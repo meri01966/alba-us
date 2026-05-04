@@ -15,270 +15,362 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Printer, List, Plus, BookOpen } from "lucide-react"
+import { Printer, List, Plus, BookOpen, BrainCircuit } from "lucide-react"
 
-interface Planning {
-  id: string
-  titulo: string
-  objetivo: string
-  actividad: string
-  recursos: string
-  fecha: string
+// ── Types ──────────────────────────────────────────────────────────────────
+
+interface BrainActivity {
+  id:          string
+  dia:         number
+  titulo:      string
+  descripcion: string
+  objetivo:    string
+  source:      "airtable" | "demo"
 }
 
-export function DayPlanning() {
-  const [planning, setPlanning] = useState<Planning | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface Planning {
+  id:        string
+  titulo:    string
+  objetivo:  string
+  actividad: string
+  recursos:  string
+  fecha:     string
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function parseSteps(text: string): string[] {
+  if (!text) return []
+  return text
+    .split(/\n|(?=\d+\.)/)
+    .map(s => s.replace(/^\d+\.\s*/, "").trim())
+    .filter(s => s.length > 0)
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; isLoading: boolean }) {
+  return (
+    <div className="flex flex-col gap-3 h-full">
+      {/* Header */}
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <BrainCircuit className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-primary leading-tight">Sugerencia de SIA</p>
+          <p className="text-xs text-muted-foreground">Cerebro central</p>
+        </div>
+        {activity && (
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+            {activity.source === "demo" ? "Demo" : `Día ${activity.dia}`}
+          </span>
+        )}
+      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center flex-1 min-h-[120px]">
+          <Spinner className="text-primary" />
+        </div>
+      ) : !activity ? (
+        <div className="flex-1 flex items-center justify-center text-center text-muted-foreground text-sm py-6">
+          Sin actividad disponible
+        </div>
+      ) : (
+        <div className="space-y-3 flex-1">
+          <div>
+            <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
+          </div>
+          {activity.objetivo && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.objetivo}</p>
+            </div>
+          )}
+          {activity.descripcion && (
+            <div className="bg-primary/5 rounded-lg p-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Actividad</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-1">
+        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
+          <Printer className="w-3.5 h-3.5 mr-1.5" />
+          Imprimir fichas
+        </Button>
+        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
+          <List className="w-3.5 h-3.5 mr-1.5" />
+          Ver secuencia
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function MyPlanningColumn({
+  planning,
+  isLoading,
+  onSaved,
+}: {
+  planning: Planning | null
+  isLoading: boolean
+  onSaved: (p: Planning) => void
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  
-  // Form state
+  const [isSaving, setIsSaving]       = useState(false)
+  const [saveError, setSaveError]     = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    titulo: "",
-    objetivo: "",
+    titulo:    "",
+    objetivo:  "",
     actividad: "",
-    recursos: "",
+    recursos:  "",
   })
-
-  const fetchPlanning = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch("/api/planning")
-      const data = await response.json()
-      
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setPlanning(data.planning)
-        setError(null)
-      }
-    } catch {
-      setError("Error al cargar la planificación")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchPlanning()
-  }, [fetchPlanning])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSaving(true)
-    
-    try {
-      const response = await fetch("/api/planning", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setPlanning(data.planning)
-        setIsModalOpen(false)
-        setFormData({ titulo: "", objetivo: "", actividad: "", recursos: "" })
-      } else {
-        setError(data.error || "Error al guardar")
-      }
-    } catch {
-      setError("Error al guardar la planificación")
-    } finally {
-      setIsSaving(false)
-    }
-  }
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  // Parse activity steps (split by newlines or numbered list)
-  const parseActivitySteps = (actividad: string): string[] => {
-    if (!actividad) return []
-    return actividad
-      .split(/\n|(?=\d+\.)/)
-      .map(s => s.replace(/^\d+\.\s*/, "").trim())
-      .filter(s => s.length > 0)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      const response = await fetch("/api/planning", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(formData),
+      })
+      const data = await response.json()
+      if (data.success && data.planning) {
+        onSaved(data.planning)
+        setIsModalOpen(false)
+        setFormData({ titulo: "", objetivo: "", actividad: "", recursos: "" })
+      } else {
+        setSaveError(data.error || "Error al guardar")
+      }
+    } catch {
+      setSaveError("Error al guardar la planificación")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  if (isLoading) {
-    return (
-      <Card className="h-full shadow-md">
-        <CardContent className="flex items-center justify-center h-full min-h-[300px]">
-          <Spinner className="text-primary" />
-        </CardContent>
-      </Card>
-    )
-  }
+  return (
+    <div className="flex flex-col gap-3 h-full">
+      {/* Header */}
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+          <BookOpen className="w-4 h-4 text-accent" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-accent leading-tight">Mi Planificación</p>
+          <p className="text-xs text-muted-foreground">Carga del docente</p>
+        </div>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="ml-auto h-7 text-xs px-2.5">
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Nueva
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-primary" />
+                Nueva Planificación
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <FieldGroup className="py-4">
+                <Field>
+                  <FieldLabel htmlFor="titulo">Título de la actividad</FieldLabel>
+                  <Input
+                    id="titulo"
+                    placeholder="Ej: Sonido /p/"
+                    value={formData.titulo}
+                    onChange={e => handleInputChange("titulo", e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="objetivo">Objetivo del día</FieldLabel>
+                  <Textarea
+                    id="objetivo"
+                    placeholder="Ej: Identificar y producir el sonido /p/ en posición inicial de palabra."
+                    value={formData.objetivo}
+                    onChange={e => handleInputChange("objetivo", e.target.value)}
+                    rows={2}
+                    required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="actividad">Actividad sugerida</FieldLabel>
+                  <Textarea
+                    id="actividad"
+                    placeholder="Escribí los pasos de la actividad (uno por línea o numerados)"
+                    value={formData.actividad}
+                    onChange={e => handleInputChange("actividad", e.target.value)}
+                    rows={4}
+                    required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="recursos">Recursos</FieldLabel>
+                  <Textarea
+                    id="recursos"
+                    placeholder="Ej: Imágenes de objetos, espejo, fichas imprimibles"
+                    value={formData.recursos}
+                    onChange={e => handleInputChange("recursos", e.target.value)}
+                    rows={2}
+                  />
+                </Field>
+              </FieldGroup>
+              {saveError && (
+                <p className="text-sm text-destructive mb-3">{saveError}</p>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isSaving}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Spinner className="w-4 h-4 mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center flex-1 min-h-[120px]">
+          <Spinner className="text-accent" />
+        </div>
+      ) : !planning ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
+          <BookOpen className="w-10 h-10 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">No hay planificación cargada para hoy.</p>
+          <p className="text-xs text-muted-foreground/70">
+            Usá el botón <strong>Nueva</strong> para agregar una.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3 flex-1">
+          <p className="text-base font-semibold text-foreground leading-snug">{planning.titulo}</p>
+          {planning.objetivo && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
+              <p className="text-sm text-foreground leading-relaxed">{planning.objetivo}</p>
+            </div>
+          )}
+          {parseSteps(planning.actividad).length > 0 && (
+            <div className="bg-accent/5 rounded-lg p-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Actividad</p>
+              <ol className="space-y-1.5 text-sm text-foreground">
+                {parseSteps(planning.actividad).map((step, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/20 text-accent text-xs flex items-center justify-center font-medium">
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {planning.recursos && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Recursos</p>
+              <p className="text-sm text-foreground leading-relaxed">{planning.recursos}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
+export function DayPlanning() {
+  const [brain,         setBrain]         = useState<BrainActivity | null>(null)
+  const [isBrainLoading, setIsBrainLoading] = useState(true)
+
+  const [planning,         setPlanning]         = useState<Planning | null>(null)
+  const [isPlanningLoading, setIsPlanningLoading] = useState(true)
+
+  // Fetch Cerebro Central
+  const fetchBrain = useCallback(async () => {
+    setIsBrainLoading(true)
+    try {
+      const res  = await fetch("/api/brain")
+      const data = await res.json()
+      setBrain(data.activity ?? null)
+    } catch {
+      setBrain(null)
+    } finally {
+      setIsBrainLoading(false)
+    }
+  }, [])
+
+  // Fetch Mi Planificacion
+  const fetchPlanning = useCallback(async () => {
+    setIsPlanningLoading(true)
+    try {
+      const res  = await fetch("/api/planning")
+      const data = await res.json()
+      setPlanning(data.planning ?? null)
+    } catch {
+      setPlanning(null)
+    } finally {
+      setIsPlanningLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchBrain()
+    fetchPlanning()
+  }, [fetchBrain, fetchPlanning])
 
   return (
     <Card className="h-full shadow-md">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-primary">
-            Planificación del día
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {planning && (
-              <span className="text-sm font-medium px-3 py-1 bg-accent/10 text-accent rounded-full">
-                {planning.titulo || "Sin título"}
-              </span>
-            )}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Nueva Planificación
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                    Nueva Planificación
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                  <FieldGroup className="py-4">
-                    <Field>
-                      <FieldLabel htmlFor="titulo">Título de la actividad</FieldLabel>
-                      <Input
-                        id="titulo"
-                        placeholder="Ej: Sonido /p/"
-                        value={formData.titulo}
-                        onChange={(e) => handleInputChange("titulo", e.target.value)}
-                        required
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="objetivo">Objetivo del día</FieldLabel>
-                      <Textarea
-                        id="objetivo"
-                        placeholder="Ej: Identificar y producir el sonido /p/ en posición inicial de palabra."
-                        value={formData.objetivo}
-                        onChange={(e) => handleInputChange("objetivo", e.target.value)}
-                        rows={2}
-                        required
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="actividad">Actividad sugerida</FieldLabel>
-                      <Textarea
-                        id="actividad"
-                        placeholder="Escribí los pasos de la actividad (uno por línea o numerados)"
-                        value={formData.actividad}
-                        onChange={(e) => handleInputChange("actividad", e.target.value)}
-                        rows={4}
-                        required
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="recursos">Recursos</FieldLabel>
-                      <Textarea
-                        id="recursos"
-                        placeholder="Ej: Imágenes de objetos, espejo, fichas imprimibles"
-                        value={formData.recursos}
-                        onChange={(e) => handleInputChange("recursos", e.target.value)}
-                        rows={2}
-                      />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsModalOpen(false)}
-                      disabled={isSaving}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving ? (
-                        <>
-                          <Spinner className="w-4 h-4 mr-2" />
-                          Guardando...
-                        </>
-                      ) : (
-                        "Guardar"
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+        <CardTitle className="text-base font-semibold text-primary">
+          Planificación del día
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          {/* Left: Sugerencia SIA */}
+          <div className="pb-4 sm:pb-0 sm:pr-4">
+            <BrainColumn activity={brain} isLoading={isBrainLoading} />
+          </div>
+          {/* Right: Mi Planificacion */}
+          <div className="pt-4 sm:pt-0 sm:pl-4">
+            <MyPlanningColumn
+              planning={planning}
+              isLoading={isPlanningLoading}
+              onSaved={setPlanning}
+            />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0 space-y-4">
-        {error && (
-          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-            {error}
-          </div>
-        )}
-        
-        {!planning ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No hay planificación para hoy.</p>
-            <p className="text-xs mt-1">Creá una nueva usando el botón de arriba.</p>
-          </div>
-        ) : (
-          <>
-            {/* Objective */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">Objetivo del día</h4>
-              <p className="text-sm text-foreground">
-                {planning.objetivo || "Sin objetivo definido"}
-              </p>
-            </div>
-
-            {/* Activity */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Actividad sugerida</h4>
-              {parseActivitySteps(planning.actividad).length > 0 ? (
-                <ol className="space-y-2 text-sm text-foreground">
-                  {parseActivitySteps(planning.actividad).map((step, index) => (
-                    <li key={index} className="flex gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
-                        {index + 1}
-                      </span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Sin actividad definida</p>
-              )}
-            </div>
-
-            {/* Resources */}
-            {planning.recursos && (
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Recursos</h4>
-                <p className="text-sm text-foreground">
-                  {planning.recursos}
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button className="flex-1 h-11" size="lg">
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir fichas
-              </Button>
-              <Button variant="outline" className="flex-1 h-11" size="lg">
-                <List className="w-4 h-4 mr-2" />
-                Ver secuencia
-              </Button>
-            </div>
-          </>
-        )}
       </CardContent>
     </Card>
   )
