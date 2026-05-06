@@ -195,33 +195,54 @@ function StudentRow({
 }
 
 export function HeatMap() {
-  const { data, isLoading, mutate } = useSWR<StudentsResponse>("/api/students", fetcher, {
+  const { data, isLoading } = useSWR<StudentsResponse>("/api/students", fetcher, {
     revalidateOnFocus: false,
   })
 
-  // Local day-activity evaluations: { studentId: StatusLevel }
+  // Local overrides: { "studentId-field": StatusLevel }
+  const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
+  // Day eval selection: { studentId: StatusLevel }
   const [dayEvals, setDayEvals] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
-  const students = data?.students ?? []
-  const source   = data?.source ?? null
+  const rawStudents = data?.students ?? []
+  const source      = data?.source ?? null
+
+  // Merge server data with local overrides so bars update instantly
+  const students: Student[] = rawStudents.map((s) => ({
+    ...s,
+    cf: (localStatus[`${s.id}-cf`] as StatusLevel) ?? s.cf,
+    rl: (localStatus[`${s.id}-rl`] as StatusLevel) ?? s.rl,
+    o:  (localStatus[`${s.id}-o`]  as StatusLevel) ?? s.o,
+  }))
 
   async function handleDayEval(student: Student, status: StatusLevel) {
     setSavingId(student.id)
+
+    // Update day button selection
     setDayEvals((prev) => ({ ...prev, [student.id]: status }))
 
+    // Update all three hito bars immediately in local state
+    setLocalStatus((prev) => ({
+      ...prev,
+      [`${student.id}-cf`]: status,
+      [`${student.id}-rl`]: status,
+      [`${student.id}-o`]:  status,
+    }))
+
+    // Persist to Airtable in background for all three fields
     try {
-      await fetch("/api/registrar-actividad", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: student.id,
-          field: "DIA",
-          status,
-        }),
-      })
+      await Promise.all(
+        (["CF", "RL", "O"] as const).map((field) =>
+          fetch("/api/registrar-actividad", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ studentId: student.id, field, status }),
+          })
+        )
+      )
     } catch (err) {
-      // Keep local state even if API fails — don't revert
+      // Keep local state even if API fails
     } finally {
       setSavingId(null)
     }
@@ -251,7 +272,7 @@ export function HeatMap() {
             const Icon = opt.icon
             return (
               <div key={opt.value} className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Icon className="w-3.5 h-3.5" style={{ color: (opt.activeStyle as React.CSSProperties).backgroundColor as string }} />
+                <Icon className="w-3.5 h-3.5" style={{ color: opt.activeStyle.backgroundColor as string }} />
                 {opt.label}
               </div>
             )
