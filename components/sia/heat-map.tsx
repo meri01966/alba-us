@@ -44,27 +44,37 @@ function getReadiness(student: Student): "advance" | "reinforce" {
 }
 
 // Daily activity evaluation buttons
-const DAY_OPTIONS: { value: StatusLevel; label: string; icon: React.ElementType; active: string; inactive: string }[] = [
+const DAY_OPTIONS: {
+  value: StatusLevel
+  label: string
+  icon: React.ElementType
+  activeStyle: React.CSSProperties
+  activeClass: string
+  inactiveClass: string
+}[] = [
   {
     value: "green",
     label: "Logrado",
     icon: CheckCircle2,
-    active:   "bg-emerald-500 text-white border-emerald-500",
-    inactive: "border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-500",
+    activeStyle:   { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" },
+    activeClass:   "",
+    inactiveClass: "border-gray-200 text-gray-400 hover:border-emerald-500 hover:text-emerald-500",
   },
   {
     value: "yellow",
     label: "En proceso",
     icon: Clock,
-    active:   "bg-amber-400 text-white border-amber-400",
-    inactive: "border-border text-muted-foreground hover:border-amber-400 hover:text-amber-500",
+    activeStyle:   { backgroundColor: "#fbbf24", color: "#fff", borderColor: "#fbbf24" },
+    activeClass:   "",
+    inactiveClass: "border-gray-200 text-gray-400 hover:border-amber-400 hover:text-amber-500",
   },
   {
     value: "red",
     label: "Necesita refuerzo",
     icon: AlertCircle,
-    active:   "bg-red-500 text-white border-red-500",
-    inactive: "border-border text-muted-foreground hover:border-red-500 hover:text-red-500",
+    activeStyle:   { backgroundColor: "#ef4444", color: "#fff", borderColor: "#ef4444" },
+    activeClass:   "",
+    inactiveClass: "border-gray-200 text-gray-400 hover:border-red-500 hover:text-red-500",
   },
 ]
 
@@ -156,10 +166,11 @@ function StudentRow({
                 disabled={saving}
                 title={opt.label}
                 aria-label={`Marcar ${student.name}: ${opt.label}`}
+                style={isActive ? opt.activeStyle : undefined}
                 className={`
                   flex items-center justify-center w-8 h-8 rounded-lg border transition-all text-sm
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  ${isActive ? opt.active : opt.inactive}
+                  ${isActive ? "shadow-md scale-105" : opt.inactiveClass}
                 `}
               >
                 <Icon className="w-4 h-4" />
@@ -236,7 +247,7 @@ export function HeatMap() {
             const Icon = opt.icon
             return (
               <div key={opt.value} className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5" style={{ color: (opt.activeStyle as React.CSSProperties).backgroundColor as string }} />
                 {opt.label}
               </div>
             )
