@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'ALBA - Alfabetización con Acompañamiento',
-  description: 'Sistema de acompañamiento docente para la enseñanza de la lectoescritura en Nivel Inicial',
+  title: 'SIA - Sistema Integral de Alfabetización',
+  description: 'Sistema de apoyo docente para la enseñanza de la lectoescritura en Nivel Inicial',
   generator: 'v0.app',
   icons: {
     icon: [

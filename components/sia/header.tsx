@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "next/link"
-import { User, Calendar, BookOpen, LayoutDashboard } from "lucide-react"
+import { User, Calendar, BookOpen } from "lucide-react"
 
 export function Header() {
   return (
@@ -14,9 +13,9 @@ export function Header() {
               <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight">ALBA</h1>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight">SIA</h1>
               <p className="text-xs sm:text-sm text-primary-foreground/70 font-medium">
-                Alfabetización con Acompañamiento
+                Sistema Integral de Alfabetización
               </p>
             </div>
           </div>
@@ -37,25 +36,16 @@ export function Header() {
               <span className="font-semibold">Día 37</span>
             </div>
 
-            {/* Macro link */}
-              <Link
-                href="/macro"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-semibold"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span className="hidden sm:inline">Vision Macro</span>
-              </Link>
-
-              {/* User */}
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                  <User className="w-4 h-4 text-accent-foreground" />
-                </div>
-                <div className="hidden sm:block">
-                  <span className="text-xs text-primary-foreground/60">Docente:</span>
-                  <span className="font-medium ml-1">Mariana</span>
-                </div>
+            {/* User */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                <User className="w-4 h-4 text-accent-foreground" />
               </div>
+              <div className="hidden sm:block">
+                <span className="text-xs text-primary-foreground/60">Docente:</span>
+                <span className="font-medium ml-1">Mariana</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
