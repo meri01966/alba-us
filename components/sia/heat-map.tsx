@@ -209,10 +209,12 @@ function StudentDetailPanel({
 function StudentRow({
   student,
   saving,
+  activityCount,
   onEval,
 }: {
   student: Student
   saving: FieldKey | null
+  activityCount: Record<FieldKey, number>
   onEval: (field: FieldKey, status: StatusLevel) => void
 }) {
   const [expanded, setExpanded]       = useState(false)
@@ -284,6 +286,7 @@ function StudentRow({
             student={student}
             activeField={activeField}
             onSelectField={setActiveField}
+            activityCount={activityCount}
             onEval={onEval}
             savingField={saving}
           />
