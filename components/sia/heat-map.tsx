@@ -31,9 +31,9 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 }
 
 const STATUS_BAR: Record<StatusLevel, { bg: string; width: string; label: string }> = {
-  green:  { bg: "bg-status-green",  width: "w-full",    label: "Logrado" },
-  yellow: { bg: "bg-status-yellow", width: "w-2/3",     label: "En proceso" },
-  red:    { bg: "bg-status-red",    width: "w-1/3",     label: "Requiere refuerzo" },
+  green:  { bg: "bg-emerald-500",  width: "w-full",    label: "Logrado" },
+  yellow: { bg: "bg-amber-400",    width: "w-2/3",     label: "En proceso" },
+  red:    { bg: "bg-red-500",      width: "w-1/3",     label: "Requiere refuerzo" },
 }
 
 // Determine overall readiness for a student
@@ -49,22 +49,22 @@ const DAY_OPTIONS: { value: StatusLevel; label: string; icon: React.ElementType;
     value: "green",
     label: "Logrado",
     icon: CheckCircle2,
-    active: "bg-status-green text-white border-status-green",
-    inactive: "border-border text-muted-foreground hover:border-status-green hover:text-status-green",
+    active:   "bg-emerald-500 text-white border-emerald-500",
+    inactive: "border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-500",
   },
   {
     value: "yellow",
     label: "En proceso",
     icon: Clock,
-    active: "bg-status-yellow text-white border-status-yellow",
-    inactive: "border-border text-muted-foreground hover:border-status-yellow hover:text-status-yellow",
+    active:   "bg-amber-400 text-white border-amber-400",
+    inactive: "border-border text-muted-foreground hover:border-amber-400 hover:text-amber-500",
   },
   {
     value: "red",
     label: "Necesita refuerzo",
     icon: AlertCircle,
-    active: "bg-status-red text-white border-status-red",
-    inactive: "border-border text-muted-foreground hover:border-status-red hover:text-status-red",
+    active:   "bg-red-500 text-white border-red-500",
+    inactive: "border-border text-muted-foreground hover:border-red-500 hover:text-red-500",
   },
 ]
 
@@ -82,9 +82,9 @@ function StudentDetailPanel({ student }: { student: Student }) {
               <span className="font-medium text-foreground">{FIELD_LABELS[field]}</span>
               <span className={`
                 px-2 py-0.5 rounded-full font-medium
-                ${status === "green"  ? "bg-status-green/15 text-status-green" : ""}
-                ${status === "yellow" ? "bg-status-yellow/15 text-status-yellow" : ""}
-                ${status === "red"    ? "bg-status-red/15 text-status-red" : ""}
+                ${status === "green"  ? "bg-emerald-100 text-emerald-700" : ""}
+                ${status === "yellow" ? "bg-amber-100 text-amber-700"     : ""}
+                ${status === "red"    ? "bg-red-100 text-red-700"         : ""}
               `}>
                 {bar.label}
               </span>
@@ -100,8 +100,8 @@ function StudentDetailPanel({ student }: { student: Student }) {
       <div className={`
         flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-sm font-semibold
         ${readiness === "advance"
-          ? "bg-status-green/10 text-status-green"
-          : "bg-status-red/10 text-status-red"}
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-red-50 text-red-700"}
       `}>
         {readiness === "advance"
           ? <CheckCircle2 className="w-4 h-4 shrink-0" />
