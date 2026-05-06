@@ -1,6 +1,7 @@
 "use client"
 
-import { User, Calendar, BookOpen } from "lucide-react"
+import Link from "next/link"
+import { User, Calendar, BookOpen, LayoutDashboard } from "lucide-react"
 
 export function Header() {
   return (
@@ -36,16 +37,25 @@ export function Header() {
               <span className="font-semibold">Día 37</span>
             </div>
 
-            {/* User */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                <User className="w-4 h-4 text-accent-foreground" />
+            {/* Macro link */}
+              <Link
+                href="/macro"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-semibold"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Vision Macro</span>
+              </Link>
+
+              {/* User */}
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                  <User className="w-4 h-4 text-accent-foreground" />
+                </div>
+                <div className="hidden sm:block">
+                  <span className="text-xs text-primary-foreground/60">Docente:</span>
+                  <span className="font-medium ml-1">Mariana</span>
+                </div>
               </div>
-              <div className="hidden sm:block">
-                <span className="text-xs text-primary-foreground/60">Docente:</span>
-                <span className="font-medium ml-1">Mariana</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
