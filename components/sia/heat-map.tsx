@@ -4,6 +4,18 @@ import { useState, useEffect, useRef } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
+import { CheckCircle, AlertCircle, XCircle, BarChart2, X } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Cell,
+  Tooltip,
+} from "recharts"
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 type StatusLevel = "green" | "yellow" | "red"
 type FieldKey    = "cf" | "rl" | "o"
@@ -21,12 +33,26 @@ interface StudentsResponse {
   source: string
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+const STATUS_TO_VALUE: Record<StatusLevel, number> = {
+  green:  100,
+  yellow: 50,
+  red:    10,
+}
 
 const STATUS_COLORS: Record<StatusLevel, string> = {
   green:  "bg-status-green",
   yellow: "bg-status-yellow",
   red:    "bg-status-red",
+}
+
+const STATUS_HEX: Record<StatusLevel, string> = {
+  green:  "#22c55e",
+  yellow: "#eab308",
+  red:    "#ef4444",
 }
 
 const STATUS_LABELS: Record<StatusLevel, string> = {
@@ -42,11 +68,13 @@ const STATUS_OPTIONS: { value: StatusLevel; label: string; color: string }[] = [
 ]
 
 const FIELD_MAP: Record<FieldKey, string> = { cf: "CF", rl: "RL", o: "O" }
-
-interface ActiveCell {
-  studentId: string
-  field: FieldKey
+const FIELD_LABELS: Record<FieldKey, string> = {
+  cf: "Conciencia Fonológica",
+  rl: "Reconocimiento de Letras",
+  o:  "Oralidad",
 }
+
+// ── Sub-components ─────────────────────────────────────────────────────────
 
 function StatusDot({
   status,
@@ -66,14 +94,11 @@ function StatusDot({
       title={STATUS_LABELS[status]}
       aria-label={`Estado: ${STATUS_LABELS[status]}. Clic para cambiar.`}
       className={`
-        inline-flex items-center justify-center
-        w-7 h-7 rounded-full shrink-0
-        ${STATUS_COLORS[status]}
-        shadow-sm transition-all duration-150
+        inline-flex items-center justify-center w-7 h-7 rounded-full shrink-0
+        ${STATUS_COLORS[status]} shadow-sm transition-all duration-150
         hover:scale-110 hover:ring-2 hover:ring-offset-2 hover:ring-primary/40
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-        disabled:opacity-50 disabled:cursor-not-allowed
-        cursor-pointer
+        disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
         ${isOpen ? "ring-2 ring-offset-2 ring-primary/60 scale-110" : ""}
       `}
     >
@@ -97,7 +122,6 @@ function StatusPopover({
         <button
           key={opt.value}
           onMouseDown={(e) => {
-            // Use onMouseDown so it fires before the blur that closes the popover
             e.preventDefault()
             onSelect(opt.value)
           }}
@@ -115,18 +139,103 @@ function StatusPopover({
   )
 }
 
+// Quick eval buttons: green check / yellow alert / red X
+function QuickEvalButtons({
+  student,
+  activeField,
+  onEval,
+}: {
+  student: Student
+  activeField: FieldKey
+  onEval: (student: Student, field: FieldKey, status: StatusLevel) => void
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        title="Logrado"
+        onMouseDown={(e) => { e.preventDefault(); onEval(student, activeField, "green") }}
+        className={`p-1.5 rounded-lg transition-colors
+          ${student[activeField] === "green"
+            ? "bg-green-100 text-green-700"
+            : "text-muted-foreground hover:bg-green-50 hover:text-green-600"}`}
+      >
+        <CheckCircle size={16} />
+      </button>
+      <button
+        title="En proceso"
+        onMouseDown={(e) => { e.preventDefault(); onEval(student, activeField, "yellow") }}
+        className={`p-1.5 rounded-lg transition-colors
+          ${student[activeField] === "yellow"
+            ? "bg-yellow-100 text-yellow-700"
+            : "text-muted-foreground hover:bg-yellow-50 hover:text-yellow-600"}`}
+      >
+        <AlertCircle size={16} />
+      </button>
+      <button
+        title="Requiere intervención"
+        onMouseDown={(e) => { e.preventDefault(); onEval(student, activeField, "red") }}
+        className={`p-1.5 rounded-lg transition-colors
+          ${student[activeField] === "red"
+            ? "bg-red-100 text-red-700"
+            : "text-muted-foreground hover:bg-red-50 hover:text-red-600"}`}
+      >
+        <XCircle size={16} />
+      </button>
+    </div>
+  )
+}
+
+// Horizontal bar chart for one student
+function StudentDetailChart({ student }: { student: Student }) {
+  const chartData: { hito: string; valor: number; status: StatusLevel }[] = [
+    { hito: "CF",       valor: STATUS_TO_VALUE[student.cf], status: student.cf },
+    { hito: "RL",       valor: STATUS_TO_VALUE[student.rl], status: student.rl },
+    { hito: "Oralidad", valor: STATUS_TO_VALUE[student.o],  status: student.o  },
+  ]
+
+  return (
+    <div className="h-36">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 8 }}>
+          <XAxis type="number" domain={[0, 100]} hide />
+          <YAxis dataKey="hito" type="category" width={68} tick={{ fontSize: 12 }} />
+          <Tooltip
+            formatter={(value: number, name: string, props: { payload?: { status: StatusLevel } }) =>
+              [STATUS_LABELS[props.payload?.status ?? "green"], "Estado"]
+            }
+            contentStyle={{ fontSize: 12, borderRadius: 8 }}
+          />
+          <Bar dataKey="valor" radius={[0, 6, 6, 0]} barSize={22}>
+            {chartData.map((entry, i) => (
+              <Cell key={i} fill={STATUS_HEX[entry.status]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
+interface ActiveCell {
+  studentId: string
+  field: FieldKey
+}
+
 export function HeatMap() {
   const { data, isLoading } = useSWR<StudentsResponse>("/api/students", fetcher, {
     revalidateOnFocus: false,
   })
 
-  // Local override map: { "studentId-field": StatusLevel }
-  const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
-  const [activeCell, setActiveCell]   = useState<ActiveCell | null>(null)
-  const [savingCell, setSavingCell]   = useState<string | null>(null)
+  const [localStatus, setLocalStatus]     = useState<Record<string, StatusLevel>>({})
+  const [activeCell, setActiveCell]       = useState<ActiveCell | null>(null)
+  const [savingCell, setSavingCell]       = useState<string | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  // Which field the quick-eval buttons act on (default: cf)
+  const [evalField, setEvalField]         = useState<FieldKey>("cf")
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Close popover when clicking outside the table
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -140,7 +249,6 @@ export function HeatMap() {
   const rawStudents = data?.students ?? []
   const source      = data?.source ?? null
 
-  // Merge server data with local overrides so dots update instantly
   const students: Student[] = rawStudents.map((s) => ({
     ...s,
     cf: (localStatus[`${s.id}-cf`] as StatusLevel) ?? s.cf,
@@ -148,59 +256,83 @@ export function HeatMap() {
     o:  (localStatus[`${s.id}-o`]  as StatusLevel) ?? s.o,
   }))
 
+  // Keep selectedStudent in sync with local changes
+  const resolvedSelected = selectedStudent
+    ? students.find((s) => s.id === selectedStudent.id) ?? null
+    : null
+
   async function handleStatusChange(student: Student, field: FieldKey, newStatus: StatusLevel) {
     const cellKey = `${student.id}-${field}`
-
-    // 1. Update local state immediately — dot changes color right away
     setLocalStatus((prev) => ({ ...prev, [cellKey]: newStatus }))
     setActiveCell(null)
     setSavingCell(cellKey)
-
-    // 2. Persist to Airtable in background
     try {
       await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId: student.id,
-          field: FIELD_MAP[field],
-          status: newStatus,
+          field:     FIELD_MAP[field],
+          status:    newStatus,
         }),
       })
     } catch (err) {
       console.error("[v0] Error guardando en Airtable:", err)
-      // Keep the local change — don't revert so the UI stays consistent
     } finally {
       setSavingCell(null)
     }
   }
 
   return (
-    <Card className="shadow-md h-full">
+    <Card className="shadow-md h-full flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base font-semibold text-primary">
             Mapa de calor del aula
           </CardTitle>
-          {!isLoading && source && (
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                source === "airtable"
-                  ? "bg-accent/15 text-accent"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {source === "airtable" ? "Airtable" : "Demo"}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {!isLoading && source && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  source === "airtable"
+                    ? "bg-accent/15 text-accent"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {source === "airtable" ? "Airtable" : "Demo"}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Quick-eval field selector */}
+        {!isLoading && students.length > 0 && (
+          <div className="flex gap-1 mt-2">
+            {(["cf", "rl", "o"] as FieldKey[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setEvalField(f)}
+                className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                  evalField === f
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {FIELD_MAP[f]}
+              </button>
+            ))}
+            <span className="ml-1 text-xs text-muted-foreground self-center">
+              Evaluando: <span className="font-medium text-foreground">{FIELD_LABELS[evalField]}</span>
+            </span>
+          </div>
+        )}
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 flex flex-col gap-4 flex-1">
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-10">
             <Spinner className="text-primary" />
-            <span className="text-sm text-muted-foreground">Cargando...</span>
+            <span className="text-sm text-muted-foreground">Cargando alumnos...</span>
           </div>
         ) : students.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">
@@ -208,80 +340,113 @@ export function HeatMap() {
           </p>
         ) : (
           <>
-            <div className="overflow-x-auto" ref={containerRef}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-4 font-medium text-muted-foreground">
-                      Alumno
-                    </th>
-                    {(["CF", "RL", "O"] as const).map((col) => (
-                      <th
-                        key={col}
-                        className="text-center py-2 px-3 font-medium text-muted-foreground w-16"
-                        title={
-                          col === "CF" ? "Conciencia Fonológica"
-                          : col === "RL" ? "Reconocimiento de Letras"
-                          : "Oralidad"
-                        }
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student, i) => (
-                    <tr
-                      key={student.id}
-                      className={i !== students.length - 1 ? "border-b border-border/40" : ""}
+            {/* ── Student list with quick-eval ── */}
+            <div ref={containerRef} className="flex flex-col gap-1">
+              {students.map((student) => {
+                const isSelected = resolvedSelected?.id === student.id
+                return (
+                  <div
+                    key={student.id}
+                    className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border transition-colors ${
+                      isSelected
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border hover:bg-muted/40"
+                    }`}
+                  >
+                    {/* Name + detail toggle */}
+                    <button
+                      className="text-sm font-medium text-foreground text-left flex-1 flex items-center gap-2"
+                      onClick={() =>
+                        setSelectedStudent(isSelected ? null : student)
+                      }
                     >
-                      <td className="py-2.5 pr-4 font-medium text-foreground whitespace-nowrap">
-                        {student.name}
-                      </td>
+                      <BarChart2
+                        size={14}
+                        className={isSelected ? "text-primary" : "text-muted-foreground"}
+                      />
+                      {student.name}
+                    </button>
+
+                    {/* All three status dots */}
+                    <div className="flex items-center gap-1.5">
                       {(["cf", "rl", "o"] as FieldKey[]).map((field) => {
-                        const cellKey  = `${student.id}-${field}`
-                        const isOpen   = activeCell?.studentId === student.id && activeCell?.field === field
+                        const cellKey = `${student.id}-${field}`
+                        const isOpen  = activeCell?.studentId === student.id && activeCell?.field === field
                         const isSaving = savingCell === cellKey
                         return (
-                          <td key={field} className="py-2.5 px-3 text-center">
-                            <div className="relative flex justify-center">
-                              <StatusDot
-                                status={student[field]}
-                                saving={isSaving}
-                                isOpen={isOpen}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setActiveCell(isOpen ? null : { studentId: student.id, field })
-                                }}
+                          <div key={field} className="relative flex justify-center">
+                            <StatusDot
+                              status={student[field]}
+                              saving={isSaving}
+                              isOpen={isOpen}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setActiveCell(isOpen ? null : { studentId: student.id, field })
+                              }}
+                            />
+                            {isOpen && (
+                              <StatusPopover
+                                current={student[field]}
+                                onSelect={(newStatus) =>
+                                  handleStatusChange(student, field, newStatus)
+                                }
                               />
-                              {isOpen && (
-                                <StatusPopover
-                                  current={student[field]}
-                                  onSelect={(newStatus) =>
-                                    handleStatusChange(student, field, newStatus)
-                                  }
-                                />
-                              )}
-                            </div>
-                          </td>
+                            )}
+                          </div>
                         )
                       })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </div>
+
+                    {/* Quick-eval buttons for active field */}
+                    <QuickEvalButtons
+                      student={student}
+                      activeField={evalField}
+                      onEval={handleStatusChange}
+                    />
+                  </div>
+                )
+              })}
             </div>
 
-            {/* Legend */}
-            <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground">
+            {/* ── Column headers for the dots ── */}
+            <div className="flex items-center justify-end gap-0 pr-1 -mt-2">
+              <div className="flex gap-5 mr-[6.5rem]">
+                {(["CF", "RL", "O"] as const).map((col) => (
+                  <span key={col} className="text-xs text-muted-foreground font-medium w-7 text-center">
+                    {col}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Detail chart for selected student ── */}
+            {resolvedSelected && (
+              <div className="border border-border rounded-xl p-3 bg-muted/20">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {resolvedSelected.name}
+                  </p>
+                  <button
+                    onClick={() => setSelectedStudent(null)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Cerrar detalle"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <StudentDetailChart student={resolvedSelected} />
+              </div>
+            )}
+
+            {/* ── Legend ── */}
+            <div className="pt-2 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground mt-auto">
               {STATUS_OPTIONS.map((opt) => (
                 <div key={opt.value} className="flex items-center gap-1.5">
                   <span className={`inline-block w-3 h-3 rounded-full ${opt.color}`} />
                   {opt.label}
                 </div>
               ))}
-              <span className="ml-auto italic">Toca un punto para editar</span>
+              <span className="ml-auto italic hidden sm:inline">Toca un punto para editar</span>
             </div>
           </>
         )}
