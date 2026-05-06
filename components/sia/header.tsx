@@ -1,8 +1,15 @@
 "use client"
 
-import { User, Calendar, BookOpen } from "lucide-react"
+import { User, Calendar, BookOpen, Zap, Map, Home } from "lucide-react"
 
-export function Header() {
+type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
+
+interface HeaderProps {
+  activeView?: ViewType
+  onNavigate?: (view: ViewType) => void
+}
+
+export function Header({ activeView = "clase", onNavigate }: HeaderProps) {
   return (
     <header className="bg-primary text-primary-foreground shadow-lg">
       <div className="px-4 py-3 sm:px-6">
@@ -15,10 +22,54 @@ export function Header() {
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-tight">ALBA</h1>
               <p className="text-xs sm:text-sm text-primary-foreground/70 font-medium">
-                Alfabetización con Acompañamiento
+                Alfabetizacion con Acompanamiento
               </p>
             </div>
           </div>
+
+          {/* Navigation buttons */}
+          {onNavigate && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNavigate("clase")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  backgroundColor: activeView === "clase" ? "rgba(212,135,14,0.15)" : "transparent",
+                  border: activeView === "clase" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
+                  color: activeView === "clase" ? "#D4870E" : "rgba(255,255,255,0.7)",
+                }}
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Clase</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate("evaluar")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  backgroundColor: activeView === "evaluar" ? "rgba(212,135,14,0.15)" : "transparent",
+                  border: activeView === "evaluar" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
+                  color: activeView === "evaluar" ? "#D4870E" : "rgba(255,255,255,0.7)",
+                }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Evaluar</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate("mapa")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  backgroundColor: activeView === "mapa" || activeView === "perfil" ? "rgba(212,135,14,0.15)" : "transparent",
+                  border: activeView === "mapa" || activeView === "perfil" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
+                  color: activeView === "mapa" || activeView === "perfil" ? "#D4870E" : "rgba(255,255,255,0.7)",
+                }}
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mapa</span>
+              </button>
+            </div>
+          )}
 
           {/* Meta info */}
           <div className="flex items-center gap-4 sm:gap-6 text-sm">
@@ -33,7 +84,7 @@ export function Header() {
             {/* Day counter */}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary-foreground/60" />
-              <span className="font-semibold">Día 37</span>
+              <span className="font-semibold">Dia 37</span>
             </div>
 
             {/* User */}
