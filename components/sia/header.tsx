@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Calendar, BookOpen, Zap, Map, Home } from "lucide-react"
+import { User, Calendar, BookOpen, Map, Home } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
@@ -41,19 +41,6 @@ export function Header({ activeView = "clase", onNavigate }: HeaderProps) {
               >
                 <Home className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Clase</span>
-              </button>
-
-              <button
-                onClick={() => onNavigate("evaluar")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: activeView === "evaluar" ? "rgba(212,135,14,0.15)" : "transparent",
-                  border: activeView === "evaluar" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
-                  color: activeView === "evaluar" ? "#D4870E" : "rgba(255,255,255,0.7)",
-                }}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Evaluar</span>
               </button>
 
               <button
