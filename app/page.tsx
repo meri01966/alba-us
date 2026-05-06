@@ -5,7 +5,7 @@ import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel }  from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
 
-export default function SIADashboard() {
+export default function ALBADashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -37,7 +37,7 @@ export default function SIADashboard() {
       </main>
 
       <footer className="py-2 px-4 text-center text-xs text-muted-foreground border-t border-border">
-        SIA · Sistema Integral de Alfabetización · Nivel Inicial
+        ALBA · Alfabetización con Acompañamiento · Nivel Inicial
       </footer>
     </div>
   )
