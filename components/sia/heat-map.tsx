@@ -49,6 +49,7 @@ const DAY_OPTIONS: {
   label: string
   icon: React.ElementType
   activeStyle: React.CSSProperties
+  inactiveStyle: React.CSSProperties
   activeClass: string
   inactiveClass: string
 }[] = [
@@ -57,24 +58,27 @@ const DAY_OPTIONS: {
     label: "Logrado",
     icon: CheckCircle2,
     activeStyle:   { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" },
-    activeClass:   "",
-    inactiveClass: "border-gray-200 text-gray-400 hover:border-emerald-500 hover:text-emerald-500",
+    inactiveStyle: { backgroundColor: "#d1fae5", color: "#10b981", borderColor: "#6ee7b7" },
+    activeClass:   "shadow-md scale-105",
+    inactiveClass: "",
   },
   {
     value: "yellow",
     label: "En proceso",
     icon: Clock,
     activeStyle:   { backgroundColor: "#fbbf24", color: "#fff", borderColor: "#fbbf24" },
-    activeClass:   "",
-    inactiveClass: "border-gray-200 text-gray-400 hover:border-amber-400 hover:text-amber-500",
+    inactiveStyle: { backgroundColor: "#fef3c7", color: "#d97706", borderColor: "#fcd34d" },
+    activeClass:   "shadow-md scale-105",
+    inactiveClass: "",
   },
   {
     value: "red",
     label: "Necesita refuerzo",
     icon: AlertCircle,
     activeStyle:   { backgroundColor: "#ef4444", color: "#fff", borderColor: "#ef4444" },
-    activeClass:   "",
-    inactiveClass: "border-gray-200 text-gray-400 hover:border-red-500 hover:text-red-500",
+    inactiveStyle: { backgroundColor: "#fee2e2", color: "#ef4444", borderColor: "#fca5a5" },
+    activeClass:   "shadow-md scale-105",
+    inactiveClass: "",
   },
 ]
 
@@ -166,11 +170,11 @@ function StudentRow({
                 disabled={saving}
                 title={opt.label}
                 aria-label={`Marcar ${student.name}: ${opt.label}`}
-                style={isActive ? opt.activeStyle : undefined}
+                style={isActive ? opt.activeStyle : opt.inactiveStyle}
                 className={`
                   flex items-center justify-center w-8 h-8 rounded-lg border transition-all text-sm
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  ${isActive ? "shadow-md scale-105" : opt.inactiveClass}
+                  ${isActive ? opt.activeClass : opt.inactiveClass}
                 `}
               >
                 <Icon className="w-4 h-4" />
