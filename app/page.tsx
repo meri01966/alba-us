@@ -1,4 +1,5 @@
 import { Header }       from "@/components/sia/header"
+import { BrainBanner } from "@/components/sia/brain-banner"
 import { HeatMap }      from "@/components/sia/heat-map"
 import { DayPlanning }  from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
@@ -12,6 +13,9 @@ export default function ALBADashboard() {
 
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
+
+          {/* ── Banner: Cerebro Central ── */}
+          <BrainBanner />
 
           {/* ── Row 1: Heat Map (protagonist) + Day Planning ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
