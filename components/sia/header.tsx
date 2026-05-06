@@ -13,9 +13,9 @@ export function Header() {
               <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight">SIA</h1>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight">ALBA</h1>
               <p className="text-xs sm:text-sm text-primary-foreground/70 font-medium">
-                Sistema Integral de Alfabetización
+                Alfabetización con Acompañamiento
               </p>
             </div>
           </div>
