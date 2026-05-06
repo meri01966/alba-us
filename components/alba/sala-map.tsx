@@ -26,71 +26,81 @@ function getAverage(p: { CF: number; CT: number; O: number }): number {
 }
 
 export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
-  // Agrupar por mesa
-  const mesas: Record<string, Student[]> = {}
+  // Agrupar por nivel de progreso
+  const grupos: { label: string; color: string; bgLight: string; alumnos: Student[] }[] = [
+    { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", alumnos: [] },
+    { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", alumnos: [] },
+    { label: "Avanzado",          color: "#10b981", bgLight: "#ecfdf5", alumnos: [] },
+  ]
+
   students.forEach((s) => {
-    const mesa = s.mesa || "General"
-    if (!mesas[mesa]) mesas[mesa] = []
-    mesas[mesa].push(s)
+    const p = progress[s.id] || { CF: 0, CT: 0, O: 0 }
+    const avg = getAverage(p)
+    if (avg >= 70) grupos[2].alumnos.push(s)
+    else if (avg >= 40) grupos[1].alumnos.push(s)
+    else grupos[0].alumnos.push(s)
   })
 
   return (
     <div className="p-4 space-y-6">
       <div className="text-center">
-        <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Mapa de la Sala</h2>
-        <p className="text-sm text-gray-500">Toca un alumno para ver su perfil completo</p>
+        <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Mapa de Progreso</h2>
+        <p className="text-sm text-gray-500">Alumnos agrupados por nivel de avance</p>
       </div>
 
-      {/* Leyenda */}
-      <div className="flex justify-center gap-4 text-xs">
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#10b981" }} />
-          <span>70%+ Avanzado</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#f59e0b" }} />
-          <span>40-69% En proceso</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#ef4444" }} />
-          <span>&lt;40% Refuerzo</span>
-        </div>
-      </div>
-
-      {/* Mesas */}
-      <div className="space-y-6">
-        {Object.entries(mesas).map(([mesaNombre, alumnos]) => (
-          <div key={mesaNombre}>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Mesa: {mesaNombre}</h3>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
-              {alumnos.map((student) => {
-                const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
-                const avg = getAverage(p)
-                const color = getColor(avg)
-
-                return (
-                  <button
-                    key={student.id}
-                    onClick={() => onStudentClick(student.id)}
-                    className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all hover:scale-105"
-                    style={{ borderColor: color, backgroundColor: `${color}10` }}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: color }}
-                    >
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 truncate w-full text-center">
-                      {student.nombre}
-                    </span>
-                    <span className="text-[10px] font-bold" style={{ color }}>
-                      {avg}%
-                    </span>
-                  </button>
-                )
-              })}
+      {/* Grupos por color */}
+      <div className="space-y-4">
+        {grupos.map((grupo) => (
+          <div
+            key={grupo.label}
+            className="rounded-2xl p-4"
+            style={{ backgroundColor: grupo.bgLight, border: `2px solid ${grupo.color}30` }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: grupo.color }}
+              />
+              <h3 className="text-sm font-bold" style={{ color: grupo.color }}>
+                {grupo.label}
+              </h3>
+              <span className="text-xs text-gray-500">
+                ({grupo.alumnos.length} alumno{grupo.alumnos.length !== 1 ? "s" : ""})
+              </span>
             </div>
+
+            {grupo.alumnos.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Sin alumnos en este nivel</p>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                {grupo.alumnos.map((student) => {
+                  const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
+                  const avg = getAverage(p)
+
+                  return (
+                    <button
+                      key={student.id}
+                      onClick={() => onStudentClick(student.id)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border-2 transition-all hover:scale-105"
+                      style={{ borderColor: grupo.color }}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: grupo.color }}
+                      >
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700 truncate w-full text-center">
+                        {student.nombre}
+                      </span>
+                      <span className="text-[10px] font-bold" style={{ color: grupo.color }}>
+                        {avg}%
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>
