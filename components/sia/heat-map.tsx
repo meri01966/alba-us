@@ -109,7 +109,6 @@ export function HeatMap() {
     revalidateOnFocus: false,
   })
 
-  const [ejeDia, setEjeDia]           = useState<FieldKey>("rl")
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId]       = useState<string | null>(null)
 
@@ -125,7 +124,7 @@ export function HeatMap() {
   }))
 
   async function handleEval(student: Student, status: StatusLevel) {
-    const cellKey = `${student.id}-${ejeDia}`
+    const cellKey = `${student.id}-rl`
     setSavingId(student.id)
     setLocalStatus((prev) => ({ ...prev, [cellKey]: status }))
 
@@ -133,7 +132,7 @@ export function HeatMap() {
       await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId: student.id, field: ejeDia.toUpperCase(), status }),
+        body: JSON.stringify({ studentId: student.id, field: "RL", status }),
       })
     } catch {
       // mantiene estado local
@@ -141,8 +140,6 @@ export function HeatMap() {
       setSavingId(null)
     }
   }
-
-  const ejeInfo = FIELDS.find((f) => f.key === ejeDia)!
 
   return (
     <Card className="shadow-md h-full flex flex-col">
@@ -164,39 +161,21 @@ export function HeatMap() {
           )}
         </div>
 
-        {/* Selector eje del dia */}
+        {/* Indicador eje del dia */}
         <div
-          className="rounded-xl p-2.5"
+          className="rounded-xl p-2.5 flex items-center gap-1.5"
           style={{ backgroundColor: "#1e3a5f08", border: "1.5px solid #1e3a5f22" }}
         >
-          <div className="flex items-center gap-1.5 mb-2">
-            <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "#1e3a5f" }} />
-            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#1e3a5f" }}>
-              Evaluando hoy:
-            </span>
-            <span
-              className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
-            >
-              {ejeInfo.label}
-            </span>
-          </div>
-          <div className="flex gap-1.5">
-            {FIELDS.map(({ key, short, label }) => (
-              <button
-                key={key}
-                onClick={() => setEjeDia(key)}
-                title={label}
-                className="flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all hover:scale-105"
-                style={ejeDia === key
-                  ? { backgroundColor: "#1e3a5f", color: "#fff", borderColor: "#1e3a5f" }
-                  : { backgroundColor: "#fff",    color: "#6b7280", borderColor: "#d1d5db" }
-                }
-              >
-                {short}
-              </button>
-            ))}
-          </div>
+          <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "#1e3a5f" }} />
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#1e3a5f" }}>
+            Evaluando hoy:
+          </span>
+          <span
+            className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
+          >
+            Reconocimiento de Letras
+          </span>
         </div>
 
         {/* Leyenda de botones */}
@@ -224,7 +203,7 @@ export function HeatMap() {
         ) : (
           <ul className="space-y-2">
             {students.map((student) => {
-              const currentStatus = (localStatus[`${student.id}-eval`] as StatusLevel) ?? null
+              const currentStatus = (localStatus[`${student.id}-rl`] as StatusLevel) ?? null
               return (
                 <StudentRow
                   key={student.id}
