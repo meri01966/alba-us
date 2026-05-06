@@ -63,14 +63,12 @@ const EVAL_OPTIONS: {
 // ── Fila de alumno: nombre + 3 botones ───────────────────────────────────────
 function StudentRow({
   student,
-  ejeDia,
   currentStatus,
   saving,
   onEval,
 }: {
   student: Student
-  ejeDia: FieldKey
-  currentStatus: StatusLevel
+  currentStatus: StatusLevel | null
   saving: boolean
   onEval: (status: StatusLevel) => void
 }) {
@@ -225,16 +223,18 @@ export function HeatMap() {
           <p className="text-sm text-muted-foreground text-center py-10">Sin registros disponibles</p>
         ) : (
           <ul className="space-y-2">
-            {students.map((student) => (
-              <StudentRow
-                key={student.id}
-                student={student}
-                ejeDia={ejeDia}
-                currentStatus={student[ejeDia]}
-                saving={savingId === student.id}
-                onEval={(status) => handleEval(student, status)}
-              />
-            ))}
+            {students.map((student) => {
+              const currentStatus = (localStatus[`${student.id}-eval`] as StatusLevel) ?? null
+              return (
+                <StudentRow
+                  key={student.id}
+                  student={student}
+                  currentStatus={currentStatus}
+                  saving={savingId === student.id}
+                  onEval={(status) => handleEval(student, status)}
+                />
+              )
+            })}
           </ul>
         )}
       </CardContent>
