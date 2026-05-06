@@ -79,6 +79,24 @@ const EVAL_OPTIONS: {
   },
 ]
 
+// ── Mini torta SVG (3 sectores iguales, coloreados por estado) ───────────────
+function MiniPie({ cf, rl, o }: { cf: StatusLevel; rl: StatusLevel; o: StatusLevel }) {
+  // 3 sectores de 120° cada uno. Coordenadas pre-calculadas para un círculo r=10 c=12,12
+  const sectors = [
+    { color: BAR_COLOR[cf],  d: "M12,12 L12,2 A10,10 0 0,1 20.66,7 Z" },   // 0°-120° CF
+    { color: BAR_COLOR[rl],  d: "M12,12 L20.66,7 A10,10 0 0,1 3.34,7 Z" }, // 120°-240° RL
+    { color: BAR_COLOR[o],   d: "M12,12 L3.34,7 A10,10 0 0,1 12,2 Z" },    // 240°-360° O
+  ]
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" className="shrink-0" aria-label="Estado CF/RL/O">
+      {sectors.map((s, i) => (
+        <path key={i} d={s.d} fill={s.color} stroke="#fff" strokeWidth="0.8" />
+      ))}
+      <circle cx="12" cy="12" r="4" fill="#fff" />
+    </svg>
+  )
+}
+
 // ── Barra normal (CF / RL) ───────────────────────────────────────────────────
 function StandardBar({ status, highlight }: { status: StatusLevel; highlight: boolean }) {
   const pct = BAR_PERCENT[status]
@@ -275,12 +293,13 @@ function StudentRow({
     <li className="border border-border rounded-xl overflow-hidden">
       <div className="flex items-center gap-3 px-3 py-2.5">
 
-        {/* Nombre */}
+        {/* Mini torta + Nombre */}
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1.5 flex-1 min-w-0 text-left group"
+          className="flex items-center gap-2 flex-1 min-w-0 text-left group"
           aria-expanded={expanded}
         >
+          <MiniPie cf={student.cf} rl={student.rl} o={student.o} />
           <span className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
             {student.name}
           </span>

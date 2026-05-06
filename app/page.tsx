@@ -15,13 +15,13 @@ export default function ALBADashboard() {
 
           {/* ── Row 1: Heat Map (protagonist) + Day Planning ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Heat Map — wider column on the left */}
-            <div className="lg:col-span-5">
+            {/* Heat Map — narrower column on the left */}
+            <div className="lg:col-span-4">
               <HeatMap />
             </div>
 
             {/* Day Planning — right side */}
-            <div className="lg:col-span-7">
+            <div className="lg:col-span-8">
               <DayPlanning />
             </div>
           </div>
