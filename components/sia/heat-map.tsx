@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import useSWR, { mutate } from "swr"
+import { useState, useEffect, useRef } from "react"
+import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -36,9 +36,9 @@ const STATUS_LABELS: Record<StatusLevel, string> = {
 }
 
 const STATUS_OPTIONS: { value: StatusLevel; label: string; color: string }[] = [
-  { value: "green",  label: "Logrado",               color: "bg-status-green"  },
-  { value: "yellow", label: "En proceso",             color: "bg-status-yellow" },
-  { value: "red",    label: "Requiere intervención",  color: "bg-status-red"    },
+  { value: "green",  label: "Logrado",              color: "bg-status-green"  },
+  { value: "yellow", label: "En proceso",            color: "bg-status-yellow" },
+  { value: "red",    label: "Requiere intervención", color: "bg-status-red"    },
 ]
 
 const FIELD_MAP: Record<FieldKey, string> = { cf: "CF", rl: "RL", o: "O" }
@@ -51,11 +51,13 @@ interface ActiveCell {
 function StatusDot({
   status,
   saving,
+  isOpen,
   onClick,
 }: {
   status: StatusLevel
   saving: boolean
-  onClick: () => void
+  isOpen: boolean
+  onClick: (e: React.MouseEvent) => void
 }) {
   return (
     <button
@@ -65,13 +67,14 @@ function StatusDot({
       aria-label={`Estado: ${STATUS_LABELS[status]}. Clic para cambiar.`}
       className={`
         inline-flex items-center justify-center
-        w-7 h-7 rounded-full
+        w-7 h-7 rounded-full shrink-0
         ${STATUS_COLORS[status]}
         shadow-sm transition-all duration-150
         hover:scale-110 hover:ring-2 hover:ring-offset-2 hover:ring-primary/40
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
         disabled:opacity-50 disabled:cursor-not-allowed
         cursor-pointer
+        ${isOpen ? "ring-2 ring-offset-2 ring-primary/60 scale-110" : ""}
       `}
     >
       {saving && (
@@ -84,38 +87,31 @@ function StatusDot({
 function StatusPopover({
   current,
   onSelect,
-  onClose,
 }: {
   current: StatusLevel
   onSelect: (s: StatusLevel) => void
-  onClose: () => void
 }) {
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-10"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      {/* Popover */}
-      <div className="absolute z-20 top-full mt-1.5 left-1/2 -translate-x-1/2 bg-card border border-border rounded-xl shadow-lg p-2 flex flex-col gap-1 min-w-[11rem]">
-        {STATUS_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onSelect(opt.value)}
-            className={`
-              flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left
-              transition-colors hover:bg-muted
-              ${current === opt.value ? "bg-muted font-semibold" : "font-normal"}
-            `}
-          >
-            <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${opt.color}`} />
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </>
+    <div className="absolute z-30 top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-xl shadow-xl p-1.5 flex flex-col gap-0.5 min-w-[12rem]">
+      {STATUS_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onMouseDown={(e) => {
+            // Use onMouseDown so it fires before the blur that closes the popover
+            e.preventDefault()
+            onSelect(opt.value)
+          }}
+          className={`
+            flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left w-full
+            transition-colors hover:bg-muted
+            ${current === opt.value ? "bg-muted font-semibold" : "font-normal"}
+          `}
+        >
+          <span className={`w-3.5 h-3.5 rounded-full shrink-0 ${opt.color}`} />
+          {opt.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -124,34 +120,45 @@ export function HeatMap() {
     revalidateOnFocus: false,
   })
 
+  // Local override map: { "studentId-field": StatusLevel }
+  const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [activeCell, setActiveCell]   = useState<ActiveCell | null>(null)
-  const [savingCell, setSavingCell]   = useState<string | null>(null) // "id-field"
+  const [savingCell, setSavingCell]   = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const students = data?.students ?? []
-  const source   = data?.source ?? null
+  // Close popover when clicking outside the table
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setActiveCell(null)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  const rawStudents = data?.students ?? []
+  const source      = data?.source ?? null
+
+  // Merge server data with local overrides so dots update instantly
+  const students: Student[] = rawStudents.map((s) => ({
+    ...s,
+    cf: (localStatus[`${s.id}-cf`] as StatusLevel) ?? s.cf,
+    rl: (localStatus[`${s.id}-rl`] as StatusLevel) ?? s.rl,
+    o:  (localStatus[`${s.id}-o`]  as StatusLevel) ?? s.o,
+  }))
 
   async function handleStatusChange(student: Student, field: FieldKey, newStatus: StatusLevel) {
-    setActiveCell(null)
     const cellKey = `${student.id}-${field}`
+
+    // 1. Update local state immediately — dot changes color right away
+    setLocalStatus((prev) => ({ ...prev, [cellKey]: newStatus }))
+    setActiveCell(null)
     setSavingCell(cellKey)
 
-    // Optimistic update — paint the dot immediately
-    mutate(
-      "/api/students",
-      (current: StudentsResponse | undefined) => {
-        if (!current) return current
-        return {
-          ...current,
-          students: current.students.map((s) =>
-            s.id === student.id ? { ...s, [field]: newStatus } : s
-          ),
-        }
-      },
-      { revalidate: false }
-    )
-
+    // 2. Persist to Airtable in background
     try {
-      const res = await fetch("/api/registrar-actividad", {
+      await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,15 +167,9 @@ export function HeatMap() {
           status: newStatus,
         }),
       })
-
-      if (!res.ok) throw new Error("Error al guardar")
-
-      // Revalidate after save to sync real server state
-      mutate("/api/students")
     } catch (err) {
-      console.error("[v0] Error guardando estado:", err)
-      // Revert to real data on error
-      mutate("/api/students")
+      console.error("[v0] Error guardando en Airtable:", err)
+      // Keep the local change — don't revert so the UI stays consistent
     } finally {
       setSavingCell(null)
     }
@@ -207,7 +208,7 @@ export function HeatMap() {
           </p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={containerRef}>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -239,20 +240,20 @@ export function HeatMap() {
                         {student.name}
                       </td>
                       {(["cf", "rl", "o"] as FieldKey[]).map((field) => {
-                        const cellKey   = `${student.id}-${field}`
-                        const isOpen    = activeCell?.studentId === student.id && activeCell?.field === field
-                        const isSaving  = savingCell === cellKey
+                        const cellKey  = `${student.id}-${field}`
+                        const isOpen   = activeCell?.studentId === student.id && activeCell?.field === field
+                        const isSaving = savingCell === cellKey
                         return (
                           <td key={field} className="py-2.5 px-3 text-center">
                             <div className="relative flex justify-center">
                               <StatusDot
                                 status={student[field]}
                                 saving={isSaving}
-                                onClick={() =>
-                                  setActiveCell(
-                                    isOpen ? null : { studentId: student.id, field }
-                                  )
-                                }
+                                isOpen={isOpen}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setActiveCell(isOpen ? null : { studentId: student.id, field })
+                                }}
                               />
                               {isOpen && (
                                 <StatusPopover
@@ -260,7 +261,6 @@ export function HeatMap() {
                                   onSelect={(newStatus) =>
                                     handleStatusChange(student, field, newStatus)
                                   }
-                                  onClose={() => setActiveCell(null)}
                                 />
                               )}
                             </div>
