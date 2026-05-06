@@ -25,69 +25,69 @@ export function QuickRegister() {
   ] as const
 
   return (
-    <Card className="shadow-md h-full flex flex-col">
+    <Card className="shadow-md">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-primary">
           Registro de cierre
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 flex flex-col gap-4 flex-1">
-        {/* Activity selector */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-muted-foreground">
-            Actividad realizada
-          </label>
-          <Select value={activity} onValueChange={setActivity}>
-            <SelectTrigger className="h-11">
-              <SelectValue placeholder="Seleccionar actividad" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sound-p">Sonido /p/ - Identificación</SelectItem>
-              <SelectItem value="syllables">Segmentación silábica</SelectItem>
-              <SelectItem value="letter-recognition">Reconocimiento de letras</SelectItem>
-              <SelectItem value="oral-expression">Expresión oral</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <CardContent className="pt-0 space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Activity selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Actividad realizada
+            </label>
+            <Select value={activity} onValueChange={setActivity}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Seleccionar actividad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sound-p">Sonido /p/ - Identificación</SelectItem>
+                <SelectItem value="syllables">Segmentación silábica</SelectItem>
+                <SelectItem value="letter-recognition">Reconocimiento de letras</SelectItem>
+                <SelectItem value="oral-expression">Expresión oral</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Feedback buttons */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-muted-foreground">
-            ¿Cómo funcionó?
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {feedbackOptions.map((option) => {
-              const Icon = option.icon
-              const isSelected = feedback === option.value
-              return (
-                <Button
-                  key={option.value}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  className={`flex-1 min-w-[7rem] h-11 text-xs gap-1.5 ${
-                    isSelected ? option.color : ""
-                  }`}
-                  onClick={() => setFeedback(option.value)}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{option.label}</span>
-                </Button>
-              )
-            })}
+          {/* Feedback buttons */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              ¿Cómo funcionó?
+            </label>
+            <div className="flex gap-2">
+              {feedbackOptions.map((option) => {
+                const Icon = option.icon
+                const isSelected = feedback === option.value
+                return (
+                  <Button
+                    key={option.value}
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    className={`flex-1 h-11 text-xs ${
+                      isSelected ? option.color : ""
+                    }`}
+                    onClick={() => setFeedback(option.value)}
+                  >
+                    <Icon className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">{option.label}</span>
+                  </Button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Save button — pinned to bottom */}
-        <div className="mt-auto pt-1">
-          <Button
-            className="w-full h-12 text-base font-medium"
-            size="lg"
-            disabled={!activity || !feedback}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            Guardar registro
-          </Button>
-        </div>
+        {/* Save button */}
+        <Button 
+          className="w-full h-12 text-base font-medium" 
+          size="lg"
+          disabled={!activity || !feedback}
+        >
+          <Save className="w-5 h-5 mr-2" />
+          Guardar registro
+        </Button>
       </CardContent>
     </Card>
   )
