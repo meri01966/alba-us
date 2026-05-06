@@ -104,7 +104,7 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
             <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>
               {alumno.nombre} {alumno.apellido}
             </h2>
-            <p className="text-sm text-gray-500">Mesa: {alumno.mesa || "General"}</p>
+            <p className="text-sm text-gray-500">Sala Manzanos</p>
           </div>
         </div>
         <div className="text-right">
