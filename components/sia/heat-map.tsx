@@ -4,7 +4,7 @@ import { useState } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronUp, BookOpen } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red"
 type FieldKey    = "cf" | "rl" | "o"
@@ -26,11 +26,30 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 const FIELDS: { key: FieldKey; label: string; short: string }[] = [
   { key: "cf", label: "Conciencia Fonológica", short: "CF" },
-  { key: "o",  label: "Oralidad",              short: "O"  },
   { key: "rl", label: "Reconocimiento Letras", short: "RL" },
+  { key: "o",  label: "Oralidad",              short: "O"  },
 ]
 
-const STATUS_OPTIONS: {
+const BAR_COLOR: Record<StatusLevel, string> = {
+  green:  "#10b981",
+  yellow: "#fbbf24",
+  red:    "#ef4444",
+}
+
+const STATUS_LABEL: Record<StatusLevel, string> = {
+  green:  "Logrado",
+  yellow: "En proceso",
+  red:    "Necesita refuerzo",
+}
+
+// Cuanto ocupa la barra segun el estado (para CF y RL)
+const BAR_PERCENT: Record<StatusLevel, number> = {
+  green:  82,
+  yellow: 50,
+  red:    20,
+}
+
+const EVAL_OPTIONS: {
   value: StatusLevel
   label: string
   icon: React.ElementType
@@ -60,44 +79,85 @@ const STATUS_OPTIONS: {
   },
 ]
 
-const BAR_WIDTH: Record<StatusLevel, string> = {
-  green:  "100%",
-  yellow: "60%",
-  red:    "25%",
+// ── Barra normal (CF / RL) ───────────────────────────────────────────────────
+function StandardBar({ status, highlight }: { status: StatusLevel; highlight: boolean }) {
+  const pct = BAR_PERCENT[status]
+  return (
+    <div
+      className="h-2.5 w-full rounded-full overflow-hidden"
+      style={{ backgroundColor: "#e5e7eb" }}
+    >
+      <div
+        className="h-full rounded-full transition-all duration-500"
+        style={{
+          width: `${pct}%`,
+          backgroundColor: BAR_COLOR[status],
+          boxShadow: highlight ? `0 0 6px ${BAR_COLOR[status]}99` : "none",
+        }}
+      />
+    </div>
+  )
 }
 
-const BAR_COLOR: Record<StatusLevel, string> = {
-  green:  "#10b981",
-  yellow: "#fbbf24",
-  red:    "#ef4444",
-}
+// ── Barra segmentada de Oralidad ─────────────────────────────────────────────
+// Tres segmentos (rojo / amarillo / verde) que crecen progresivamente.
+// Nunca llega al 100% porque la oralidad es un proceso constante.
+function OralidadBar({ status }: { status: StatusLevel }) {
+  // Proporciones fijas de cada segmento sobre el total visible (max 88%)
+  const segments: { color: string; maxPct: number }[] = [
+    { color: "#ef4444", maxPct: 28 }, // rojo  — base siempre presente
+    { color: "#fbbf24", maxPct: 32 }, // amarillo — proceso
+    { color: "#10b981", maxPct: 28 }, // verde  — logro parcial
+  ]
 
-const STATUS_LABEL: Record<StatusLevel, string> = {
-  green:  "Logrado",
-  yellow: "En proceso",
-  red:    "Necesita refuerzo",
-}
+  // Cuantos segmentos se muestran llenos segun el estado del alumno
+  const filledSegments =
+    status === "red"    ? 1 :
+    status === "yellow" ? 2 : 3
 
-function getReadiness(student: Student): "advance" | "reinforce" {
-  const reds = [student.cf, student.rl, student.o].filter((s) => s === "red").length
-  return reds >= 2 ? "reinforce" : "advance"
+  return (
+    <div className="flex gap-0.5 h-2.5 w-full">
+      {segments.map((seg, i) => {
+        const isFilled = i < filledSegments
+        return (
+          <div
+            key={i}
+            className="rounded-full transition-all duration-500 overflow-hidden"
+            style={{
+              flex: seg.maxPct,
+              backgroundColor: "#e5e7eb",
+            }}
+          >
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: isFilled ? "100%" : "0%",
+                backgroundColor: seg.color,
+              }}
+            />
+          </div>
+        )
+      })}
+      {/* Gap visual al final para enfatizar que nunca llega al 100% */}
+      <div style={{ flex: 12, backgroundColor: "transparent" }} />
+    </div>
+  )
 }
 
 // ── Panel de detalle individual ──────────────────────────────────────────────
 function StudentDetailPanel({
   student,
-  activeField,
-  onSelectField,
+  ejeDia,
   onEval,
   savingField,
 }: {
   student: Student
-  activeField: FieldKey | null
-  onSelectField: (f: FieldKey) => void
+  ejeDia: FieldKey
   onEval: (field: FieldKey, status: StatusLevel) => void
   savingField: FieldKey | null
 }) {
-  const readiness = getReadiness(student)
+  const readiness = [student.cf, student.rl, student.o].filter((s) => s === "red").length >= 2
+    ? "reinforce" : "advance"
 
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-4">
@@ -105,33 +165,34 @@ function StudentDetailPanel({
       {/* Barras por area */}
       <div className="space-y-3">
         {FIELDS.map(({ key, label, short }) => {
-          const status  = student[key]
-          const isActive = activeField === key
+          const status     = student[key]
+          const isEjeActivo = key === ejeDia
+
           return (
             <div key={key}>
-              {/* Fila: label + badge + boton selector */}
               <div className="flex items-center justify-between mb-1">
-                <button
-                  onClick={() => onSelectField(key)}
-                  className="flex items-center gap-1.5 text-xs font-semibold group"
-                  style={{ color: isActive ? "#1e3a5f" : "#6b7280" }}
-                >
+                <div className="flex items-center gap-1.5">
                   <span
                     className="px-1.5 py-0.5 rounded font-bold text-[10px]"
                     style={{
-                      backgroundColor: isActive ? "#1e3a5f" : "#e5e7eb",
-                      color: isActive ? "#fff" : "#6b7280",
+                      backgroundColor: isEjeActivo ? "#1e3a5f" : "#e5e7eb",
+                      color:           isEjeActivo ? "#fff"    : "#6b7280",
                     }}
                   >
                     {short}
                   </span>
-                  {label}
-                  {isActive && (
-                    <span className="text-[10px] font-normal ml-1" style={{ color: "#10b981" }}>
-                      evaluando ahora
+                  <span className="text-xs font-medium" style={{ color: isEjeActivo ? "#1e3a5f" : "#6b7280" }}>
+                    {label}
+                  </span>
+                  {isEjeActivo && (
+                    <span
+                      className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: "#1e3a5f22", color: "#1e3a5f" }}
+                    >
+                      eje del dia
                     </span>
                   )}
-                </button>
+                </div>
                 <span
                   className="text-[11px] font-medium px-2 py-0.5 rounded-full"
                   style={{
@@ -143,26 +204,17 @@ function StudentDetailPanel({
                 </span>
               </div>
 
-              {/* Barra de progreso */}
-              <div
-                className="h-2.5 w-full rounded-full overflow-hidden"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: BAR_WIDTH[status],
-                    backgroundColor: BAR_COLOR[status],
-                    boxShadow: isActive ? `0 0 6px ${BAR_COLOR[status]}88` : "none",
-                  }}
-                />
-              </div>
+              {/* Barra */}
+              {key === "o"
+                ? <OralidadBar status={status} />
+                : <StandardBar status={status} highlight={isEjeActivo} />
+              }
 
-              {/* Botones de evaluacion — solo visibles cuando este area esta activa */}
-              {isActive && (
-                <div className="flex items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-gray-400 mr-1">Marcar:</span>
-                  {STATUS_OPTIONS.map((opt) => {
+              {/* Botones de evaluacion — solo en el eje del dia */}
+              {isEjeActivo && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-gray-400">Marcar:</span>
+                  {EVAL_OPTIONS.map((opt) => {
                     const Icon     = opt.icon
                     const isChosen = student[key] === opt.value
                     return (
@@ -171,7 +223,6 @@ function StudentDetailPanel({
                         onClick={() => onEval(key, opt.value)}
                         disabled={savingField === key}
                         title={opt.label}
-                        aria-label={opt.label}
                         style={isChosen ? opt.activeStyle : opt.inactiveStyle}
                         className="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-medium transition-all disabled:opacity-50"
                       >
@@ -188,7 +239,7 @@ function StudentDetailPanel({
         })}
       </div>
 
-      {/* Leyenda global del alumno */}
+      {/* Leyenda global */}
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
         style={{
@@ -208,34 +259,25 @@ function StudentDetailPanel({
 // ── Fila de alumno ───────────────────────────────────────────────────────────
 function StudentRow({
   student,
+  ejeDia,
   saving,
-  activityCount,
   onEval,
 }: {
   student: Student
+  ejeDia: FieldKey
   saving: FieldKey | null
-  activityCount: Record<FieldKey, number>
   onEval: (field: FieldKey, status: StatusLevel) => void
 }) {
-  const [expanded, setExpanded]       = useState(false)
-  const [activeField, setActiveField] = useState<FieldKey | null>(null)
-
-  function handleSelectField(f: FieldKey) {
-    if (!expanded) setExpanded(true)
-    setActiveField((prev) => (prev === f ? null : f))
-  }
+  const [expanded, setExpanded] = useState(false)
+  const ejeStatus = student[ejeDia]
 
   return (
     <li className="border border-border rounded-xl overflow-hidden">
-      {/* Cabecera de fila */}
       <div className="flex items-center gap-3 px-3 py-2.5">
 
-        {/* Nombre — toca para expandir detalle */}
+        {/* Nombre */}
         <button
-          onClick={() => {
-            setExpanded((v) => !v)
-            if (!expanded) setActiveField(null)
-          }}
+          onClick={() => setExpanded((v) => !v)}
           className="flex items-center gap-1.5 flex-1 min-w-0 text-left group"
           aria-expanded={expanded}
         >
@@ -247,35 +289,25 @@ function StudentRow({
             : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
         </button>
 
-        {/* Chips de area — tocar selecciona el area activa y expande */}
+        {/* Tres botones de evaluacion — impactan SOLO el eje del dia */}
         <div className="flex items-center gap-1 shrink-0">
-          {FIELDS.map(({ key, short }) => {
-            const status    = student[key]
-            const isActive  = activeField === key && expanded
+          {EVAL_OPTIONS.map((opt) => {
+            const Icon     = opt.icon
+            const isChosen = ejeStatus === opt.value
             return (
               <button
-                key={key}
-                onClick={() => handleSelectField(key)}
-                title={`Evaluar ${short}`}
-                style={{
-                  backgroundColor: isActive
-                    ? BAR_COLOR[status]
-                    : status === "green"  ? "#d1fae5"
-                    : status === "yellow" ? "#fef3c7"
-                    : "#fee2e2",
-                  color: isActive
-                    ? "#fff"
-                    : status === "green"  ? "#065f46"
-                    : status === "yellow" ? "#92400e"
-                    : "#991b1b",
-                  borderColor: BAR_COLOR[status],
-                }}
-                className="flex items-center justify-center w-7 h-7 rounded-lg border text-[11px] font-bold transition-all hover:scale-105"
+                key={opt.value}
+                onClick={() => onEval(ejeDia, opt.value)}
+                disabled={saving === ejeDia}
+                title={opt.label}
+                style={isChosen ? opt.activeStyle : opt.inactiveStyle}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border transition-all hover:scale-105 disabled:opacity-50"
               >
-                {short}
+                <Icon className="w-4 h-4" />
               </button>
             )
           })}
+          {saving === ejeDia && <Spinner className="w-3.5 h-3.5 text-primary" />}
         </div>
       </div>
 
@@ -284,9 +316,7 @@ function StudentRow({
         <div className="px-3 pb-3">
           <StudentDetailPanel
             student={student}
-            activeField={activeField}
-            onSelectField={setActiveField}
-            activityCount={activityCount}
+            ejeDia={ejeDia}
             onEval={onEval}
             savingField={saving}
           />
@@ -302,8 +332,10 @@ export function HeatMap() {
     revalidateOnFocus: false,
   })
 
+  // Eje del dia: el docente selecciona cual area se evalua hoy
+  const [ejeDia, setEjeDia]           = useState<FieldKey>("rl")
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
-  const [savingCell, setSavingCell]   = useState<string | null>(null) // "studentId-field"
+  const [savingCell, setSavingCell]   = useState<string | null>(null)
 
   const rawStudents = data?.students ?? []
   const source      = data?.source ?? null
@@ -318,31 +350,27 @@ export function HeatMap() {
   async function handleEval(student: Student, field: FieldKey, status: StatusLevel) {
     const cellKey = `${student.id}-${field}`
     setSavingCell(cellKey)
-
-    // Actualiza solo el campo evaluado
     setLocalStatus((prev) => ({ ...prev, [cellKey]: status }))
 
     try {
       await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: student.id,
-          field: field.toUpperCase(),
-          status,
-        }),
+        body: JSON.stringify({ studentId: student.id, field: field.toUpperCase(), status }),
       })
     } catch {
-      // Mantiene el estado local aunque falle Airtable
+      // Estado local se mantiene aunque falle Airtable
     } finally {
       setSavingCell(null)
     }
   }
 
+  const ejeInfo = FIELDS.find((f) => f.key === ejeDia)!
+
   return (
     <Card className="shadow-md h-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-base font-semibold text-primary">
             Registro del aula
           </CardTitle>
@@ -358,9 +386,38 @@ export function HeatMap() {
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          Toca el nombre para ver el detalle. Toca <strong>CF</strong>, <strong>O</strong> o <strong>RL</strong> para evaluar esa area.
-        </p>
+
+        {/* Selector del Eje del Dia */}
+        <div className="mt-2 p-2.5 rounded-xl border-2 flex flex-col gap-2" style={{ borderColor: "#1e3a5f33", backgroundColor: "#1e3a5f08" }}>
+          <div className="flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "#1e3a5f" }} />
+            <span className="text-xs font-semibold" style={{ color: "#1e3a5f" }}>
+              Eje del dia:
+            </span>
+            <span
+              className="text-xs font-bold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
+            >
+              {ejeInfo.label}
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {FIELDS.map(({ key, short, label }) => (
+              <button
+                key={key}
+                onClick={() => setEjeDia(key)}
+                title={label}
+                className="flex-1 py-1 rounded-lg border text-xs font-bold transition-all hover:scale-105"
+                style={ejeDia === key
+                  ? { backgroundColor: "#1e3a5f", color: "#fff", borderColor: "#1e3a5f" }
+                  : { backgroundColor: "#fff", color: "#6b7280", borderColor: "#d1d5db" }
+                }
+              >
+                {short}
+              </button>
+            ))}
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent className="pt-0">
@@ -379,6 +436,7 @@ export function HeatMap() {
               <StudentRow
                 key={student.id}
                 student={student}
+                ejeDia={ejeDia}
                 saving={savingCell?.startsWith(student.id) ? savingCell.replace(`${student.id}-`, "") as FieldKey : null}
                 onEval={(field, status) => handleEval(student, field, status)}
               />
