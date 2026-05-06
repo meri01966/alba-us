@@ -162,11 +162,11 @@ function StudentDetailPanel({
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-4">
 
-      {/* Barras por area */}
+      {/* Barras por area — solo muestra el eje del dia */}
       <div className="space-y-3">
-        {FIELDS.map(({ key, label, short }) => {
+        {FIELDS.filter(({ key }) => key === ejeDia).map(({ key, label, short }) => {
           const status     = student[key]
-          const isEjeActivo = key === ejeDia
+          const isEjeActivo = true
 
           return (
             <div key={key}>
