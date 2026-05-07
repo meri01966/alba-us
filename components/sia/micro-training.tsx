@@ -84,7 +84,7 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
     setConsejoIndex((prev) => (prev + 1) % consejos.length)
   }
 
-  // Reproducir audio con voz femenina animada tipo maestra de jardin con punch
+  // Reproducir audio - voz natural sin distorsiones tipo Alexa
   const handlePlayAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel()
@@ -92,34 +92,31 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
       setIsTalking(false)
     } else {
       const utterance = new SpeechSynthesisUtterance(consejoActual)
-      utterance.lang = "es-AR"
-      utterance.rate = 1.05  // Un poquito mas rapido para energia y punch
-      utterance.pitch = 1.5  // Bien agudo, femenino y dulce
-      utterance.volume = 1   // Volumen al maximo
       
-      // Buscar la mejor voz femenina disponible
+      // Sin distorsion - dejar que la voz natural suene bien
+      utterance.rate = 1.0
+      utterance.pitch = 1.0
+      utterance.volume = 1
+      
+      // Buscar voces de alta calidad (Google y Microsoft suenan tipo Alexa)
       const voices = window.speechSynthesis.getVoices()
       
-      // Prioridad: voces femeninas de Google/Microsoft en espanol que suenan mas naturales
-      const vozFemenina = voices.find(v => 
-        v.lang.includes("es") && v.name.toLowerCase().includes("google")
-      ) || voices.find(v => 
-        v.lang.includes("es") && 
-        (v.name.toLowerCase().includes("paulina") ||
-         v.name.toLowerCase().includes("monica") ||
-         v.name.toLowerCase().includes("sabina") ||
-         v.name.toLowerCase().includes("lucia") ||
-         v.name.toLowerCase().includes("elena") ||
-         v.name.toLowerCase().includes("female") ||
-         v.name.toLowerCase().includes("mujer"))
-      ) || voices.find(v => 
-        v.lang.includes("es") && v.name.toLowerCase().includes("microsoft")
-      ) || voices.find(v => v.lang.includes("es-AR")) 
-        || voices.find(v => v.lang.includes("es-MX"))
-        || voices.find(v => v.lang.includes("es"))
+      // Orden de preferencia para voces naturales en espanol
+      const vozNatural = 
+        voices.find(v => v.name.includes("Google español")) ||
+        voices.find(v => v.name.includes("Google Spanish")) ||
+        voices.find(v => v.name === "Paulina") ||  // macOS/iOS - muy natural
+        voices.find(v => v.name === "Monica") ||
+        voices.find(v => v.name.includes("Microsoft") && v.lang.includes("es")) ||
+        voices.find(v => v.lang === "es-MX") ||    // Mexicano suena suave
+        voices.find(v => v.lang === "es-AR") ||
+        voices.find(v => v.lang.startsWith("es"))
       
-      if (vozFemenina) {
-        utterance.voice = vozFemenina
+      if (vozNatural) {
+        utterance.voice = vozNatural
+        utterance.lang = vozNatural.lang
+      } else {
+        utterance.lang = "es-MX"
       }
       
       utterance.onstart = () => setIsTalking(true)
