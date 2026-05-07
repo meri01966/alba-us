@@ -178,26 +178,28 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
             )}
           </div>
 
+          {/* Banner de actividad del dia - destacado */}
           <div
-            className="rounded-xl p-2.5 flex items-center gap-1.5"
-            style={{ backgroundColor: "#1e3a5f08", border: "1.5px solid #1e3a5f22" }}
+            className="rounded-xl p-3 flex flex-col gap-2"
+            style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
           >
-            <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: "#1e3a5f" }} />
-            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#1e3a5f" }}>
-              Evaluando hoy:
-            </span>
-            <span
-              className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
-            >
-              {ACTIVIDAD_DEL_DIA}
-            </span>
-            <span
-              className="ml-1 text-[10px] px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: "#10b98120", color: "#10b981" }}
-            >
-              → CF
-            </span>
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 shrink-0 text-amber-300" />
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                Evaluando hoy
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold">
+                {ACTIVIDAD_DEL_DIA}
+              </span>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
+              >
+                Eje: Conciencia Fonologica
+              </span>
+            </div>
           </div>
 
           <div className="flex gap-3 mt-2">
