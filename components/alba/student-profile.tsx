@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft, User } from "lucide-react"
+import { ArrowLeft, User, Lightbulb, Clock } from "lucide-react"
 
 interface StudentProfileProps {
   alumnoId: string
@@ -20,16 +20,42 @@ interface ProgresoEje {
 }
 
 const EJES = [
-  { key: "CF", label: "Conciencia Fonologica", short: "CF" },
-  { key: "CT", label: "Conocimiento de Textos", short: "CT" },
-  { key: "O", label: "Oralidad", short: "O" },
+  { key: "CF", label: "Conciencia Fonologica" },
+  { key: "CT", label: "Conocimiento de Textos" },
+  { key: "O", label: "Oralidad" },
 ]
 
-// Color del semaforo segun porcentaje
-function getSemaforoColor(porcentaje: number): string {
-  if (porcentaje >= 70) return "#10b981" // Verde
-  if (porcentaje >= 40) return "#f59e0b" // Amarillo
-  return "#ef4444" // Rojo
+// Nivel segun porcentaje - sin mostrar el numero
+function getNivel(porcentaje: number): { texto: string; color: string; bg: string } {
+  if (porcentaje >= 70) return { texto: "Avanzado", color: "#10b981", bg: "#ecfdf5" }
+  if (porcentaje >= 40) return { texto: "En Proceso", color: "#f59e0b", bg: "#fffbeb" }
+  return { texto: "Necesita Apoyo", color: "#ef4444", bg: "#fef2f2" }
+}
+
+// Sugerencias cortas por eje y nivel
+const SUGERENCIAS: Record<string, Record<string, string>> = {
+  CF: {
+    "Necesita Apoyo": "Jugar con rimas y canciones. Aplaudir silabas.",
+    "En Proceso": "Identificar sonidos iniciales. Juego del veo-veo.",
+    "Avanzado": "Asociar sonido con letra. Armar palabras cortas.",
+  },
+  CT: {
+    "Necesita Apoyo": "Leer cuentos con imagenes. Preguntar: Quien? Donde?",
+    "En Proceso": "Secuenciar la historia. Que paso primero?",
+    "Avanzado": "Predecir que pasara. Inventar finales.",
+  },
+  O: {
+    "Necesita Apoyo": "Conversar con preguntas abiertas. Usar titeres.",
+    "En Proceso": "Describir objetos. Contar que hizo ayer.",
+    "Avanzado": "Contar una historia propia. Exponer al grupo.",
+  },
+}
+
+// Historial demo
+const HISTORIAL_DEMO: Record<string, string[]> = {
+  CF: ["Silabas con palmas", "Rimas con animales", "Sonido inicial /M/"],
+  CT: ["Cuento del patito", "Secuencia de imagenes"],
+  O: ["Descripcion de familia", "Contar el fin de semana"],
 }
 
 export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps) {
@@ -75,14 +101,10 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
     )
   }
 
-  const avgPercent = Math.round(
-    EJES.reduce((sum, e) => sum + (progreso[e.key]?.porcentaje || 0), 0) / EJES.length
-  )
-
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      {/* Header minimo */}
-      <div className="flex items-center gap-3 mb-8">
+    <div className="p-4 max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200"
@@ -92,60 +114,68 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
         <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1e3a5f" }}>
           <User className="w-6 h-6 text-white" />
         </div>
-        <div className="flex-1">
+        <div>
           <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>
             {alumno.nombre}
           </h2>
-          <p className="text-sm text-gray-500">Promedio {avgPercent}%</p>
+          <p className="text-sm text-gray-500">Sala Manzanos</p>
         </div>
       </div>
 
-      {/* 3 TARJETAS SIMPLES - solo nombre, numero y semaforo */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      {/* 3 TARJETAS - una por eje */}
+      <div className="space-y-4">
         {EJES.map((eje) => {
           const p = progreso[eje.key] || { porcentaje: 0 }
-          const color = getSemaforoColor(p.porcentaje)
+          const nivel = getNivel(p.porcentaje)
+          const sugerencia = SUGERENCIAS[eje.key][nivel.texto]
+          const historial = HISTORIAL_DEMO[eje.key] || []
           
           return (
             <div 
               key={eje.key}
-              className="bg-white rounded-2xl p-4 text-center shadow-sm border border-slate-100"
+              className="rounded-2xl overflow-hidden border"
+              style={{ borderColor: `${nivel.color}40` }}
             >
-              {/* Nombre del eje */}
-              <p className="text-xs text-gray-500 font-medium mb-2">{eje.label}</p>
-              
-              {/* Numero grande con color semaforo */}
+              {/* Encabezado con nombre y semaforo */}
               <div 
-                className="text-4xl font-bold mb-2"
-                style={{ color }}
+                className="flex items-center justify-between px-4 py-3"
+                style={{ backgroundColor: nivel.bg }}
               >
-                {p.porcentaje}%
+                <span className="font-semibold text-gray-700">{eje.label}</span>
+                <span 
+                  className="px-3 py-1 rounded-full text-sm font-bold text-white"
+                  style={{ backgroundColor: nivel.color }}
+                >
+                  {nivel.texto}
+                </span>
               </div>
-              
-              {/* Circulo semaforo */}
-              <div 
-                className="w-4 h-4 rounded-full mx-auto"
-                style={{ backgroundColor: color }}
-              />
+
+              {/* Contenido */}
+              <div className="p-4 bg-white space-y-3">
+                {/* Sugerencia */}
+                <div className="flex items-start gap-2">
+                  <Lightbulb className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                  <p className="text-sm text-gray-600">{sugerencia}</p>
+                </div>
+
+                {/* Historial reciente */}
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
+                  <div className="flex flex-wrap gap-1">
+                    {historial.map((act, i) => (
+                      <span 
+                        key={i}
+                        className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                      >
+                        {act}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )
         })}
-      </div>
-
-      {/* Leyenda simple */}
-      <div className="flex justify-center gap-6 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#10b981" }} />
-          <span>Avanzado</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#f59e0b" }} />
-          <span>En Proceso</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#ef4444" }} />
-          <span>Refuerzo</span>
-        </div>
       </div>
     </div>
   )
