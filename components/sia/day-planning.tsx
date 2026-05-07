@@ -78,7 +78,7 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
           Sin actividad disponible
         </div>
       ) : (
-        <div className="space-y-3 flex-1">
+        <div className="space-y-2">
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
           </div>
@@ -161,7 +161,7 @@ function MyPlanningColumn({
   }
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex flex-col gap-2">
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
@@ -272,7 +272,7 @@ function MyPlanningColumn({
           </p>
         </div>
       ) : (
-        <div className="space-y-3 flex-1">
+        <div className="space-y-2">
           <p className="text-base font-semibold text-foreground leading-snug">{planning.titulo}</p>
           {planning.objetivo && (
             <div>
