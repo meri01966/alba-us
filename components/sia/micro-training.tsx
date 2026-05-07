@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { RefreshCw, Lightbulb } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { RefreshCw, Lightbulb, Volume2, VolumeX } from "lucide-react"
 import Image from "next/image"
 
 // Consejos de ALBA segun el eje - en tono argentino, amigable
@@ -65,8 +65,73 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
   
   const [consejoIndex, setConsejoIndex] = useState(0)
   const [showAprendizajes, setShowAprendizajes] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isTalking, setIsTalking] = useState(false)
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const consejoActual = consejos[consejoIndex]
+
+  // Cargar voces del navegador
+  useEffect(() => {
+    const loadVoices = () => window.speechSynthesis.getVoices()
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+  }, [])
+
+  // Detener audio al cambiar de consejo
+  useEffect(() => {
+    window.speechSynthesis.cancel()
+    setIsPlaying(false)
+    setIsTalking(false)
+  }, [consejoIndex])
+
+  const handlePlayAudio = () => {
+    if (isPlaying) {
+      window.speechSynthesis.cancel()
+      setIsPlaying(false)
+      setIsTalking(false)
+    } else {
+      const utterance = new SpeechSynthesisUtterance(consejoActual)
+      
+      // Voz natural sin distorsiones
+      utterance.rate = 1.0
+      utterance.pitch = 1.0
+      utterance.volume = 1
+      
+      // Buscar voz en espanol de alta calidad
+      const voices = window.speechSynthesis.getVoices()
+      const vozNatural = 
+        voices.find(v => v.name.includes("Google español")) ||
+        voices.find(v => v.name.includes("Google Spanish")) ||
+        voices.find(v => v.name === "Paulina") ||
+        voices.find(v => v.name === "Monica") ||
+        voices.find(v => v.name.includes("Microsoft") && v.lang.includes("es")) ||
+        voices.find(v => v.lang === "es-MX") ||
+        voices.find(v => v.lang === "es-AR") ||
+        voices.find(v => v.lang.startsWith("es"))
+      
+      if (vozNatural) {
+        utterance.voice = vozNatural
+        utterance.lang = vozNatural.lang
+      } else {
+        utterance.lang = "es-MX"
+      }
+      
+      utterance.onstart = () => setIsTalking(true)
+      utterance.onend = () => {
+        setIsPlaying(false)
+        setIsTalking(false)
+      }
+      utterance.onerror = () => {
+        setIsPlaying(false)
+        setIsTalking(false)
+      }
+      
+      speechRef.current = utterance
+      window.speechSynthesis.speak(utterance)
+      setIsPlaying(true)
+    }
+  }
 
   const handleRefresh = () => {
     setConsejoIndex((prev) => (prev + 1) % consejos.length)
@@ -88,10 +153,10 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
           {/* Avatar + Burbuja */}
           <div className="p-4">
             <div className="flex gap-3">
-              {/* Avatar de ALBA */}
+              {/* Avatar de ALBA con animacion */}
               <div className="relative flex-shrink-0">
                 <div 
-                  className="w-16 h-16 rounded-full overflow-hidden"
+                  className={`w-16 h-16 rounded-full overflow-hidden transition-transform ${isTalking ? "animate-pulse scale-105" : ""}`}
                   style={{ borderColor: "#fbbf24", borderWidth: "3px" }}
                 >
                   <Image 
@@ -102,6 +167,21 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
                     className="object-cover w-full h-full"
                   />
                 </div>
+                {/* Boton de audio sobre el avatar */}
+                <button
+                  type="button"
+                  onClick={handlePlayAudio}
+                  className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                    isPlaying ? "bg-red-500" : "bg-amber-500 hover:bg-amber-600"
+                  }`}
+                  title={isPlaying ? "Pausar" : "Escuchar"}
+                >
+                  {isPlaying ? (
+                    <VolumeX className="w-3.5 h-3.5 text-white" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5 text-white" />
+                  )}
+                </button>
               </div>
               
               {/* Burbuja de dialogo */}
