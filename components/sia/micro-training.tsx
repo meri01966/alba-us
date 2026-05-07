@@ -167,21 +167,6 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
                     className="object-cover w-full h-full"
                   />
                 </div>
-                {/* Boton de audio sobre el avatar */}
-                <button
-                  type="button"
-                  onClick={handlePlayAudio}
-                  className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                    isPlaying ? "bg-red-500" : "bg-amber-500 hover:bg-amber-600"
-                  }`}
-                  title={isPlaying ? "Pausar" : "Escuchar"}
-                >
-                  {isPlaying ? (
-                    <VolumeX className="w-3.5 h-3.5 text-white" />
-                  ) : (
-                    <Volume2 className="w-3.5 h-3.5 text-white" />
-                  )}
-                </button>
               </div>
               
               {/* Burbuja de dialogo */}
@@ -204,16 +189,42 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
             </div>
           </div>
           
-          {/* Boton de refrescar */}
+          {/* Botones de audio y refrescar */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50">
-            <button 
-              type="button"
-              onClick={handleRefresh}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-white/30 text-white hover:bg-white/10 transition-all"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Otro tip
-            </button>
+            <div className="flex gap-2">
+              {/* Boton Escuchar */}
+              <button 
+                type="button"
+                onClick={handlePlayAudio}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
+                  isPlaying 
+                    ? "bg-red-500 text-white" 
+                    : "bg-amber-500 text-white hover:bg-amber-600"
+                }`}
+              >
+                {isPlaying ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5" />
+                    Pausar
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5" />
+                    Escuchar
+                  </>
+                )}
+              </button>
+              
+              {/* Boton Otro tip */}
+              <button 
+                type="button"
+                onClick={handleRefresh}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-white/30 text-white hover:bg-white/10 transition-all"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Otro tip
+              </button>
+            </div>
             <span className="text-xs text-white/60">
               {consejoIndex + 1} / {consejos.length}
             </span>
