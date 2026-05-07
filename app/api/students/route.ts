@@ -4,15 +4,33 @@ const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appvmkxMrMWhGbclm"
 const TABLE_ID = "tbllr0ae0dLj1VIfN"
 
+// 25 nombres reales con progreso inicial aleatorio
 const FALLBACK_STUDENTS = [
-  { id: "demo-1", name: "Valentina G.", cf: "green",  rl: "green",  o: "green"  },
-  { id: "demo-2", name: "Tomás R.",     cf: "yellow", rl: "green",  o: "yellow" },
-  { id: "demo-3", name: "Sofía M.",     cf: "red",    rl: "yellow", o: "green"  },
-  { id: "demo-4", name: "Mateo P.",     cf: "green",  rl: "green",  o: "yellow" },
-  { id: "demo-5", name: "Lucía F.",     cf: "yellow", rl: "red",    o: "yellow" },
-  { id: "demo-6", name: "Emilio C.",    cf: "green",  rl: "yellow", o: "green"  },
-  { id: "demo-7", name: "Isabella D.",  cf: "red",    rl: "red",    o: "yellow" },
-  { id: "demo-8", name: "Benjamín A.",  cf: "yellow", rl: "green",  o: "green"  },
+  { id: "demo-1",  name: "Bautista M.",   cf: "green",  rl: "green",  o: "green"  },
+  { id: "demo-2",  name: "Catalina F.",   cf: "yellow", rl: "green",  o: "yellow" },
+  { id: "demo-3",  name: "Santino V.",    cf: "red",    rl: "red",    o: "yellow" },
+  { id: "demo-4",  name: "Martina L.",    cf: "green",  rl: "green",  o: "yellow" },
+  { id: "demo-5",  name: "Thiago R.",     cf: "yellow", rl: "red",    o: "yellow" },
+  { id: "demo-6",  name: "Emma S.",       cf: "green",  rl: "yellow", o: "green"  },
+  { id: "demo-7",  name: "Benicio A.",    cf: "red",    rl: "yellow", o: "red"    },
+  { id: "demo-8",  name: "Olivia P.",     cf: "yellow", rl: "green",  o: "green"  },
+  { id: "demo-9",  name: "Felipe G.",     cf: "green",  rl: "green",  o: "green"  },
+  { id: "demo-10", name: "Valentina D.",  cf: "yellow", rl: "yellow", o: "yellow" },
+  { id: "demo-11", name: "Mateo H.",      cf: "red",    rl: "yellow", o: "green"  },
+  { id: "demo-12", name: "Delfina C.",    cf: "green",  rl: "green",  o: "yellow" },
+  { id: "demo-13", name: "Lautaro B.",    cf: "yellow", rl: "red",    o: "red"    },
+  { id: "demo-14", name: "Mia T.",        cf: "green",  rl: "yellow", o: "green"  },
+  { id: "demo-15", name: "Joaquin E.",    cf: "yellow", rl: "green",  o: "yellow" },
+  { id: "demo-16", name: "Sofia N.",      cf: "red",    rl: "red",    o: "yellow" },
+  { id: "demo-17", name: "Nicolas O.",    cf: "green",  rl: "green",  o: "green"  },
+  { id: "demo-18", name: "Isabella K.",   cf: "yellow", rl: "yellow", o: "green"  },
+  { id: "demo-19", name: "Benjamin Z.",   cf: "red",    rl: "yellow", o: "yellow" },
+  { id: "demo-20", name: "Lucia W.",      cf: "green",  rl: "green",  o: "yellow" },
+  { id: "demo-21", name: "Tomas Q.",      cf: "yellow", rl: "red",    o: "green"  },
+  { id: "demo-22", name: "Emilia J.",     cf: "green",  rl: "yellow", o: "green"  },
+  { id: "demo-23", name: "Agustin I.",    cf: "yellow", rl: "green",  o: "yellow" },
+  { id: "demo-24", name: "Alma U.",       cf: "red",    rl: "yellow", o: "red"    },
+  { id: "demo-25", name: "Franco Y.",     cf: "green",  rl: "green",  o: "green"  },
 ]
 
 function normalizeStatus(value: string | undefined): "green" | "yellow" | "red" {

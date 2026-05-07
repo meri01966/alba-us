@@ -34,14 +34,65 @@ function statusToProgress(status: StatusLevel): number {
   }
 }
 
+// Key para localStorage
+const STORAGE_KEY = "alba_evaluaciones_dia"
+const STORAGE_PROGRESS_KEY = "alba_progreso"
+
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   
-  // Estado centralizado de evaluaciones del dia
+  // Estado centralizado de evaluaciones del dia (persistido en localStorage)
   const [evaluaciones, setEvaluaciones] = useState<Record<string, StatusLevel>>({})
+
+  // Cargar evaluaciones guardadas de localStorage al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Verificar que sea del mismo dia
+        const today = new Date().toDateString()
+        if (parsed.fecha === today) {
+          setEvaluaciones(parsed.evaluaciones || {})
+        } else {
+          // Limpiar si es de otro dia
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      } catch {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
+    
+    // Cargar progreso guardado
+    const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+    if (savedProgress) {
+      try {
+        setProgress(JSON.parse(savedProgress))
+      } catch {
+        localStorage.removeItem(STORAGE_PROGRESS_KEY)
+      }
+    }
+  }, [])
+
+  // Guardar evaluaciones en localStorage cuando cambien
+  useEffect(() => {
+    if (Object.keys(evaluaciones).length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        fecha: new Date().toDateString(),
+        evaluaciones,
+      }))
+    }
+  }, [evaluaciones])
+
+  // Guardar progreso en localStorage cuando cambie
+  useEffect(() => {
+    if (Object.keys(progress).length > 0) {
+      localStorage.setItem(STORAGE_PROGRESS_KEY, JSON.stringify(progress))
+    }
+  }, [progress])
 
   const fetchProgreso = useCallback(async () => {
     try {
@@ -49,7 +100,11 @@ export default function ALBADashboard() {
       const data = await res.json()
       if (data.ok) {
         setStudents(data.alumnos)
-        setProgress(data.progreso)
+        // Solo cargar progreso de API si no hay guardado local
+        const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+        if (!savedProgress) {
+          setProgress(data.progreso)
+        }
       }
     } catch (err) {
       console.error("Error fetching progreso:", err)

@@ -11,12 +11,13 @@ interface AirtableRecord {
 }
 
 // Actividad de demo para cuando no hay token o la API falla
+// Eje: Conciencia Fonologica (CF)
 const DEMO_BRAIN: BrainActivity = {
   id:          "demo",
   dia:         37,
-  titulo:      "Sonido /p/",
-  descripcion: "Presentar el fonema /p/ con imágenes de palabras que empiecen con ese sonido: pelota, pez, pato.",
-  objetivo:    "Que los niños identifiquen y reproduzcan el sonido /p/ en posición inicial de palabra.",
+  titulo:      "Reconocimiento de Sonido Inicial /M/",
+  descripcion: "1. Mostrar imagenes de objetos: MESA, MONO, MANZANA, MAPA.\n2. Pronunciar cada palabra enfatizando el sonido /M/ inicial.\n3. Pedir a los ninos que repitan el sonido /M/ solos.\n4. Juego: aplaudir cuando escuchen una palabra que empiece con /M/.",
+  objetivo:    "Que los ninos identifiquen y reproduzcan el sonido /M/ en posicion inicial de palabra.",
   source:      "demo",
 }
 

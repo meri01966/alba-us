@@ -4,7 +4,8 @@ import { useState } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { CheckCircle2, Clock, AlertCircle, BookOpen } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, Send } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 type StatusLevel = "green" | "yellow" | "red"
 
@@ -28,8 +29,9 @@ interface HeatMapProps {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-// Actividad del dia (mapea a CF segun las reglas)
-const ACTIVIDAD_DEL_DIA = "Reconocimiento de Letras"
+// Actividad del dia (mapea a CF segun las reglas de ALBA)
+// "Reconocimiento de Sonido Inicial /M/" pertenece al eje Conciencia Fonologica (CF)
+const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 
 const EVAL_OPTIONS: {
   value: StatusLevel
@@ -111,6 +113,25 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
 
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [reportSent, setReportSent] = useState(false)
+  const [sendingReport, setSendingReport] = useState(false)
+
+  // Contar cuantos fueron evaluados en esta sesion
+  const evaluadosCount = Object.keys(evaluaciones).length + Object.keys(localStatus).length
+
+  // Funcion para enviar el reporte
+  async function handleSendReport() {
+    setSendingReport(true)
+    try {
+      // Simular envio de reporte
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      setReportSent(true)
+    } catch {
+      // Error silencioso
+    } finally {
+      setSendingReport(false)
+    }
+  }
 
   const rawStudents = data?.students ?? []
   const source = data?.source ?? null
@@ -234,6 +255,41 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
           </ul>
         )}
       </CardContent>
+
+      {/* Boton Enviar Reporte - solo se habilita despues de evaluar al menos un nino */}
+      <div className="p-3 border-t border-border">
+        <Button
+          onClick={handleSendReport}
+          disabled={evaluadosCount === 0 || sendingReport || reportSent}
+          className="w-full"
+          style={{
+            backgroundColor: reportSent ? "#10b981" : evaluadosCount === 0 ? "#9ca3af" : "#1e3a5f",
+            color: "#fff",
+          }}
+        >
+          {sendingReport ? (
+            <>
+              <Spinner className="w-4 h-4 mr-2" />
+              Enviando...
+            </>
+          ) : reportSent ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Reporte Enviado
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4 mr-2" />
+              Enviar Reporte ({evaluadosCount} evaluados)
+            </>
+          )}
+        </Button>
+        {evaluadosCount === 0 && !isLoading && (
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Evalua al menos un alumno para habilitar el reporte
+          </p>
+        )}
+      </div>
     </Card>
   )
 }

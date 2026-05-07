@@ -33,6 +33,38 @@ const EJES = [
   { key: "O", label: "Oralidad", color: "#f59e0b", total: 40 },
 ]
 
+// Sugerencias pedagogicas segun el nivel de progreso
+const SUGERENCIAS: Record<string, { rojo: string; amarillo: string; verde: string }> = {
+  CF: {
+    rojo: "Reforzar con juegos de rimas simples y sonidos onomatopeyicos. Usar canciones con repeticion de fonemas.",
+    amarillo: "Bien encaminado. Introducir palabras con el fonema en posicion media. Practicar segmentacion silabica.",
+    verde: "Hito logrado! Pasar a la identificacion de la grafia correspondiente (RL). Comenzar asociacion sonido-letra.",
+  },
+  CT: {
+    rojo: "Leer cuentos cortos con imagenes. Hacer preguntas simples: Quien? Donde? Usar libros con texturas.",
+    amarillo: "Aumentar complejidad de las narraciones. Introducir secuencias temporales: Que paso primero?",
+    verde: "Excelente comprension! Comenzar con predicciones y relaciones causa-efecto en los textos.",
+  },
+  O: {
+    rojo: "Fomentar conversaciones guiadas con preguntas abiertas. Usar titeres para motivar la expresion.",
+    amarillo: "Expandir vocabulario con categorias semanticas. Practicar descripciones de objetos y personas.",
+    verde: "Gran desarrollo oral! Introducir narraciones propias y exposiciones breves frente al grupo.",
+  },
+}
+
+function getSugerencia(eje: string, porcentaje: number): { nivel: string; texto: string; color: string } {
+  const sugs = SUGERENCIAS[eje]
+  if (!sugs) return { nivel: "", texto: "", color: "" }
+  
+  if (porcentaje < 40) {
+    return { nivel: "Requiere Apoyo", texto: sugs.rojo, color: "#ef4444" }
+  } else if (porcentaje < 70) {
+    return { nivel: "En Proceso", texto: sugs.amarillo, color: "#f59e0b" }
+  } else {
+    return { nivel: "Avanzado", texto: sugs.verde, color: "#10b981" }
+  }
+}
+
 export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps) {
   const [loading, setLoading] = useState(true)
   const [alumno, setAlumno] = useState<Alumno | null>(null)
@@ -115,12 +147,13 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
         </div>
       </div>
 
-      {/* Barras de progreso */}
+      {/* Barras de progreso con sugerencias pedagogicas */}
       <div className="space-y-4">
         {EJES.map((eje) => {
           const p = progreso[eje.key] || { logradas: [], porcentaje: 0 }
+          const sugerencia = getSugerencia(eje.key, p.porcentaje)
           return (
-            <div key={eje.key} className="space-y-1">
+            <div key={eje.key} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-semibold" style={{ color: eje.color }}>
                   {eje.label}
@@ -137,6 +170,21 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
                     backgroundColor: eje.color,
                   }}
                 />
+              </div>
+              {/* Sugerencia pedagogica */}
+              <div
+                className="rounded-lg p-3 text-sm"
+                style={{ backgroundColor: `${sugerencia.color}10`, borderLeft: `3px solid ${sugerencia.color}` }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: sugerencia.color, color: "#fff" }}
+                  >
+                    {sugerencia.nivel}
+                  </span>
+                </div>
+                <p className="text-gray-700 leading-relaxed">{sugerencia.texto}</p>
               </div>
             </div>
           )
