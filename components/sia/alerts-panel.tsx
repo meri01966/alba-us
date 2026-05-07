@@ -44,39 +44,33 @@ function generarAlertas(
     if (ejesEnRojo >= 2) dosRojosSeguidos.push(s.nombre)
   })
   
-  // Alerta por grupo en CF - muestra nombres
+  // Alerta por grupo en CF - muestra cantidad
   if (necesitanRefuerzoCF.length >= 1) {
-    const nombres = necesitanRefuerzoCF.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoCF.length > 4 ? ` y ${necesitanRefuerzoCF.length - 4} mas` : ""
     alertas.push({
       id: "cf-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCF.length > 1 ? "n" : ""} refuerzo en Conciencia Fonologica`,
+      mensaje: `${necesitanRefuerzoCF.length} alumno${necesitanRefuerzoCF.length > 1 ? "s" : ""} necesita${necesitanRefuerzoCF.length > 1 ? "n" : ""} refuerzo en Conciencia Fonologica`,
       tipo: "atencion",
       sugerencia: "Considera hacer grupos pequenos para trabajar rimas y sonidos iniciales. Usa juegos de aplaudir silabas.",
       alumnos: necesitanRefuerzoCF
     })
   }
   
-  // Alerta por grupo en CT - muestra nombres
+  // Alerta por grupo en CT - muestra cantidad
   if (necesitanRefuerzoCT.length >= 1) {
-    const nombres = necesitanRefuerzoCT.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoCT.length > 4 ? ` y ${necesitanRefuerzoCT.length - 4} mas` : ""
     alertas.push({
       id: "ct-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCT.length > 1 ? "n" : ""} refuerzo en Conocimiento de Textos`,
+      mensaje: `${necesitanRefuerzoCT.length} alumno${necesitanRefuerzoCT.length > 1 ? "s" : ""} necesita${necesitanRefuerzoCT.length > 1 ? "n" : ""} refuerzo en Conocimiento de Textos`,
       tipo: "atencion",
       sugerencia: "Lee cuentos en voz alta y haz preguntas sobre la historia. Usa imagenes para que anticipen que pasara.",
       alumnos: necesitanRefuerzoCT
     })
   }
   
-  // Alerta por grupo en O - muestra nombres
+  // Alerta por grupo en O - muestra cantidad
   if (necesitanRefuerzoO.length >= 1) {
-    const nombres = necesitanRefuerzoO.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoO.length > 4 ? ` y ${necesitanRefuerzoO.length - 4} mas` : ""
     alertas.push({
       id: "o-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoO.length > 1 ? "n" : ""} mas oportunidades de expresion oral`,
+      mensaje: `${necesitanRefuerzoO.length} alumno${necesitanRefuerzoO.length > 1 ? "s" : ""} necesita${necesitanRefuerzoO.length > 1 ? "n" : ""} mas oportunidades de expresion oral`,
       tipo: "atencion",
       sugerencia: "Incluye rondas de conversacion donde cada nino cuente algo. Haz preguntas abiertas durante las actividades.",
       alumnos: necesitanRefuerzoO
@@ -166,10 +160,11 @@ export function AlertsPanel({ progress = {}, students = [] }: AlertsPanelProps) 
                       <Lightbulb className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm text-slate-700">{alerta.sugerencia}</p>
-                        {alerta.alumnos && alerta.alumnos.length <= 5 && (
-                          <p className="text-xs text-slate-500 mt-2">
-                            Alumnos: {alerta.alumnos.join(", ")}
-                          </p>
+                        {alerta.alumnos && alerta.alumnos.length > 0 && (
+                          <div className="mt-3 pt-2 border-t border-slate-100">
+                            <p className="text-xs font-medium text-slate-600 mb-1">Alumnos:</p>
+                            <p className="text-sm text-slate-700">{alerta.alumnos.join(", ")}</p>
+                          </div>
                         )}
                       </div>
                     </div>
