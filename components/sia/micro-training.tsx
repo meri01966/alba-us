@@ -133,7 +133,7 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
           <Lightbulb className="w-4 h-4 text-amber-500" />
-          ALBA te cuenta
+          Micro capacitacion just in time
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
