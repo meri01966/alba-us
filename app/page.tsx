@@ -76,9 +76,13 @@ function SintesisPedagogicaModal({
   const estrategias = `Implementamos dinamicas de rimas, juegos sonoros grupales y el uso de nuestras fichas diagnosticas para personalizar el apoyo segun la necesidad de cada nino. Utilizamos canciones con repeticion de fonemas, imagenes asociativas y actividades de segmentacion silabica.`
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      onClick={onClose}
+    >
       <div 
         className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full my-8"
+        onClick={(e) => e.stopPropagation()}
         style={{ 
           backgroundImage: "linear-gradient(to bottom, #fefefe 0%, #f9f9f9 100%)",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
@@ -99,10 +103,11 @@ function SintesisPedagogicaModal({
               </div>
             </div>
             <button 
-              onClick={onClose} 
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+              onClick={onClose}
+              type="button"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5 text-slate-400" />
+              <X className="w-5 h-5 text-slate-600" />
             </button>
           </div>
         </div>
@@ -334,6 +339,13 @@ export default function ALBADashboard() {
           }}
           onClose={() => setActiveView("clase")}
         />
+        {showSintesis && (
+          <SintesisPedagogicaModal
+            evaluaciones={evaluaciones}
+            totalStudents={students.length}
+            onClose={() => setShowSintesis(false)}
+          />
+        )}
       </div>
     )
   }
@@ -350,6 +362,13 @@ export default function ALBADashboard() {
             setActiveView("perfil")
           }}
         />
+        {showSintesis && (
+          <SintesisPedagogicaModal
+            evaluaciones={evaluaciones}
+            totalStudents={students.length}
+            onClose={() => setShowSintesis(false)}
+          />
+        )}
       </div>
     )
   }
@@ -365,6 +384,13 @@ export default function ALBADashboard() {
             setActiveView("mapa")
           }}
         />
+        {showSintesis && (
+          <SintesisPedagogicaModal
+            evaluaciones={evaluaciones}
+            totalStudents={students.length}
+            onClose={() => setShowSintesis(false)}
+          />
+        )}
       </div>
     )
   }
