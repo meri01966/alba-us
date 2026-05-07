@@ -145,15 +145,15 @@ function StudentRow({
             </button>
           )
         })}
-        {/* Boton enviar reporte individual */}
+        {/* Boton enviar reporte individual - siempre azul, con check cuando enviado */}
         <button
           onClick={onSendReport}
           disabled={saving}
-          title="Enviar reporte a la familia"
+          title={reportSent ? "Reporte enviado" : "Enviar reporte a la familia"}
           className="flex items-center justify-center w-8 h-8 rounded-lg border transition-all hover:scale-110 disabled:opacity-50 ml-1"
           style={{
-            backgroundColor: reportSent ? "#10b981" : "#1e3a5f",
-            borderColor: reportSent ? "#10b981" : "#1e3a5f",
+            backgroundColor: "#1e3a5f",
+            borderColor: "#1e3a5f",
             color: "#fff",
           }}
         >
