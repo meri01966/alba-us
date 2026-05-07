@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { FileText, X, ListChecks } from "lucide-react"
+import { FileText, X } from "lucide-react"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
@@ -52,28 +52,37 @@ function SintesisPedagogicaModal({
   totalStudents: number
   onClose: () => void 
 }) {
-  const [bulletMode, setBulletMode] = useState(false)
-  
-  // Contar por nivel
+  // Contar por nivel para generar texto descriptivo
   const counts = { green: 0, yellow: 0, red: 0 }
   Object.values(evaluaciones).forEach(status => {
     if (status in counts) counts[status as keyof typeof counts]++
   })
   
   const evaluados = Object.keys(evaluaciones).length
-  const porcentajeAvanzado = evaluados > 0 ? Math.round((counts.green / evaluados) * 100) : 0
-  const porcentajeProceso = evaluados > 0 ? Math.round((counts.yellow / evaluados) * 100) : 0
-  const porcentajeRefuerzo = evaluados > 0 ? Math.round((counts.red / evaluados) * 100) : 0
 
-  const propositos = `Durante este periodo, nuestro foco principal fue la estimulacion de la conciencia fonologica, especificamente la identificacion de fonemas base para iniciar el proceso de alfabetizacion. Trabajamos con la actividad "${ACTIVIDAD_DEL_DIA}" para fortalecer el reconocimiento auditivo y la asociacion sonido-palabra.`
+  // Textos descriptivos sin porcentajes
+  const getMayoria = () => {
+    if (counts.green >= counts.yellow && counts.green >= counts.red) return "la mayoria"
+    if (counts.yellow >= counts.green && counts.yellow >= counts.red) return "varios ninos"
+    return "algunos ninos"
+  }
 
-  const logros = porcentajeAvanzado >= 50
-    ? `Hemos observado un avance consolidado en el ${porcentajeAvanzado}% de los evaluados, quienes ya logran discriminar sonidos con autonomia. El grupo muestra una maduracion notable en la escucha atenta y la asociacion fonema-grafema.`
-    : porcentajeProceso >= 30
-    ? `El ${porcentajeProceso}% de los evaluados esta en proceso de consolidacion, mostrando avances graduales en la discriminacion de sonidos. El ${porcentajeAvanzado}% ya domina estas habilidades con autonomia.`
-    : `Identificamos que el ${porcentajeRefuerzo}% de los evaluados requiere acompanamiento adicional. Estamos implementando estrategias diferenciadas para fortalecer estas habilidades fundamentales.`
+  const getLogrosTexto = () => {
+    if (counts.green > counts.red && counts.green > 0) {
+      return `Observamos que ${getMayoria()} del grupo ya logra identificar el sonido inicial con autonomia. Muestran maduracion en la escucha atenta y comienzan a asociar sonido con palabra de forma espontanea.`
+    } else if (counts.yellow > counts.red) {
+      return `El grupo esta en un momento de transicion. Varios ninos estan consolidando la habilidad de discriminar sonidos, aunque todavia necesitan acompanamiento para hacerlo de forma autonoma.`
+    } else {
+      return `Identificamos que el grupo necesita mas tiempo y acompanamiento para fortalecer estas habilidades. Seguiremos trabajando con estrategias diferenciadas.`
+    }
+  }
 
-  const estrategias = `Implementamos dinamicas de rimas, juegos sonoros grupales y el uso de nuestras fichas diagnosticas para personalizar el apoyo segun la necesidad de cada nino. Utilizamos canciones con repeticion de fonemas, imagenes asociativas y actividades de segmentacion silabica.`
+  const getProximosPasos = () => {
+    if (counts.red > 0) {
+      return `Para los ninos que necesitan mas apoyo, continuaremos con juegos de rimas mas simples y repeticion de fonemas en contextos ludicos.`
+    }
+    return `Avanzaremos hacia la identificacion de otros fonemas y comenzaremos a introducir la asociacion con la letra escrita.`
+  }
 
   return (
     <div 
@@ -81,123 +90,80 @@ function SintesisPedagogicaModal({
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full my-8"
+        className="bg-white rounded-2xl shadow-2xl max-w-xl w-full my-8"
         onClick={(e) => e.stopPropagation()}
-        style={{ 
-          backgroundImage: "linear-gradient(to bottom, #fefefe 0%, #f9f9f9 100%)",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-        }}
       >
-        {/* Header */}
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#1e3a5f" }}>
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold" style={{ color: "#1e3a5f", fontFamily: "Georgia, serif" }}>
-                  Sintesis Pedagogica
-                </h2>
-                <p className="text-sm text-slate-500">Sala Manzanos · Dia 37 · {evaluados} evaluados</p>
-              </div>
+        {/* Header simple */}
+        <div className="p-5 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
+                Sintesis Pedagogica
+              </h2>
+              <p className="text-sm text-slate-500">Sala Manzanos · Dia 37</p>
             </div>
             <button 
               onClick={onClose}
               type="button"
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
             >
-              <X className="w-5 h-5 text-slate-600" />
+              <X className="w-4 h-4 text-slate-600" />
             </button>
           </div>
         </div>
 
-        {/* Contenido */}
-        <div className="p-6 space-y-6" style={{ fontFamily: "Georgia, serif" }}>
+        {/* Contenido narrativo limpio */}
+        <div className="p-5 space-y-5 text-slate-700 leading-relaxed">
           
-          {/* Bloque 1: Propositos */}
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#1e3a5f" }}>1</div>
-              <h3 className="font-bold text-lg" style={{ color: "#1e3a5f" }}>Que nos propusimos</h3>
-            </div>
-            {bulletMode ? (
-              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
-                <li>Foco en conciencia fonologica</li>
-                <li>Identificacion de fonemas base</li>
-                <li>Actividad: {ACTIVIDAD_DEL_DIA}</li>
-                <li>Reconocimiento auditivo y asociacion sonido-palabra</li>
-              </ul>
-            ) : (
-              <p className="text-slate-700 leading-relaxed ml-8">{propositos}</p>
+            <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
+              Que nos propusimos
+            </h3>
+            <p>
+              Trabajamos con la actividad <strong>{ACTIVIDAD_DEL_DIA}</strong>, 
+              enfocados en que los ninos puedan reconocer el sonido inicial de las palabras. 
+              El objetivo fue fortalecer la conciencia fonologica como base para la alfabetizacion.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
+              Como lo hicimos
+            </h3>
+            <p>
+              Usamos imagenes de objetos que empiezan con el mismo sonido, 
+              jugamos a aplaudir cuando escuchaban el fonema, 
+              y cantamos canciones que repiten el sonido de forma divertida.
+              Cada nino tuvo oportunidad de participar y practicar.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
+              Que logramos
+            </h3>
+            <p>{getLogrosTexto()}</p>
+            {evaluados > 0 && (
+              <p className="mt-2 text-sm text-slate-500 italic">
+                Se evaluaron {evaluados} ninos en esta actividad.
+              </p>
             )}
           </section>
 
-          {/* Bloque 2: Logros */}
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#6366f1" }}>2</div>
-              <h3 className="font-bold text-lg" style={{ color: "#6366f1" }}>Que logramos</h3>
-            </div>
-            {bulletMode ? (
-              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
-                <li>{counts.green} alumnos avanzados ({porcentajeAvanzado}%)</li>
-                <li>{counts.yellow} alumnos en proceso ({porcentajeProceso}%)</li>
-                <li>{counts.red} alumnos requieren refuerzo ({porcentajeRefuerzo}%)</li>
-              </ul>
-            ) : (
-              <p className="text-slate-700 leading-relaxed ml-8">{logros}</p>
-            )}
-            {/* Mini grafico - usa tonos de azul/violeta para no confundir con semaforo */}
-            <div className="flex gap-1 mt-3 ml-8 h-3 rounded-full overflow-hidden bg-slate-100">
-              <div style={{ width: `${porcentajeAvanzado}%`, backgroundColor: "#1e3a5f" }} />
-              <div style={{ width: `${porcentajeProceso}%`, backgroundColor: "#6366f1" }} />
-              <div style={{ width: `${porcentajeRefuerzo}%`, backgroundColor: "#c7d2fe" }} />
-            </div>
-            <div className="flex gap-4 mt-2 ml-8 text-xs text-slate-500">
-              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#1e3a5f" }} />Avanzado</span>
-              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#6366f1" }} />En proceso</span>
-              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#c7d2fe" }} />Refuerzo</span>
-            </div>
+            <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
+              Proximos pasos
+            </h3>
+            <p>{getProximosPasos()}</p>
           </section>
 
-          {/* Bloque 3: Estrategias */}
-          <section>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#8b5cf6" }}>3</div>
-              <h3 className="font-bold text-lg" style={{ color: "#8b5cf6" }}>Como lo hicimos</h3>
-            </div>
-            {bulletMode ? (
-              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
-                <li>Dinamicas de rimas</li>
-                <li>Juegos sonoros grupales</li>
-                <li>Fichas diagnosticas personalizadas</li>
-                <li>Canciones con repeticion de fonemas</li>
-              </ul>
-            ) : (
-              <p className="text-slate-700 leading-relaxed ml-8">{estrategias}</p>
-            )}
-          </section>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-3xl">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-400 italic">
-              Sintesis del recorrido grupal registrado en ALBA.
-            </p>
-            <button
-              onClick={() => setBulletMode(!bulletMode)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: bulletMode ? "#1e3a5f" : "#f1f5f9", 
-                color: bulletMode ? "#fff" : "#1e3a5f" 
-              }}
-            >
-              <ListChecks className="w-4 h-4" />
-              {bulletMode ? "Ver narrativa" : "Preparar para Reunion"}
-            </button>
-          </div>
+        <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+          <p className="text-xs text-slate-400 text-center">
+            Generado automaticamente por ALBA a partir del registro diario.
+          </p>
         </div>
       </div>
     </div>
