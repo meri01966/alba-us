@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { RefreshCw, Lightbulb, Volume2, VolumeX } from "lucide-react"
+import { RefreshCw, Lightbulb } from "lucide-react"
 import Image from "next/image"
 
 // Consejos de ALBA segun el eje - en tono argentino, amigable
@@ -85,20 +85,24 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
     setIsTalking(false)
   }, [consejoIndex])
 
-  const handlePlayAudio = () => {
-    if (isPlaying) {
-      window.speechSynthesis.cancel()
-      setIsPlaying(false)
-      setIsTalking(false)
-    } else {
-      const utterance = new SpeechSynthesisUtterance(consejoActual)
+  // Un solo boton: cambia tip y reproduce audio automaticamente
+  const handleOtroTip = () => {
+    // Detener audio actual
+    window.speechSynthesis.cancel()
+    
+    // Cambiar al siguiente consejo
+    const nextIndex = (consejoIndex + 1) % consejos.length
+    setConsejoIndex(nextIndex)
+    
+    // Reproducir el nuevo consejo despues de un momento
+    setTimeout(() => {
+      const nuevoConsejo = consejos[nextIndex]
+      const utterance = new SpeechSynthesisUtterance(nuevoConsejo)
       
-      // Voz natural sin distorsiones
       utterance.rate = 1.0
       utterance.pitch = 1.0
       utterance.volume = 1
       
-      // Buscar voz en espanol de alta calidad
       const voices = window.speechSynthesis.getVoices()
       const vozNatural = 
         voices.find(v => v.name.includes("Google español")) ||
@@ -130,11 +134,7 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
       speechRef.current = utterance
       window.speechSynthesis.speak(utterance)
       setIsPlaying(true)
-    }
-  }
-
-  const handleRefresh = () => {
-    setConsejoIndex((prev) => (prev + 1) % consejos.length)
+    }, 100)
   }
   
   return (
@@ -189,42 +189,16 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
             </div>
           </div>
           
-          {/* Botones de audio y refrescar */}
+          {/* Un solo boton: Otro tip (cambia y reproduce) */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50">
-            <div className="flex gap-2">
-              {/* Boton Escuchar */}
-              <button 
-                type="button"
-                onClick={handlePlayAudio}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
-                  isPlaying 
-                    ? "bg-red-500 text-white" 
-                    : "bg-amber-500 text-white hover:bg-amber-600"
-                }`}
-              >
-                {isPlaying ? (
-                  <>
-                    <VolumeX className="w-3.5 h-3.5" />
-                    Pausar
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-3.5 h-3.5" />
-                    Escuchar
-                  </>
-                )}
-              </button>
-              
-              {/* Boton Otro tip */}
-              <button 
-                type="button"
-                onClick={handleRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-white/30 text-white hover:bg-white/10 transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Otro tip
-              </button>
-            </div>
+            <button 
+              type="button"
+              onClick={handleOtroTip}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-amber-500 text-white hover:bg-amber-600 transition-all"
+            >
+              <RefreshCw className={`w-4 h-4 ${isTalking ? "animate-spin" : ""}`} />
+              Otro tip
+            </button>
             <span className="text-xs text-white/60">
               {consejoIndex + 1} / {consejos.length}
             </span>
