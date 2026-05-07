@@ -84,7 +84,7 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
     setConsejoIndex((prev) => (prev + 1) % consejos.length)
   }
 
-  // Reproducir audio con voz femenina dulce tipo maestra de jardin
+  // Reproducir audio con voz femenina animada tipo maestra de jardin con punch
   const handlePlayAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel()
@@ -93,22 +93,30 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
     } else {
       const utterance = new SpeechSynthesisUtterance(consejoActual)
       utterance.lang = "es-AR"
-      utterance.rate = 0.9  // Un poco mas lento para que sea claro
-      utterance.pitch = 1.3 // Mas agudo para voz femenina dulce
+      utterance.rate = 1.05  // Un poquito mas rapido para energia y punch
+      utterance.pitch = 1.5  // Bien agudo, femenino y dulce
+      utterance.volume = 1   // Volumen al maximo
       
-      // Buscar una voz femenina en espanol
+      // Buscar la mejor voz femenina disponible
       const voices = window.speechSynthesis.getVoices()
+      
+      // Prioridad: voces femeninas de Google/Microsoft en espanol que suenan mas naturales
       const vozFemenina = voices.find(v => 
-        (v.lang.includes("es") || v.lang.includes("ES")) && 
-        (v.name.toLowerCase().includes("female") || 
-         v.name.toLowerCase().includes("mujer") ||
-         v.name.toLowerCase().includes("paulina") ||
+        v.lang.includes("es") && v.name.toLowerCase().includes("google")
+      ) || voices.find(v => 
+        v.lang.includes("es") && 
+        (v.name.toLowerCase().includes("paulina") ||
          v.name.toLowerCase().includes("monica") ||
+         v.name.toLowerCase().includes("sabina") ||
          v.name.toLowerCase().includes("lucia") ||
          v.name.toLowerCase().includes("elena") ||
-         v.name.toLowerCase().includes("google") ||
-         v.name.toLowerCase().includes("microsoft"))
-      ) || voices.find(v => v.lang.includes("es"))
+         v.name.toLowerCase().includes("female") ||
+         v.name.toLowerCase().includes("mujer"))
+      ) || voices.find(v => 
+        v.lang.includes("es") && v.name.toLowerCase().includes("microsoft")
+      ) || voices.find(v => v.lang.includes("es-AR")) 
+        || voices.find(v => v.lang.includes("es-MX"))
+        || voices.find(v => v.lang.includes("es"))
       
       if (vozFemenina) {
         utterance.voice = vozFemenina
