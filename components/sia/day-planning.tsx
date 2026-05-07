@@ -70,11 +70,11 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center flex-1 min-h-[120px]">
+        <div className="flex items-center justify-center py-4">
           <Spinner className="text-primary" />
         </div>
       ) : !activity ? (
-        <div className="flex-1 flex items-center justify-center text-center text-muted-foreground text-sm py-6">
+        <div className="flex items-center justify-center text-center text-muted-foreground text-xs py-3">
           Sin actividad disponible
         </div>
       ) : (
@@ -98,14 +98,14 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
-          <Printer className="w-3.5 h-3.5 mr-1.5" />
-          Imprimir fichas
+      <div className="flex gap-2 pt-2">
+        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs">
+          <Printer className="w-3 h-3 mr-1" />
+          Fichas
         </Button>
-        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
-          <List className="w-3.5 h-3.5 mr-1.5" />
-          Ver secuencia
+        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs">
+          <List className="w-3 h-3 mr-1" />
+          Secuencia
         </Button>
       </div>
     </div>
@@ -260,16 +260,13 @@ function MyPlanningColumn({
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center flex-1 min-h-[120px]">
+        <div className="flex items-center justify-center py-4">
           <Spinner className="text-accent" />
         </div>
       ) : !planning ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
-          <BookOpen className="w-10 h-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No hay planificación cargada para hoy.</p>
-          <p className="text-xs text-muted-foreground/70">
-            Usá el botón <strong>Nueva</strong> para agregar una.
-          </p>
+        <div className="flex flex-col items-center justify-center text-center py-3 gap-1">
+          <BookOpen className="w-6 h-6 text-muted-foreground/40" />
+          <p className="text-xs text-muted-foreground">Sin planificación cargada</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -350,20 +347,20 @@ export function DayPlanning() {
   }, [fetchBrain, fetchPlanning])
 
   return (
-    <Card className="h-full shadow-md">
-      <CardHeader className="pb-3">
+    <Card className="shadow-md">
+      <CardHeader className="pb-2 pt-3">
         <CardTitle className="text-base font-semibold text-primary">
           Planificación del día
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
+      <CardContent className="pt-0 pb-3">
+        <div className="grid grid-cols-2 gap-4 divide-x divide-border">
           {/* Left: Sugerencia SIA */}
-          <div className="pb-4 sm:pb-0 sm:pr-4">
+          <div className="pr-4">
             <BrainColumn activity={brain} isLoading={isBrainLoading} />
           </div>
           {/* Right: Mi Planificacion */}
-          <div className="pt-4 sm:pt-0 sm:pl-4">
+          <div className="pl-4">
             <MyPlanningColumn
               planning={planning}
               isLoading={isPlanningLoading}
