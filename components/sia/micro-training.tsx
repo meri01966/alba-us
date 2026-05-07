@@ -3,35 +3,49 @@
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, RefreshCw, Lightbulb, Volume2 } from "lucide-react"
+import { Play, Pause, RefreshCw, Lightbulb } from "lucide-react"
 import Image from "next/image"
 
+// ========================================================================
+// VIDEOS DE ALBA - Cuando los tengas de Canva, agregalos aca
+// Formato: { id: "cf-1", url: "/videos/alba-cf-1.mp4" }
+// ========================================================================
+const VIDEOS_ALBA: Record<string, { url: string; poster?: string }[]> = {
+  CF: [
+    // { url: "/videos/alba-cf-1.mp4", poster: "/images/alba-saludando.jpg" },
+    // { url: "/videos/alba-cf-2.mp4", poster: "/images/alba-pensando.jpg" },
+  ],
+  CT: [],
+  O: []
+}
+
 // Consejos de ALBA segun el eje - en tono argentino, amigable
+// ESTOS SON LOS TEXTOS PARA GRABAR EN CANVA
 const CONSEJOS_ALBA: Record<string, string[]> = {
   CF: [
-    "Dale, vamos con el sonido inicial. Cuando digas la palabra, alarga ese primer sonido: 'Mmmmmanzana'. Los chicos van a captar enseguida que todas empiezan igual.",
+    "Hola! Hoy vamos con el sonido inicial. Cuando digas la palabra, alarga ese primer sonido: 'Mmmmmanzana'. Los chicos van a captar enseguida que todas empiezan igual.",
     "Un tip que funciona barbaro: usa objetos del aula que empiecen con el mismo sonido. Si trabajas la M, junta una mochila, un muneco, una manzana. Los nenes lo ven y lo entienden al toque.",
     "Acorda que lo importante es que asocien el dibujo de la letra con el sonido. Cuando vean la M, tienen que pensar 'Mmmmm'. Eso es la base de todo.",
     "Proba con rimas cortitas. 'Sol, caracol, girasol'. Los chicos se enganchan con la musicalidad y sin darse cuenta estan trabajando conciencia fonologica.",
     "Si un nene no lo agarra de una, tranqui. Repetilo de forma divertida, con juegos. Nada de presion, que esto es jardin y tienen que pasarla bien."
   ],
   CT: [
-    "Antes de leer el cuento, mostrales la tapa y preguntales de que creen que se trata. Eso los mete en la historia antes de empezar.",
-    "Mientras lees, para cada tanto y pregunta: 'Que les parece que va a pasar ahora?'. Eso los mantiene atentos y activa la imaginacion.",
+    "Hola! Antes de leer el cuento, mostrales la tapa y preguntales de que creen que se trata. Eso los mete en la historia antes de empezar.",
+    "Mientras lees, para cada tanto y pregunta: Que les parece que va a pasar ahora? Eso los mantiene atentos y activa la imaginacion.",
     "Relaciona el cuento con cosas que ellos conocen. Si el personaje tiene un perro, pregunta quien tiene mascota en casa. Asi conectan la historia con su vida.",
     "Despues de leer, pedidles que cuenten la historia con sus palabras. No importa si se saltean partes, lo que importa es que comprendan la secuencia.",
     "Usa distintos tonos de voz para los personajes. A los chicos les encanta y les ayuda a distinguir quien habla en la historia."
   ],
   O: [
-    "Hace preguntas abiertas, no de si o no. En vez de '¿Te gusto?', pregunta '¿Que parte te gusto mas?'. Asi los obligas a pensar y expresarse.",
-    "Cuando un nene dice algo cortito como 'Vi perro', vos amplias: 'Ah, viste un perro! Era grande o chiquito? De que color era?'. Asi van sumando vocabulario.",
+    "Hola! Hace preguntas abiertas, no de si o no. En vez de Te gusto, pregunta Que parte te gusto mas. Asi los obligas a pensar y expresarse.",
+    "Cuando un nene dice algo cortito como Vi perro, vos amplias: Ah, viste un perro! Era grande o chiquito? De que color era? Asi van sumando vocabulario.",
     "Dale tiempo para que piensen. A veces los apuramos y los ponemos nerviosos. Espera unos segundos antes de pasar a otro nene.",
     "La ronda de intercambio es clave. Que cada uno cuente algo de su fin de semana, de su familia. Escucharse entre ellos tambien es aprender.",
     "Si un nene es timido, no lo fuerces adelante de todos. Acercate y charlale de a poquito, que agarre confianza de a poco."
   ]
 }
 
-// Lo que deben aprender los ninos - tips pedagogicos
+// Lo que deben aprender los ninos
 const QUE_DEBEN_APRENDER: Record<string, string[]> = {
   CF: [
     "Asociar el dibujo de la letra con su sonido",
@@ -56,100 +70,63 @@ const QUE_DEBEN_APRENDER: Record<string, string[]> = {
   ]
 }
 
+// Imagenes de ALBA segun el indice del consejo
+const IMAGENES_ALBA = [
+  "/images/alba-saludando.jpg",
+  "/images/alba-pensando.jpg", 
+  "/images/alba-entusiasmada.jpg",
+  "/images/alba-personaje.jpg",
+  "/images/alba-saludando.jpg"
+]
+
 interface MicroTrainingProps {
   ejeDelDia?: "CF" | "CT" | "O"
   actividadDelDia?: string
 }
 
-export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTrainingProps) {
+export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
   const consejos = CONSEJOS_ALBA[ejeDelDia]
+  const videos = VIDEOS_ALBA[ejeDelDia]
   const aprendizajes = QUE_DEBEN_APRENDER[ejeDelDia]
   
   const [consejoIndex, setConsejoIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isTalking, setIsTalking] = useState(false)
   const [showAprendizajes, setShowAprendizajes] = useState(false)
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   const consejoActual = consejos[consejoIndex]
+  const videoActual = videos[consejoIndex]
+  const imagenActual = IMAGENES_ALBA[consejoIndex % IMAGENES_ALBA.length]
+  
+  // Hay video disponible para este consejo?
+  const tieneVideo = videoActual && videoActual.url
 
   // Refrescar consejo
   const handleRefresh = () => {
-    // Parar audio si esta sonando
-    if (isPlaying) {
-      window.speechSynthesis.cancel()
-      setIsPlaying(false)
-      setIsTalking(false)
+    if (videoRef.current) {
+      videoRef.current.pause()
     }
+    setIsPlaying(false)
     setConsejoIndex((prev) => (prev + 1) % consejos.length)
   }
 
-  // Reproducir audio - voz natural sin distorsiones tipo Alexa
-  const handlePlayAudio = () => {
+  // Play/Pause video
+  const handlePlayPause = () => {
+    if (!videoRef.current) return
+    
     if (isPlaying) {
-      window.speechSynthesis.cancel()
+      videoRef.current.pause()
       setIsPlaying(false)
-      setIsTalking(false)
     } else {
-      const utterance = new SpeechSynthesisUtterance(consejoActual)
-      
-      // Sin distorsion - dejar que la voz natural suene bien
-      utterance.rate = 1.0
-      utterance.pitch = 1.0
-      utterance.volume = 1
-      
-      // Buscar voces de alta calidad (Google y Microsoft suenan tipo Alexa)
-      const voices = window.speechSynthesis.getVoices()
-      
-      // Orden de preferencia para voces naturales en espanol
-      const vozNatural = 
-        voices.find(v => v.name.includes("Google español")) ||
-        voices.find(v => v.name.includes("Google Spanish")) ||
-        voices.find(v => v.name === "Paulina") ||  // macOS/iOS - muy natural
-        voices.find(v => v.name === "Monica") ||
-        voices.find(v => v.name.includes("Microsoft") && v.lang.includes("es")) ||
-        voices.find(v => v.lang === "es-MX") ||    // Mexicano suena suave
-        voices.find(v => v.lang === "es-AR") ||
-        voices.find(v => v.lang.startsWith("es"))
-      
-      if (vozNatural) {
-        utterance.voice = vozNatural
-        utterance.lang = vozNatural.lang
-      } else {
-        utterance.lang = "es-MX"
-      }
-      
-      utterance.onstart = () => setIsTalking(true)
-      utterance.onend = () => {
-        setIsPlaying(false)
-        setIsTalking(false)
-      }
-      utterance.onerror = () => {
-        setIsPlaying(false)
-        setIsTalking(false)
-      }
-      
-      speechRef.current = utterance
-      window.speechSynthesis.speak(utterance)
+      videoRef.current.play()
       setIsPlaying(true)
     }
   }
-  
-  // Cargar voces cuando esten disponibles
-  useEffect(() => {
-    const loadVoices = () => {
-      window.speechSynthesis.getVoices()
-    }
-    loadVoices()
-    window.speechSynthesis.onvoiceschanged = loadVoices
-  }, [])
 
-  // Limpiar al desmontar
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel()
-    }
-  }, [])
+  // Cuando termina el video
+  const handleVideoEnd = () => {
+    setIsPlaying(false)
+  }
   
   return (
     <Card className="h-full shadow-md overflow-hidden">
@@ -162,77 +139,89 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
       <CardContent className="pt-0">
         <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#1e3a5f" }}>
           
-          {/* Area del personaje ALBA */}
-          <div className="relative p-4">
-            <div className="flex gap-3">
-              {/* Avatar de ALBA con animacion */}
-              <div className="relative flex-shrink-0">
-                <div 
-                  className={`w-16 h-16 rounded-full overflow-hidden border-3 transition-all duration-300 ${
-                    isTalking ? "animate-pulse scale-105" : ""
-                  }`}
-                  style={{ borderColor: "#fbbf24", borderWidth: "3px" }}
-                >
-                  <Image 
-                    src="/images/alba-personaje.jpg" 
-                    alt="ALBA"
-                    width={64}
-                    height={64}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                {/* Indicador de hablando */}
-                {isTalking && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
-                    <Volume2 className="w-3 h-3 text-slate-800 animate-pulse" />
-                  </div>
+          {/* Area del video o imagen */}
+          <div className="relative">
+            {tieneVideo ? (
+              // VIDEO DE CANVA
+              <div className="relative aspect-video bg-slate-900">
+                <video
+                  ref={videoRef}
+                  src={videoActual.url}
+                  poster={videoActual.poster || imagenActual}
+                  onEnded={handleVideoEnd}
+                  className="w-full h-full object-cover"
+                  playsInline
+                />
+                {/* Boton play overlay */}
+                {!isPlaying && (
+                  <button
+                    onClick={handlePlayPause}
+                    className="absolute inset-0 flex items-center justify-center bg-black/30 transition-all hover:bg-black/40"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-amber-400 flex items-center justify-center">
+                      <Play className="w-8 h-8 text-slate-800 ml-1" fill="currentColor" />
+                    </div>
+                  </button>
                 )}
               </div>
-              
-              {/* Burbuja de dialogo */}
-              <div className="flex-1 relative">
-                <div 
-                  className="bg-white rounded-xl rounded-tl-none p-3 text-sm text-slate-700 leading-relaxed"
-                  style={{ minHeight: "80px" }}
-                >
-                  {consejoActual}
+            ) : (
+              // IMAGEN + TEXTO (fallback hasta que tengas los videos)
+              <div className="p-4">
+                <div className="flex gap-3">
+                  {/* Avatar de ALBA */}
+                  <div className="relative flex-shrink-0">
+                    <div 
+                      className="w-16 h-16 rounded-full overflow-hidden"
+                      style={{ borderColor: "#fbbf24", borderWidth: "3px" }}
+                    >
+                      <Image 
+                        src={imagenActual}
+                        alt="ALBA"
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Burbuja de dialogo */}
+                  <div className="flex-1 relative">
+                    <div 
+                      className="bg-white rounded-xl rounded-tl-none p-3 text-sm text-slate-700 leading-relaxed"
+                      style={{ minHeight: "80px" }}
+                    >
+                      {consejoActual}
+                    </div>
+                    <div 
+                      className="absolute top-3 -left-2 w-0 h-0"
+                      style={{
+                        borderTop: "8px solid transparent",
+                        borderBottom: "8px solid transparent",
+                        borderRight: "8px solid white"
+                      }}
+                    />
+                  </div>
                 </div>
-                {/* Triangulo de la burbuja */}
-                <div 
-                  className="absolute top-3 -left-2 w-0 h-0"
-                  style={{
-                    borderTop: "8px solid transparent",
-                    borderBottom: "8px solid transparent",
-                    borderRight: "8px solid white"
-                  }}
-                />
               </div>
-            </div>
+            )}
             
             {/* Botones de control */}
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50">
               <div className="flex gap-2">
-                <Button 
-                  size="sm"
-                  onClick={handlePlayAudio}
-                  className="rounded-full px-3 text-xs"
-                  style={{ 
-                    backgroundColor: isPlaying ? "#f59e0b" : "#fbbf24", 
-                    color: "#1e3a5f" 
-                  }}
-                >
-                  {isPlaying ? (
-                    <>
-                      <Pause className="w-3.5 h-3.5 mr-1" fill="currentColor" />
-                      Pausar
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3.5 h-3.5 mr-1" fill="currentColor" />
-                      Escuchar
-                    </>
-                  )}
-                </Button>
+                {tieneVideo && (
+                  <Button 
+                    size="sm"
+                    onClick={handlePlayPause}
+                    className="rounded-full px-3 text-xs"
+                    style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
+                  >
+                    {isPlaying ? (
+                      <><Pause className="w-3.5 h-3.5 mr-1" fill="currentColor" />Pausar</>
+                    ) : (
+                      <><Play className="w-3.5 h-3.5 mr-1" fill="currentColor" />Ver</>
+                    )}
+                  </Button>
+                )}
                 <Button 
                   size="sm"
                   variant="outline"
