@@ -42,46 +42,58 @@ const STORAGE_PROGRESS_KEY = "alba_progreso"
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 
-// ── Sintesis Pedagogica Modal ──────────────────────────────────────────────
+// ── Sintesis Pedagogica Cuatrimestral ──────────────────────────────────────
 function SintesisPedagogicaModal({ 
-  evaluaciones,
+  progress,
   totalStudents,
   onClose 
 }: { 
-  evaluaciones: Record<string, StatusLevel>
+  progress: Record<string, { CF: number; CT: number; O: number }>
   totalStudents: number
   onClose: () => void 
 }) {
-  // Contar por nivel para generar texto descriptivo
-  const counts = { green: 0, yellow: 0, red: 0 }
-  Object.values(evaluaciones).forEach(status => {
-    if (status in counts) counts[status as keyof typeof counts]++
-  })
-  
-  const evaluados = Object.keys(evaluaciones).length
+  // Calcular promedios por eje de todo el grupo
+  const estudiantes = Object.values(progress)
+  const totalEvaluados = estudiantes.length
 
-  // Textos descriptivos sin porcentajes
-  const getMayoria = () => {
-    if (counts.green >= counts.yellow && counts.green >= counts.red) return "la mayoria"
-    if (counts.yellow >= counts.green && counts.yellow >= counts.red) return "varios ninos"
-    return "algunos ninos"
+  const promedios = {
+    CF: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.CF, 0) / totalEvaluados) : 0,
+    CT: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.CT, 0) / totalEvaluados) : 0,
+    O: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.O, 0) / totalEvaluados) : 0,
   }
 
-  const getLogrosTexto = () => {
-    if (counts.green > counts.red && counts.green > 0) {
-      return `Observamos que ${getMayoria()} del grupo ya logra identificar el sonido inicial con autonomia. Muestran maduracion en la escucha atenta y comienzan a asociar sonido con palabra de forma espontanea.`
-    } else if (counts.yellow > counts.red) {
-      return `El grupo esta en un momento de transicion. Varios ninos estan consolidando la habilidad de discriminar sonidos, aunque todavia necesitan acompanamiento para hacerlo de forma autonoma.`
-    } else {
-      return `Identificamos que el grupo necesita mas tiempo y acompanamiento para fortalecer estas habilidades. Seguiremos trabajando con estrategias diferenciadas.`
-    }
+  // Contar ninos por nivel en cada eje
+  const contarNiveles = (eje: "CF" | "CT" | "O") => {
+    let avanzados = 0, enProceso = 0, necesitanApoyo = 0
+    estudiantes.forEach(s => {
+      if (s[eje] >= 70) avanzados++
+      else if (s[eje] >= 40) enProceso++
+      else necesitanApoyo++
+    })
+    return { avanzados, enProceso, necesitanApoyo }
   }
 
-  const getProximosPasos = () => {
-    if (counts.red > 0) {
-      return `Para los ninos que necesitan mas apoyo, continuaremos con juegos de rimas mas simples y repeticion de fonemas en contextos ludicos.`
-    }
-    return `Avanzaremos hacia la identificacion de otros fonemas y comenzaremos a introducir la asociacion con la letra escrita.`
+  const nivelesCF = contarNiveles("CF")
+  const nivelesCT = contarNiveles("CT")
+  const nivelesO = contarNiveles("O")
+
+  // Determinar el eje mas fuerte y el que necesita mas trabajo
+  const getNivelTexto = (promedio: number) => {
+    if (promedio >= 70) return "muy buen avance"
+    if (promedio >= 40) return "avance sostenido"
+    return "necesita mas trabajo"
+  }
+
+  const getEjeMasFuerte = () => {
+    if (promedios.CF >= promedios.CT && promedios.CF >= promedios.O) return "Conciencia Fonologica"
+    if (promedios.CT >= promedios.CF && promedios.CT >= promedios.O) return "Conocimiento de Textos"
+    return "Oralidad"
+  }
+
+  const getEjeAReforzar = () => {
+    if (promedios.CF <= promedios.CT && promedios.CF <= promedios.O) return "Conciencia Fonologica"
+    if (promedios.CT <= promedios.CF && promedios.CT <= promedios.O) return "Conocimiento de Textos"
+    return "Oralidad"
   }
 
   return (
@@ -90,17 +102,17 @@ function SintesisPedagogicaModal({
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-xl w-full my-8"
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header simple */}
+        {/* Header */}
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-                Sintesis Pedagogica
+                Sintesis Pedagogica Cuatrimestral
               </h2>
-              <p className="text-sm text-slate-500">Sala Manzanos · Dia 37</p>
+              <p className="text-sm text-slate-500">Sala Manzanos · Primer Cuatrimestre 2025 · {totalEvaluados} alumnos</p>
             </div>
             <button 
               onClick={onClose}
@@ -112,7 +124,7 @@ function SintesisPedagogicaModal({
           </div>
         </div>
 
-        {/* Contenido narrativo limpio */}
+        {/* Contenido narrativo */}
         <div className="p-5 space-y-5 text-slate-700 leading-relaxed">
           
           <section>
@@ -120,9 +132,12 @@ function SintesisPedagogicaModal({
               Que nos propusimos
             </h3>
             <p>
-              Trabajamos con la actividad <strong>{ACTIVIDAD_DEL_DIA}</strong>, 
-              enfocados en que los ninos puedan reconocer el sonido inicial de las palabras. 
-              El objetivo fue fortalecer la conciencia fonologica como base para la alfabetizacion.
+              Durante este cuatrimestre trabajamos los tres ejes fundamentales de la alfabetizacion inicial: 
+              <strong> Conciencia Fonologica</strong> (reconocimiento de sonidos y rimas), 
+              <strong> Conocimiento de Textos</strong> (comprension de cuentos y narraciones), y 
+              <strong> Oralidad</strong> (expresion verbal y vocabulario). 
+              El objetivo fue sentar las bases para que cada nino avance en su proceso de alfabetizacion 
+              respetando sus tiempos y necesidades.
             </p>
           </section>
 
@@ -131,10 +146,10 @@ function SintesisPedagogicaModal({
               Como lo hicimos
             </h3>
             <p>
-              Usamos imagenes de objetos que empiezan con el mismo sonido, 
-              jugamos a aplaudir cuando escuchaban el fonema, 
-              y cantamos canciones que repiten el sonido de forma divertida.
-              Cada nino tuvo oportunidad de participar y practicar.
+              Utilizamos el metodo ALBA con actividades diarias estructuradas: juegos de rimas y sonidos 
+              para la conciencia fonologica, lectura compartida de cuentos para el conocimiento de textos, 
+              y rondas de conversacion para desarrollar la oralidad. Cada actividad fue registrada y 
+              evaluada para hacer un seguimiento personalizado de cada alumno.
             </p>
           </section>
 
@@ -142,19 +157,59 @@ function SintesisPedagogicaModal({
             <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
               Que logramos
             </h3>
-            <p>{getLogrosTexto()}</p>
-            {evaluados > 0 && (
-              <p className="mt-2 text-sm text-slate-500 italic">
-                Se evaluaron {evaluados} ninos en esta actividad.
+            
+            <div className="space-y-3 mt-3">
+              <div className="p-3 rounded-xl" style={{ backgroundColor: "#f8fafc" }}>
+                <p className="font-medium" style={{ color: "#1e3a5f" }}>Conciencia Fonologica</p>
+                <p className="text-sm mt-1">
+                  {nivelesCF.avanzados > 0 && `${nivelesCF.avanzados} ninos logran identificar sonidos con autonomia. `}
+                  {nivelesCF.enProceso > 0 && `${nivelesCF.enProceso} estan consolidando esta habilidad. `}
+                  {nivelesCF.necesitanApoyo > 0 && `${nivelesCF.necesitanApoyo} necesitan mas acompanamiento.`}
+                  {totalEvaluados === 0 && "Sin datos registrados aun."}
+                </p>
+              </div>
+              
+              <div className="p-3 rounded-xl" style={{ backgroundColor: "#f8fafc" }}>
+                <p className="font-medium" style={{ color: "#1e3a5f" }}>Conocimiento de Textos</p>
+                <p className="text-sm mt-1">
+                  {nivelesCT.avanzados > 0 && `${nivelesCT.avanzados} ninos comprenden y recuerdan las historias. `}
+                  {nivelesCT.enProceso > 0 && `${nivelesCT.enProceso} estan desarrollando la comprension. `}
+                  {nivelesCT.necesitanApoyo > 0 && `${nivelesCT.necesitanApoyo} requieren mas practica con cuentos.`}
+                  {totalEvaluados === 0 && "Sin datos registrados aun."}
+                </p>
+              </div>
+              
+              <div className="p-3 rounded-xl" style={{ backgroundColor: "#f8fafc" }}>
+                <p className="font-medium" style={{ color: "#1e3a5f" }}>Oralidad</p>
+                <p className="text-sm mt-1">
+                  {nivelesO.avanzados > 0 && `${nivelesO.avanzados} ninos se expresan con fluidez y vocabulario amplio. `}
+                  {nivelesO.enProceso > 0 && `${nivelesO.enProceso} estan ampliando su expresion verbal. `}
+                  {nivelesO.necesitanApoyo > 0 && `${nivelesO.necesitanApoyo} necesitan mas oportunidades de hablar.`}
+                  {totalEvaluados === 0 && "Sin datos registrados aun."}
+                </p>
+              </div>
+            </div>
+
+            {totalEvaluados > 0 && (
+              <p className="mt-4">
+                En general, el grupo muestra <strong>{getNivelTexto(promedios.CF)}</strong> en Conciencia Fonologica, 
+                <strong> {getNivelTexto(promedios.CT)}</strong> en Conocimiento de Textos, y 
+                <strong> {getNivelTexto(promedios.O)}</strong> en Oralidad. 
+                El eje mas consolidado es <strong>{getEjeMasFuerte()}</strong>.
               </p>
             )}
           </section>
 
           <section>
             <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
-              Proximos pasos
+              Proyecciones para el proximo cuatrimestre
             </h3>
-            <p>{getProximosPasos()}</p>
+            <p>
+              Para el segundo cuatrimestre, nos proponemos profundizar el trabajo en <strong>{getEjeAReforzar()}</strong>, 
+              que es el eje que muestra mayor necesidad de acompanamiento. Continuaremos con estrategias 
+              diferenciadas para los ninos que requieren apoyo adicional, mientras avanzamos con quienes 
+              estan listos para nuevos desafios en su proceso de alfabetizacion.
+            </p>
           </section>
 
         </div>
@@ -162,7 +217,7 @@ function SintesisPedagogicaModal({
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
           <p className="text-xs text-slate-400 text-center">
-            Generado automaticamente por ALBA a partir del registro diario.
+            Generado automaticamente por ALBA a partir del registro cuatrimestral.
           </p>
         </div>
       </div>
@@ -312,7 +367,7 @@ export default function ALBADashboard() {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            evaluaciones={evaluaciones}
+            progress={progress}
             totalStudents={students.length}
             onClose={() => setShowSintesis(false)}
           />
@@ -335,7 +390,7 @@ export default function ALBADashboard() {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            evaluaciones={evaluaciones}
+            progress={progress}
             totalStudents={students.length}
             onClose={() => setShowSintesis(false)}
           />
@@ -362,7 +417,7 @@ export default function ALBADashboard() {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            evaluaciones={evaluaciones}
+            progress={progress}
             totalStudents={students.length}
             onClose={() => setShowSintesis(false)}
           />
@@ -401,7 +456,7 @@ export default function ALBADashboard() {
       {/* Sintesis Pedagogica Modal */}
       {showSintesis && (
         <SintesisPedagogicaModal
-          evaluaciones={evaluaciones}
+          progress={progress}
           totalStudents={students.length}
           onClose={() => setShowSintesis(false)}
         />
