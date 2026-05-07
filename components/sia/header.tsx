@@ -1,15 +1,16 @@
 "use client"
 
-import { User, Calendar, BookOpen, Map, Home } from "lucide-react"
+import { User, Calendar, BookOpen, Map, Home, FileText } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
 interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
+  onSintesis?: () => void
 }
 
-export function Header({ activeView = "clase", onNavigate }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis }: HeaderProps) {
   return (
     <header className="bg-primary text-primary-foreground shadow-lg">
       <div className="px-4 py-3 sm:px-6">
@@ -59,7 +60,18 @@ export function Header({ activeView = "clase", onNavigate }: HeaderProps) {
           )}
 
           {/* Meta info */}
-          <div className="flex items-center gap-4 sm:gap-6 text-sm">
+          <div className="flex items-center gap-3 sm:gap-4 text-sm">
+            {/* Boton Sintesis Pedagogica */}
+            {onSintesis && (
+              <button
+                onClick={onSintesis}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sintesis</span>
+              </button>
+            )}
             {/* Classroom */}
             <div className="flex items-center gap-2">
               <span className="text-primary-foreground/60 text-xs hidden sm:inline">Sala:</span>
