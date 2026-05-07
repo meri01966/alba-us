@@ -443,9 +443,19 @@ export default function ALBADashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MicroTraining />
-            <AlertsPanel />
-            <QuickRegister />
+            <MicroTraining 
+              ejeDelDia="CF" 
+              actividadDelDia={ACTIVIDAD_DEL_DIA} 
+            />
+            <AlertsPanel 
+              progress={progress}
+              students={students}
+            />
+            <QuickRegister 
+              actividadDelDia={ACTIVIDAD_DEL_DIA}
+              evaluados={Object.keys(evaluaciones).length}
+              totalAlumnos={students.length}
+            />
           </div>
         </div>
       </main>
