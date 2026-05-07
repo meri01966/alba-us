@@ -70,10 +70,20 @@ export function QuickRegister({
   return (
     <Card className="shadow-md h-full flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
-          <ClipboardList className="w-4 h-4" />
-          Registro de cierre
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
+            <ClipboardList className="w-4 h-4" />
+            Registro de cierre
+          </CardTitle>
+          {guardado && (
+            <button 
+              className="text-xs px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600"
+              onClick={() => setGuardado(false)}
+            >
+              Editar
+            </button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="pt-0 flex flex-col gap-3 flex-1">
         {/* Actividad del dia */}
@@ -97,28 +107,25 @@ export function QuickRegister({
               const Icon = option.icon
               const isSelected = feedback === option.value
               return (
-                <Button
+                <button
                   key={option.value}
-                  variant="outline"
-                  size="sm"
-                  className={`flex-1 h-10 text-xs gap-1 transition-all ${
-                    isSelected ? "ring-2 ring-offset-1" : ""
-                  }`}
+                  type="button"
+                  className={`flex-1 h-10 text-xs gap-1 flex items-center justify-center rounded-md border transition-all ${
+                    isSelected ? "ring-2 ring-offset-1" : "border-slate-200 hover:border-slate-300"
+                  } ${guardado && !isSelected ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   style={isSelected ? { 
                     backgroundColor: option.bgColor, 
                     color: "#fff",
-                    borderColor: option.bgColor,
-                    ringColor: option.bgColor
+                    borderColor: option.bgColor
                   } : {}}
                   onClick={() => {
+                    if (guardado) return
                     setFeedback(option.value)
-                    setGuardado(false)
                   }}
-                  disabled={guardado}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{option.label}</span>
-                </Button>
+                  <span className="hidden sm:inline ml-1">{option.label}</span>
+                </button>
               )
             })}
           </div>
@@ -133,42 +140,39 @@ export function QuickRegister({
             placeholder="Algo que quieras recordar para manana..."
             value={observaciones}
             onChange={(e) => {
+              if (guardado) return
               setObservaciones(e.target.value)
-              setGuardado(false)
             }}
             className="flex-1 min-h-[60px] text-sm resize-none"
-            disabled={guardado}
+            readOnly={guardado}
           />
         </div>
 
         {/* Save button */}
-        <Button
-          className="w-full h-10 text-sm font-medium"
+        <button
+          type="button"
+          className={`w-full h-10 text-sm font-medium rounded-md text-white flex items-center justify-center gap-2 transition-all ${
+            !feedback && !guardado ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:opacity-90"
+          }`}
           style={{ backgroundColor: guardado ? "#10b981" : "#1e3a5f" }}
-          disabled={!feedback || guardado}
-          onClick={handleGuardar}
+          onClick={() => {
+            if (!guardado && feedback) {
+              handleGuardar()
+            }
+          }}
         >
           {guardado ? (
             <>
-              <CheckCircle2 className="w-4 h-4 mr-2" />
+              <CheckCircle2 className="w-4 h-4" />
               Registro guardado
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4" />
               Guardar cierre del dia
             </>
           )}
-        </Button>
-        
-        {guardado && (
-          <button 
-            className="text-xs text-slate-500 hover:text-slate-700 underline"
-            onClick={() => setGuardado(false)}
-          >
-            Editar registro
-          </button>
-        )}
+        </button>
       </CardContent>
     </Card>
   )
