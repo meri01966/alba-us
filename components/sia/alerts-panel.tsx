@@ -44,33 +44,50 @@ function generarAlertas(
     if (ejesEnRojo >= 2) dosRojosSeguidos.push(s.nombre)
   })
   
-  // Alerta por grupo en CF
-  if (necesitanRefuerzoCF.length >= 3) {
+  // Alerta por grupo en CF - muestra nombres
+  if (necesitanRefuerzoCF.length >= 1) {
+    const nombres = necesitanRefuerzoCF.slice(0, 4).join(", ")
+    const yMas = necesitanRefuerzoCF.length > 4 ? ` y ${necesitanRefuerzoCF.length - 4} mas` : ""
     alertas.push({
       id: "cf-grupo",
-      mensaje: `${necesitanRefuerzoCF.length} alumnos necesitan refuerzo en Conciencia Fonologica`,
+      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCF.length > 1 ? "n" : ""} refuerzo en Conciencia Fonologica`,
       tipo: "atencion",
       sugerencia: "Considera hacer grupos pequenos para trabajar rimas y sonidos iniciales. Usa juegos de aplaudir silabas.",
       alumnos: necesitanRefuerzoCF
     })
   }
   
-  // Alerta por grupo en O
-  if (necesitanRefuerzoO.length >= 3) {
+  // Alerta por grupo en CT - muestra nombres
+  if (necesitanRefuerzoCT.length >= 1) {
+    const nombres = necesitanRefuerzoCT.slice(0, 4).join(", ")
+    const yMas = necesitanRefuerzoCT.length > 4 ? ` y ${necesitanRefuerzoCT.length - 4} mas` : ""
+    alertas.push({
+      id: "ct-grupo",
+      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCT.length > 1 ? "n" : ""} refuerzo en Conocimiento de Textos`,
+      tipo: "atencion",
+      sugerencia: "Lee cuentos en voz alta y haz preguntas sobre la historia. Usa imagenes para que anticipen que pasara.",
+      alumnos: necesitanRefuerzoCT
+    })
+  }
+  
+  // Alerta por grupo en O - muestra nombres
+  if (necesitanRefuerzoO.length >= 1) {
+    const nombres = necesitanRefuerzoO.slice(0, 4).join(", ")
+    const yMas = necesitanRefuerzoO.length > 4 ? ` y ${necesitanRefuerzoO.length - 4} mas` : ""
     alertas.push({
       id: "o-grupo",
-      mensaje: `${necesitanRefuerzoO.length} alumnos necesitan mas oportunidades de expresion oral`,
+      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoO.length > 1 ? "n" : ""} mas oportunidades de expresion oral`,
       tipo: "atencion",
       sugerencia: "Incluye rondas de conversacion donde cada nino cuente algo. Haz preguntas abiertas durante las actividades.",
       alumnos: necesitanRefuerzoO
     })
   }
   
-  // Alerta urgente por alumnos con multiples ejes en rojo
+  // Alerta urgente por alumnos con multiples ejes en rojo - muestra nombres
   if (dosRojosSeguidos.length > 0) {
     alertas.push({
       id: "multiples-rojos",
-      mensaje: `${dosRojosSeguidos.join(", ")} necesita${dosRojosSeguidos.length > 1 ? "n" : ""} atencion especial`,
+      mensaje: `${dosRojosSeguidos.join(", ")} necesita${dosRojosSeguidos.length > 1 ? "n" : ""} atencion especial (varios ejes)`,
       tipo: "urgente",
       sugerencia: "Estos ninos requieren acompanamiento individualizado. Considera hablar con la familia y planificar actividades especificas.",
       alumnos: dosRojosSeguidos
