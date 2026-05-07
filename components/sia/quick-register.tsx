@@ -4,13 +4,10 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Save, ThumbsUp, Minus, AlertCircle, CheckCircle2, ClipboardList, Pencil } from "lucide-react"
 
-type FeedbackType = "bien" | "parcial" | "ajustar" | null
-
 interface QuickRegisterProps {
   actividadDelDia?: string
   evaluados?: number
   totalAlumnos?: number
-  onGuardar?: (registro: { feedback: FeedbackType; observaciones: string }) => void
 }
 
 const STORAGE_KEY = "alba_registro_cierre"
@@ -18,37 +15,28 @@ const STORAGE_KEY = "alba_registro_cierre"
 export function QuickRegister({ 
   actividadDelDia = "Reconocimiento de Sonido Inicial /M/",
   evaluados = 0,
-  totalAlumnos = 0,
-  onGuardar
+  totalAlumnos = 0
 }: QuickRegisterProps) {
-  const [feedback, setFeedback] = useState<FeedbackType>(null)
+  const [feedback, setFeedback] = useState<"bien" | "parcial" | "ajustar" | null>(null)
   const [observaciones, setObservaciones] = useState("")
   const [guardado, setGuardado] = useState(false)
-  const [modoEdicion, setModoEdicion] = useState(true)
 
   // Cargar registro guardado del dia
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
         const parsed = JSON.parse(saved)
         if (parsed.fecha === new Date().toDateString()) {
           setFeedback(parsed.feedback)
           setObservaciones(parsed.observaciones || "")
           setGuardado(true)
-          setModoEdicion(false)
         }
-      } catch {
-        // Ignorar errores
       }
+    } catch (e) {
+      // Ignorar
     }
   }, [])
-
-  const feedbackOptions = [
-    { value: "bien" as const, label: "Bien", icon: ThumbsUp, bgColor: "#10b981" },
-    { value: "parcial" as const, label: "Parcial", icon: Minus, bgColor: "#f59e0b" },
-    { value: "ajustar" as const, label: "Ajustar", icon: AlertCircle, bgColor: "#ef4444" },
-  ]
 
   const guardar = () => {
     if (!feedback) {
@@ -67,13 +55,16 @@ export function QuickRegister({
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(registro))
     setGuardado(true)
-    setModoEdicion(false)
-    onGuardar?.(registro)
   }
 
   const editar = () => {
-    setModoEdicion(true)
     setGuardado(false)
+  }
+
+  const seleccionarFeedback = (valor: "bien" | "parcial" | "ajustar") => {
+    if (!guardado) {
+      setFeedback(valor)
+    }
   }
 
   return (
@@ -84,11 +75,11 @@ export function QuickRegister({
             <ClipboardList className="w-4 h-4" />
             Registro de cierre
           </CardTitle>
-          {!modoEdicion && (
+          {guardado && (
             <button 
               type="button"
-              className="text-xs px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-700 flex items-center gap-1"
               onClick={editar}
+              className="text-xs px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-700 flex items-center gap-1 cursor-pointer"
             >
               <Pencil className="w-3 h-3" />
               Editar
@@ -99,7 +90,7 @@ export function QuickRegister({
       
       <CardContent className="pt-0 flex flex-col gap-3 flex-1">
         {/* Actividad del dia */}
-        <div className="p-2.5 rounded-lg text-xs" style={{ backgroundColor: "#f8fafc" }}>
+        <div className="p-2.5 rounded-lg text-xs bg-slate-50">
           <span className="text-slate-500">Actividad:</span>
           <span className="ml-1 font-medium text-slate-700">{actividadDelDia}</span>
           {totalAlumnos > 0 && (
@@ -109,39 +100,50 @@ export function QuickRegister({
           )}
         </div>
 
-        {/* Feedback buttons - siempre visibles */}
+        {/* Feedback buttons */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-500">
             Como funciono la actividad?
           </label>
           <div className="flex gap-2">
-            {feedbackOptions.map((option) => {
-              const Icon = option.icon
-              const isSelected = feedback === option.value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={!modoEdicion}
-                  className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
-                    ${isSelected ? "text-white" : "bg-white text-slate-600 border-slate-200"}
-                    ${modoEdicion ? "hover:border-slate-400 cursor-pointer" : "cursor-default"}
-                  `}
-                  style={isSelected ? { 
-                    backgroundColor: option.bgColor, 
-                    borderColor: option.bgColor
-                  } : {}}
-                  onClick={() => {
-                    if (modoEdicion) {
-                      setFeedback(option.value)
-                    }
-                  }}
-                >
-                  <Icon className="w-4 h-4 mb-0.5" />
-                  <span>{option.label}</span>
-                </button>
-              )
-            })}
+            {/* Boton BIEN */}
+            <button
+              type="button"
+              onClick={() => seleccionarFeedback("bien")}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all cursor-pointer
+                ${feedback === "bien" ? "text-white bg-green-500 border-green-500" : "bg-white text-slate-600 border-slate-200 hover:border-green-300"}
+                ${guardado ? "opacity-60" : ""}
+              `}
+            >
+              <ThumbsUp className="w-4 h-4 mb-0.5" />
+              <span>Bien</span>
+            </button>
+
+            {/* Boton PARCIAL */}
+            <button
+              type="button"
+              onClick={() => seleccionarFeedback("parcial")}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all cursor-pointer
+                ${feedback === "parcial" ? "text-white bg-amber-500 border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"}
+                ${guardado ? "opacity-60" : ""}
+              `}
+            >
+              <Minus className="w-4 h-4 mb-0.5" />
+              <span>Parcial</span>
+            </button>
+
+            {/* Boton AJUSTAR */}
+            <button
+              type="button"
+              onClick={() => seleccionarFeedback("ajustar")}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all cursor-pointer
+                ${feedback === "ajustar" ? "text-white bg-red-500 border-red-500" : "bg-white text-slate-600 border-slate-200 hover:border-red-300"}
+                ${guardado ? "opacity-60" : ""}
+              `}
+            >
+              <AlertCircle className="w-4 h-4 mb-0.5" />
+              <span>Ajustar</span>
+            </button>
           </div>
         </div>
 
@@ -153,31 +155,30 @@ export function QuickRegister({
           <textarea
             placeholder="Algo que quieras recordar..."
             value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            disabled={!modoEdicion}
-            className="flex-1 min-h-[60px] text-sm resize-none p-2 rounded-lg border border-slate-200 focus:border-slate-400 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+            onChange={(e) => !guardado && setObservaciones(e.target.value)}
+            readOnly={guardado}
+            className={`flex-1 min-h-[60px] text-sm resize-none p-2 rounded-lg border border-slate-200 focus:border-slate-400 focus:outline-none ${guardado ? "bg-slate-50 text-slate-500" : ""}`}
           />
         </div>
 
-        {/* Boton guardar */}
-        {modoEdicion ? (
+        {/* Boton guardar o estado guardado */}
+        {guardado ? (
+          <div 
+            className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2 bg-green-500"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Registro guardado
+          </div>
+        ) : (
           <button
             type="button"
             onClick={guardar}
-            className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+            className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer"
             style={{ backgroundColor: "#1e3a5f" }}
           >
             <Save className="w-4 h-4" />
             Guardar cierre del dia
           </button>
-        ) : (
-          <div 
-            className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2"
-            style={{ backgroundColor: "#10b981" }}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Registro guardado
-          </div>
         )}
       </CardContent>
     </Card>
