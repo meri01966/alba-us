@@ -4,7 +4,7 @@ import { useState } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, Send, X } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red"
 
@@ -65,63 +65,18 @@ const EVAL_OPTIONS: {
   },
 ]
 
-// Genera el mensaje de reporte para la familia basado en el progreso
-function generarReporteFamilia(nombre: string, cf: StatusLevel, rl: StatusLevel, o: StatusLevel): string {
-  const getNivel = (status: StatusLevel) => {
-    if (status === "green") return "avanza muy bien"
-    if (status === "yellow") return "esta progresando"
-    return "necesita apoyo"
-  }
 
-  const getEjeTexto = (eje: string, status: StatusLevel) => {
-    const nivel = getNivel(status)
-    if (eje === "CF") return `En Conciencia Fonologica ${nivel}`
-    if (eje === "RL") return `En Reconocimiento de Letras ${nivel}`
-    return `En Oralidad ${nivel}`
-  }
-
-  // Ordenar por prioridad: primero los logros, luego lo que necesita apoyo
-  const ejes = [
-    { eje: "CF", status: cf },
-    { eje: "RL", status: rl },
-    { eje: "O", status: o },
-  ]
-
-  const logros = ejes.filter(e => e.status === "green")
-  const proceso = ejes.filter(e => e.status === "yellow")
-  const apoyo = ejes.filter(e => e.status === "red")
-
-  let mensaje = `Hola! Les comparto el avance de ${nombre.split(" ")[0]} en el aula:\n\n`
-
-  if (logros.length > 0) {
-    mensaje += logros.map(e => `${getEjeTexto(e.eje, e.status)}.`).join(" ") + "\n"
-  }
-  if (proceso.length > 0) {
-    mensaje += proceso.map(e => `${getEjeTexto(e.eje, e.status)}.`).join(" ") + "\n"
-  }
-  if (apoyo.length > 0) {
-    mensaje += "\n" + apoyo.map(e => `${getEjeTexto(e.eje, e.status)} y seria bueno practicar en casa.`).join(" ")
-  }
-
-  mensaje += "\n\nSaludos, Seño"
-
-  return mensaje
-}
 
 function StudentRow({
   student,
   currentStatus,
   saving,
   onEval,
-  onSendReport,
-  reportSent,
 }: {
   student: Student
   currentStatus: StatusLevel | null
   saving: boolean
   onEval: (status: StatusLevel) => void
-  onSendReport: () => void
-  reportSent: boolean
 }) {
   return (
     <li className="flex items-center gap-2 px-3 py-2.5 border border-border rounded-xl bg-card">
@@ -145,92 +100,13 @@ function StudentRow({
             </button>
           )
         })}
-        {/* Boton enviar reporte individual - siempre azul, con check cuando enviado */}
-        <button
-          onClick={onSendReport}
-          disabled={saving}
-          title={reportSent ? "Reporte enviado" : "Enviar reporte a la familia"}
-          className="flex items-center justify-center w-8 h-8 rounded-lg border transition-all hover:scale-110 disabled:opacity-50 ml-1"
-          style={{
-            backgroundColor: "#1e3a5f",
-            borderColor: "#1e3a5f",
-            color: "#fff",
-          }}
-        >
-          {reportSent ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-        </button>
         {saving && <Spinner className="w-4 h-4 text-primary" />}
       </div>
     </li>
   )
 }
 
-// Modal de reporte
-function ReportModal({
-  student,
-  mensaje,
-  onClose,
-  onSend,
-  sending,
-}: {
-  student: Student
-  mensaje: string
-  onClose: () => void
-  onSend: () => void
-  sending: boolean
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-            Reporte para familia de {student.name.split(" ")[0]}
-          </h3>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
 
-        <div
-          className="rounded-xl p-4 mb-4 text-sm leading-relaxed whitespace-pre-line"
-          style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
-        >
-          {mensaje}
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onSend}
-            disabled={sending}
-            className="flex-1 py-2.5 rounded-xl font-medium text-white flex items-center justify-center gap-2 transition-all hover:scale-105 disabled:opacity-50"
-            style={{ backgroundColor: "#1e3a5f" }}
-          >
-            {sending ? (
-              <>
-                <Spinner className="w-4 h-4" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Enviar
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
   const { data, isLoading } = useSWR<StudentsResponse>("/api/students", fetcher, {
@@ -239,9 +115,6 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
 
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [reportsSent, setReportsSent] = useState<Record<string, boolean>>({})
-  const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
-  const [sendingReport, setSendingReport] = useState(false)
 
   const rawStudents = data?.students ?? []
   const source = data?.source ?? null
@@ -278,23 +151,6 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
     }
     
     setSavingId(null)
-  }
-
-  function handleOpenReport(student: Student) {
-    const mensaje = generarReporteFamilia(student.name, student.cf, student.rl, student.o)
-    setReportModal({ student, mensaje })
-  }
-
-  async function handleSendReport() {
-    if (!reportModal) return
-    setSendingReport(true)
-    
-    // Simular envio
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setReportsSent((prev) => ({ ...prev, [reportModal.student.id]: true }))
-    setSendingReport(false)
-    setReportModal(null)
   }
 
   const getStudentStatus = (studentId: string): StatusLevel | null => {
@@ -354,10 +210,6 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
                 </div>
               )
             })}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
-              <Send className="w-3.5 h-3.5" style={{ color: "#1e3a5f" }} />
-              Reporte
-            </div>
           </div>
         </CardHeader>
 
@@ -378,25 +230,12 @@ export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
                   currentStatus={getStudentStatus(student.id)}
                   saving={savingId === student.id}
                   onEval={(status) => handleEval(student, status)}
-                  onSendReport={() => handleOpenReport(student)}
-                  reportSent={reportsSent[student.id] || false}
                 />
               ))}
             </ul>
           )}
         </CardContent>
       </Card>
-
-      {/* Modal de reporte */}
-      {reportModal && (
-        <ReportModal
-          student={reportModal.student}
-          mensaje={reportModal.mensaje}
-          onClose={() => setReportModal(null)}
-          onSend={handleSendReport}
-          sending={sendingReport}
-        />
-      )}
     </>
   )
 }
