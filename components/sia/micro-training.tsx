@@ -140,30 +140,30 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
   return (
     <div className="bg-white rounded-xl shadow-md h-full flex flex-col border border-slate-200 overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-100">
-        <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
+      <div className="px-3 py-2 border-b border-slate-100">
+        <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
           <Lightbulb className="w-4 h-4 text-amber-500" />
           Micro capacitacion just in time
         </h3>
       </div>
       
       {/* Content */}
-      <div className="flex-1">
-        <div className="rounded-xl overflow-hidden m-4" style={{ backgroundColor: "#1e3a5f" }}>
+      <div className="flex-1 overflow-auto p-2">
+        <div className="rounded-lg overflow-hidden" style={{ backgroundColor: "#1e3a5f" }}>
           {/* Avatar + Burbuja */}
-          <div className="p-4">
-            <div className="flex gap-3">
-              {/* Avatar de ALBA con animacion */}
+          <div className="p-3">
+            <div className="flex gap-2">
+              {/* Avatar de ALBA */}
               <div className="relative flex-shrink-0">
                 <div 
-                  className={`w-16 h-16 rounded-full overflow-hidden transition-transform ${isTalking ? "animate-pulse scale-105" : ""}`}
-                  style={{ borderColor: "#fbbf24", borderWidth: "3px" }}
+                  className={`w-12 h-12 rounded-full overflow-hidden transition-transform ${isTalking ? "animate-pulse scale-105" : ""}`}
+                  style={{ borderColor: "#fbbf24", borderWidth: "2px" }}
                 >
                   <Image 
                     src="/images/alba-personaje.jpg"
                     alt="ALBA"
-                    width={64}
-                    height={64}
+                    width={48}
+                    height={48}
                     className="object-cover w-full h-full"
                   />
                 </div>
@@ -171,57 +171,46 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
               
               {/* Burbuja de dialogo */}
               <div className="flex-1 relative">
-                <div 
-                  className="bg-white rounded-xl rounded-tl-none p-3 text-sm text-slate-700 leading-relaxed"
-                  style={{ minHeight: "80px" }}
-                >
+                <div className="bg-white rounded-lg rounded-tl-none p-2 text-xs text-slate-700 leading-relaxed">
                   {consejoActual}
                 </div>
-                <div 
-                  className="absolute top-3 -left-2 w-0 h-0"
-                  style={{
-                    borderTop: "8px solid transparent",
-                    borderBottom: "8px solid transparent",
-                    borderRight: "8px solid white"
-                  }}
-                />
               </div>
             </div>
           </div>
           
           {/* Un solo boton: Otro tip (cambia y reproduce) */}
-          <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50">
+          <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50">
             <button 
               type="button"
               onClick={handleOtroTip}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-amber-500 text-white hover:bg-amber-600 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-amber-500 text-white hover:bg-amber-600 transition-all"
             >
-              <RefreshCw className={`w-4 h-4 ${isTalking ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3 h-3 ${isTalking ? "animate-spin" : ""}`} />
               Otro tip
             </button>
-            <span className="text-xs text-white/60">
-              {consejoIndex + 1} / {consejos.length}
+            <span className="text-[10px] text-white/60">
+              {consejoIndex + 1}/{consejos.length}
             </span>
           </div>
         </div>
 
         {/* Lo que deben aprender - colapsable */}
-        <div className="mx-4 mb-4 bg-slate-50 rounded-lg px-4 py-3">
+        <div className="mt-2 bg-slate-50 rounded-lg px-3 py-2">
           <button 
             type="button"
             onClick={() => setShowAprendizajes(!showAprendizajes)}
-            className="w-full text-left flex items-center justify-between text-xs font-semibold"
+            className="w-full text-left flex items-center justify-between text-[11px] font-semibold"
             style={{ color: "#1e3a5f" }}
           >
-            <span>Que deben aprender los ninos</span>
+            <span>Que deben aprender</span>
             <span className="text-slate-400">{showAprendizajes ? "−" : "+"}</span>
           </button>
           
           {showAprendizajes && (
-            <ul className="mt-2 text-xs text-slate-600 space-y-1.5">
+            <ul className="mt-1.5 text-[11px] text-slate-600 space-y-1">
               {aprendizajes.map((item, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 bg-amber-500" />
+                <li key={i} className="flex items-start gap-1.5">
+                  <span className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0 bg-amber-500" />
                   <span>{item}</span>
                 </li>
               ))}
