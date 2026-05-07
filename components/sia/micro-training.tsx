@@ -84,7 +84,7 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
     setConsejoIndex((prev) => (prev + 1) % consejos.length)
   }
 
-  // Reproducir audio
+  // Reproducir audio con voz femenina dulce tipo maestra de jardin
   const handlePlayAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel()
@@ -93,8 +93,26 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
     } else {
       const utterance = new SpeechSynthesisUtterance(consejoActual)
       utterance.lang = "es-AR"
-      utterance.rate = 0.95
-      utterance.pitch = 1.1
+      utterance.rate = 0.9  // Un poco mas lento para que sea claro
+      utterance.pitch = 1.3 // Mas agudo para voz femenina dulce
+      
+      // Buscar una voz femenina en espanol
+      const voices = window.speechSynthesis.getVoices()
+      const vozFemenina = voices.find(v => 
+        (v.lang.includes("es") || v.lang.includes("ES")) && 
+        (v.name.toLowerCase().includes("female") || 
+         v.name.toLowerCase().includes("mujer") ||
+         v.name.toLowerCase().includes("paulina") ||
+         v.name.toLowerCase().includes("monica") ||
+         v.name.toLowerCase().includes("lucia") ||
+         v.name.toLowerCase().includes("elena") ||
+         v.name.toLowerCase().includes("google") ||
+         v.name.toLowerCase().includes("microsoft"))
+      ) || voices.find(v => v.lang.includes("es"))
+      
+      if (vozFemenina) {
+        utterance.voice = vozFemenina
+      }
       
       utterance.onstart = () => setIsTalking(true)
       utterance.onend = () => {
@@ -111,6 +129,15 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia }: MicroTraini
       setIsPlaying(true)
     }
   }
+  
+  // Cargar voces cuando esten disponibles
+  useEffect(() => {
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices()
+    }
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+  }, [])
 
   // Limpiar al desmontar
   useEffect(() => {
