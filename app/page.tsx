@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import useSWR from "swr"
 import { 
   BookOpen, Calendar, User, CheckCircle2, Clock, AlertCircle, 
-  Send, X, BrainCircuit, ChevronRight 
+  Send, X, BrainCircuit, ChevronRight, FileText, ListChecks
 } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -59,6 +59,154 @@ function generarReporteFamilia(nombre: string, progress: { CF: number; CT: numbe
   return msg
 }
 
+// ── Sintesis Pedagogica Modal ──────────────────────────────────────────────
+function SintesisPedagogicaModal({ 
+  counts, 
+  totalStudents,
+  actividad,
+  onClose 
+}: { 
+  counts: { red: number; yellow: number; green: number }
+  totalStudents: number
+  actividad: string
+  onClose: () => void 
+}) {
+  const [bulletMode, setBulletMode] = useState(false)
+  const porcentajeAvanzado = totalStudents > 0 ? Math.round((counts.green / totalStudents) * 100) : 0
+  const porcentajeProceso = totalStudents > 0 ? Math.round((counts.yellow / totalStudents) * 100) : 0
+  const porcentajeRefuerzo = totalStudents > 0 ? Math.round((counts.red / totalStudents) * 100) : 0
+
+  const propositos = `Durante este periodo, nuestro foco principal fue la estimulacion de la conciencia fonologica, especificamente la identificacion de fonemas base para iniciar el proceso de alfabetizacion. Trabajamos con la actividad "${actividad}" para fortalecer el reconocimiento auditivo y la asociacion sonido-palabra.`
+
+  const logros = porcentajeAvanzado >= 50
+    ? `Hemos observado un avance consolidado en el ${porcentajeAvanzado}% de la sala, quienes ya logran discriminar sonidos con autonomia. El grupo muestra una maduracion notable en la escucha atenta y la asociacion fonema-grafema.`
+    : porcentajeProceso >= 30
+    ? `El ${porcentajeProceso}% de la sala esta en proceso de consolidacion, mostrando avances graduales en la discriminacion de sonidos. El ${porcentajeAvanzado}% ya domina estas habilidades con autonomia.`
+    : `Identificamos que el ${porcentajeRefuerzo}% de la sala requiere acompanamiento adicional. Estamos implementando estrategias diferenciadas para fortalecer estas habilidades fundamentales.`
+
+  const estrategias = `Implementamos dinamicas de rimas, juegos sonoros grupales y el uso de nuestras fichas diagnosticas para personalizar el apoyo segun la necesidad de cada nino. Utilizamos canciones con repeticion de fonemas, imagenes asociativas y actividades de segmentacion silabica.`
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div 
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full my-8"
+        style={{ 
+          backgroundImage: "linear-gradient(to bottom, #fefefe 0%, #f9f9f9 100%)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+        }}
+      >
+        {/* Header elegante */}
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#1e3a5f" }}>
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: "#1e3a5f", fontFamily: "Georgia, serif" }}>
+                  Sintesis Pedagogica
+                </h2>
+                <p className="text-sm text-slate-500">Sala Manzanos · Dia 37</p>
+              </div>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Contenido del reporte */}
+        <div className="p-6 space-y-6" style={{ fontFamily: "Georgia, serif" }}>
+          
+          {/* Bloque 1: Propositos */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#1e3a5f" }}>1</div>
+              <h3 className="font-bold text-lg" style={{ color: "#1e3a5f" }}>Que nos propusimos</h3>
+            </div>
+            {bulletMode ? (
+              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
+                <li>Foco en conciencia fonologica</li>
+                <li>Identificacion de fonemas base</li>
+                <li>Actividad: {actividad}</li>
+                <li>Reconocimiento auditivo y asociacion sonido-palabra</li>
+              </ul>
+            ) : (
+              <p className="text-slate-700 leading-relaxed ml-8">{propositos}</p>
+            )}
+          </section>
+
+          {/* Bloque 2: Logros */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#10b981" }}>2</div>
+              <h3 className="font-bold text-lg" style={{ color: "#10b981" }}>Que logramos</h3>
+            </div>
+            {bulletMode ? (
+              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
+                <li>{counts.green} alumnos avanzados ({porcentajeAvanzado}%)</li>
+                <li>{counts.yellow} alumnos en proceso ({porcentajeProceso}%)</li>
+                <li>{counts.red} alumnos requieren refuerzo ({porcentajeRefuerzo}%)</li>
+                <li>El grupo muestra maduracion en escucha atenta</li>
+              </ul>
+            ) : (
+              <p className="text-slate-700 leading-relaxed ml-8">{logros}</p>
+            )}
+            {/* Mini grafico */}
+            <div className="flex gap-1 mt-3 ml-8 h-3 rounded-full overflow-hidden bg-slate-100">
+              <div style={{ width: `${porcentajeAvanzado}%`, backgroundColor: "#10b981" }} />
+              <div style={{ width: `${porcentajeProceso}%`, backgroundColor: "#f59e0b" }} />
+              <div style={{ width: `${porcentajeRefuerzo}%`, backgroundColor: "#ef4444" }} />
+            </div>
+          </section>
+
+          {/* Bloque 3: Estrategias */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#f59e0b" }}>3</div>
+              <h3 className="font-bold text-lg" style={{ color: "#f59e0b" }}>Como lo hicimos</h3>
+            </div>
+            {bulletMode ? (
+              <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
+                <li>Dinamicas de rimas</li>
+                <li>Juegos sonoros grupales</li>
+                <li>Fichas diagnosticas personalizadas</li>
+                <li>Canciones con repeticion de fonemas</li>
+                <li>Actividades de segmentacion silabica</li>
+              </ul>
+            ) : (
+              <p className="text-slate-700 leading-relaxed ml-8">{estrategias}</p>
+            )}
+          </section>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-3xl">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-400 italic">
+              Este informe es una sintesis del recorrido grupal registrado en ALBA.
+            </p>
+            <button
+              onClick={() => setBulletMode(!bulletMode)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: bulletMode ? "#1e3a5f" : "#f1f5f9", 
+                color: bulletMode ? "#fff" : "#1e3a5f" 
+              }}
+            >
+              <ListChecks className="w-4 h-4" />
+              {bulletMode ? "Ver narrativa" : "Preparar para Reunion"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Report Modal ───────────────────────────────────────────────────────────
 function ReportModal({ nombre, mensaje, onClose, onSend, sending }: {
   nombre: string; mensaje: string; onClose: () => void; onSend: () => void; sending: boolean
@@ -100,6 +248,7 @@ export default function ALBADashboard() {
   const [reportModal, setReportModal] = useState<{ nombre: string; mensaje: string; id: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  const [showSintesis, setShowSintesis] = useState(false)
 
   const students = studentsData?.students ?? []
   const activity = brainData?.activity
@@ -176,7 +325,17 @@ export default function ALBADashboard() {
             <p className="text-xs text-white/60">Sala Manzanos</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-white text-sm">
+        <div className="flex items-center gap-3 text-white text-sm">
+          {/* Boton Sintesis Pedagogica */}
+          <button
+            onClick={() => setShowSintesis(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sintesis</span>
+          </button>
+          
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-white/60" />
             <span className="font-semibold">Dia 37</span>
@@ -410,6 +569,16 @@ export default function ALBADashboard() {
           onClose={() => setReportModal(null)}
           onSend={handleSendReport}
           sending={sendingReport}
+        />
+      )}
+
+      {/* Sintesis Pedagogica Modal */}
+      {showSintesis && (
+        <SintesisPedagogicaModal
+          counts={counts}
+          totalStudents={students.length}
+          actividad={ACTIVIDAD_DEL_DIA}
+          onClose={() => setShowSintesis(false)}
         />
       )}
     </div>
