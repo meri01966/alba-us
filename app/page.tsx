@@ -136,8 +136,8 @@ function SintesisPedagogicaModal({
           {/* Bloque 2: Logros */}
           <section>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#10b981" }}>2</div>
-              <h3 className="font-bold text-lg" style={{ color: "#10b981" }}>Que logramos</h3>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#6366f1" }}>2</div>
+              <h3 className="font-bold text-lg" style={{ color: "#6366f1" }}>Que logramos</h3>
             </div>
             {bulletMode ? (
               <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">
@@ -148,19 +148,24 @@ function SintesisPedagogicaModal({
             ) : (
               <p className="text-slate-700 leading-relaxed ml-8">{logros}</p>
             )}
-            {/* Mini grafico */}
+            {/* Mini grafico - usa tonos de azul/violeta para no confundir con semaforo */}
             <div className="flex gap-1 mt-3 ml-8 h-3 rounded-full overflow-hidden bg-slate-100">
-              <div style={{ width: `${porcentajeAvanzado}%`, backgroundColor: "#10b981" }} />
-              <div style={{ width: `${porcentajeProceso}%`, backgroundColor: "#f59e0b" }} />
-              <div style={{ width: `${porcentajeRefuerzo}%`, backgroundColor: "#ef4444" }} />
+              <div style={{ width: `${porcentajeAvanzado}%`, backgroundColor: "#1e3a5f" }} />
+              <div style={{ width: `${porcentajeProceso}%`, backgroundColor: "#6366f1" }} />
+              <div style={{ width: `${porcentajeRefuerzo}%`, backgroundColor: "#c7d2fe" }} />
+            </div>
+            <div className="flex gap-4 mt-2 ml-8 text-xs text-slate-500">
+              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#1e3a5f" }} />Avanzado</span>
+              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#6366f1" }} />En proceso</span>
+              <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#c7d2fe" }} />Refuerzo</span>
             </div>
           </section>
 
           {/* Bloque 3: Estrategias */}
           <section>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#f59e0b" }}>3</div>
-              <h3 className="font-bold text-lg" style={{ color: "#f59e0b" }}>Como lo hicimos</h3>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: "#8b5cf6" }}>3</div>
+              <h3 className="font-bold text-lg" style={{ color: "#8b5cf6" }}>Como lo hicimos</h3>
             </div>
             {bulletMode ? (
               <ul className="list-disc list-inside text-slate-700 leading-relaxed space-y-1 ml-8">

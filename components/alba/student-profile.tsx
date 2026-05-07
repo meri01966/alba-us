@@ -27,10 +27,12 @@ interface HistorialItem {
   fecha: string
 }
 
+// Colores de EJES distintos al sistema de semaforo (verde/amarillo/rojo)
+// para evitar confusion entre eje de aprendizaje y nivel de logro
 const EJES = [
-  { key: "CF", label: "Conciencia Fonologica", color: "#10b981", total: 40 },
-  { key: "CT", label: "Conocimiento de Textos", color: "#3b82f6", total: 20 },
-  { key: "O", label: "Oralidad", color: "#f59e0b", total: 40 },
+  { key: "CF", label: "Conciencia Fonologica", color: "#6366f1", total: 40 },  // Indigo
+  { key: "CT", label: "Conocimiento de Textos", color: "#8b5cf6", total: 20 }, // Violeta
+  { key: "O", label: "Oralidad", color: "#06b6d4", total: 40 },                // Cyan
 ]
 
 // Sugerencias pedagogicas segun el nivel de progreso
@@ -208,7 +210,7 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
                     key={i}
                     className="flex items-center justify-between py-1 px-2 rounded text-xs"
                     style={{
-                      backgroundColor: item.resultado === "logrado" ? "#d1fae5" : "#fee2e2",
+                      backgroundColor: item.resultado === "logrado" ? "#e0e7ff" : "#f1f5f9",
                     }}
                   >
                     <span>{item.actividad}</span>
