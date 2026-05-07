@@ -17,33 +17,33 @@ interface SalaMapProps {
   onStudentClick: (id: string) => void
 }
 
-// Genera el mensaje de reporte para la familia basado en el progreso
+// Genera el mensaje de reporte para la familia basado en el progreso - SIN porcentajes
 function generarReporteFamilia(nombre: string, progress: { CF: number; CT: number; O: number }): string {
   const getNivel = (percent: number) => {
     if (percent >= 70) return "avanza muy bien"
     if (percent >= 40) return "esta progresando"
-    return "necesita apoyo"
+    return "necesita un poco mas de practica"
   }
 
   const cf = getNivel(progress.CF)
   const ct = getNivel(progress.CT)
   const o = getNivel(progress.O)
 
-  let mensaje = `Hola! Les comparto el avance de ${nombre} en el aula:\n\n`
-  mensaje += `En Conciencia Fonologica ${cf} (${progress.CF}%).\n`
-  mensaje += `En Conocimiento de Textos ${ct} (${progress.CT}%).\n`
-  mensaje += `En Oralidad ${o} (${progress.O}%).\n`
+  let mensaje = `Hola! Les comparto como viene ${nombre} en el aula:\n\n`
+  mensaje += `En Conciencia Fonologica (reconocer sonidos): ${cf}.\n`
+  mensaje += `En Conocimiento de Textos (entender cuentos): ${ct}.\n`
+  mensaje += `En Oralidad (expresarse): ${o}.\n`
 
   const apoyo = []
-  if (progress.CF < 40) apoyo.push("Conciencia Fonologica")
-  if (progress.CT < 40) apoyo.push("Conocimiento de Textos")
-  if (progress.O < 40) apoyo.push("Oralidad")
+  if (progress.CF < 40) apoyo.push("jugar con rimas y sonidos")
+  if (progress.CT < 40) apoyo.push("leer cuentos juntos")
+  if (progress.O < 40) apoyo.push("conversar sobre el dia")
 
   if (apoyo.length > 0) {
-    mensaje += `\nSeria bueno practicar en casa: ${apoyo.join(", ")}.`
+    mensaje += `\nEn casa pueden ayudar con: ${apoyo.join(", ")}.`
   }
 
-  mensaje += "\n\nSaludos, Seño"
+  mensaje += "\n\nSaludos!"
 
   return mensaje
 }
@@ -198,8 +198,6 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {grupo.alumnos.map((student) => {
-                    const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
-                    const avg = getAverage(p)
                     const isReportSent = reportsSent[student.id] || false
 
                     return (
@@ -220,9 +218,6 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
                           </div>
                           <span className="text-xs font-medium text-gray-700 truncate w-full text-center">
                             {student.nombre}
-                          </span>
-                          <span className="text-[10px] font-bold" style={{ color: grupo.color }}>
-                            {avg}%
                           </span>
                         </button>
                         

@@ -5,6 +5,8 @@ import { ArrowLeft, User, Lightbulb, Clock } from "lucide-react"
 
 interface StudentProfileProps {
   alumnoId: string
+  alumnoNombre?: string
+  progressData?: { CF: number; CT: number; O: number }
   onBack: () => void
 }
 
@@ -58,12 +60,35 @@ const HISTORIAL_DEMO: Record<string, string[]> = {
   O: ["Descripcion de familia", "Contar el fin de semana"],
 }
 
-export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps) {
-  const [loading, setLoading] = useState(true)
-  const [alumno, setAlumno] = useState<Alumno | null>(null)
-  const [progreso, setProgreso] = useState<Record<string, ProgresoEje>>({})
+export default function StudentProfile({ alumnoId, alumnoNombre, progressData, onBack }: StudentProfileProps) {
+  const [loading, setLoading] = useState(!progressData)
+  const [alumno, setAlumno] = useState<Alumno | null>(
+    alumnoNombre ? { id: alumnoId, nombre: alumnoNombre, apellido: "" } : null
+  )
+  const [progreso, setProgreso] = useState<Record<string, ProgresoEje>>(
+    progressData ? {
+      CF: { logradas: [], porcentaje: progressData.CF },
+      CT: { logradas: [], porcentaje: progressData.CT },
+      O: { logradas: [], porcentaje: progressData.O },
+    } : {}
+  )
+
+  // Actualizar progreso cuando cambia desde el padre
+  useEffect(() => {
+    if (progressData) {
+      setProgreso({
+        CF: { logradas: [], porcentaje: progressData.CF },
+        CT: { logradas: [], porcentaje: progressData.CT },
+        O: { logradas: [], porcentaje: progressData.O },
+      })
+      setLoading(false)
+    }
+  }, [progressData])
 
   useEffect(() => {
+    // Solo fetch si no tenemos datos del padre
+    if (progressData && alumnoNombre) return
+    
     async function fetchData() {
       setLoading(true)
       try {
@@ -80,7 +105,7 @@ export default function StudentProfile({ alumnoId, onBack }: StudentProfileProps
       }
     }
     fetchData()
-  }, [alumnoId])
+  }, [alumnoId, progressData, alumnoNombre])
 
   if (loading) {
     return (

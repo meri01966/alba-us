@@ -345,11 +345,16 @@ export default function ALBADashboard() {
   }
 
   if (activeView === "perfil" && selectedStudent) {
+    const student = students.find(s => s.id === selectedStudent)
+    const studentProgress = progress[selectedStudent] || { CF: 0, CT: 0, O: 0 }
+    
     return (
       <div className="min-h-screen bg-background">
         <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
         <StudentProfile
           alumnoId={selectedStudent}
+          alumnoNombre={student?.nombre}
+          progressData={studentProgress}
           onBack={() => {
             setSelectedStudent(null)
             setActiveView("mapa")
