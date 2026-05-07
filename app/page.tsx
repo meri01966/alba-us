@@ -146,10 +146,11 @@ function SintesisPedagogicaModal({
               Como lo hicimos
             </h3>
             <p>
-              Utilizamos el metodo ALBA con actividades diarias estructuradas: juegos de rimas y sonidos 
-              para la conciencia fonologica, lectura compartida de cuentos para el conocimiento de textos, 
-              y rondas de conversacion para desarrollar la oralidad. Cada actividad fue registrada y 
-              evaluada para hacer un seguimiento personalizado de cada alumno.
+              A traves del registro diario, fuimos identificando que actividades funcionaron mejor 
+              con este grupo: cuales captaron su atencion, cuales generaron mayor participacion, 
+              y cuales necesitaron ajustes. ALBA nos permitio descubrir patrones y tecnicas que 
+              enriquecieron nuestra planificacion, nutriendose de la experiencia real del aula. 
+              Cada docente aporto su mirada y creatividad, haciendo crecer este proceso junto con los ninos.
             </p>
           </section>
 
