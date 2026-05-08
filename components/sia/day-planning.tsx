@@ -59,7 +59,6 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
         </div>
         <div>
           <p className="text-sm font-semibold text-primary leading-tight">Sugerencia de ALBA</p>
-          <p className="text-xs text-muted-foreground">Cerebro central</p>
         </div>
         {activity && (
           <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
