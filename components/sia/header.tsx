@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Calendar, BookOpen, Map, Home, FileText } from "lucide-react"
+import { User, Calendar, BookOpen, Database, Home, FileText } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
@@ -54,8 +54,8 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
                   color: activeView === "mapa" || activeView === "perfil" ? "#D4870E" : "rgba(255,255,255,0.7)",
                 }}
               >
-                <Map className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Mapa</span>
+                <Database className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Datos</span>
               </button>
             </div>
           )}

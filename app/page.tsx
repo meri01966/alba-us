@@ -381,39 +381,35 @@ export default function ALBADashboard() {
     }
   }
 
-  // Agregar nuevo alumno a Supabase
+  // Agregar nuevo alumno a Supabase (nombre en MAYUSCULAS para estandarizar)
   const handleAddStudent = async () => {
     if (!newStudentName.trim()) return
+    
+    const nombreEstandarizado = newStudentName.trim().toUpperCase()
     
     setAddingStudent(true)
     try {
       if (isSupabaseConfigured() && supabase) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('alumnos')
-          .insert([{ nombre: newStudentName.trim(), sala: salaActual }])
-          .select()
-          .single()
+          .insert([{ nombre: nombreEstandarizado, sala: salaActual }])
 
         if (error) {
           console.error("Error agregando alumno:", error)
           alert("Error al agregar alumno: " + error.message)
-        } else if (data) {
-          setStudents(prev => [...prev, {
-            id: data.id,
-            name: data.nombre,
-            nombre: data.nombre,
-            sala: data.sala,
-          }])
+        } else {
+          // Re-fetch automatico para sincronizar con la base de datos
           setNewStudentName("")
           setShowAddStudent(false)
+          await fetchProgreso()
         }
       } else {
         // Demo mode - agregar localmente (sin persistencia)
         const newId = `demo-${Date.now()}`
         setStudents(prev => [...prev, {
           id: newId,
-          name: newStudentName.trim(),
-          nombre: newStudentName.trim(),
+          name: nombreEstandarizado,
+          nombre: nombreEstandarizado,
           sala: salaActual,
         }])
         setNewStudentName("")
@@ -426,11 +422,11 @@ export default function ALBADashboard() {
     }
   }
 
-  // Agregar multiples alumnos de una vez
+  // Agregar multiples alumnos de una vez (nombres en MAYUSCULAS)
   const handleBulkAddStudents = async () => {
     const nombres = bulkNames
       .split('\n')
-      .map(n => n.trim())
+      .map(n => n.trim().toUpperCase())
       .filter(n => n.length > 0)
     
     if (nombres.length === 0) return
@@ -439,24 +435,18 @@ export default function ALBADashboard() {
     try {
       if (isSupabaseConfigured() && supabase) {
         const inserts = nombres.map(nombre => ({ nombre, sala: salaActual }))
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('alumnos')
           .insert(inserts)
-          .select()
 
         if (error) {
           console.error("Error agregando alumnos:", error)
           alert("Error al agregar alumnos: " + error.message)
-        } else if (data) {
-          const newStudents = data.map((al: any) => ({
-            id: al.id,
-            name: al.nombre,
-            nombre: al.nombre,
-            sala: al.sala,
-          }))
-          setStudents(prev => [...prev, ...newStudents])
+        } else {
+          // Re-fetch automatico para sincronizar con la base de datos
           setBulkNames("")
           setShowConfigSala(false)
+          await fetchProgreso()
         }
       } else {
         // Demo mode
