@@ -996,6 +996,7 @@ export default function ALBADashboard() {
                 <AlertsPanel 
                   progress={progress}
                   students={students}
+                  evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
                   actividadDelDia={ACTIVIDAD_DEL_DIA}
