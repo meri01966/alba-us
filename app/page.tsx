@@ -39,6 +39,7 @@ function statusToProgress(status: StatusLevel): number {
 // Key para localStorage
 const STORAGE_KEY = "alba_evaluaciones_dia"
 const STORAGE_PROGRESS_KEY = "alba_progreso"
+const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
 
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
@@ -365,8 +366,20 @@ export default function ALBADashboard() {
       }
     }
 
-    // Sin Supabase configurado: iniciar con lista vacia (inicio de ano)
-    setStudents([])
+    // Sin Supabase configurado: cargar de localStorage (modo demo)
+    try {
+      const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
+      if (savedStudents) {
+        const allStudents = JSON.parse(savedStudents)
+        // Filtrar por sala actual
+        const salaStudents = allStudents.filter((s: any) => s.sala === salaActual)
+        setStudents(salaStudents)
+      } else {
+        setStudents([])
+      }
+    } catch {
+      setStudents([])
+    }
     setIsLoading(false)
   }, [salaActual])
 
@@ -404,14 +417,28 @@ export default function ALBADashboard() {
           await fetchProgreso()
         }
       } else {
-        // Demo mode - agregar localmente (sin persistencia)
+        // Demo mode - guardar en localStorage
         const newId = `demo-${Date.now()}`
-        setStudents(prev => [...prev, {
+        const newStudent = {
           id: newId,
           name: nombreEstandarizado,
           nombre: nombreEstandarizado,
           sala: salaActual,
-        }])
+        }
+        
+        // Actualizar estado local
+        setStudents(prev => [...prev, newStudent])
+        
+        // Persistir en localStorage
+        try {
+          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
+          const allStudents = savedStudents ? JSON.parse(savedStudents) : []
+          allStudents.push(newStudent)
+          localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(allStudents))
+        } catch (err) {
+          console.error("Error guardando en localStorage:", err)
+        }
+        
         setNewStudentName("")
         setShowAddStudent(false)
       }
@@ -449,14 +476,27 @@ export default function ALBADashboard() {
           await fetchProgreso()
         }
       } else {
-        // Demo mode
+        // Demo mode - guardar en localStorage
         const newStudents = nombres.map((nombre, i) => ({
           id: `demo-${Date.now()}-${i}`,
           name: nombre,
           nombre: nombre,
           sala: salaActual,
         }))
+        
+        // Actualizar estado local
         setStudents(prev => [...prev, ...newStudents])
+        
+        // Persistir en localStorage
+        try {
+          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
+          const allStudents = savedStudents ? JSON.parse(savedStudents) : []
+          allStudents.push(...newStudents)
+          localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(allStudents))
+        } catch (err) {
+          console.error("Error guardando en localStorage:", err)
+        }
+        
         setBulkNames("")
         setShowConfigSala(false)
       }
