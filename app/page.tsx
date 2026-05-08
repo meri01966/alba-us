@@ -9,6 +9,7 @@ import { DayPlanning } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
+import { AIInsights } from "@/components/sia/ai-insights"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
@@ -998,10 +999,18 @@ export default function ALBADashboard() {
                   students={students}
                   evaluaciones={evaluaciones}
                 />
-                <QuickRegister 
+<QuickRegister
                   actividadDelDia={ACTIVIDAD_DEL_DIA}
                   evaluados={Object.keys(evaluaciones).length}
                   totalAlumnos={students.length}
+                />
+              </div>
+              
+              {/* Panel de Analisis IA */}
+              <div className="mt-4">
+                <AIInsights 
+                  sala={salaActual}
+                  totalEvaluaciones={Object.keys(evaluaciones).length}
                 />
               </div>
             </>
