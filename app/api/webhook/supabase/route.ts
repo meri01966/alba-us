@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { google } from '@ai-sdk/google'
 
 // Este endpoint es llamado por el webhook de Supabase
 // cuando se acumulan registros en la tabla seguimiento
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar configuracion
-    const apiKey = process.env.AI_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey || !supabaseUrl || !supabaseKey) {
       return Response.json({ 
         ok: false, 
@@ -100,7 +100,7 @@ Ejemplo: "El grupo muestra buen avance en conciencia fonologica. Considera dedic
 Se breve y accionable.`
 
     const { text } = await generateText({
-      model: openai('gpt-4o-mini', { apiKey }),
+      model: google('gemini-1.5-flash', { apiKey }),
       prompt,
       maxTokens: 150,
     })

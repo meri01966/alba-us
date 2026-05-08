@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { google } from '@ai-sdk/google'
 
 // Inicializar Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -10,12 +10,12 @@ export async function POST(request: Request) {
   try {
     const { sala, alumnoId } = await request.json()
     
-    // Verificar API Key
-    const apiKey = process.env.AI_API_KEY
+    // Verificar API Key de Gemini
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       return Response.json({ 
         ok: false, 
-        error: "AI_API_KEY no configurada" 
+        error: "GEMINI_API_KEY no configurada" 
       }, { status: 500 })
     }
 
@@ -114,7 +114,7 @@ Por favor genera un analisis breve (maximo 3 parrafos) que incluya:
 Usa un tono profesional pero cercano, como si hablaras con una maestra de jardin.`
 
     const { text } = await generateText({
-      model: openai('gpt-4o-mini', { apiKey }),
+      model: google('gemini-1.5-flash', { apiKey }),
       prompt,
       maxTokens: 500,
     })
