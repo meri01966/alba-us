@@ -70,15 +70,15 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center flex-1 min-h-[120px]">
           <Spinner className="text-primary" />
         </div>
       ) : !activity ? (
-        <div className="flex items-center justify-center text-center text-muted-foreground text-xs py-3">
+        <div className="flex-1 flex items-center justify-center text-center text-muted-foreground text-sm py-6">
           Sin actividad disponible
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3 flex-1">
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
           </div>
@@ -98,14 +98,14 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2">
-        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs">
-          <Printer className="w-3 h-3 mr-1" />
-          Fichas
+      <div className="flex gap-2 pt-1">
+        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
+          <Printer className="w-3.5 h-3.5 mr-1.5" />
+          Imprimir fichas
         </Button>
-        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs">
-          <List className="w-3 h-3 mr-1" />
-          Secuencia
+        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
+          <List className="w-3.5 h-3.5 mr-1.5" />
+          Ver secuencia
         </Button>
       </div>
     </div>
@@ -161,7 +161,7 @@ function MyPlanningColumn({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3 h-full">
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
@@ -260,16 +260,19 @@ function MyPlanningColumn({
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center flex-1 min-h-[120px]">
           <Spinner className="text-accent" />
         </div>
       ) : !planning ? (
-        <div className="flex flex-col items-center justify-center text-center py-3 gap-1">
-          <BookOpen className="w-6 h-6 text-muted-foreground/40" />
-          <p className="text-xs text-muted-foreground">Sin planificación cargada</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
+          <BookOpen className="w-10 h-10 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">No hay planificación cargada para hoy.</p>
+          <p className="text-xs text-muted-foreground/70">
+            Usá el botón <strong>Nueva</strong> para agregar una.
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3 flex-1">
           <p className="text-base font-semibold text-foreground leading-snug">{planning.titulo}</p>
           {planning.objetivo && (
             <div>
@@ -347,20 +350,20 @@ export function DayPlanning() {
   }, [fetchBrain, fetchPlanning])
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="pb-2 pt-3">
+    <Card className="h-full shadow-md">
+      <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-primary">
           Planificación del día
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 pb-3">
-        <div className="grid grid-cols-2 gap-4 divide-x divide-border">
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
           {/* Left: Sugerencia SIA */}
-          <div className="pr-4">
+          <div className="pb-4 sm:pb-0 sm:pr-4">
             <BrainColumn activity={brain} isLoading={isBrainLoading} />
           </div>
           {/* Right: Mi Planificacion */}
-          <div className="pl-4">
+          <div className="pt-4 sm:pt-0 sm:pl-4">
             <MyPlanningColumn
               planning={planning}
               isLoading={isPlanningLoading}

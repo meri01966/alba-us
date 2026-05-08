@@ -67,11 +67,11 @@ export function QuickRegister({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md h-full flex flex-col border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md h-full flex flex-col border border-slate-200">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-100">
+      <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
+          <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
             <ClipboardList className="w-4 h-4" />
             Registro de cierre
           </h3>
@@ -79,9 +79,9 @@ export function QuickRegister({
             <button 
               type="button"
               onClick={handleEditar}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-700 flex items-center gap-0.5"
+              className="text-xs px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-700 flex items-center gap-1"
             >
-              <Pencil className="w-2.5 h-2.5" />
+              <Pencil className="w-3 h-3" />
               Editar
             </button>
           )}
@@ -89,88 +89,97 @@ export function QuickRegister({
       </div>
       
       {/* Content */}
-      <div className="p-2 flex flex-col gap-2 flex-1 overflow-auto">
+      <div className="p-4 flex flex-col gap-3 flex-1">
         {/* Actividad del dia */}
-        <div className="p-2 rounded-lg text-[11px] bg-slate-50">
+        <div className="p-2.5 rounded-lg text-xs bg-slate-50">
           <span className="text-slate-500">Actividad:</span>
           <span className="ml-1 font-medium text-slate-700">{actividadDelDia}</span>
           {totalAlumnos > 0 && (
-            <span className="ml-1 text-slate-400">({evaluados}/{totalAlumnos})</span>
+            <span className="ml-2 text-slate-400">
+              ({evaluados}/{totalAlumnos} evaluados)
+            </span>
           )}
         </div>
 
         {/* Feedback buttons */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-medium text-slate-500">
-            Como funciono?
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-500">
+            Como funciono la actividad?
           </label>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
+            {/* Boton BIEN */}
             <button
               type="button"
               onClick={() => handleSelectFeedback("bien")}
               disabled={guardado}
-              className={`flex-1 h-9 text-[10px] flex flex-col items-center justify-center rounded-lg border transition-all
-                ${feedback === "bien" ? "text-white bg-green-500 border-green-500" : "bg-white text-slate-600 border-slate-200"}
-                ${guardado ? "opacity-60" : "cursor-pointer"}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
+                ${feedback === "bien" ? "text-white bg-green-500 border-green-500" : "bg-white text-slate-600 border-slate-200 hover:border-green-300"}
+                ${guardado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
               `}
             >
-              <ThumbsUp className="w-3 h-3" />
+              <ThumbsUp className="w-4 h-4 mb-0.5" />
               <span>Bien</span>
             </button>
+
+            {/* Boton PARCIAL */}
             <button
               type="button"
               onClick={() => handleSelectFeedback("parcial")}
               disabled={guardado}
-              className={`flex-1 h-9 text-[10px] flex flex-col items-center justify-center rounded-lg border transition-all
-                ${feedback === "parcial" ? "text-white bg-amber-500 border-amber-500" : "bg-white text-slate-600 border-slate-200"}
-                ${guardado ? "opacity-60" : "cursor-pointer"}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
+                ${feedback === "parcial" ? "text-white bg-amber-500 border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"}
+                ${guardado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
               `}
             >
-              <Minus className="w-3 h-3" />
+              <Minus className="w-4 h-4 mb-0.5" />
               <span>Parcial</span>
             </button>
+
+            {/* Boton AJUSTAR */}
             <button
               type="button"
               onClick={() => handleSelectFeedback("ajustar")}
               disabled={guardado}
-              className={`flex-1 h-9 text-[10px] flex flex-col items-center justify-center rounded-lg border transition-all
-                ${feedback === "ajustar" ? "text-white bg-red-500 border-red-500" : "bg-white text-slate-600 border-slate-200"}
-                ${guardado ? "opacity-60" : "cursor-pointer"}
+              className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
+                ${feedback === "ajustar" ? "text-white bg-red-500 border-red-500" : "bg-white text-slate-600 border-slate-200 hover:border-red-300"}
+                ${guardado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
               `}
             >
-              <AlertCircle className="w-3 h-3" />
+              <AlertCircle className="w-4 h-4 mb-0.5" />
               <span>Ajustar</span>
             </button>
           </div>
         </div>
 
         {/* Observaciones */}
-        <div className="flex flex-col gap-1 flex-1 min-h-0">
-          <label className="text-[10px] font-medium text-slate-500">Observaciones</label>
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-xs font-medium text-slate-500">
+            Observaciones (opcional)
+          </label>
           <textarea
             placeholder="Algo que quieras recordar..."
             value={observaciones}
             onChange={(e) => !guardado && setObservaciones(e.target.value)}
             readOnly={guardado}
-            className={`flex-1 min-h-[40px] text-xs resize-none p-2 rounded-lg border border-slate-200 focus:outline-none ${guardado ? "bg-slate-50 text-slate-500" : ""}`}
+            className={`flex-1 min-h-[60px] text-sm resize-none p-2 rounded-lg border border-slate-200 focus:border-slate-400 focus:outline-none ${guardado ? "bg-slate-50 text-slate-500" : ""}`}
           />
         </div>
 
-        {/* Boton guardar */}
+        {/* Boton guardar o estado guardado */}
         {guardado ? (
-          <div className="w-full h-8 text-xs font-medium rounded-lg text-white flex items-center justify-center gap-1.5 bg-green-500">
-            <CheckCircle2 className="w-3 h-3" />
-            Guardado
+          <div className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2 bg-green-500">
+            <CheckCircle2 className="w-4 h-4" />
+            Registro guardado
           </div>
         ) : (
           <button
             type="button"
             onClick={handleGuardar}
-            className="w-full h-8 text-xs font-medium rounded-lg text-white flex items-center justify-center gap-1.5 hover:opacity-90"
+            className="w-full h-10 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all"
             style={{ backgroundColor: "#1e3a5f" }}
           >
-            <Save className="w-3 h-3" />
-            Guardar cierre
+            <Save className="w-4 h-4" />
+            Guardar cierre del dia
           </button>
         )}
       </div>
