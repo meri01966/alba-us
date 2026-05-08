@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { FileText, X } from "lucide-react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
@@ -284,12 +285,67 @@ export default function ALBADashboard() {
   }, [progress])
 
   const fetchProgreso = useCallback(async () => {
+    // Si Supabase esta configurado, cargar de ahi
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        // Cargar alumnos
+        const { data: alumnosData, error: alumnosError } = await supabase
+          .from('alumnos')
+          .select('*')
+          .order('nombre')
+
+        if (alumnosError) {
+          console.error("Error cargando alumnos de Supabase:", alumnosError)
+          return
+        }
+
+        if (alumnosData && alumnosData.length > 0) {
+          const mappedStudents = alumnosData.map((al: any) => ({
+            id: al.id,
+            name: al.nombre,
+            nombre: al.nombre,
+          }))
+          setStudents(mappedStudents)
+
+          // Cargar seguimiento/evaluaciones
+          const { data: seguimientoData } = await supabase
+            .from('seguimiento')
+            .select('*')
+
+          const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+          if (!savedProgress && seguimientoData) {
+            const newProgress: Record<string, { CF: number; CT: number; O: number }> = {}
+            alumnosData.forEach((al: any) => {
+              const registros = seguimientoData.filter((s: any) => s.alumno_id === al.id)
+              const getAverage = (eje: string) => {
+                const ejeRegs = registros.filter((r: any) => r.eje === eje)
+                if (ejeRegs.length === 0) return 0
+                const last = ejeRegs[ejeRegs.length - 1]
+                if (last.resultado === 'green') return 100
+                if (last.resultado === 'yellow') return 50
+                return 10
+              }
+              newProgress[al.id] = {
+                CF: getAverage('CF'),
+                CT: getAverage('CT'),
+                O: getAverage('O'),
+              }
+            })
+            setProgress(newProgress)
+          }
+          return // Salir si cargamos de Supabase exitosamente
+        }
+      } catch (err) {
+        console.error("Error con Supabase:", err)
+      }
+    }
+
+    // Fallback a API local si Supabase no esta configurado o fallo
     try {
       const res = await fetch("/api/progreso")
       const data = await res.json()
       if (data.ok) {
         setStudents(data.alumnos)
-        // Solo cargar progreso de API si no hay guardado local
         const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
         if (!savedProgress) {
           setProgress(data.progreso)
@@ -312,7 +368,7 @@ export default function ALBADashboard() {
   }
 
   // Callback cuando se evalua un alumno en HeatMap
-  // Actualiza el progreso en tiempo real sin recargar
+  // Actualiza el progreso en tiempo real y guarda en Supabase
   const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string) => {
     // Determinar el eje segun la actividad
     const eje = ACTIVIDAD_EJE_MAP[actividadDelDia] || "CF"
@@ -333,7 +389,29 @@ export default function ALBADashboard() {
       }
     })
 
-    // Persistir en API
+    // Guardar en Supabase si esta configurado
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase
+          .from('seguimiento')
+          .insert([{
+            alumno_id: studentId,
+            eje: eje,
+            resultado: status,
+            actividad: actividadDelDia,
+            fecha: new Date().toISOString()
+          }])
+
+        if (error) {
+          console.error("Error guardando en Supabase:", error)
+        }
+        return // Salir si guardamos en Supabase
+      } catch (err) {
+        console.error("Error con Supabase:", err)
+      }
+    }
+
+    // Fallback a API local
     try {
       await fetch("/api/registrar-actividad", {
         method: "POST",
