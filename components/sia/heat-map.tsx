@@ -143,7 +143,6 @@ function StudentRow({
 }
 
 export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, isLoading = false }: HeatMapProps) {
-  const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
   // Si no hay estudiantes y no esta cargando, retornar null
@@ -152,9 +151,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   }
 
   async function handleEval(student: Student, status: StatusLevel) {
-    const cellKey = `${student.id}-cf`
     setSavingId(student.id)
-    setLocalStatus((prev) => ({ ...prev, [cellKey]: status }))
 
     if (onEvaluacion) {
       onEvaluacion(student.id, status, ACTIVIDAD_DEL_DIA)
@@ -164,12 +161,6 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   }
 
   function handleClear(studentId: string) {
-    const cellKey = `${studentId}-cf`
-    setLocalStatus((prev) => {
-      const newState = { ...prev }
-      delete newState[cellKey]
-      return newState
-    })
     if (onClearEvaluacion) {
       onClearEvaluacion(studentId)
     }
@@ -177,7 +168,6 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
 
   function handleClearAll() {
     if (confirm("Estas seguro de borrar todas las evaluaciones de hoy?")) {
-      setLocalStatus({})
       if (onClearAllEvaluaciones) {
         onClearAllEvaluaciones()
       }
@@ -185,7 +175,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   }
 
   const getStudentStatus = (studentId: string): StatusLevel | null => {
-    return evaluaciones[studentId] || (localStatus[`${studentId}-cf`] as StatusLevel) || null
+    return evaluaciones[studentId] || null
   }
   
   const evaluadosCount = students.filter(s => getStudentStatus(s.id) !== null).length
