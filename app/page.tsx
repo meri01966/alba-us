@@ -702,6 +702,30 @@ export default function ALBADashboard() {
     }
   }, [])
 
+  // Limpiar evaluacion de un alumno
+  const handleClearEvaluacion = useCallback((studentId: string) => {
+    setEvaluaciones(prev => {
+      const newEval = { ...prev }
+      delete newEval[studentId]
+      return newEval
+    })
+    // Actualizar localStorage
+    const savedEval = localStorage.getItem(STORAGE_KEY)
+    if (savedEval) {
+      try {
+        const data = JSON.parse(savedEval)
+        delete data.evaluaciones[studentId]
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      } catch {}
+    }
+  }, [])
+
+  // Limpiar todas las evaluaciones del dia
+  const handleClearAllEvaluaciones = useCallback(() => {
+    setEvaluaciones({})
+    localStorage.removeItem(STORAGE_KEY)
+  }, [])
+
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
@@ -941,6 +965,8 @@ export default function ALBADashboard() {
                     students={students}
                     evaluaciones={evaluaciones}
                     onEvaluacion={handleEvaluacion}
+                    onClearEvaluacion={handleClearEvaluacion}
+                    onClearAllEvaluaciones={handleClearAllEvaluaciones}
                     isLoading={isLoading}
                   />
                 </div>

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { CheckCircle2, Clock, AlertCircle, BookOpen } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red"
 
@@ -17,6 +17,8 @@ interface HeatMapProps {
   students: Student[]
   evaluaciones?: Record<string, StatusLevel>
   onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string) => void
+  onClearEvaluacion?: (studentId: string) => void
+  onClearAllEvaluaciones?: () => void
   isLoading?: boolean
 }
 
@@ -77,11 +79,13 @@ function StudentRow({
   currentStatus,
   saving,
   onEval,
+  onClear,
 }: {
   student: Student
   currentStatus: StatusLevel | null
   saving: boolean
   onEval: (status: StatusLevel) => void
+  onClear?: () => void
 }) {
   const studentName = student.name || student.nombre || "Sin nombre"
   const statusColor = getStatusColor(currentStatus)
@@ -121,13 +125,24 @@ function StudentRow({
             </button>
           )
         })}
+        {/* Boton para quitar evaluacion */}
+        {currentStatus && onClear && (
+          <button
+            onClick={onClear}
+            disabled={saving}
+            title="Quitar evaluacion"
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all hover:scale-110 disabled:opacity-50"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         {saving && <Spinner className="w-4 h-4 text-primary" />}
       </div>
     </li>
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, isLoading = false }: HeatMapProps) {
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
@@ -148,9 +163,32 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, isLoad
     setSavingId(null)
   }
 
+  function handleClear(studentId: string) {
+    const cellKey = `${studentId}-cf`
+    setLocalStatus((prev) => {
+      const newState = { ...prev }
+      delete newState[cellKey]
+      return newState
+    })
+    if (onClearEvaluacion) {
+      onClearEvaluacion(studentId)
+    }
+  }
+
+  function handleClearAll() {
+    if (confirm("Estas seguro de borrar todas las evaluaciones de hoy?")) {
+      setLocalStatus({})
+      if (onClearAllEvaluaciones) {
+        onClearAllEvaluaciones()
+      }
+    }
+  }
+
   const getStudentStatus = (studentId: string): StatusLevel | null => {
     return evaluaciones[studentId] || (localStatus[`${studentId}-cf`] as StatusLevel) || null
   }
+  
+  const evaluadosCount = students.filter(s => getStudentStatus(s.id) !== null).length
 
   return (
     <Card className="shadow-md h-full flex flex-col">
@@ -159,12 +197,24 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, isLoad
           <CardTitle className="text-base font-semibold text-primary">
             Registro del aula
           </CardTitle>
-          <span
-            className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: "#ecfdf5", color: "#065f46" }}
-          >
-            {students.length} alumnos
-          </span>
+          <div className="flex items-center gap-2">
+            {evaluadosCount > 0 && (
+              <button
+                onClick={handleClearAll}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition-colors"
+                title="Borrar todas las evaluaciones"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Limpiar
+              </button>
+            )}
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ backgroundColor: "#ecfdf5", color: "#065f46" }}
+            >
+              {evaluadosCount}/{students.length}
+            </span>
+          </div>
         </div>
 
         {/* Banner de actividad del dia */}
@@ -219,6 +269,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, isLoad
                 currentStatus={getStudentStatus(student.id)}
                 saving={savingId === student.id}
                 onEval={(status) => handleEval(student, status)}
+                onClear={() => handleClear(student.id)}
               />
             ))}
           </ul>
