@@ -230,7 +230,7 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["Manzanitos", "Naranjitas", "Frutillitas", "Limoneros"]
+const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos"]
 
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
@@ -240,7 +240,7 @@ export default function ALBADashboard() {
   const [showSintesis, setShowSintesis] = useState(false)
   
   // Gestion de sala
-  const [salaActual, setSalaActual] = useState("Manzanitos")
+  const [salaActual, setSalaActual] = useState("Manzanos")
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showConfigSala, setShowConfigSala] = useState(false)
