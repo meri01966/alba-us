@@ -781,8 +781,10 @@ export default function ALBADashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4">
                   <HeatMap 
+                    students={students}
                     evaluaciones={evaluaciones}
                     onEvaluacion={handleEvaluacion}
+                    isLoading={isLoading}
                   />
                 </div>
                 <div className="lg:col-span-8">
