@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase"
 // Importaciones simplificadas para evitar errores de ruta
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
-import { DayPlanning } from "@/components/sia/day-planning"
 import { QuickRegister } from "@/components/sia/quick-register"
 
 export default function ALBADashboard() {
