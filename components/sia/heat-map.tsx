@@ -57,6 +57,21 @@ const EVAL_OPTIONS: {
   },
 ]
 
+// Obtener color del estado
+function getStatusColor(status: StatusLevel | null): string {
+  if (status === "green") return "#10b981"
+  if (status === "yellow") return "#fbbf24"
+  if (status === "red") return "#ef4444"
+  return "#94a3b8" // gris para sin evaluar
+}
+
+function getStatusBg(status: StatusLevel | null): string {
+  if (status === "green") return "#ecfdf5"
+  if (status === "yellow") return "#fef3c7"
+  if (status === "red") return "#fef2f2"
+  return "#f1f5f9" // gris claro para sin evaluar
+}
+
 function StudentRow({
   student,
   currentStatus,
@@ -69,9 +84,23 @@ function StudentRow({
   onEval: (status: StatusLevel) => void
 }) {
   const studentName = student.name || student.nombre || "Sin nombre"
+  const statusColor = getStatusColor(currentStatus)
+  const statusBg = getStatusBg(currentStatus)
   
   return (
-    <li className="flex items-center gap-2 px-3 py-2.5 border border-border rounded-xl bg-card">
+    <li 
+      className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors"
+      style={{ 
+        backgroundColor: statusBg,
+        border: `2px solid ${statusColor}40`
+      }}
+    >
+      {/* Indicador de estado */}
+      <div 
+        className="w-3 h-3 rounded-full shrink-0"
+        style={{ backgroundColor: statusColor }}
+        title={currentStatus ? `Estado: ${currentStatus}` : "Sin evaluar"}
+      />
       <span className="text-sm font-semibold text-foreground flex-1 truncate">
         {studentName}
       </span>

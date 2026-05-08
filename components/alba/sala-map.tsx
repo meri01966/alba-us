@@ -132,17 +132,25 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
 
   // Agrupar por nivel de progreso
   const grupos: { label: string; color: string; bgLight: string; alumnos: Student[] }[] = [
+    { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", alumnos: [] },
     { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", alumnos: [] },
     { label: "Avanzado",          color: "#10b981", bgLight: "#ecfdf5", alumnos: [] },
   ]
 
   students.forEach((s) => {
-    const p = progress[s.id] || { CF: 0, CT: 0, O: 0 }
+    const p = progress[s.id]
+    
+    // Si no tiene progreso registrado o todos los ejes estan en 0, es "Sin evaluar"
+    if (!p || (p.CF === 0 && p.CT === 0 && p.O === 0)) {
+      grupos[0].alumnos.push(s)
+      return
+    }
+    
     const avg = getAverage(p)
-    if (avg >= 70) grupos[2].alumnos.push(s)
-    else if (avg >= 40) grupos[1].alumnos.push(s)
-    else grupos[0].alumnos.push(s)
+    if (avg >= 70) grupos[3].alumnos.push(s)
+    else if (avg >= 40) grupos[2].alumnos.push(s)
+    else grupos[1].alumnos.push(s)
   })
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
