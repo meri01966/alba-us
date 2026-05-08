@@ -133,7 +133,7 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // Agrupar por evaluacion del dia (semaforo) - prioridad sobre progreso historico
+  // Agrupar SOLO por evaluacion del dia (semaforo) - sin fallback a progreso historico
   const grupos: { label: string; color: string; bgLight: string; alumnos: Student[] }[] = [
     { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", alumnos: [] },
@@ -144,26 +144,17 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   students.forEach((s) => {
     const evalHoy = evaluaciones[s.id]
     
-    // Si tiene evaluacion del dia, agrupar por esa
-    if (evalHoy) {
-      if (evalHoy === "green") grupos[3].alumnos.push(s)
-      else if (evalHoy === "yellow") grupos[2].alumnos.push(s)
-      else grupos[1].alumnos.push(s)
-      return
-    }
-    
-    // Si no tiene evaluacion del dia, revisar progreso historico
-    const p = progress[s.id]
-    if (!p || (p.CF === 0 && p.CT === 0 && p.O === 0)) {
+    // Agrupar SOLO por evaluacion del dia
+    if (evalHoy === "green") {
+      grupos[3].alumnos.push(s)
+    } else if (evalHoy === "yellow") {
+      grupos[2].alumnos.push(s)
+    } else if (evalHoy === "red") {
+      grupos[1].alumnos.push(s)
+    } else {
+      // Sin evaluacion del dia = gris
       grupos[0].alumnos.push(s)
-      return
     }
-    
-    // Usar progreso historico como fallback
-    const avg = getAverage(p)
-    if (avg >= 70) grupos[3].alumnos.push(s)
-    else if (avg >= 40) grupos[2].alumnos.push(s)
-    else grupos[1].alumnos.push(s)
   })
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
