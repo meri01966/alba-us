@@ -287,13 +287,16 @@ export default function ALBADashboard() {
     }
   }, [])
 
-  // Guardar evaluaciones en localStorage cuando cambien
+// Guardar evaluaciones en localStorage cuando cambien
   useEffect(() => {
     if (Object.keys(evaluaciones).length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         fecha: new Date().toDateString(),
         evaluaciones,
       }))
+    } else {
+      // Si no hay evaluaciones, limpiar localStorage
+      localStorage.removeItem(STORAGE_KEY)
     }
   }, [evaluaciones])
 
@@ -709,15 +712,6 @@ export default function ALBADashboard() {
       delete newEval[studentId]
       return newEval
     })
-    // Actualizar localStorage
-    const savedEval = localStorage.getItem(STORAGE_KEY)
-    if (savedEval) {
-      try {
-        const data = JSON.parse(savedEval)
-        delete data.evaluaciones[studentId]
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-      } catch {}
-    }
   }, [])
 
   // Limpiar todas las evaluaciones del dia
