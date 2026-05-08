@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { FileText, X, UserPlus, ChevronDown } from "lucide-react"
+import { FileText, X, UserPlus, ChevronDown, Users, Sparkles } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
@@ -243,8 +243,12 @@ export default function ALBADashboard() {
   const [salaActual, setSalaActual] = useState("Manzanitos")
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
+  const [showConfigSala, setShowConfigSala] = useState(false)
   const [newStudentName, setNewStudentName] = useState("")
   const [addingStudent, setAddingStudent] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [bulkNames, setBulkNames] = useState("")
+  const [addingBulk, setAddingBulk] = useState(false)
   
   // Estado centralizado de evaluaciones del dia (persistido en localStorage)
   const [evaluaciones, setEvaluaciones] = useState<Record<string, StatusLevel>>({})
@@ -297,6 +301,8 @@ export default function ALBADashboard() {
   }, [progress])
 
   const fetchProgreso = useCallback(async () => {
+    setIsLoading(true)
+    
     // Si Supabase esta configurado, cargar de ahi
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -309,17 +315,20 @@ export default function ALBADashboard() {
 
         if (alumnosError) {
           console.error("Error cargando alumnos de Supabase:", alumnosError)
-          // Continuar con fallback
-        } else if (alumnosData && alumnosData.length > 0) {
-          const mappedStudents = alumnosData.map((al: any) => ({
-            id: al.id,
-            name: al.nombre,
-            nombre: al.nombre,
-            sala: al.sala,
-          }))
-          setStudents(mappedStudents)
+          // Continuar - lista vacia es valido
+        }
+        
+        // Siempre setear los alumnos (puede ser array vacio)
+        const mappedStudents = (alumnosData || []).map((al: any) => ({
+          id: al.id,
+          name: al.nombre,
+          nombre: al.nombre,
+          sala: al.sala,
+        }))
+        setStudents(mappedStudents)
 
-          // Cargar seguimiento/evaluaciones de estos alumnos
+        // Cargar seguimiento/evaluaciones si hay alumnos
+        if (alumnosData && alumnosData.length > 0) {
           const alumnoIds = alumnosData.map((al: any) => al.id)
           const { data: seguimientoData } = await supabase
             .from('seguimiento')
@@ -347,27 +356,18 @@ export default function ALBADashboard() {
             })
             setProgress(newProgress)
           }
-          return // Salir si cargamos de Supabase exitosamente
         }
+        
+        setIsLoading(false)
+        return // Salir - usamos Supabase (aunque sea vacio)
       } catch (err) {
         console.error("Error con Supabase:", err)
       }
     }
 
-    // Fallback a API local si Supabase no esta configurado o fallo
-    try {
-      const res = await fetch("/api/progreso")
-      const data = await res.json()
-      if (data.ok) {
-        setStudents(data.alumnos)
-        const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-        if (!savedProgress) {
-          setProgress(data.progreso)
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching progreso:", err)
-    }
+    // Sin Supabase configurado: iniciar con lista vacia (inicio de ano)
+    setStudents([])
+    setIsLoading(false)
   }, [salaActual])
 
   useEffect(() => {
@@ -398,7 +398,6 @@ export default function ALBADashboard() {
           console.error("Error agregando alumno:", error)
           alert("Error al agregar alumno: " + error.message)
         } else if (data) {
-          // Agregar al estado local
           setStudents(prev => [...prev, {
             id: data.id,
             name: data.nombre,
@@ -409,7 +408,7 @@ export default function ALBADashboard() {
           setShowAddStudent(false)
         }
       } else {
-        // Demo mode - agregar localmente
+        // Demo mode - agregar localmente (sin persistencia)
         const newId = `demo-${Date.now()}`
         setStudents(prev => [...prev, {
           id: newId,
@@ -424,6 +423,57 @@ export default function ALBADashboard() {
       console.error("Error agregando alumno:", err)
     } finally {
       setAddingStudent(false)
+    }
+  }
+
+  // Agregar multiples alumnos de una vez
+  const handleBulkAddStudents = async () => {
+    const nombres = bulkNames
+      .split('\n')
+      .map(n => n.trim())
+      .filter(n => n.length > 0)
+    
+    if (nombres.length === 0) return
+    
+    setAddingBulk(true)
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        const inserts = nombres.map(nombre => ({ nombre, sala: salaActual }))
+        const { data, error } = await supabase
+          .from('alumnos')
+          .insert(inserts)
+          .select()
+
+        if (error) {
+          console.error("Error agregando alumnos:", error)
+          alert("Error al agregar alumnos: " + error.message)
+        } else if (data) {
+          const newStudents = data.map((al: any) => ({
+            id: al.id,
+            name: al.nombre,
+            nombre: al.nombre,
+            sala: al.sala,
+          }))
+          setStudents(prev => [...prev, ...newStudents])
+          setBulkNames("")
+          setShowConfigSala(false)
+        }
+      } else {
+        // Demo mode
+        const newStudents = nombres.map((nombre, i) => ({
+          id: `demo-${Date.now()}-${i}`,
+          name: nombre,
+          nombre: nombre,
+          sala: salaActual,
+        }))
+        setStudents(prev => [...prev, ...newStudents])
+        setBulkNames("")
+        setShowConfigSala(false)
+      }
+    } catch (err) {
+      console.error("Error agregando alumnos:", err)
+    } finally {
+      setAddingBulk(false)
     }
   }
 
@@ -618,8 +668,8 @@ export default function ALBADashboard() {
               )}
             </div>
             
-            {/* Boton agregar alumno */}
-            <div className="relative">
+            {/* Botones de gestion */}
+            <div className="flex items-center gap-2">
               {showAddStudent ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -658,56 +708,168 @@ export default function ALBADashboard() {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAddStudent(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: "#1e3a5f" }}
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Agregar alumno
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfigSala(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                    style={{ color: "#1e3a5f" }}
+                  >
+                    <Users className="w-4 h-4" />
+                    Cargar Lista
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStudent(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: "#1e3a5f" }}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    + Alumno
+                  </button>
+                </>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-4">
-              <HeatMap 
-                evaluaciones={evaluaciones}
-                onEvaluacion={handleEvaluacion}
-              />
+          {/* Estado vacio - cuando no hay alumnos */}
+          {!isLoading && students.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center max-w-lg mx-auto">
+              <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
+                <Users className="w-10 h-10 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a5f" }}>
+                Esta sala aun no tiene alumnos
+              </h2>
+              <p className="text-slate-500 mb-6">
+                Empeza cargando tu lista de alumnos para comenzar a registrar el progreso de alfabetizacion.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowConfigSala(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#1e3a5f" }}
+              >
+                <Sparkles className="w-5 h-5" />
+                Configurar Sala / Cargar Alumnos
+              </button>
+              <p className="text-xs text-slate-400 mt-4">
+                Podes agregar los nombres uno por uno o varios a la vez
+              </p>
             </div>
-            <div className="lg:col-span-8">
-              <DayPlanning />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MicroTraining 
-              ejeDelDia="CF" 
-              actividadDelDia={ACTIVIDAD_DEL_DIA} 
-            />
-            <AlertsPanel 
-              progress={progress}
-              students={students}
-            />
-            <QuickRegister 
-              actividadDelDia={ACTIVIDAD_DEL_DIA}
-              evaluados={Object.keys(evaluaciones).length}
-              totalAlumnos={students.length}
-            />
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-4">
+                  <HeatMap 
+                    evaluaciones={evaluaciones}
+                    onEvaluacion={handleEvaluacion}
+                  />
+                </div>
+                <div className="lg:col-span-8">
+                  <DayPlanning />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <MicroTraining 
+                  ejeDelDia="CF" 
+                  actividadDelDia={ACTIVIDAD_DEL_DIA} 
+                />
+                <AlertsPanel 
+                  progress={progress}
+                  students={students}
+                />
+                <QuickRegister 
+                  actividadDelDia={ACTIVIDAD_DEL_DIA}
+                  evaluados={Object.keys(evaluaciones).length}
+                  totalAlumnos={students.length}
+                />
+              </div>
+            </>
+          )}
         </div>
       </main>
       <footer className="py-2 px-4 text-center text-xs text-muted-foreground border-t border-border">
         ALBA · Alfabetizacion con Acompanamiento · Nivel Inicial
       </footer>
 
+      {/* Modal de Configuracion de Sala - Carga masiva */}
+      {showConfigSala && (
+        <div 
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowConfigSala(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
+                    Cargar Alumnos
+                  </h2>
+                  <p className="text-sm text-slate-500">Sala {salaActual}</p>
+                </div>
+                <button 
+                  onClick={() => setShowConfigSala(false)}
+                  type="button"
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200"
+                >
+                  <X className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombres de los alumnos
+                </label>
+                <textarea
+                  value={bulkNames}
+                  onChange={(e) => setBulkNames(e.target.value)}
+                  placeholder={"Escribi un nombre por linea:\n\nSofia Garcia\nMartin Lopez\nLucia Fernandez\nBenjamin Rodriguez"}
+                  className="w-full h-48 p-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none"
+                />
+                <p className="text-xs text-slate-400 mt-2">
+                  Escribe un nombre por linea. Se guardaran todos al hacer clic en &quot;Cargar Alumnos&quot;.
+                </p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={handleBulkAddStudents}
+                disabled={addingBulk || !bulkNames.trim()}
+                className="w-full py-3 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#1e3a5f" }}
+              >
+                {addingBulk ? (
+                  <>Guardando...</>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    Cargar Alumnos ({bulkNames.split('\n').filter(n => n.trim()).length})
+                  </>
+                )}
+              </button>
+              
+              {!isSupabaseConfigured() && (
+                <p className="text-xs text-amber-600 text-center p-2 bg-amber-50 rounded-lg">
+                  Modo Demo: Los alumnos se guardaran solo en esta sesion. Conecta Supabase para persistir los datos.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sintesis Pedagogica Modal */}
       {showSintesis && (
         <SintesisPedagogicaModal
           progress={progress}
           totalStudents={students.length}
+          salaName={salaActual}
           onClose={() => setShowSintesis(false)}
         />
       )}
