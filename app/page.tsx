@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { FileText, X } from "lucide-react"
+import { FileText, X, UserPlus, ChevronDown } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
@@ -47,10 +47,12 @@ const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 function SintesisPedagogicaModal({ 
   progress,
   totalStudents,
+  salaName,
   onClose 
 }: { 
   progress: Record<string, { CF: number; CT: number; O: number }>
   totalStudents: number
+  salaName: string
   onClose: () => void 
 }) {
   // Calcular promedios por eje de todo el grupo
@@ -113,7 +115,7 @@ function SintesisPedagogicaModal({
               <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
                 Sintesis Pedagogica Cuatrimestral
               </h2>
-              <p className="text-sm text-slate-500">Sala Manzanos · Primer Cuatrimestre 2025 · {totalEvaluados} alumnos</p>
+              <p className="text-sm text-slate-500">Sala {salaName} · Primer Cuatrimestre 2025 · {totalEvaluados} alumnos</p>
             </div>
             <button 
               onClick={onClose}
@@ -227,12 +229,22 @@ function SintesisPedagogicaModal({
   )
 }
 
+// Salas disponibles
+const SALAS_DISPONIBLES = ["Manzanitos", "Naranjitas", "Frutillitas", "Limoneros"]
+
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
+  
+  // Gestion de sala
+  const [salaActual, setSalaActual] = useState("Manzanitos")
+  const [showSalaDropdown, setShowSalaDropdown] = useState(false)
+  const [showAddStudent, setShowAddStudent] = useState(false)
+  const [newStudentName, setNewStudentName] = useState("")
+  const [addingStudent, setAddingStudent] = useState(false)
   
   // Estado centralizado de evaluaciones del dia (persistido en localStorage)
   const [evaluaciones, setEvaluaciones] = useState<Record<string, StatusLevel>>({})
@@ -288,29 +300,31 @@ export default function ALBADashboard() {
     // Si Supabase esta configurado, cargar de ahi
     if (isSupabaseConfigured() && supabase) {
       try {
-        // Cargar alumnos
+        // Cargar alumnos filtrados por sala
         const { data: alumnosData, error: alumnosError } = await supabase
           .from('alumnos')
           .select('*')
+          .eq('sala', salaActual)
           .order('nombre')
 
         if (alumnosError) {
           console.error("Error cargando alumnos de Supabase:", alumnosError)
-          return
-        }
-
-        if (alumnosData && alumnosData.length > 0) {
+          // Continuar con fallback
+        } else if (alumnosData && alumnosData.length > 0) {
           const mappedStudents = alumnosData.map((al: any) => ({
             id: al.id,
             name: al.nombre,
             nombre: al.nombre,
+            sala: al.sala,
           }))
           setStudents(mappedStudents)
 
-          // Cargar seguimiento/evaluaciones
+          // Cargar seguimiento/evaluaciones de estos alumnos
+          const alumnoIds = alumnosData.map((al: any) => al.id)
           const { data: seguimientoData } = await supabase
             .from('seguimiento')
             .select('*')
+            .in('alumno_id', alumnoIds)
 
           const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
           if (!savedProgress && seguimientoData) {
@@ -354,7 +368,7 @@ export default function ALBADashboard() {
     } catch (err) {
       console.error("Error fetching progreso:", err)
     }
-  }, [])
+  }, [salaActual])
 
   useEffect(() => {
     fetchProgreso()
@@ -364,6 +378,52 @@ export default function ALBADashboard() {
     setActiveView(view)
     if (view !== "perfil") {
       setSelectedStudent(null)
+    }
+  }
+
+  // Agregar nuevo alumno a Supabase
+  const handleAddStudent = async () => {
+    if (!newStudentName.trim()) return
+    
+    setAddingStudent(true)
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        const { data, error } = await supabase
+          .from('alumnos')
+          .insert([{ nombre: newStudentName.trim(), sala: salaActual }])
+          .select()
+          .single()
+
+        if (error) {
+          console.error("Error agregando alumno:", error)
+          alert("Error al agregar alumno: " + error.message)
+        } else if (data) {
+          // Agregar al estado local
+          setStudents(prev => [...prev, {
+            id: data.id,
+            name: data.nombre,
+            nombre: data.nombre,
+            sala: data.sala,
+          }])
+          setNewStudentName("")
+          setShowAddStudent(false)
+        }
+      } else {
+        // Demo mode - agregar localmente
+        const newId = `demo-${Date.now()}`
+        setStudents(prev => [...prev, {
+          id: newId,
+          name: newStudentName.trim(),
+          nombre: newStudentName.trim(),
+          sala: salaActual,
+        }])
+        setNewStudentName("")
+        setShowAddStudent(false)
+      }
+    } catch (err) {
+      console.error("Error agregando alumno:", err)
+    } finally {
+      setAddingStudent(false)
     }
   }
 
@@ -448,6 +508,7 @@ export default function ALBADashboard() {
           <SintesisPedagogicaModal
             progress={progress}
             totalStudents={students.length}
+            salaName={salaActual}
             onClose={() => setShowSintesis(false)}
           />
         )}
@@ -471,6 +532,7 @@ export default function ALBADashboard() {
           <SintesisPedagogicaModal
             progress={progress}
             totalStudents={students.length}
+            salaName={salaActual}
             onClose={() => setShowSintesis(false)}
           />
         )}
@@ -498,6 +560,7 @@ export default function ALBADashboard() {
           <SintesisPedagogicaModal
             progress={progress}
             totalStudents={students.length}
+            salaName={salaActual}
             onClose={() => setShowSintesis(false)}
           />
         )}
@@ -510,6 +573,104 @@ export default function ALBADashboard() {
       <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
+          
+          {/* Barra de gestion de sala */}
+          <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3">
+              {/* Selector de sala */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-medium"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  <span>Sala: {salaActual}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />
+                </button>
+                {showSalaDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 min-w-[160px]">
+                    {SALAS_DISPONIBLES.map((sala) => (
+                      <button
+                        key={sala}
+                        type="button"
+                        onClick={() => {
+                          setSalaActual(sala)
+                          setShowSalaDropdown(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 ${sala === salaActual ? "font-semibold bg-slate-50" : ""}`}
+                      >
+                        {sala}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <span className="text-sm text-slate-500">
+                {students.length} alumno{students.length !== 1 ? "s" : ""}
+              </span>
+              
+              {!isSupabaseConfigured() && (
+                <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">
+                  Modo Demo
+                </span>
+              )}
+            </div>
+            
+            {/* Boton agregar alumno */}
+            <div className="relative">
+              {showAddStudent ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newStudentName}
+                    onChange={(e) => setNewStudentName(e.target.value)}
+                    placeholder="Nombre del alumno"
+                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 w-40"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddStudent()
+                      if (e.key === "Escape") {
+                        setShowAddStudent(false)
+                        setNewStudentName("")
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddStudent}
+                    disabled={addingStudent || !newStudentName.trim()}
+                    className="px-3 py-1.5 text-sm text-white rounded-lg disabled:opacity-50"
+                    style={{ backgroundColor: "#1e3a5f" }}
+                  >
+                    {addingStudent ? "..." : "Agregar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddStudent(false)
+                      setNewStudentName("")
+                    }}
+                    className="px-2 py-1.5 text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAddStudent(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: "#1e3a5f" }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Agregar alumno
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-4">
               <HeatMap 
