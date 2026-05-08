@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { FileText, X, UserPlus, ChevronDown, Users, Sparkles } from "lucide-react"
+import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
@@ -250,6 +250,9 @@ export default function ALBADashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [bulkNames, setBulkNames] = useState("")
   const [addingBulk, setAddingBulk] = useState(false)
+  const [showEditList, setShowEditList] = useState(false)
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState("")
   
   // Estado centralizado de evaluaciones del dia (persistido en localStorage)
   const [evaluaciones, setEvaluaciones] = useState<Record<string, StatusLevel>>({})
@@ -504,6 +507,108 @@ export default function ALBADashboard() {
       console.error("Error agregando alumnos:", err)
     } finally {
       setAddingBulk(false)
+    }
+  }
+
+  // Eliminar alumno
+  const handleDeleteStudent = async (studentId: string) => {
+    if (!confirm("Estas seguro de eliminar este alumno?")) return
+    
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        const { error } = await supabase
+          .from('alumnos')
+          .delete()
+          .eq('id', studentId)
+
+        if (error) {
+          console.error("Error eliminando alumno:", error)
+          alert("Error al eliminar: " + error.message)
+          return
+        }
+      }
+      
+      // Actualizar estado local
+      setStudents(prev => prev.filter(s => s.id !== studentId))
+      
+      // Actualizar localStorage en modo demo
+      if (!isSupabaseConfigured()) {
+        try {
+          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
+          if (savedStudents) {
+            const allStudents = JSON.parse(savedStudents)
+            const filtered = allStudents.filter((s: any) => s.id !== studentId)
+            localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(filtered))
+          }
+        } catch (err) {
+          console.error("Error actualizando localStorage:", err)
+        }
+      }
+      
+      // Limpiar progreso y evaluaciones del alumno eliminado
+      setProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[studentId]
+        return newProgress
+      })
+      setEvaluaciones(prev => {
+        const newEval = { ...prev }
+        delete newEval[studentId]
+        return newEval
+      })
+    } catch (err) {
+      console.error("Error eliminando alumno:", err)
+    }
+  }
+
+  // Editar nombre de alumno
+  const handleEditStudent = async (studentId: string, newName: string) => {
+    const nombreEstandarizado = newName.trim().toUpperCase()
+    if (!nombreEstandarizado) return
+    
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        const { error } = await supabase
+          .from('alumnos')
+          .update({ nombre: nombreEstandarizado })
+          .eq('id', studentId)
+
+        if (error) {
+          console.error("Error editando alumno:", error)
+          alert("Error al editar: " + error.message)
+          return
+        }
+      }
+      
+      // Actualizar estado local
+      setStudents(prev => prev.map(s => 
+        s.id === studentId 
+          ? { ...s, name: nombreEstandarizado, nombre: nombreEstandarizado }
+          : s
+      ))
+      
+      // Actualizar localStorage en modo demo
+      if (!isSupabaseConfigured()) {
+        try {
+          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
+          if (savedStudents) {
+            const allStudents = JSON.parse(savedStudents)
+            const updated = allStudents.map((s: any) => 
+              s.id === studentId 
+                ? { ...s, name: nombreEstandarizado, nombre: nombreEstandarizado }
+                : s
+            )
+            localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(updated))
+          }
+        } catch (err) {
+          console.error("Error actualizando localStorage:", err)
+        }
+      }
+      
+      setEditingStudentId(null)
+      setEditingName("")
+    } catch (err) {
+      console.error("Error editando alumno:", err)
     }
   }
 
@@ -777,6 +882,17 @@ export default function ALBADashboard() {
                     <Users className="w-4 h-4" />
                     Cargar Lista
                   </button>
+                  {students.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEditList(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                      style={{ color: "#1e3a5f" }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Editar Lista
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowAddStudent(true)}
@@ -920,6 +1036,138 @@ export default function ALBADashboard() {
                   Modo Demo: Los alumnos se guardaran solo en esta sesion. Conecta Supabase para persistir los datos.
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Lista de Alumnos */}
+      {showEditList && (
+        <div 
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowEditList(false)
+            setEditingStudentId(null)
+            setEditingName("")
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
+                    Editar Lista de Alumnos
+                  </h2>
+                  <p className="text-sm text-slate-500">Sala {salaActual} - {students.length} alumnos</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowEditList(false)
+                    setEditingStudentId(null)
+                    setEditingName("")
+                  }}
+                  type="button"
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200"
+                >
+                  <X className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {students.length === 0 ? (
+                <p className="text-center text-slate-500 py-8">No hay alumnos en esta sala</p>
+              ) : (
+                <ul className="space-y-2">
+                  {students.map((student) => (
+                    <li 
+                      key={student.id}
+                      className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50"
+                    >
+                      {editingStudentId === student.id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-blue-400"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleEditStudent(student.id, editingName)
+                              if (e.key === "Escape") {
+                                setEditingStudentId(null)
+                                setEditingName("")
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleEditStudent(student.id, editingName)}
+                            className="w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 flex items-center justify-center text-green-600"
+                            title="Guardar"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingStudentId(null)
+                              setEditingName("")
+                            }}
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"
+                            title="Cancelar"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-sm font-medium text-slate-700">
+                            {student.name || student.nombre}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingStudentId(student.id)
+                              setEditingName(student.name || student.nombre || "")
+                            }}
+                            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"
+                            title="Editar nombre"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStudent(student.id)}
+                            className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 flex items-center justify-center text-red-600"
+                            title="Eliminar alumno"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditList(false)
+                  setEditingStudentId(null)
+                  setEditingName("")
+                }}
+                className="w-full py-2.5 text-sm font-medium rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
+                style={{ color: "#1e3a5f" }}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
