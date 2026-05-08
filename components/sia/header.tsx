@@ -8,9 +8,10 @@ interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
+  salaActual?: string
 }
 
-export function Header({ activeView = "clase", onNavigate, onSintesis }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos" }: HeaderProps) {
   return (
     <header className="bg-primary text-primary-foreground shadow-lg">
       <div className="px-4 py-3 sm:px-6">
@@ -76,7 +77,7 @@ export function Header({ activeView = "clase", onNavigate, onSintesis }: HeaderP
             <div className="flex items-center gap-2">
               <span className="text-primary-foreground/60 text-xs hidden sm:inline">Sala:</span>
               <span className="font-semibold px-2.5 py-1 bg-white/10 rounded-lg text-sm">
-                Manzanos
+                {salaActual}
               </span>
             </div>
 

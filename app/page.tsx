@@ -499,21 +499,50 @@ export default function ALBADashboard() {
       }
     })
 
-    // Guardar en Supabase si esta configurado
+    // Guardar en Supabase si esta configurado (upsert para evitar duplicados del mismo dia)
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { error } = await supabase
+        const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        
+        // Primero verificar si ya existe un registro para hoy
+        const { data: existing } = await supabase
           .from('seguimiento')
-          .insert([{
-            alumno_id: studentId,
-            eje: eje,
-            resultado: status,
-            actividad: actividadDelDia,
-            fecha: new Date().toISOString()
-          }])
+          .select('id')
+          .eq('alumno_id', studentId)
+          .eq('eje', eje)
+          .gte('fecha', `${today}T00:00:00`)
+          .lte('fecha', `${today}T23:59:59`)
+          .single()
 
-        if (error) {
-          console.error("Error guardando en Supabase:", error)
+        if (existing) {
+          // Actualizar registro existente
+          const { error } = await supabase
+            .from('seguimiento')
+            .update({
+              resultado: status,
+              actividad: actividadDelDia,
+              fecha: new Date().toISOString()
+            })
+            .eq('id', existing.id)
+
+          if (error) {
+            console.error("Error actualizando en Supabase:", error)
+          }
+        } else {
+          // Insertar nuevo registro
+          const { error } = await supabase
+            .from('seguimiento')
+            .insert([{
+              alumno_id: studentId,
+              eje: eje,
+              resultado: status,
+              actividad: actividadDelDia,
+              fecha: new Date().toISOString()
+            }])
+
+          if (error) {
+            console.error("Error insertando en Supabase:", error)
+          }
         }
         return // Salir si guardamos en Supabase
       } catch (err) {
@@ -541,7 +570,7 @@ export default function ALBADashboard() {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -569,7 +598,7 @@ export default function ALBADashboard() {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
         <SalaMap
           students={students}
           progress={progress}
@@ -596,7 +625,7 @@ export default function ALBADashboard() {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={student?.nombre}
@@ -620,7 +649,7 @@ export default function ALBADashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
