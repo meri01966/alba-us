@@ -737,6 +737,7 @@ export default function ALBADashboard() {
         <SalaMap
           students={students}
           progress={progress}
+          evaluaciones={evaluaciones}
           onStudentClick={(id) => {
             setSelectedStudent(id)
             setActiveView("perfil")

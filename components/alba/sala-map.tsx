@@ -11,9 +11,12 @@ interface Student {
   mesa?: string
 }
 
+type StatusLevel = "green" | "yellow" | "red"
+
 interface SalaMapProps {
   students: Student[]
   progress: Record<string, { CF: number; CT: number; O: number }>
+  evaluaciones?: Record<string, StatusLevel>  // Evaluaciones del dia
   onStudentClick: (id: string) => void
 }
 
@@ -125,28 +128,38 @@ function getAverage(p: { CF: number; CT: number; O: number }): number {
   return Math.round((p.CF + p.CT + p.O) / 3)
 }
 
-export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
+export default function SalaMap({ students, progress, evaluaciones = {}, onStudentClick }: SalaMapProps) {
   const [reportsSent, setReportsSent] = useState<Record<string, boolean>>({})
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // Agrupar por nivel de progreso
+  // Agrupar por evaluacion del dia (semaforo) - prioridad sobre progreso historico
   const grupos: { label: string; color: string; bgLight: string; alumnos: Student[] }[] = [
     { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", alumnos: [] },
     { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", alumnos: [] },
-    { label: "Avanzado",          color: "#10b981", bgLight: "#ecfdf5", alumnos: [] },
+    { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", alumnos: [] },
   ]
 
   students.forEach((s) => {
-    const p = progress[s.id]
+    const evalHoy = evaluaciones[s.id]
     
-    // Si no tiene progreso registrado o todos los ejes estan en 0, es "Sin evaluar"
+    // Si tiene evaluacion del dia, agrupar por esa
+    if (evalHoy) {
+      if (evalHoy === "green") grupos[3].alumnos.push(s)
+      else if (evalHoy === "yellow") grupos[2].alumnos.push(s)
+      else grupos[1].alumnos.push(s)
+      return
+    }
+    
+    // Si no tiene evaluacion del dia, revisar progreso historico
+    const p = progress[s.id]
     if (!p || (p.CF === 0 && p.CT === 0 && p.O === 0)) {
       grupos[0].alumnos.push(s)
       return
     }
     
+    // Usar progreso historico como fallback
     const avg = getAverage(p)
     if (avg >= 70) grupos[3].alumnos.push(s)
     else if (avg >= 40) grupos[2].alumnos.push(s)
