@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { FileText, X } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
@@ -283,16 +284,63 @@ export default function ALBADashboard() {
     }
   }, [progress])
 
+  // Cargar alumnos y progreso desde Supabase
   const fetchProgreso = useCallback(async () => {
     try {
-      const res = await fetch("/api/progreso")
-      const data = await res.json()
-      if (data.ok) {
-        setStudents(data.alumnos)
-        // Solo cargar progreso de API si no hay guardado local
+      // 1. Traer alumnos de la tabla 'alumnos'
+      const { data: alumnosData, error: alumnosError } = await supabase
+        .from('alumnos')
+        .select('*')
+        .order('nombre')
+
+      if (alumnosError) {
+        console.error("Error cargando alumnos:", alumnosError)
+        return
+      }
+
+      if (alumnosData) {
+        // Mapear al formato que usa el HeatMap
+        const mappedStudents = alumnosData.map((al: any) => ({
+          id: al.id,
+          name: al.nombre,
+          nombre: al.nombre,
+          cf: "yellow" as StatusLevel,
+          rl: "yellow" as StatusLevel,
+          o: "yellow" as StatusLevel,
+        }))
+        setStudents(mappedStudents)
+
+        // 2. Traer seguimiento/evaluaciones
+        const { data: seguimientoData } = await supabase
+          .from('seguimiento')
+          .select('*')
+
+        // Solo cargar progreso de Supabase si no hay guardado local
         const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-        if (!savedProgress) {
-          setProgress(data.progreso)
+        if (!savedProgress && seguimientoData) {
+          const newProgress: Record<string, { CF: number; CT: number; O: number }> = {}
+          alumnosData.forEach((al: any) => {
+            const registros = seguimientoData.filter((s: any) => s.alumno_id === al.id)
+            const cfRegistros = registros.filter((r: any) => r.eje === 'CF')
+            const ctRegistros = registros.filter((r: any) => r.eje === 'CT')
+            const oRegistros = registros.filter((r: any) => r.eje === 'O')
+            
+            // Calcular promedio basado en ultimo registro o cantidad
+            const getAverage = (regs: any[]) => {
+              if (regs.length === 0) return 0
+              const last = regs[regs.length - 1]
+              if (last.resultado === 'green') return 100
+              if (last.resultado === 'yellow') return 50
+              return 10
+            }
+            
+            newProgress[al.id] = {
+              CF: getAverage(cfRegistros),
+              CT: getAverage(ctRegistros),
+              O: getAverage(oRegistros),
+            }
+          })
+          setProgress(newProgress)
         }
       }
     } catch (err) {
@@ -312,7 +360,7 @@ export default function ALBADashboard() {
   }
 
   // Callback cuando se evalua un alumno en HeatMap
-  // Actualiza el progreso en tiempo real sin recargar
+  // Actualiza el progreso en tiempo real y guarda en Supabase
   const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string) => {
     // Determinar el eje segun la actividad
     const eje = ACTIVIDAD_EJE_MAP[actividadDelDia] || "CF"
@@ -333,18 +381,21 @@ export default function ALBADashboard() {
       }
     })
 
-    // Persistir en API
+    // Guardar en Supabase
     try {
-      await fetch("/api/registrar-actividad", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          studentId, 
-          field: eje,
-          status,
-          actividad: actividadDelDia 
-        }),
-      })
+      const { error } = await supabase
+        .from('seguimiento')
+        .insert([{
+          alumno_id: studentId,
+          eje: eje,
+          resultado: status,
+          actividad: actividadDelDia,
+          fecha: new Date().toISOString()
+        }])
+
+      if (error) {
+        console.error("Error guardando en Supabase:", error)
+      }
     } catch (err) {
       console.error("Error guardando evaluacion:", err)
     }
@@ -437,6 +488,7 @@ export default function ALBADashboard() {
               <HeatMap 
                 evaluaciones={evaluaciones}
                 onEvaluacion={handleEvaluacion}
+                students={students}
               />
             </div>
             <div className="lg:col-span-8">

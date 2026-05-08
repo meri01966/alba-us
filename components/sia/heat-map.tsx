@@ -24,6 +24,7 @@ interface StudentsResponse {
 interface HeatMapProps {
   evaluaciones?: Record<string, StatusLevel>
   onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string) => void
+  students?: Student[]  // Opcional: si se pasan, usa estos en lugar de cargar de API
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -108,22 +109,28 @@ function StudentRow({
 
 
 
-export function HeatMap({ evaluaciones = {}, onEvaluacion }: HeatMapProps) {
-  const { data, isLoading } = useSWR<StudentsResponse>("/api/students", fetcher, {
-    revalidateOnFocus: false,
-  })
+export function HeatMap({ evaluaciones = {}, onEvaluacion, students: propStudents }: HeatMapProps) {
+  // Solo cargar de API si no se pasaron students por props
+  const { data, isLoading: apiLoading } = useSWR<StudentsResponse>(
+    propStudents ? null : "/api/students", 
+    fetcher, 
+    { revalidateOnFocus: false }
+  )
 
   const [localStatus, setLocalStatus] = useState<Record<string, StatusLevel>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
-  const rawStudents = data?.students ?? []
-  const source = data?.source ?? null
+  // Usar students de props o de API
+  const rawStudents = propStudents ?? data?.students ?? []
+  const source = propStudents ? "supabase" : (data?.source ?? null)
+  const isLoading = propStudents ? false : apiLoading
 
   const students: Student[] = rawStudents.map((s) => ({
     ...s,
-    cf: (localStatus[`${s.id}-cf`] as StatusLevel) ?? s.cf,
-    rl: (localStatus[`${s.id}-rl`] as StatusLevel) ?? s.rl,
-    o: (localStatus[`${s.id}-o`] as StatusLevel) ?? s.o,
+    name: s.name || (s as any).nombre || "Sin nombre",
+    cf: (localStatus[`${s.id}-cf`] as StatusLevel) ?? s.cf ?? "yellow",
+    rl: (localStatus[`${s.id}-rl`] as StatusLevel) ?? s.rl ?? "yellow",
+    o: (localStatus[`${s.id}-o`] as StatusLevel) ?? s.o ?? "yellow",
   }))
 
   async function handleEval(student: Student, status: StatusLevel) {
