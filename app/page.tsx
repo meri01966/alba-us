@@ -705,13 +705,33 @@ export default function ALBADashboard() {
     }
   }, [])
 
-  // Limpiar evaluacion de un alumno
-  const handleClearEvaluacion = useCallback((studentId: string) => {
+  // Limpiar evaluacion de un alumno (corregir error del docente)
+  const handleClearEvaluacion = useCallback(async (studentId: string) => {
+    // Actualizar estado local inmediatamente
     setEvaluaciones(prev => {
       const newEval = { ...prev }
       delete newEval[studentId]
       return newEval
     })
+    
+    // Eliminar registro de hoy en Supabase (para corregir error)
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        const { error } = await supabase
+          .from('seguimiento')
+          .delete()
+          .eq('alumno_id', studentId)
+          .gte('fecha', `${today}T00:00:00`)
+          .lte('fecha', `${today}T23:59:59`)
+
+        if (error) {
+          console.error("Error eliminando registro de Supabase:", error)
+        }
+      } catch (err) {
+        console.error("Error con Supabase:", err)
+      }
+    }
   }, [])
 
   // Limpiar todas las evaluaciones del dia
