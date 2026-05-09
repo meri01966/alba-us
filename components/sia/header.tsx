@@ -1,102 +1,77 @@
+// components/sia/header.tsx
 "use client"
 
-import { User, Calendar, BookOpen, Database, Home, FileText } from "lucide-react"
+import { BookOpen, Database, FileText } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
 interface HeaderProps {
-  activeView?: ViewType
-  onNavigate?: (view: ViewType) => void
-  onSintesis?: () => void
-  salaActual?: string
+  activeView: ViewType
+  onNavigate: (view: ViewType) => void
+  onSintesis: () => void
+  salaActual: string
 }
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos" }: HeaderProps) {
+export function Header({ activeView, onNavigate, onSintesis, salaActual }: HeaderProps) {
+  const tabs: { id: ViewType; label: string; icon: React.ElementType }[] = [
+    { id: "clase", label: "Clase", icon: BookOpen },
+    { id: "mapa", label: "Datos", icon: Database },
+  ]
+
   return (
-    <header className="bg-primary text-primary-foreground shadow-lg">
-      <div className="px-4 py-3 sm:px-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* Logo and Title */}
+    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5">
+        <div className="flex items-center justify-between h-14">
+          {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 backdrop-blur">
-              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight">ALBA</h1>
-              <p className="text-xs sm:text-sm text-primary-foreground/70 font-medium">
-                Alfabetizacion con Acompanamiento
-              </p>
-            </div>
+            <h1
+              className="text-xl font-light tracking-tight cursor-pointer"
+              style={{ fontFamily: "Georgia, serif" }}
+              onClick={() => onNavigate("clase")}
+            >
+              <span style={{ color: "#D4870E", fontWeight: 700 }}>A</span>
+              <span style={{ color: "#1e3a5f" }}>LBA</span>
+            </h1>
+            <div className="hidden sm:block w-px h-5 bg-slate-200" />
+            <span className="hidden sm:block text-xs text-slate-400 tracking-wide uppercase">
+              {salaActual}
+            </span>
           </div>
 
-          {/* Navigation buttons */}
-          {onNavigate && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onNavigate("clase")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: activeView === "clase" ? "rgba(212,135,14,0.15)" : "transparent",
-                  border: activeView === "clase" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
-                  color: activeView === "clase" ? "#D4870E" : "rgba(255,255,255,0.7)",
-                }}
-              >
-                <Home className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Clase</span>
-              </button>
+          {/* Navegacion central */}
+          <nav className="flex items-center gap-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeView === tab.id || (tab.id === "mapa" && activeView === "perfil")
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onNavigate(tab.id)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    backgroundColor: isActive ? "#1e3a5f" : "transparent",
+                    color: isActive ? "#fff" : "#64748b",
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              )
+            })}
+          </nav>
 
-              <button
-                onClick={() => onNavigate("mapa")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: activeView === "mapa" || activeView === "perfil" ? "rgba(212,135,14,0.15)" : "transparent",
-                  border: activeView === "mapa" || activeView === "perfil" ? "1px solid #D4870E" : "1px solid rgba(255,255,255,0.2)",
-                  color: activeView === "mapa" || activeView === "perfil" ? "#D4870E" : "rgba(255,255,255,0.7)",
-                }}
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Datos</span>
-              </button>
-            </div>
-          )}
-
-          {/* Meta info */}
-          <div className="flex items-center gap-3 sm:gap-4 text-sm">
-            {/* Boton Sintesis Pedagogica */}
-            {onSintesis && (
-              <button
-                onClick={onSintesis}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
-                style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sintesis</span>
-              </button>
-            )}
-            {/* Classroom */}
-            <div className="flex items-center gap-2">
-              <span className="text-primary-foreground/60 text-xs hidden sm:inline">Sala:</span>
-              <span className="font-semibold px-2.5 py-1 bg-white/10 rounded-lg text-sm">
-                {salaActual}
-              </span>
-            </div>
-
-            {/* Day counter */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary-foreground/60" />
-              <span className="font-semibold">Dia 37</span>
-            </div>
-
-            {/* User */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                <User className="w-4 h-4 text-accent-foreground" />
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-xs text-primary-foreground/60">Docente:</span>
-                <span className="font-medium ml-1">Mariana</span>
-              </div>
-            </div>
+          {/* Sintesis */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onSintesis}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all hover:bg-slate-50"
+              style={{ borderColor: "#D4870E40", color: "#D4870E" }}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sintesis</span>
+            </button>
           </div>
         </div>
       </div>
