@@ -9,7 +9,6 @@ import { DayPlanning } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
-import { AIInsights } from "@/components/sia/ai-insights"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
@@ -706,33 +705,13 @@ export default function ALBADashboard() {
     }
   }, [])
 
-  // Limpiar evaluacion de un alumno (corregir error del docente)
-  const handleClearEvaluacion = useCallback(async (studentId: string) => {
-    // Actualizar estado local inmediatamente
+  // Limpiar evaluacion de un alumno
+  const handleClearEvaluacion = useCallback((studentId: string) => {
     setEvaluaciones(prev => {
       const newEval = { ...prev }
       delete newEval[studentId]
       return newEval
     })
-    
-    // Eliminar registro de hoy en Supabase (para corregir error)
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const today = new Date().toISOString().split('T')[0]
-        const { error } = await supabase
-          .from('seguimiento')
-          .delete()
-          .eq('alumno_id', studentId)
-          .gte('fecha', `${today}T00:00:00`)
-          .lte('fecha', `${today}T23:59:59`)
-
-        if (error) {
-          console.error("Error eliminando registro de Supabase:", error)
-        }
-      } catch (err) {
-        console.error("Error con Supabase:", err)
-      }
-    }
   }, [])
 
   // Limpiar todas las evaluaciones del dia
@@ -997,20 +976,11 @@ export default function ALBADashboard() {
                 <AlertsPanel 
                   progress={progress}
                   students={students}
-                  evaluaciones={evaluaciones}
                 />
-<QuickRegister
+                <QuickRegister 
                   actividadDelDia={ACTIVIDAD_DEL_DIA}
                   evaluados={Object.keys(evaluaciones).length}
                   totalAlumnos={students.length}
-                />
-              </div>
-              
-              {/* Panel de Analisis IA */}
-              <div className="mt-4">
-                <AIInsights 
-                  sala={salaActual}
-                  totalEvaluaciones={Object.keys(evaluaciones).length}
                 />
               </div>
             </>
