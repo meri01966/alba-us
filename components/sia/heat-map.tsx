@@ -403,7 +403,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
               <span className="font-bold text-slate-700">Vinculo con Planificacion ALBA</span>
             </div>
             
-            {/* Actividad evaluada = Sugerencia de ALBA */}
+            {/* Actividad sugerida por ALBA - igual que en Planificacion del Dia */}
             <div 
               className="rounded-xl p-3 border-2"
               style={{ 
@@ -412,9 +412,9 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
               }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <Star className="w-4 h-4" style={{ color: EJE_COLORS[selectedEje]?.color }} />
+                <BookOpen className="w-4 h-4" style={{ color: EJE_COLORS[selectedEje]?.color }} />
                 <span className="text-xs font-bold uppercase" style={{ color: EJE_COLORS[selectedEje]?.color }}>
-                  Actividad evaluada
+                  Actividad sugerida por ALBA
                 </span>
               </div>
               <p className="font-bold text-lg" style={{ color: "#1e3a5f" }}>
@@ -422,12 +422,6 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
               </p>
               <p className="text-xs mt-1" style={{ color: EJE_COLORS[selectedEje]?.color }}>
                 Eje: {EJE_COLORS[selectedEje]?.nombre || selectedEje}
-              </p>
-            </div>
-            
-            <div className="bg-green-50 rounded-lg p-2 text-center border border-green-200">
-              <p className="text-xs font-medium text-green-700">
-                Esta es la actividad sugerida por ALBA en la Planificacion del Dia
               </p>
             </div>
             
