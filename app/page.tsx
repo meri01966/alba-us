@@ -1126,7 +1126,6 @@ export default function ALBADashboard() {
                     onEvaluacion={handleEvaluacion}
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
-                    onActividadChange={handleActividadChange}
                     onRegistroCierre={handleRegistroCierre}
                     actividadSugeridaALBA={actividadSugeridaALBA}
                     ejeDeALBA={ejeActual}

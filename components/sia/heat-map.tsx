@@ -38,37 +38,13 @@ interface HeatMapProps {
   onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string, eje: string) => void
   onClearEvaluacion?: (studentId: string) => void
   onClearAllEvaluaciones?: () => void
-  onActividadChange?: (actividad: string, eje: string) => void
   onRegistroCierre?: (registro: RegistroCierre) => void
   actividadSugeridaALBA?: string
   ejeDeALBA?: string // Eje decidido por ALBA
   isLoading?: boolean
 }
 
-// Actividades sugeridas por eje (de la secuencia ALBA)
-const ACTIVIDADES_SUGERIDAS: Record<string, string[]> = {
-  CF: [
-    "Reconocimiento de Sonido Inicial /M/",
-    "Segmentacion silabica con palmadas",
-    "Rimas y canciones",
-    "Sonido inicial /A/",
-    "Sonido inicial /E/",
-  ],
-  CT: [
-    "Lectura Dialogica: Antes de leer",
-    "Cruz de Comprension: QUIEN",
-    "Cruz de Comprension: QUE",
-    "Lectura Dialogica: Durante",
-    "Cruz de Comprension: POR QUE",
-  ],
-  O: [
-    "ECO: Escucha de instrucciones",
-    "ECO: Comprension literal oral",
-    "ECO: Narrar con secuencia",
-    "ECO: Describir con estructura",
-    "ECO: Vocabulario receptivo",
-  ],
-}
+
 
 const EVAL_OPTIONS: {
   value: StatusLevel
@@ -197,14 +173,14 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onActividadChange, onRegistroCierre, actividadSugeridaALBA = "", ejeDeALBA = "CF", isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onRegistroCierre, actividadSugeridaALBA = "", ejeDeALBA = "CF", isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [actividadDelDia, setActividadDelDia] = useState(actividadSugeridaALBA || ACTIVIDADES_SUGERIDAS.CF[0])
-  const [editandoActividad, setEditandoActividad] = useState(false)
-  const [actividadTemporal, setActividadTemporal] = useState("")
   
   // El eje viene de ALBA (no se selecciona manualmente)
   const selectedEje = ejeDeALBA
+  
+  // La actividad SIEMPRE es la sugerida por ALBA - no hay estado local
+  const actividadDelDia = actividadSugeridaALBA || "Cargando sugerencia de ALBA..."
   
   // Estado para Registro de Cierre
   const [mostrarCierre, setMostrarCierre] = useState(false)
@@ -212,33 +188,6 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   const [cierreObservaciones, setCierreObservaciones] = useState("")
   const [cierreSugerencia, setCierreSugerencia] = useState("")
   const [enviandoCierre, setEnviandoCierre] = useState(false)
-  
-  // Actualizar actividad cuando cambia la sugerida por ALBA
-  useEffect(() => {
-    if (actividadSugeridaALBA && !editandoActividad) {
-      setActividadDelDia(actividadSugeridaALBA)
-    }
-  }, [actividadSugeridaALBA, editandoActividad])
-  
-  // Guardar actividad personalizada
-  const guardarActividad = () => {
-    if (actividadTemporal.trim()) {
-      setActividadDelDia(actividadTemporal.trim())
-      if (onActividadChange) {
-        onActividadChange(actividadTemporal.trim(), selectedEje)
-      }
-    }
-    setEditandoActividad(false)
-  }
-  
-  // Seleccionar actividad sugerida
-  const seleccionarActividadSugerida = (actividad: string) => {
-    setActividadDelDia(actividad)
-    setEditandoActividad(false)
-    if (onActividadChange) {
-      onActividadChange(actividad, selectedEje)
-    }
-  }
   
   // Calcular stats actuales
   const calcularStats = () => {
@@ -260,12 +209,10 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
     setEnviandoCierre(true)
     const stats = calcularStats()
     
-    // La actividad del cierre DEBE coincidir con la sugerencia de ALBA
-    const actividadParaCierre = actividadSugeridaALBA || actividadDelDia
-    
+    // La actividad del cierre ES la sugerencia de ALBA (son la misma)
     const registro: RegistroCierre = {
-      actividadALBA: actividadSugeridaALBA || "",
-      actividadDocente: actividadParaCierre, // Usa la sugerencia de ALBA
+      actividadALBA: actividadDelDia,
+      actividadDocente: actividadDelDia, // Siempre igual a ALBA
       eje: selectedEje,
       evaluacionGeneral: cierreEvaluacion,
       observaciones: cierreObservaciones,
@@ -456,37 +403,33 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
               <span className="font-bold text-slate-700">Vinculo con Planificacion ALBA</span>
             </div>
             
-            {/* Actividad sugerida por ALBA */}
-            <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-100">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-blue-500 font-medium">Sugerencia de ALBA:</span>
+            {/* Actividad evaluada = Sugerencia de ALBA */}
+            <div 
+              className="rounded-xl p-3 border-2"
+              style={{ 
+                backgroundColor: `${EJE_COLORS[selectedEje]?.bgColor || "#eff6ff"}`,
+                borderColor: EJE_COLORS[selectedEje]?.color || "#3b82f6"
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-4 h-4" style={{ color: EJE_COLORS[selectedEje]?.color }} />
+                <span className="text-xs font-bold uppercase" style={{ color: EJE_COLORS[selectedEje]?.color }}>
+                  Actividad evaluada
+                </span>
               </div>
-              <p className="text-blue-800 font-semibold">
-                {actividadSugeridaALBA || "Sin sugerencia activa"}
+              <p className="font-bold text-lg" style={{ color: "#1e3a5f" }}>
+                {actividadDelDia}
+              </p>
+              <p className="text-xs mt-1" style={{ color: EJE_COLORS[selectedEje]?.color }}>
+                Eje: {EJE_COLORS[selectedEje]?.nombre || selectedEje}
               </p>
             </div>
             
-            {/* Actividad realizada por el docente */}
-            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-slate-500 font-medium">Actividad realizada:</span>
-              </div>
-              <p className="text-slate-800 font-semibold">{actividadDelDia}</p>
+            <div className="bg-green-50 rounded-lg p-2 text-center border border-green-200">
+              <p className="text-xs font-medium text-green-700">
+                Esta es la actividad sugerida por ALBA en la Planificacion del Dia
+              </p>
             </div>
-            
-            {/* Indicador de coincidencia */}
-            {actividadSugeridaALBA && (
-              <div className={`rounded-lg p-2 text-center font-medium ${
-                actividadSugeridaALBA === actividadDelDia 
-                  ? "bg-green-100 text-green-700 border border-green-200" 
-                  : "bg-amber-50 text-amber-700 border border-amber-200"
-              }`}>
-                {actividadSugeridaALBA === actividadDelDia 
-                  ? "Actividad coincide con la sugerencia de ALBA" 
-                  : "Se realizo una actividad diferente a la sugerida"
-                }
-              </div>
-            )}
             
             {/* Resultados de la clase */}
             <div className="pt-2 border-t border-slate-100">
