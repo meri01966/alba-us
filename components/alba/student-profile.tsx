@@ -336,6 +336,16 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
   }
 
   const sintesis = calcularSintesis()
+  
+  // Verificar si hay datos evaluados (si todos los ejes tienen 0% significa sin evaluar)
+  const tieneEvaluaciones = EJES.some(eje => {
+    const p = progreso[eje.key]
+    return p && (p.porcentaje > 0 || p.actividades.length > 0)
+  })
+  
+  const totalClasesEvaluadas = EJES.reduce((sum, eje) => {
+    return sum + (progreso[eje.key]?.actividades?.length || 0)
+  }, 0)
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
@@ -386,10 +396,31 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         </button>
       </div>
 
+      {/* Mensaje cuando no hay evaluaciones */}
+      {!tieneEvaluaciones && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-4 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+            <BookOpen className="w-8 h-8 text-blue-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">Sin evaluaciones registradas</h3>
+          <p className="text-sm text-blue-700 mb-4">
+            Este alumno aun no tiene evaluaciones en el Registro del Aula. 
+            El reporte se completara automaticamente a medida que se registren las clases.
+          </p>
+          <p className="text-xs text-blue-500">
+            Utiliza el panel de &quot;Registro del Aula&quot; para evaluar a los alumnos durante las actividades diarias.
+          </p>
+        </div>
+      )}
+
       {vistaActiva === "progreso" ? (
         /* VISTA: Progreso por Eje */
         <div className="space-y-4">
-          {EJES.map((eje) => {
+          {!tieneEvaluaciones ? (
+            <div className="text-center py-8 text-gray-400">
+              <p>Los datos de progreso apareceran aqui cuando se realicen evaluaciones.</p>
+            </div>
+          ) : EJES.map((eje) => {
             const p = progreso[eje.key] || { porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 }
             const nivel = getNivel(p.porcentaje)
             const sugerencia = SUGERENCIAS[eje.key][nivel.texto]
@@ -563,25 +594,47 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
       ) : (
         /* VISTA: Sintesis Cuatrimestral */
         <div className="space-y-4">
-          {/* Resumen General */}
-          <div 
-            className="rounded-2xl p-5 text-center"
-            style={{ backgroundColor: sintesis.nivelGeneral.bg }}
-          >
-            <p className="text-sm text-gray-500 mb-2">Nivel General de Alfabetizacion</p>
-            <div 
-              className="text-4xl font-bold mb-2"
-              style={{ color: sintesis.nivelGeneral.color }}
-            >
-              {Math.round(sintesis.promedioGeneral)}%
+          {!tieneEvaluaciones ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+                <Target className="w-8 h-8 text-amber-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-amber-900 mb-2">Sintesis no disponible</h3>
+              <p className="text-sm text-amber-700 mb-4">
+                La sintesis cuatrimestral se genera a partir de las evaluaciones realizadas en el Registro del Aula.
+              </p>
+              <p className="text-xs text-amber-500">
+                Una vez que se registren evaluaciones, podras ver aqui el analisis completo del proceso 
+                de alfabetizacion incluyendo los tres ejes: CF, CT y O.
+              </p>
             </div>
-            <span 
-              className="inline-block px-4 py-1.5 rounded-full text-white font-bold"
-              style={{ backgroundColor: sintesis.nivelGeneral.color }}
-            >
-              {sintesis.nivelGeneral.texto}
-            </span>
-          </div>
+          ) : (
+            <>
+              {/* Info de clases evaluadas */}
+              <div className="bg-slate-100 rounded-xl p-3 flex items-center justify-between text-sm">
+                <span className="text-slate-600">Clases evaluadas:</span>
+                <span className="font-bold text-slate-700">{totalClasesEvaluadas}</span>
+              </div>
+
+              {/* Resumen General */}
+              <div 
+                className="rounded-2xl p-5 text-center"
+                style={{ backgroundColor: sintesis.nivelGeneral.bg }}
+              >
+                <p className="text-sm text-gray-500 mb-2">Nivel General de Alfabetizacion</p>
+                <div 
+                  className="text-4xl font-bold mb-2"
+                  style={{ color: sintesis.nivelGeneral.color }}
+                >
+                  {Math.round(sintesis.promedioGeneral)}%
+                </div>
+                <span 
+                  className="inline-block px-4 py-1.5 rounded-full text-white font-bold"
+                  style={{ backgroundColor: sintesis.nivelGeneral.color }}
+                >
+                  {sintesis.nivelGeneral.texto}
+                </span>
+              </div>
 
           {/* Grafico de barras por eje */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -718,12 +771,12 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
               })}
             </div>
             
-            <p className="text-xs text-blue-600 mt-4 text-center italic">
-              Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
-            </p>
-          </div>
+<p className="text-xs text-blue-600 mt-4 text-center italic">
+  Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
+  </p>
+  </div>
+            </>
+          )}
         </div>
-      )}
-    </div>
   )
 }

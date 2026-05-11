@@ -83,16 +83,16 @@ export async function GET(
 ) {
   const { alumnoId } = await params
 
-  // Si no hay Supabase, devolver datos demo
+  // Si no hay Supabase, devolver datos vacios (sin evaluar)
   if (!supabase) {
     return NextResponse.json({
       ok: true,
       source: "demo",
-      alumno: { id: alumnoId, nombre: "Demo", apellido: "Alumno" },
+      alumno: { id: alumnoId, nombre: "Sin", apellido: "Datos" },
       progreso: {
-        CF: { logradas: [], porcentaje: 45, actividades: [], tendencia: "estable", semanaActual: 3 },
-        CT: { logradas: [], porcentaje: 60, actividades: [], tendencia: "mejorando", semanaActual: 4 },
-        O: { logradas: [], porcentaje: 35, actividades: [], tendencia: "estable", semanaActual: 2 },
+        CF: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+        CT: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+        O: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
       },
     })
   }

@@ -195,6 +195,18 @@ function SintesisPedagogicaModal({
             </div>
           )}
           
+          {!loading && totalEvaluados === 0 && !datosReales && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center mb-4">
+              <FileText className="w-10 h-10 mx-auto mb-3 text-amber-400" />
+              <h3 className="font-semibold text-amber-900 mb-2">Sintesis pendiente de datos</h3>
+              <p className="text-sm text-amber-700">
+                La sintesis pedagogica se generara automaticamente a medida que se realicen 
+                evaluaciones en el Registro del Aula. Actualmente no hay datos suficientes 
+                para generar el informe.
+              </p>
+            </div>
+          )}
+          
           <section>
             <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
               Que nos propusimos
