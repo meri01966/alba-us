@@ -169,36 +169,39 @@ function generarDescripcionActividad(eje: string, semana: number): string {
 // ── Consultar historial de Supabase ────────────────────────────────────────
 async function obtenerHistorialSeguimiento(sala?: string): Promise<{
   totalRegistros: number
-  porEje: Record<string, { green: number; yellow: number; red: number; total: number }>
+  porEje: Record<string, { green: number; yellow: number; red: number; total: number; promedio: number }>
   ultimaSemana: Record<string, number>
   tendencia: Record<string, "mejorando" | "estable" | "bajando">
+  diasEvaluados: Record<string, number>
 }> {
   const resultado = {
     totalRegistros: 0,
     porEje: {
-      CF: { green: 0, yellow: 0, red: 0, total: 0 },
-      CT: { green: 0, yellow: 0, red: 0, total: 0 },
-      O: { green: 0, yellow: 0, red: 0, total: 0 },
+      CF: { green: 0, yellow: 0, red: 0, total: 0, promedio: 0 },
+      CT: { green: 0, yellow: 0, red: 0, total: 0, promedio: 0 },
+      O: { green: 0, yellow: 0, red: 0, total: 0, promedio: 0 },
     },
     ultimaSemana: { CF: 1, CT: 1, O: 1 },
     tendencia: { CF: "estable" as const, CT: "estable" as const, O: "estable" as const },
+    diasEvaluados: { CF: 0, CT: 0, O: 0 },
   }
 
   if (!supabase) return resultado
 
   try {
-    // Obtener ultimos 100 registros de seguimiento
+    // Obtener TODOS los registros de seguimiento para calcular promedio real
     const { data, error } = await supabase
       .from("seguimiento")
       .select("eje, resultado, fecha")
       .order("fecha", { ascending: false })
-      .limit(100)
 
     if (error || !data) return resultado
 
     resultado.totalRegistros = data.length
 
     // Contar por eje y resultado
+    const fechasPorEje: Record<string, Set<string>> = { CF: new Set(), CT: new Set(), O: new Set() }
+    
     data.forEach((registro: { eje: string; resultado: string; fecha: string }) => {
       const eje = registro.eje as "CF" | "CT" | "O"
       if (resultado.porEje[eje]) {
@@ -206,29 +209,72 @@ async function obtenerHistorialSeguimiento(sala?: string): Promise<{
         if (registro.resultado === "green") resultado.porEje[eje].green++
         else if (registro.resultado === "yellow") resultado.porEje[eje].yellow++
         else if (registro.resultado === "red") resultado.porEje[eje].red++
+        
+        // Contar dias unicos evaluados
+        const fecha = registro.fecha.split("T")[0]
+        fechasPorEje[eje].add(fecha)
       }
     })
 
-    // Calcular semana aproximada basada en total de registros por eje
+    // Calcular promedio de logro por eje (verde=100, amarillo=50, rojo=10)
     Object.keys(resultado.porEje).forEach((eje) => {
-      const totalEje = resultado.porEje[eje as "CF" | "CT" | "O"].total
-      // Aproximar: cada 20 registros = 1 semana avanzada
-      resultado.ultimaSemana[eje as "CF" | "CT" | "O"] = Math.min(25, Math.floor(totalEje / 20) + 1)
+      const datos = resultado.porEje[eje as "CF" | "CT" | "O"]
+      if (datos.total > 0) {
+        const puntosTotales = (datos.green * 100) + (datos.yellow * 50) + (datos.red * 10)
+        datos.promedio = Math.round(puntosTotales / datos.total)
+      }
+      resultado.diasEvaluados[eje as "CF" | "CT" | "O"] = fechasPorEje[eje].size
     })
 
-    // Calcular tendencia (ultimos 20 vs anteriores 20)
+    // Calcular semana basada en PROMEDIO de logro de la sala
+    // Si promedio >= 70% -> puede avanzar semana, si no -> se queda o retrocede
+    Object.keys(resultado.porEje).forEach((eje) => {
+      const datos = resultado.porEje[eje as "CF" | "CT" | "O"]
+      const diasEvaluados = resultado.diasEvaluados[eje as "CF" | "CT" | "O"]
+      
+      // Calcular semana: empezamos en 1, avanzamos solo si el promedio es >= 70
+      // Cada 5 dias con promedio >= 70 = avanzar 1 semana
+      // Si promedio < 50, no avanzamos aunque pasen dias
+      let semanaCalculada = 1
+      
+      if (datos.total > 0) {
+        if (datos.promedio >= 70) {
+          // Buen desempeno: avanzar 1 semana cada 5 dias de evaluacion
+          semanaCalculada = Math.min(25, Math.floor(diasEvaluados / 5) + 1)
+        } else if (datos.promedio >= 50) {
+          // Desempeno medio: avanzar mas lento (1 semana cada 7 dias)
+          semanaCalculada = Math.min(25, Math.floor(diasEvaluados / 7) + 1)
+        } else {
+          // Bajo desempeno: avanzar muy lento (1 semana cada 10 dias)
+          semanaCalculada = Math.min(25, Math.floor(diasEvaluados / 10) + 1)
+        }
+      }
+      
+      resultado.ultimaSemana[eje as "CF" | "CT" | "O"] = Math.max(1, semanaCalculada)
+    })
+
+    // Calcular tendencia (ultimos 30 vs anteriores 30)
     Object.keys(resultado.porEje).forEach((eje) => {
       const registrosEje = data.filter((r: { eje: string }) => r.eje === eje)
-      if (registrosEje.length >= 20) {
-        const recientes = registrosEje.slice(0, 10)
-        const anteriores = registrosEje.slice(10, 20)
+      if (registrosEje.length >= 30) {
+        const recientes = registrosEje.slice(0, 15)
+        const anteriores = registrosEje.slice(15, 30)
         
-        const promedioReciente = recientes.filter((r: { resultado: string }) => r.resultado === "green").length / recientes.length
-        const promedioAnterior = anteriores.filter((r: { resultado: string }) => r.resultado === "green").length / anteriores.length
+        const calcularPuntaje = (registros: Array<{ resultado: string }>) => {
+          const puntos = registros.reduce((acc, r) => {
+            if (r.resultado === "green") return acc + 100
+            if (r.resultado === "yellow") return acc + 50
+            return acc + 10
+          }, 0)
+          return puntos / registros.length
+        }
         
-        if (promedioReciente > promedioAnterior + 0.1) {
+        const promedioReciente = calcularPuntaje(recientes)
+        const promedioAnterior = calcularPuntaje(anteriores)
+        
+        if (promedioReciente > promedioAnterior + 10) {
           resultado.tendencia[eje as "CF" | "CT" | "O"] = "mejorando"
-        } else if (promedioReciente < promedioAnterior - 0.1) {
+        } else if (promedioReciente < promedioAnterior - 10) {
           resultado.tendencia[eje as "CF" | "CT" | "O"] = "bajando"
         }
       }
@@ -255,30 +301,43 @@ async function generarSugerenciaConIA(
   const tendencia = historial.tendencia[ejeActual]
   const datosEje = historial.porEje[ejeActual as "CF" | "CT" | "O"]
 
+  // Calcular promedios para el prompt
+  const promedioHistorico = datosEje?.promedio || 0
+  const totalHoy = statsHoy.green + statsHoy.yellow + statsHoy.red
+  const promedioHoy = totalHoy > 0 
+    ? Math.round(((statsHoy.green * 100) + (statsHoy.yellow * 50) + (statsHoy.red * 10)) / totalHoy)
+    : 0
+
   const prompt = `Eres ALBA, un asistente pedagogico experto en alfabetizacion inicial para ninos de 4-5 anos.
 
-CONTEXTO:
+CONTEXTO DE LA SALA:
 - Eje actual: ${secuencia?.nombre || ejeActual}
-- Semana de la secuencia: ${semanaActual} de 25
+- Semana de la secuencia curricular: ${semanaActual} de 25
 - Actividad actual: "${actividadActual?.titulo}"
 - Objetivo: "${actividadActual?.objetivo}"
 
-DATOS HISTORICOS DEL EJE ${ejeActual}:
-- Total evaluaciones: ${datosEje?.total || 0}
-- Logrado (verde): ${datosEje?.green || 0} (${datosEje?.total ? Math.round((datosEje.green / datosEje.total) * 100) : 0}%)
-- En proceso (amarillo): ${datosEje?.yellow || 0}
-- Necesita refuerzo (rojo): ${datosEje?.red || 0}
+PROMEDIO HISTORICO DE LA SALA EN ${ejeActual}:
+- Total evaluaciones acumuladas: ${datosEje?.total || 0}
+- PROMEDIO DE LOGRO: ${promedioHistorico}% (verde=100, amarillo=50, rojo=10)
+- Distribucion: ${datosEje?.green || 0} logrado, ${datosEje?.yellow || 0} en proceso, ${datosEje?.red || 0} refuerzo
 - Tendencia: ${tendencia}
 
-EVALUACIONES DE HOY:
-- Verde: ${statsHoy.green}
-- Amarillo: ${statsHoy.yellow}
-- Rojo: ${statsHoy.red}
+EVALUACION DE HOY:
+- Alumnos evaluados: ${totalHoy}
+- Verde (logrado): ${statsHoy.green}
+- Amarillo (proceso): ${statsHoy.yellow}
+- Rojo (refuerzo): ${statsHoy.red}
+- PROMEDIO HOY: ${promedioHoy}%
+
+REGLAS DE DECISION:
+- Si promedio >= 70% y tendencia no baja -> AVANZAR a siguiente semana
+- Si promedio < 40% o tendencia bajando -> REFORZAR con semana anterior
+- Si promedio 40-70% -> REPETIR para consolidar
 
 INSTRUCCION:
-Basandote en estos datos, genera UNA recomendacion pedagogica breve (maximo 2 oraciones) sobre:
-1. Si la clase debe AVANZAR a la siguiente semana, REPETIR la actividad actual, o hacer REFUERZO
-2. Una sugerencia concreta para manana
+Analiza el PROMEDIO DE LA SALA (no solo el de hoy) y genera UNA recomendacion pedagogica de 2-3 oraciones que incluya:
+1. La decision (AVANZAR/REPETIR/REFORZAR) y por que
+2. Una sugerencia concreta de actividad para manana basada en la secuencia curricular
 
 Responde SOLO con la recomendacion, sin explicaciones adicionales.`
 
@@ -358,32 +417,52 @@ function generarActividadSecuencia(
   }
 }
 
-// ── POST: Analisis inteligente ─────────────────────────────────────────────
+// ── POST: Analisis inteligente basado en promedio de la sala ───────────────
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { ejeActual = "CF", stats = { green: 0, yellow: 0, red: 0 } } = body
 
-    // Obtener historial de Supabase
+    // Obtener historial COMPLETO de Supabase
     const historial = await obtenerHistorialSeguimiento()
     const semanaActual = historial.ultimaSemana[ejeActual] || 1
+    const datosEje = historial.porEje[ejeActual as "CF" | "CT" | "O"]
+    const promedioHistorico = datosEje?.promedio || 0
+    const tendencia = historial.tendencia[ejeActual]
 
-    // Determinar decision basada en stats de hoy
+    // Calcular promedio de hoy
     const totalHoy = stats.green + stats.yellow + stats.red
-    let decision: "avanzar" | "repetir" | "reforzar" = "repetir"
-
+    let promedioHoy = 0
     if (totalHoy > 0) {
-      const porcentajeVerde = (stats.green / totalHoy) * 100
-      const porcentajeRojo = (stats.red / totalHoy) * 100
-
-      if (porcentajeVerde >= 70) {
-        decision = "avanzar"
-      } else if (porcentajeRojo >= 40) {
-        decision = "reforzar"
-      }
+      promedioHoy = Math.round(((stats.green * 100) + (stats.yellow * 50) + (stats.red * 10)) / totalHoy)
     }
 
-    // Generar sugerencia con IA si esta disponible
+    // DECISION BASADA EN PROMEDIO HISTORICO + TENDENCIA + HOY
+    let decision: "avanzar" | "repetir" | "reforzar" = "repetir"
+    
+    // Promedio combinado: 60% historico + 40% hoy (si hay datos de hoy)
+    const promedioCombinado = totalHoy > 0 
+      ? Math.round((promedioHistorico * 0.6) + (promedioHoy * 0.4))
+      : promedioHistorico
+
+    // Logica de decision
+    if (promedioCombinado >= 70 && tendencia !== "bajando") {
+      // Buen promedio y no esta bajando -> AVANZAR
+      decision = "avanzar"
+    } else if (promedioCombinado < 40 || tendencia === "bajando") {
+      // Promedio bajo o tendencia bajando -> REFORZAR
+      decision = "reforzar"
+    } else {
+      // Promedio medio (40-70) -> REPETIR para consolidar
+      decision = "repetir"
+    }
+
+    // Si hoy fue muy malo (>50% rojo) y el historico era bueno, solo repetir
+    if (totalHoy > 0 && promedioHoy < 30 && promedioHistorico >= 70) {
+      decision = "repetir" // Un mal dia no debe hacernos retroceder si el historico es bueno
+    }
+
+    // Generar sugerencia con IA incluyendo promedios
     const sugerenciaIA = await generarSugerenciaConIA(historial, ejeActual, stats)
 
     // Generar actividad basada en la secuencia curricular
@@ -393,8 +472,13 @@ export async function POST(request: Request) {
       activity,
       historial: {
         semanaActual,
-        tendencia: historial.tendencia[ejeActual],
+        tendencia,
         totalRegistros: historial.totalRegistros,
+        promedioHistorico,
+        promedioHoy,
+        promedioCombinado,
+        diasEvaluados: historial.diasEvaluados[ejeActual],
+        decision,
       }
     })
   } catch (err) {

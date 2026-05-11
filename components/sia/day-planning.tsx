@@ -315,12 +315,25 @@ function BrainColumn({ activity, isLoading, stats }: {
         )}
       </div>
       
-      {/* Stats del dia si hay */}
+      {/* Stats del dia con promedio */}
       {stats && stats.green + stats.yellow + stats.red > 0 && (
-        <div className="flex gap-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-green-100 text-green-700">{stats.green} logrado</span>
-          <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">{stats.yellow} proceso</span>
-          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700">{stats.red} refuerzo</span>
+        <div className="space-y-2">
+          <div className="flex gap-2 text-xs">
+            <span className="px-2 py-1 rounded-full bg-green-100 text-green-700">{stats.green} logrado</span>
+            <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">{stats.yellow} proceso</span>
+            <span className="px-2 py-1 rounded-full bg-red-100 text-red-700">{stats.red} refuerzo</span>
+          </div>
+          {/* Promedio del dia */}
+          {(() => {
+            const total = stats.green + stats.yellow + stats.red
+            const promedio = Math.round(((stats.green * 100) + (stats.yellow * 50) + (stats.red * 10)) / total)
+            const colorPromedio = promedio >= 70 ? "text-green-600 bg-green-50" : promedio >= 40 ? "text-yellow-600 bg-yellow-50" : "text-red-600 bg-red-50"
+            return (
+              <div className={`px-3 py-1.5 rounded-lg text-xs font-medium ${colorPromedio}`}>
+                Promedio de hoy: {promedio}% {promedio >= 70 ? "(Listo para avanzar)" : promedio >= 40 ? "(Consolidando)" : "(Necesita refuerzo)"}
+              </div>
+            )
+          })()}
         </div>
       )}
 
