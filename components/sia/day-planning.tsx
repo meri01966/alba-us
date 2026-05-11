@@ -30,10 +30,11 @@ interface DayPlanningProps {
 interface BrainActivity {
   id:          string
   dia:         number
+  semana?:     number
   titulo:      string
   descripcion: string
   objetivo:    string
-  source:      "airtable" | "demo" | "alba"
+  source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
   razon?: string
 }
@@ -298,7 +299,7 @@ function BrainColumn({ activity, isLoading, stats }: {
         </div>
         {activity && (
           <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
-            {activity.source === "alba" ? "Basado en datos" : activity.source === "demo" ? "Demo" : `Día ${activity.dia}`}
+            {activity.source === "alba-ia" ? "Analisis IA" : activity.source === "secuencia" ? `Semana ${activity.semana || activity.dia}/25` : "Demo"}
           </span>
         )}
       </div>
