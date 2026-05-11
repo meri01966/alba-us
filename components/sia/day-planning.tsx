@@ -26,6 +26,7 @@ interface DayPlanningProps {
   ejeActual?: string
   actividadActual?: string
   totalAlumnos?: number
+  onActividadALBA?: (actividad: string) => void
 }
 
 interface BrainActivity {
@@ -615,7 +616,7 @@ function MyPlanningColumn({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0 }: DayPlanningProps) {
+export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, onActividadALBA }: DayPlanningProps) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
 
@@ -649,6 +650,10 @@ body: JSON.stringify({
       })
       const data = await res.json()
       setBrain(data.activity ?? null)
+      // Notificar la actividad sugerida por ALBA al componente padre
+      if (data.activity?.titulo && onActividadALBA) {
+        onActividadALBA(data.activity.titulo)
+      }
     } catch {
       // Fallback a GET si POST falla
       try {
@@ -661,7 +666,7 @@ body: JSON.stringify({
     } finally {
       setIsBrainLoading(false)
     }
-  }, [evaluaciones, ejeActual, actividadActual, stats])
+  }, [evaluaciones, ejeActual, actividadActual, stats, onActividadALBA])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

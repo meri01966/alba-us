@@ -15,6 +15,16 @@ interface Student {
   nombre?: string
 }
 
+export interface RegistroCierre {
+  actividadALBA: string
+  actividadDocente: string
+  eje: string
+  evaluacionGeneral: "excelente" | "buena" | "regular" | "necesita_mejora"
+  observaciones: string
+  sugerenciaParaIA: string
+  stats: { green: number; yellow: number; red: number }
+}
+
 interface HeatMapProps {
   students: Student[]
   evaluaciones?: Record<string, StatusLevel>
@@ -23,6 +33,8 @@ interface HeatMapProps {
   onClearAllEvaluaciones?: () => void
   onEjeChange?: (eje: string) => void
   onActividadChange?: (actividad: string, eje: string) => void
+  onRegistroCierre?: (registro: RegistroCierre) => void
+  actividadSugeridaALBA?: string
   isLoading?: boolean
 }
 
@@ -168,12 +180,19 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, onActividadChange, isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, onActividadChange, onRegistroCierre, actividadSugeridaALBA = "", isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [selectedEje, setSelectedEje] = useState("CF")
   const [actividadDelDia, setActividadDelDia] = useState(ACTIVIDADES_SUGERIDAS.CF[0])
   const [editandoActividad, setEditandoActividad] = useState(false)
   const [actividadTemporal, setActividadTemporal] = useState("")
+  
+  // Estado para Registro de Cierre
+  const [mostrarCierre, setMostrarCierre] = useState(false)
+  const [cierreEvaluacion, setCierreEvaluacion] = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | null>(null)
+  const [cierreObservaciones, setCierreObservaciones] = useState("")
+  const [cierreSugerencia, setCierreSugerencia] = useState("")
+  const [enviandoCierre, setEnviandoCierre] = useState(false)
   
   // Notificar cambio de eje al padre y actualizar actividad sugerida
   const handleEjeChange = (eje: string) => {
@@ -207,6 +226,47 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
     if (onActividadChange) {
       onActividadChange(actividad, selectedEje)
     }
+  }
+  
+  // Calcular stats actuales
+  const calcularStats = () => {
+    let green = 0, yellow = 0, red = 0
+    students.forEach(s => {
+      const status = evaluaciones[s.id]
+      if (status === "green") green++
+      else if (status === "yellow") yellow++
+      else if (status === "red") red++
+    })
+    return { green, yellow, red }
+  }
+  
+  // Enviar registro de cierre
+  const enviarRegistroCierre = async () => {
+    if (!cierreEvaluacion) return
+    
+    setEnviandoCierre(true)
+    const stats = calcularStats()
+    
+    const registro: RegistroCierre = {
+      actividadALBA: actividadSugeridaALBA || "",
+      actividadDocente: actividadDelDia,
+      eje: selectedEje,
+      evaluacionGeneral: cierreEvaluacion,
+      observaciones: cierreObservaciones,
+      sugerenciaParaIA: cierreSugerencia,
+      stats,
+    }
+    
+    if (onRegistroCierre) {
+      await onRegistroCierre(registro)
+    }
+    
+    // Limpiar formulario
+    setMostrarCierre(false)
+    setCierreEvaluacion(null)
+    setCierreObservaciones("")
+    setCierreSugerencia("")
+    setEnviandoCierre(false)
   }
 
   // Si no hay estudiantes y no esta cargando, retornar null
@@ -409,6 +469,143 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
           </ul>
         )}
       </CardContent>
+      
+      {/* Boton para abrir Registro de Cierre */}
+      {evaluadosCount > 0 && !mostrarCierre && (
+        <div className="p-3 border-t border-slate-100">
+          <Button
+            onClick={() => setMostrarCierre(true)}
+            className="w-full"
+            style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Registro de Cierre
+          </Button>
+        </div>
+      )}
+      
+      {/* Panel de Registro de Cierre */}
+      {mostrarCierre && (
+        <div 
+          className="p-4 border-t-2 space-y-4"
+          style={{ borderColor: EJE_COLORS[selectedEje]?.color, backgroundColor: EJE_COLORS[selectedEje]?.bgColor }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5" style={{ color: EJE_COLORS[selectedEje]?.color }} />
+              <h3 className="font-bold text-sm" style={{ color: EJE_COLORS[selectedEje]?.color }}>
+                Registro de Cierre - {selectedEje}
+              </h3>
+            </div>
+            <button
+              onClick={() => setMostrarCierre(false)}
+              className="p-1 rounded-lg hover:bg-white/50 transition-colors"
+            >
+              <X className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+          
+          {/* Resumen de actividades */}
+          <div className="bg-white rounded-lg p-3 space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500">Actividad evaluada:</span>
+              <span className="font-medium text-slate-700">{actividadDelDia}</span>
+            </div>
+            {actividadSugeridaALBA && actividadSugeridaALBA !== actividadDelDia && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Sugerida por ALBA:</span>
+                <span className="font-medium text-slate-700">{actividadSugeridaALBA}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-slate-500">Resultados:</span>
+              <div className="flex gap-2">
+                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">{calcularStats().green} logrado</span>
+                <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{calcularStats().yellow} proceso</span>
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700">{calcularStats().red} refuerzo</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Evaluacion general de la actividad */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-600">Como evaluas esta actividad?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: "excelente", label: "Excelente", color: "#10b981" },
+                { value: "buena", label: "Buena", color: "#3b82f6" },
+                { value: "regular", label: "Regular", color: "#f59e0b" },
+                { value: "necesita_mejora", label: "Necesita mejora", color: "#ef4444" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setCierreEvaluacion(opt.value as typeof cierreEvaluacion)}
+                  className="px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all"
+                  style={
+                    cierreEvaluacion === opt.value
+                      ? { backgroundColor: opt.color, color: "#fff", borderColor: opt.color }
+                      : { backgroundColor: "#fff", color: opt.color, borderColor: opt.color + "40" }
+                  }
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" />
+              Observaciones (opcional)
+            </label>
+            <Textarea
+              value={cierreObservaciones}
+              onChange={(e) => setCierreObservaciones(e.target.value)}
+              placeholder="Que observaste durante la actividad?"
+              className="text-sm h-16 resize-none"
+            />
+          </div>
+          
+          {/* Sugerencia para IA */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-600">
+              Sugerencia para proximas actividades (opcional)
+            </label>
+            <Textarea
+              value={cierreSugerencia}
+              onChange={(e) => setCierreSugerencia(e.target.value)}
+              placeholder="Ej: Repetir con material concreto, avanzar al siguiente nivel..."
+              className="text-sm h-16 resize-none"
+            />
+          </div>
+          
+          {/* Botones */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setMostrarCierre(false)}
+              className="flex-1"
+              disabled={enviandoCierre}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={enviarRegistroCierre}
+              disabled={!cierreEvaluacion || enviandoCierre}
+              className="flex-1"
+              style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
+            >
+              {enviandoCierre ? (
+                <Spinner className="w-4 h-4 mr-2" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Enviar Cierre
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

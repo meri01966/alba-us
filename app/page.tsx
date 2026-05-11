@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
-import { HeatMap } from "@/components/sia/heat-map"
+import { HeatMap, type RegistroCierre } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel } from "@/components/sia/alerts-panel"
@@ -263,10 +263,33 @@ export default function ALBADashboard() {
   // Actividad actual que esta evaluando el docente
   const [actividadActual, setActividadActual] = useState<string>("Reconocimiento de Sonido Inicial /M/")
   
+  // Actividad sugerida por ALBA (para comparar en el cierre)
+  const [actividadSugeridaALBA, setActividadSugeridaALBA] = useState<string>("")
+  
   // Callback cuando el docente cambia la actividad del dia
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
     setEjeActual(eje)
+  }, [])
+  
+  // Callback para el registro de cierre
+  const handleRegistroCierre = useCallback(async (registro: RegistroCierre) => {
+    try {
+      const response = await fetch("/api/registro-cierre", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registro),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Mostrar feedback al docente (podria ser un toast)
+        console.log("[v0] Registro de cierre guardado:", data.feedback)
+      }
+    } catch (err) {
+      console.error("[v0] Error guardando registro de cierre:", err)
+    }
   }, [])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
@@ -975,6 +998,8 @@ export default function ALBADashboard() {
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
                     onEjeChange={setEjeActual}
                     onActividadChange={handleActividadChange}
+                    onRegistroCierre={handleRegistroCierre}
+                    actividadSugeridaALBA={actividadSugeridaALBA}
                     isLoading={isLoading}
                   />
                 </div>
@@ -984,6 +1009,7 @@ export default function ALBADashboard() {
                     ejeActual={ejeActual}
                     actividadActual={actividadActual}
                     totalAlumnos={students.length}
+                    onActividadALBA={setActividadSugeridaALBA}
                   />
                 </div>
               </div>
