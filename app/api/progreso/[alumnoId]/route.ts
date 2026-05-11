@@ -1,35 +1,80 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
-const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN
-const AIRTABLE_BASE = process.env.AIRTABLE_BASE_ID || "appvmkxMrMWhGbclm"
-const TOTALES: Record<string, number> = { CF: 40, CT: 20, O: 40 }
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Demo data
-const DEMO_ALUMNO = {
-  id: "demo1",
-  nombre: "Lucia",
-  apellido: "Garcia",
-  mesa: "Manzanas",
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null
+
+// Mapeo de actividades a semanas de la secuencia ALBA
+const SECUENCIA_SEMANAS = {
+  CF: 25,
+  CT: 25,
+  O: 25,
 }
 
-const DEMO_PROGRESO = {
-  CF: { logradas: [1, 2, 3, 5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30], porcentaje: 35 },
-  CT: { logradas: [1, 2, 4, 6, 8, 10, 12], porcentaje: 35 },
-  O: { logradas: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 32], porcentaje: 40 },
+interface ActividadEvaluada {
+  semana: number
+  titulo: string
+  fecha: string
+  resultado: "green" | "yellow" | "red"
+  promedio: number
 }
 
-const DEMO_HISTORIAL = {
-  CF: [
-    { actividad: "Rimas", actividadIndex: 1, resultado: "logrado", fecha: "2024-05-01" },
-    { actividad: "Sonido inicial", actividadIndex: 2, resultado: "logrado", fecha: "2024-05-02" },
-  ],
-  CT: [
-    { actividad: "Partes del libro", actividadIndex: 1, resultado: "logrado", fecha: "2024-05-01" },
-  ],
-  O: [
-    { actividad: "Presentacion personal", actividadIndex: 1, resultado: "logrado", fecha: "2024-05-01" },
-    { actividad: "Descripcion de imagen", actividadIndex: 2, resultado: "refuerzo", fecha: "2024-05-03" },
-  ],
+interface ProgresoEje {
+  logradas: number[]
+  porcentaje: number
+  actividades: ActividadEvaluada[]
+  tendencia: "mejorando" | "estable" | "bajando"
+  semanaActual: number
+}
+
+// Calcular promedio ponderado: green=100, yellow=50, red=10
+function calcularPromedio(actividades: Array<{ resultado: string }>): number {
+  if (actividades.length === 0) return 0
+  const puntos = actividades.reduce((acc, a) => {
+    if (a.resultado === "green") return acc + 100
+    if (a.resultado === "yellow") return acc + 50
+    return acc + 10
+  }, 0)
+  return Math.round(puntos / actividades.length)
+}
+
+// Calcular tendencia basada en ultimas evaluaciones
+function calcularTendencia(actividades: Array<{ resultado: string; fecha: string }>): "mejorando" | "estable" | "bajando" {
+  if (actividades.length < 6) return "estable"
+  
+  const ordenadas = [...actividades].sort((a, b) => 
+    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  )
+  
+  const recientes = ordenadas.slice(0, 3)
+  const anteriores = ordenadas.slice(3, 6)
+  
+  const promedioReciente = calcularPromedio(recientes)
+  const promedioAnterior = calcularPromedio(anteriores)
+  
+  if (promedioReciente > promedioAnterior + 10) return "mejorando"
+  if (promedioReciente < promedioAnterior - 10) return "bajando"
+  return "estable"
+}
+
+// Calcular semana actual basada en promedio y cantidad de evaluaciones
+function calcularSemanaActual(actividades: Array<{ resultado: string }>, promedio: number): number {
+  const diasEvaluados = actividades.length
+  
+  if (diasEvaluados === 0) return 1
+  
+  // Avance basado en promedio
+  if (promedio >= 70) {
+    return Math.min(25, Math.floor(diasEvaluados / 3) + 1)
+  } else if (promedio >= 50) {
+    return Math.min(25, Math.floor(diasEvaluados / 5) + 1)
+  } else {
+    return Math.min(25, Math.floor(diasEvaluados / 7) + 1)
+  }
 }
 
 export async function GET(
@@ -38,73 +83,112 @@ export async function GET(
 ) {
   const { alumnoId } = await params
 
-  // Demo mode
-  if (!AIRTABLE_TOKEN || alumnoId.startsWith("demo")) {
+  // Si no hay Supabase, devolver datos demo
+  if (!supabase) {
     return NextResponse.json({
       ok: true,
       source: "demo",
-      alumno: { ...DEMO_ALUMNO, id: alumnoId },
-      progreso: DEMO_PROGRESO,
-      historial: DEMO_HISTORIAL,
+      alumno: { id: alumnoId, nombre: "Demo", apellido: "Alumno" },
+      progreso: {
+        CF: { logradas: [], porcentaje: 45, actividades: [], tendencia: "estable", semanaActual: 3 },
+        CT: { logradas: [], porcentaje: 60, actividades: [], tendencia: "mejorando", semanaActual: 4 },
+        O: { logradas: [], porcentaje: 35, actividades: [], tendencia: "estable", semanaActual: 2 },
+      },
     })
   }
 
   try {
-    // Fetch student data
-    const aRes = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE}/Alumnos/${alumnoId}`,
-      { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }, cache: "no-store" }
-    )
-    const aData = await aRes.json()
+    // Buscar datos del alumno
+    const { data: alumnoData, error: alumnoError } = await supabase
+      .from("alumnos")
+      .select("id, nombre, apellido")
+      .eq("id", alumnoId)
+      .single()
 
-    // Fetch student records
-    const formula = encodeURIComponent(`FIND("${alumnoId}",ARRAYJOIN({alumno_id}))`)
-    const rRes = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE}/Registros?filterByFormula=${formula}&sort%5B0%5D%5Bfield%5D=fecha&sort%5B0%5D%5Bdirection%5D=desc&pageSize=100`,
-      { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }, cache: "no-store" }
-    )
-    const rData = await rRes.json()
+    if (alumnoError && alumnoError.code !== "PGRST116") {
+      console.error("[v0] Error fetching alumno:", alumnoError)
+    }
 
-    // Organize data
-    const historial: Record<string, any[]> = { CF: [], CT: [], O: [] }
-    const logradas: Record<string, Set<number>> = { CF: new Set(), CT: new Set(), O: new Set() }
+    // Buscar todas las evaluaciones del alumno
+    const { data: evaluaciones, error: evalError } = await supabase
+      .from("seguimiento")
+      .select("*")
+      .eq("alumno_id", alumnoId)
+      .order("fecha", { ascending: false })
 
-    rData.records?.forEach((r: any) => {
-      const eje = r.fields.eje
-      if (!eje || !historial[eje]) return
-      historial[eje].push({
-        actividad: r.fields.actividad,
-        actividadIndex: r.fields.actividad_index,
-        resultado: r.fields.resultado,
-        fecha: r.fields.fecha,
+    if (evalError) {
+      console.error("[v0] Error fetching evaluaciones:", evalError)
+    }
+
+    // Organizar evaluaciones por eje
+    const evaluacionesPorEje: Record<string, Array<{
+      semana: number
+      titulo: string
+      fecha: string
+      resultado: "green" | "yellow" | "red"
+      actividad: string
+    }>> = { CF: [], CT: [], O: [] }
+
+    const contadorSemana: Record<string, number> = { CF: 1, CT: 1, O: 1 }
+
+    ;(evaluaciones || []).forEach((ev: any) => {
+      const eje = ev.eje as "CF" | "CT" | "O"
+      if (!evaluacionesPorEje[eje]) return
+
+      evaluacionesPorEje[eje].push({
+        semana: contadorSemana[eje]++,
+        titulo: ev.actividad || `Actividad ${contadorSemana[eje]}`,
+        fecha: new Date(ev.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
+        resultado: ev.resultado as "green" | "yellow" | "red",
+        actividad: ev.actividad || "",
       })
-      if (r.fields.resultado === "logrado") {
-        logradas[eje].add(r.fields.actividad_index)
-      }
     })
 
-    const progreso: Record<string, { logradas: number[]; porcentaje: number }> = {}
-    Object.keys(TOTALES).forEach((eje) => {
+    // Calcular progreso por eje
+    const progreso: Record<string, ProgresoEje> = {}
+
+    for (const eje of ["CF", "CT", "O"]) {
+      const actividades = evaluacionesPorEje[eje]
+      const promedio = calcularPromedio(actividades)
+      const tendencia = calcularTendencia(actividades)
+      const semanaActual = calcularSemanaActual(actividades, promedio)
+      
+      // Actividades logradas (green)
+      const logradas = actividades
+        .filter(a => a.resultado === "green")
+        .map((_, idx) => idx + 1)
+
       progreso[eje] = {
-        logradas: Array.from(logradas[eje]),
-        porcentaje: Math.round((logradas[eje].size / TOTALES[eje]) * 100),
+        logradas,
+        porcentaje: promedio,
+        actividades: actividades.slice(0, 10).map(a => ({
+          semana: a.semana,
+          titulo: a.titulo,
+          fecha: a.fecha,
+          resultado: a.resultado,
+          promedio: a.resultado === "green" ? 100 : a.resultado === "yellow" ? 50 : 10,
+        })),
+        tendencia,
+        semanaActual,
       }
-    })
+    }
 
     return NextResponse.json({
       ok: true,
-      source: "airtable",
-      alumno: {
-        id: aData.id,
-        nombre: aData.fields?.nombre || "",
-        apellido: aData.fields?.apellido || "",
-        mesa: aData.fields?.mesa || "",
-      },
+      source: "supabase",
+      alumno: alumnoData || { id: alumnoId, nombre: "Alumno", apellido: "" },
       progreso,
-      historial,
     })
   } catch (error) {
-    console.error("[v0] Error fetching student profile:", error)
-    return NextResponse.json({ ok: false, error: String(error) }, { status: 500 })
+    console.error("[v0] Error in progreso API:", error)
+    return NextResponse.json({ 
+      ok: false, 
+      error: String(error),
+      progreso: {
+        CF: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+        CT: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+        O: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+      },
+    }, { status: 500 })
   }
 }
