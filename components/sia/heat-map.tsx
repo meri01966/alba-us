@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Edit3, Check } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Edit3, Check, Send, Star } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red"
 
@@ -25,16 +25,23 @@ export interface RegistroCierre {
   stats: { green: number; yellow: number; red: number }
 }
 
+// Colores por eje
+const EJE_COLORS: Record<string, { color: string; bgColor: string; nombre: string }> = {
+  CF: { color: "#3b82f6", bgColor: "#eff6ff", nombre: "Conciencia Fonologica" },
+  CT: { color: "#10b981", bgColor: "#ecfdf5", nombre: "Comprension de Textos" },
+  O: { color: "#f59e0b", bgColor: "#fffbeb", nombre: "Oralidad" },
+}
+
 interface HeatMapProps {
   students: Student[]
   evaluaciones?: Record<string, StatusLevel>
   onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string, eje: string) => void
   onClearEvaluacion?: (studentId: string) => void
   onClearAllEvaluaciones?: () => void
-  onEjeChange?: (eje: string) => void
   onActividadChange?: (actividad: string, eje: string) => void
   onRegistroCierre?: (registro: RegistroCierre) => void
   actividadSugeridaALBA?: string
+  ejeDeALBA?: string // Eje decidido por ALBA
   isLoading?: boolean
 }
 
@@ -180,12 +187,14 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, onActividadChange, onRegistroCierre, actividadSugeridaALBA = "", isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onActividadChange, onRegistroCierre, actividadSugeridaALBA = "", ejeDeALBA = "CF", isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [selectedEje, setSelectedEje] = useState("CF")
-  const [actividadDelDia, setActividadDelDia] = useState(ACTIVIDADES_SUGERIDAS.CF[0])
+  const [actividadDelDia, setActividadDelDia] = useState(actividadSugeridaALBA || ACTIVIDADES_SUGERIDAS.CF[0])
   const [editandoActividad, setEditandoActividad] = useState(false)
   const [actividadTemporal, setActividadTemporal] = useState("")
+  
+  // El eje viene de ALBA (no se selecciona manualmente)
+  const selectedEje = ejeDeALBA
   
   // Estado para Registro de Cierre
   const [mostrarCierre, setMostrarCierre] = useState(false)
@@ -194,19 +203,12 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   const [cierreSugerencia, setCierreSugerencia] = useState("")
   const [enviandoCierre, setEnviandoCierre] = useState(false)
   
-  // Notificar cambio de eje al padre y actualizar actividad sugerida
-  const handleEjeChange = (eje: string) => {
-    setSelectedEje(eje)
-    // Cambiar a la primera actividad sugerida del nuevo eje
-    const nuevaActividad = ACTIVIDADES_SUGERIDAS[eje]?.[0] || ""
-    setActividadDelDia(nuevaActividad)
-    if (onEjeChange) {
-      onEjeChange(eje)
+  // Actualizar actividad cuando cambia la sugerida por ALBA
+  useEffect(() => {
+    if (actividadSugeridaALBA && !editandoActividad) {
+      setActividadDelDia(actividadSugeridaALBA)
     }
-    if (onActividadChange) {
-      onActividadChange(nuevaActividad, eje)
-    }
-  }
+  }, [actividadSugeridaALBA, editandoActividad])
   
   // Guardar actividad personalizada
   const guardarActividad = () => {
@@ -332,31 +334,10 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
           </div>
         </div>
 
-        {/* Selector de Eje */}
-        <div className="flex gap-2 mb-2">
-          {[
-            { id: "CF", label: "Conciencia Fonologica" },
-            { id: "CT", label: "Conocimiento del Texto" },
-            { id: "O", label: "Oralidad" },
-          ].map((eje) => (
-            <button
-              key={eje.id}
-              onClick={() => handleEjeChange(eje.id)}
-              className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all ${
-                selectedEje === eje.id
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary"
-              }`}
-            >
-              {eje.id}
-            </button>
-          ))}
-        </div>
-
-        {/* Banner de actividad del dia - Editable */}
+        {/* Banner de actividad del dia - El eje viene de ALBA */}
         <div
           className="rounded-xl p-3 flex flex-col gap-2"
-          style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
+          style={{ backgroundColor: EJE_COLORS[selectedEje]?.color || "#1e3a5f", color: "#fff" }}
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -426,10 +407,12 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
                 {actividadDelDia}
               </span>
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
+                className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20"
               >
-                Eje: {selectedEje === "CF" ? "Conciencia Fonologica" : selectedEje === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+                {EJE_COLORS[selectedEje]?.nombre || selectedEje}
+              </span>
+              <span className="text-xs text-white/70 italic">
+                (Eje sugerido por ALBA)
               </span>
             </div>
           )}

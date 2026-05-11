@@ -56,30 +56,74 @@ function SintesisPedagogicaModal({
   salaName: string
   onClose: () => void 
 }) {
-  // Calcular promedios por eje de todo el grupo
+  const [loading, setLoading] = useState(true)
+  const [datosReales, setDatosReales] = useState<{
+    promedios: { CF: number; CT: number; O: number }
+    niveles: { CF: { avanzados: number; enProceso: number; necesitanApoyo: number }; CT: { avanzados: number; enProceso: number; necesitanApoyo: number }; O: { avanzados: number; enProceso: number; necesitanApoyo: number } }
+    totalClases: number
+    semanaActual: number
+  } | null>(null)
+
+  // Cargar datos reales de Supabase
+  useEffect(() => {
+    async function fetchDatosReales() {
+      try {
+        const res = await fetch("/api/brain")
+        const data = await res.json()
+        
+        if (data.historial?.promediosPorEje) {
+          // Datos reales de la API
+          const promediosReales = data.historial.promediosPorEje
+          
+          // Calcular niveles basados en datos de estudiantes
+          const estudiantes = Object.values(progress)
+          const calcNiveles = (eje: "CF" | "CT" | "O") => {
+            let avanzados = 0, enProceso = 0, necesitanApoyo = 0
+            estudiantes.forEach((s: any) => {
+              if (s[eje] >= 70) avanzados++
+              else if (s[eje] >= 40) enProceso++
+              else necesitanApoyo++
+            })
+            return { avanzados, enProceso, necesitanApoyo }
+          }
+          
+          setDatosReales({
+            promedios: {
+              CF: promediosReales.CF || 0,
+              CT: promediosReales.CT || 0,
+              O: promediosReales.O || 0,
+            },
+            niveles: {
+              CF: calcNiveles("CF"),
+              CT: calcNiveles("CT"),
+              O: calcNiveles("O"),
+            },
+            totalClases: data.progreso?.totalClasesCompletadas || 0,
+            semanaActual: data.progreso?.semanaActual || 1,
+          })
+        }
+      } catch (err) {
+        console.error("Error fetching sintesis data:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDatosReales()
+  }, [progress])
+
+  // Usar datos reales si estan disponibles, sino fallback a progress local
   const estudiantes = Object.values(progress)
   const totalEvaluados = estudiantes.length
 
-  const promedios = {
+  const promedios = datosReales?.promedios || {
     CF: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.CF, 0) / totalEvaluados) : 0,
     CT: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.CT, 0) / totalEvaluados) : 0,
     O: totalEvaluados > 0 ? Math.round(estudiantes.reduce((sum, s) => sum + s.O, 0) / totalEvaluados) : 0,
   }
 
-  // Contar ninos por nivel en cada eje
-  const contarNiveles = (eje: "CF" | "CT" | "O") => {
-    let avanzados = 0, enProceso = 0, necesitanApoyo = 0
-    estudiantes.forEach(s => {
-      if (s[eje] >= 70) avanzados++
-      else if (s[eje] >= 40) enProceso++
-      else necesitanApoyo++
-    })
-    return { avanzados, enProceso, necesitanApoyo }
-  }
-
-  const nivelesCF = contarNiveles("CF")
-  const nivelesCT = contarNiveles("CT")
-  const nivelesO = contarNiveles("O")
+  const nivelesCF = datosReales?.niveles.CF || { avanzados: 0, enProceso: 0, necesitanApoyo: 0 }
+  const nivelesCT = datosReales?.niveles.CT || { avanzados: 0, enProceso: 0, necesitanApoyo: 0 }
+  const nivelesO = datosReales?.niveles.O || { avanzados: 0, enProceso: 0, necesitanApoyo: 0 }
 
   // Determinar el eje mas fuerte y el que necesita mas trabajo
   const getNivelTexto = (promedio: number) => {
@@ -90,13 +134,13 @@ function SintesisPedagogicaModal({
 
   const getEjeMasFuerte = () => {
     if (promedios.CF >= promedios.CT && promedios.CF >= promedios.O) return "Conciencia Fonologica"
-    if (promedios.CT >= promedios.CF && promedios.CT >= promedios.O) return "Conocimiento de Textos"
+    if (promedios.CT >= promedios.CF && promedios.CT >= promedios.O) return "Comprension de Textos"
     return "Oralidad"
   }
 
   const getEjeAReforzar = () => {
     if (promedios.CF <= promedios.CT && promedios.CF <= promedios.O) return "Conciencia Fonologica"
-    if (promedios.CT <= promedios.CF && promedios.CT <= promedios.O) return "Conocimiento de Textos"
+    if (promedios.CT <= promedios.CF && promedios.CT <= promedios.O) return "Comprension de Textos"
     return "Oralidad"
   }
 
@@ -130,6 +174,26 @@ function SintesisPedagogicaModal({
 
         {/* Contenido narrativo */}
         <div className="p-5 space-y-5 text-slate-700 leading-relaxed">
+          
+          {/* Info de datos reales si estan disponibles */}
+          {datosReales && (
+            <div className="bg-blue-50 rounded-xl p-3 flex items-center gap-3 text-sm">
+              <Sparkles className="w-5 h-5 text-blue-500" />
+              <div>
+                <span className="font-medium text-blue-700">Datos actualizados</span>
+                <span className="text-blue-600 ml-2">
+                  Semana {datosReales.semanaActual}/25 · {datosReales.totalClases} clases registradas
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {loading && (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <span className="ml-2 text-sm text-slate-500">Cargando datos...</span>
+            </div>
+          )}
           
           <section>
             <h3 className="font-semibold mb-2" style={{ color: "#1e3a5f" }}>
@@ -996,10 +1060,10 @@ export default function ALBADashboard() {
                     onEvaluacion={handleEvaluacion}
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
-                    onEjeChange={setEjeActual}
                     onActividadChange={handleActividadChange}
                     onRegistroCierre={handleRegistroCierre}
                     actividadSugeridaALBA={actividadSugeridaALBA}
+                    ejeDeALBA={ejeActual}
                     isLoading={isLoading}
                   />
                 </div>
@@ -1010,6 +1074,7 @@ export default function ALBADashboard() {
                     actividadActual={actividadActual}
                     totalAlumnos={students.length}
                     onActividadALBA={setActividadSugeridaALBA}
+                    onEjeALBA={setEjeActual}
                   />
                 </div>
               </div>

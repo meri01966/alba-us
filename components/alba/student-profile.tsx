@@ -150,6 +150,106 @@ const SUGERENCIAS: Record<string, Record<string, string>> = {
   },
 }
 
+// Mensajes para la familia segun nivel y eje
+const MENSAJES_FAMILIA: Record<string, Record<string, { titulo: string; mensaje: string; actividades: string[] }>> = {
+  CF: {
+    "Necesita Apoyo": {
+      titulo: "Conciencia Fonologica: Trabajando juntos",
+      mensaje: "Su hijo/a esta comenzando a descubrir los sonidos del lenguaje. En casa pueden ayudar con actividades simples y divertidas.",
+      actividades: [
+        "Cantar canciones con rimas (ej: 'Arroz con leche')",
+        "Jugar a encontrar cosas que empiecen con el mismo sonido",
+        "Aplaudir las silabas de los nombres de la familia",
+        "Leer cuentos rimados antes de dormir",
+      ],
+    },
+    "En Proceso": {
+      titulo: "Conciencia Fonologica: Avanzando bien",
+      mensaje: "Su hijo/a esta desarrollando la habilidad de reconocer sonidos. Pueden seguir practicando en casa de forma ludica.",
+      actividades: [
+        "Jugar 'Veo veo' con sonidos iniciales (ej: 'Veo algo que empieza con /m/')",
+        "Inventar rimas tontas con nombres de la familia",
+        "Identificar palabras largas y cortas aplaudiendo silabas",
+        "Buscar objetos en casa que empiecen con una letra especifica",
+      ],
+    },
+    "Avanzado": {
+      titulo: "Conciencia Fonologica: Excelente progreso",
+      mensaje: "Su hijo/a muestra muy buen dominio de los sonidos del lenguaje. Pueden desafiarlo con actividades mas complejas.",
+      actividades: [
+        "Jugar a cambiar sonidos en palabras (ej: si a 'pato' le cambio /p/ por /g/, que queda?)",
+        "Inventar palabras nuevas combinando sonidos",
+        "Jugar a las adivinanzas con sonidos",
+        "Crear trabalenguas familiares",
+      ],
+    },
+  },
+  CT: {
+    "Necesita Apoyo": {
+      titulo: "Comprension de Textos: Explorando juntos",
+      mensaje: "Su hijo/a esta aprendiendo a comprender historias. La lectura compartida en casa es fundamental.",
+      actividades: [
+        "Leer cuentos cortos y preguntar 'Quien aparece en el cuento?'",
+        "Mirar las imagenes antes de leer y adivinar de que tratara",
+        "Hacer pausas y preguntar 'Que paso hasta ahora?'",
+        "Releer los cuentos favoritos varias veces",
+      ],
+    },
+    "En Proceso": {
+      titulo: "Comprension de Textos: Progresando",
+      mensaje: "Su hijo/a comprende historias basicas y esta listo para profundizar. Sigan disfrutando la lectura juntos.",
+      actividades: [
+        "Preguntar 'Por que crees que el personaje hizo eso?'",
+        "Conectar el cuento con experiencias propias ('Te paso algo parecido?')",
+        "Pedir que cuente el cuento a otro familiar",
+        "Imaginar finales alternativos para las historias",
+      ],
+    },
+    "Avanzado": {
+      titulo: "Comprension de Textos: Destacado",
+      mensaje: "Su hijo/a tiene excelente comprension lectora. Pueden explorar textos mas complejos y conversaciones profundas.",
+      actividades: [
+        "Leer cuentos mas largos en capitulos",
+        "Discutir 'Esta bien o mal lo que hizo el personaje? Por que?'",
+        "Comparar diferentes versiones de un mismo cuento",
+        "Crear historias propias inspiradas en los cuentos leidos",
+      ],
+    },
+  },
+  O: {
+    "Necesita Apoyo": {
+      titulo: "Oralidad: Encontrando su voz",
+      mensaje: "Su hijo/a esta desarrollando su expresion verbal. Cada conversacion en casa es una oportunidad de aprendizaje.",
+      actividades: [
+        "Hablar sobre el dia: 'Que hiciste hoy? Con quien jugaste?'",
+        "Nombrar objetos y describir sus caracteristicas",
+        "Cantar canciones y repetir rimas juntos",
+        "Escuchar con atencion cuando habla, sin interrumpir",
+      ],
+    },
+    "En Proceso": {
+      titulo: "Oralidad: Creciendo en expresion",
+      mensaje: "Su hijo/a se expresa cada vez mejor. Sigan conversando y dando oportunidades para hablar.",
+      actividades: [
+        "Pedir que cuente historias con inicio, desarrollo y final",
+        "Jugar a describir objetos para que otros adivinen",
+        "Hacer preguntas abiertas que requieran explicaciones",
+        "Inventar cuentos juntos, turnandose para agregar partes",
+      ],
+    },
+    "Avanzado": {
+      titulo: "Oralidad: Comunicador nato",
+      mensaje: "Su hijo/a tiene excelentes habilidades de comunicacion oral. Pueden desafiarlo con actividades mas complejas.",
+      actividades: [
+        "Debatir opiniones sobre temas simples ('Que es mejor, perros o gatos? Por que?')",
+        "Pedir que explique como hacer algo (receta, juego, etc.)",
+        "Grabar audiocuentos inventados por el/ella",
+        "Practicar presentaciones sobre temas que le interesen",
+      ],
+    },
+  },
+}
+
 export default function StudentProfile({ alumnoId, alumnoNombre, progressData, onBack }: StudentProfileProps) {
   const [loading, setLoading] = useState(true)
   const [alumno, setAlumno] = useState<Alumno | null>(
@@ -564,6 +664,63 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 </span>
               </li>
             </ul>
+          </div>
+
+          {/* MENSAJES PARA LA FAMILIA */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
+            <div className="flex items-center gap-2 mb-4">
+              <User className="w-5 h-5 text-blue-600" />
+              <p className="font-bold text-blue-900">Mensaje para la Familia</p>
+            </div>
+            
+            <div className="space-y-4">
+              {EJES.map((eje) => {
+                const p = progreso[eje.key]?.porcentaje || 0
+                const nivel = getNivel(p)
+                const mensajeFamilia = MENSAJES_FAMILIA[eje.key]?.[nivel.texto]
+                
+                if (!mensajeFamilia) return null
+                
+                return (
+                  <div 
+                    key={eje.key}
+                    className="bg-white rounded-xl p-4 border"
+                    style={{ borderColor: `${eje.color}40` }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <eje.icon className="w-4 h-4" style={{ color: eje.color }} />
+                      <h4 className="font-semibold text-sm" style={{ color: eje.color }}>
+                        {mensajeFamilia.titulo}
+                      </h4>
+                      <span 
+                        className="ml-auto text-xs px-2 py-0.5 rounded-full text-white"
+                        style={{ backgroundColor: nivel.color }}
+                      >
+                        {p}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{mensajeFamilia.mensaje}</p>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs font-medium text-slate-500 mb-2">Actividades sugeridas para hacer en casa:</p>
+                      <ul className="space-y-1.5">
+                        {mensajeFamilia.actividades.map((act, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
+                            <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
+                              {idx + 1}
+                            </span>
+                            {act}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <p className="text-xs text-blue-600 mt-4 text-center italic">
+              Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
+            </p>
           </div>
         </div>
       )}
