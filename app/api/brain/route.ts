@@ -228,6 +228,88 @@ async function obtenerProgresoSecuencia(): Promise<{
   }
 }
 
+// ── Consultar feedback de registros de cierre ──────────────────────────────
+async function obtenerFeedbackCierres(): Promise<{
+  ultimosCierres: Array<{
+    eje: string
+    actividadALBA: string
+    actividadDocente: string
+    promedio: number
+    efectiva: boolean
+    sugerenciaDocente: string | null
+  }>
+  actividadesEfectivas: Record<string, string[]>
+  actividadesEvitar: Record<string, string[]>
+  sugerenciasDocentes: string[]
+}> {
+  const resultado = {
+    ultimosCierres: [] as Array<{
+      eje: string
+      actividadALBA: string
+      actividadDocente: string
+      promedio: number
+      efectiva: boolean
+      sugerenciaDocente: string | null
+    }>,
+    actividadesEfectivas: { CF: [] as string[], CT: [] as string[], O: [] as string[] },
+    actividadesEvitar: { CF: [] as string[], CT: [] as string[], O: [] as string[] },
+    sugerenciasDocentes: [] as string[],
+  }
+
+  if (!supabase) return resultado
+
+  try {
+    const { data, error } = await supabase
+      .from("registros_cierre")
+      .select("*")
+      .order("fecha", { ascending: false })
+      .limit(20)
+
+    if (error || !data) return resultado
+
+    data.forEach((cierre: {
+      eje: string
+      actividad_alba: string
+      actividad_docente: string
+      promedio_logro: number
+      actividad_efectiva: boolean
+      sugerencia_ia: string | null
+    }) => {
+      resultado.ultimosCierres.push({
+        eje: cierre.eje,
+        actividadALBA: cierre.actividad_alba,
+        actividadDocente: cierre.actividad_docente,
+        promedio: cierre.promedio_logro,
+        efectiva: cierre.actividad_efectiva,
+        sugerenciaDocente: cierre.sugerencia_ia,
+      })
+
+      // Clasificar actividades
+      if (cierre.actividad_efectiva && cierre.promedio_logro >= 60) {
+        const ejeKey = cierre.eje as "CF" | "CT" | "O"
+        if (!resultado.actividadesEfectivas[ejeKey].includes(cierre.actividad_docente)) {
+          resultado.actividadesEfectivas[ejeKey].push(cierre.actividad_docente)
+        }
+      } else if (cierre.promedio_logro < 40) {
+        const ejeKey = cierre.eje as "CF" | "CT" | "O"
+        if (!resultado.actividadesEvitar[ejeKey].includes(cierre.actividad_docente)) {
+          resultado.actividadesEvitar[ejeKey].push(cierre.actividad_docente)
+        }
+      }
+
+      // Recopilar sugerencias del docente
+      if (cierre.sugerencia_ia) {
+        resultado.sugerenciasDocentes.push(cierre.sugerencia_ia)
+      }
+    })
+
+    return resultado
+  } catch (err) {
+    console.error("[v0] Error obteniendo feedback de cierres:", err)
+    return resultado
+  }
+}
+
 // ── Consultar historial de Supabase ────────────────────────────────────────
 async function obtenerHistorialSeguimiento(sala?: string): Promise<{
   totalRegistros: number
@@ -488,8 +570,11 @@ export async function POST(request: Request) {
     // Obtener progreso REAL de la secuencia basado en registros de cierre
     const progreso = await obtenerProgresoSecuencia()
     
-    // El eje a usar: si el docente selecciono uno, usarlo; si no, usar el sugerido por ALBA
-    const ejeParaActividad = ejeActual || progreso.ejeParaHoy
+    // Obtener feedback de cierres anteriores para retroalimentar sugerencias
+    const feedbackCierres = await obtenerFeedbackCierres()
+    
+    // El eje a usar: ALBA decide basado en progreso y feedback
+    const ejeParaActividad = progreso.ejeParaHoy
     
     // Obtener historial de evaluaciones
     const historial = await obtenerHistorialSeguimiento()
@@ -554,12 +639,28 @@ export async function POST(request: Request) {
     // Generar sugerencia con IA
     const sugerenciaIA = await generarSugerenciaConIA(historial, ejeParaActividad, stats)
     
-    // Construir razon con informacion de la clase semanal
-    const infoClaseSemanal = `Semana ${semanaReal}/25 - Clase ${progreso.claseDeLaSemana}/3 (${
-      progreso.claseDeLaSemana === 1 ? "CF" : progreso.claseDeLaSemana === 2 ? "CT" : "O"
-    }). `
+    // Construir razon con informacion de la clase semanal y feedback
+    const infoClaseSemanal = `Semana ${semanaReal}/25. `
     
-    const razonFinal = infoClaseSemanal + (mensajeActividad || "") + (sugerenciaIA || "")
+    // Incluir feedback del ultimo cierre si existe
+    let feedbackUltimoCierre = ""
+    const ultimoCierreEje = feedbackCierres.ultimosCierres.find(c => c.eje === ejeParaActividad)
+    if (ultimoCierreEje) {
+      if (ultimoCierreEje.efectiva) {
+        feedbackUltimoCierre = `Ultima actividad efectiva (${ultimoCierreEje.promedio}%). `
+      } else {
+        feedbackUltimoCierre = `Se ajusta segun retroalimentacion anterior. `
+      }
+    }
+    
+    // Incluir si hay actividades efectivas probadas
+    const actividadesEfectivas = feedbackCierres.actividadesEfectivas[ejeParaActividad as "CF" | "CT" | "O"] || []
+    let infoActividadesEfectivas = ""
+    if (actividadesEfectivas.length > 0) {
+      infoActividadesEfectivas = `Actividades probadas: ${actividadesEfectivas.slice(0, 2).join(", ")}. `
+    }
+    
+    const razonFinal = infoClaseSemanal + feedbackUltimoCierre + (mensajeActividad || "") + infoActividadesEfectivas + (sugerenciaIA || "")
 
     // Generar actividad basada en la secuencia curricular
     const activity = generarActividadSecuencia(ejeParaActividad, semanaReal, decision, razonFinal || undefined)
@@ -590,6 +691,11 @@ export async function POST(request: Request) {
         decision,
         actividadDocente: actividadActual,
         actividadFueExitosa,
+      },
+      feedback: {
+        ultimoCierre: ultimoCierreEje || null,
+        actividadesEfectivas: feedbackCierres.actividadesEfectivas[ejeParaActividad as "CF" | "CT" | "O"] || [],
+        sugerenciasDocentes: feedbackCierres.sugerenciasDocentes.slice(0, 3),
       }
     })
   } catch (err) {

@@ -488,26 +488,87 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
             </button>
           </div>
           
-          {/* Resumen de actividades */}
-          <div className="bg-white rounded-lg p-3 space-y-2 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500">Actividad evaluada:</span>
-              <span className="font-medium text-slate-700">{actividadDelDia}</span>
+          {/* Conexion con Planificacion del Dia (ALBA) */}
+          <div className="bg-white rounded-xl p-3 space-y-3 text-xs border border-slate-200">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
+              >
+                <Star className="w-3 h-3 text-white" />
+              </div>
+              <span className="font-bold text-slate-700">Vinculo con Planificacion ALBA</span>
             </div>
-            {actividadSugeridaALBA && actividadSugeridaALBA !== actividadDelDia && (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Sugerida por ALBA:</span>
-                <span className="font-medium text-slate-700">{actividadSugeridaALBA}</span>
+            
+            {/* Actividad sugerida por ALBA */}
+            <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-100">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-blue-500 font-medium">Sugerencia de ALBA:</span>
+              </div>
+              <p className="text-blue-800 font-semibold">
+                {actividadSugeridaALBA || "Sin sugerencia activa"}
+              </p>
+            </div>
+            
+            {/* Actividad realizada por el docente */}
+            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-slate-500 font-medium">Actividad realizada:</span>
+              </div>
+              <p className="text-slate-800 font-semibold">{actividadDelDia}</p>
+            </div>
+            
+            {/* Indicador de coincidencia */}
+            {actividadSugeridaALBA && (
+              <div className={`rounded-lg p-2 text-center font-medium ${
+                actividadSugeridaALBA === actividadDelDia 
+                  ? "bg-green-100 text-green-700 border border-green-200" 
+                  : "bg-amber-50 text-amber-700 border border-amber-200"
+              }`}>
+                {actividadSugeridaALBA === actividadDelDia 
+                  ? "Actividad coincide con la sugerencia de ALBA" 
+                  : "Se realizo una actividad diferente a la sugerida"
+                }
               </div>
             )}
-            <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-slate-500">Resultados:</span>
-              <div className="flex gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">{calcularStats().green} logrado</span>
-                <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{calcularStats().yellow} proceso</span>
-                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700">{calcularStats().red} refuerzo</span>
+            
+            {/* Resultados de la clase */}
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-slate-500 mb-2">Resultados de la clase:</p>
+              <div className="flex gap-2 flex-wrap">
+                <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+                  {calcularStats().green} logrado
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                  {calcularStats().yellow} en proceso
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-medium">
+                  {calcularStats().red} necesita refuerzo
+                </span>
               </div>
+              {/* Promedio calculado */}
+              {(() => {
+                const s = calcularStats()
+                const total = s.green + s.yellow + s.red
+                if (total === 0) return null
+                const promedio = Math.round(((s.green * 100) + (s.yellow * 50) + (s.red * 10)) / total)
+                return (
+                  <div className={`mt-2 px-3 py-1.5 rounded-lg text-center font-bold ${
+                    promedio >= 70 ? "bg-green-500 text-white" : 
+                    promedio >= 40 ? "bg-yellow-500 text-white" : "bg-red-500 text-white"
+                  }`}>
+                    Promedio: {promedio}%
+                  </div>
+                )
+              })()}
             </div>
+          </div>
+          
+          {/* Feedback para ALBA */}
+          <div className="bg-purple-50 rounded-xl p-3 border border-purple-100">
+            <p className="text-xs font-medium text-purple-700 mb-2">
+              Este cierre retroalimenta a ALBA para mejorar futuras sugerencias
+            </p>
           </div>
           
           {/* Evaluacion general de la actividad */}
