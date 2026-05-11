@@ -39,6 +39,8 @@ interface BrainActivity {
   source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
   razon?: string
+  claseNumero?: number
+  claseDeLaSemana?: number
 }
 
 interface Planning {
@@ -322,18 +324,46 @@ function BrainColumn({ activity, isLoading, stats }: {
     <>
     <SecuenciaModal isOpen={showSecuencia} onClose={() => setShowSecuencia(false)} />
     <div className="flex flex-col gap-3 h-full">
-      {/* Header */}
-      <div className="flex items-center gap-2 pb-2 border-b border-border">
-        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <BrainCircuit className="w-4 h-4 text-primary" />
+      {/* Header con info de clase */}
+      <div className="flex flex-col gap-2 pb-2 border-b border-border">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <BrainCircuit className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-primary leading-tight">Sugerencia de ALBA</p>
+          </div>
+          {activity && (
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+              Semana {activity.semana || activity.dia}/25
+            </span>
+          )}
         </div>
-        <div>
-          <p className="text-sm font-semibold text-primary leading-tight">Sugerencia de ALBA</p>
-        </div>
+        {/* Info de clase semanal y eje */}
         {activity && (
-          <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
-            {activity.source === "alba-ia" ? "Analisis IA" : activity.source === "secuencia" ? `Semana ${activity.semana || activity.dia}/25` : "Demo"}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {activity.claseNumero && (
+              <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600 font-medium">
+                Clase #{activity.claseNumero}
+              </span>
+            )}
+            {activity.claseDeLaSemana && (
+              <span className="text-xs px-2 py-1 rounded-lg bg-purple-100 text-purple-700 font-medium">
+                Estimulo {activity.claseDeLaSemana}/3
+              </span>
+            )}
+            {activity.ejeRecomendado && (
+              <span 
+                className="text-xs px-2 py-1 rounded-lg font-bold text-white"
+                style={{ 
+                  backgroundColor: activity.ejeRecomendado === "CF" ? "#3b82f6" : 
+                                   activity.ejeRecomendado === "CT" ? "#10b981" : "#f59e0b"
+                }}
+              >
+                {activity.ejeRecomendado}: {activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+              </span>
+            )}
+          </div>
         )}
       </div>
       
@@ -377,11 +407,6 @@ function BrainColumn({ activity, isLoading, stats }: {
           )}
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
-            {activity.ejeRecomendado && (
-              <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                Eje: {activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"}
-              </span>
-            )}
           </div>
           {activity.objetivo && (
             <div>

@@ -166,6 +166,68 @@ function generarDescripcionActividad(eje: string, semana: number): string {
     `1. Introducir el concepto de la semana.\n2. Modelar la actividad con ejemplos claros.\n3. Practicar en grupo grande.\n4. Trabajo en parejas o pequenos grupos.\n5. Cierre: reflexionar sobre lo aprendido.`
 }
 
+// ── Consultar registros de cierre para calcular progreso real ──────────────
+async function obtenerProgresoSecuencia(): Promise<{
+  totalClasesCompletadas: number
+  semanaActual: number
+  claseDeLaSemana: number // 1, 2 o 3
+  ejeParaHoy: "CF" | "CT" | "O"
+  clasesCompletadasPorEje: Record<string, number>
+  ultimaFechaClase: string | null
+}> {
+  const resultado = {
+    totalClasesCompletadas: 0,
+    semanaActual: 1,
+    claseDeLaSemana: 1,
+    ejeParaHoy: "CF" as "CF" | "CT" | "O",
+    clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 },
+    ultimaFechaClase: null as string | null,
+  }
+
+  if (!supabase) return resultado
+
+  try {
+    // Contar registros de cierre completados
+    const { data: cierres, error } = await supabase
+      .from("registros_cierre")
+      .select("id, eje, fecha, evaluacion_general")
+      .order("fecha", { ascending: true })
+
+    if (error || !cierres) return resultado
+
+    resultado.totalClasesCompletadas = cierres.length
+    
+    // Contar clases por eje
+    cierres.forEach((cierre: { eje: string; fecha: string }) => {
+      if (resultado.clasesCompletadasPorEje[cierre.eje] !== undefined) {
+        resultado.clasesCompletadasPorEje[cierre.eje]++
+      }
+    })
+
+    if (cierres.length > 0) {
+      resultado.ultimaFechaClase = cierres[cierres.length - 1].fecha
+    }
+
+    // Calcular semana actual: cada 3 clases = 1 semana
+    // Semana 1: clases 1,2,3 | Semana 2: clases 4,5,6 | etc.
+    resultado.semanaActual = Math.floor(resultado.totalClasesCompletadas / 3) + 1
+    resultado.semanaActual = Math.min(25, resultado.semanaActual)
+
+    // Calcular clase dentro de la semana (1, 2 o 3)
+    resultado.claseDeLaSemana = (resultado.totalClasesCompletadas % 3) + 1
+
+    // Determinar eje para hoy: rotacion CF -> CT -> O
+    // Clase 1 de semana = CF, Clase 2 = CT, Clase 3 = O
+    const ejesRotacion: Array<"CF" | "CT" | "O"> = ["CF", "CT", "O"]
+    resultado.ejeParaHoy = ejesRotacion[(resultado.totalClasesCompletadas) % 3]
+
+    return resultado
+  } catch (err) {
+    console.error("[v0] Error obteniendo progreso secuencia:", err)
+    return resultado
+  }
+}
+
 // ── Consultar historial de Supabase ────────────────────────────────────────
 async function obtenerHistorialSeguimiento(sala?: string): Promise<{
   totalRegistros: number
@@ -421,14 +483,22 @@ function generarActividadSecuencia(
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { ejeActual = "CF", actividadActual = "", stats = { green: 0, yellow: 0, red: 0 } } = body
+    const { ejeActual, actividadActual = "", stats = { green: 0, yellow: 0, red: 0 } } = body
 
-    // Obtener historial COMPLETO de Supabase
+    // Obtener progreso REAL de la secuencia basado en registros de cierre
+    const progreso = await obtenerProgresoSecuencia()
+    
+    // El eje a usar: si el docente selecciono uno, usarlo; si no, usar el sugerido por ALBA
+    const ejeParaActividad = ejeActual || progreso.ejeParaHoy
+    
+    // Obtener historial de evaluaciones
     const historial = await obtenerHistorialSeguimiento()
-    const semanaActual = historial.ultimaSemana[ejeActual] || 1
-    const datosEje = historial.porEje[ejeActual as "CF" | "CT" | "O"]
+    const datosEje = historial.porEje[ejeParaActividad as "CF" | "CT" | "O"]
     const promedioHistorico = datosEje?.promedio || 0
-    const tendencia = historial.tendencia[ejeActual]
+    const tendencia = historial.tendencia[ejeParaActividad]
+
+    // La semana REAL viene del progreso de registros de cierre
+    const semanaReal = progreso.semanaActual
 
     // Calcular promedio de hoy
     const totalHoy = stats.green + stats.yellow + stats.red
@@ -447,28 +517,25 @@ export async function POST(request: Request) {
 
     // Logica de decision basada en evaluacion del docente
     if (promedioCombinado >= 70 && tendencia !== "bajando") {
-      // Buen promedio y no esta bajando -> AVANZAR
       decision = "avanzar"
     } else if (promedioCombinado < 40 || tendencia === "bajando") {
-      // Promedio bajo o tendencia bajando -> REFORZAR
       decision = "reforzar"
     } else {
-      // Promedio medio (40-70) -> REPETIR para consolidar
       decision = "repetir"
     }
 
-    // Si hoy fue muy malo (>50% rojo) y el historico era bueno, solo repetir
+    // Si hoy fue muy malo y el historico era bueno, solo repetir
     if (totalHoy > 0 && promedioHoy < 30 && promedioHistorico >= 70) {
-      decision = "repetir" // Un mal dia no debe hacernos retroceder si el historico es bueno
+      decision = "repetir"
+    }
+
+    // Para la primera vez o si no hay registros de cierre, siempre empezar con la actividad de la semana
+    if (progreso.totalClasesCompletadas === 0) {
+      decision = "repetir" // Mantener en semana 1
     }
 
     // Verificar si la actividad del docente coincide con la secuencia
-    // Si tuvo buenos resultados, considerar integrarla
-    const secuencia = SECUENCIA_ANUAL[ejeActual as "CF" | "CT" | "O"]
-    const actividadEnSecuencia = secuencia?.actividades.find(a => 
-      actividadActual.toLowerCase().includes(a.titulo.toLowerCase().split(":")[0]) ||
-      a.titulo.toLowerCase().includes(actividadActual.toLowerCase().split(" ")[0])
-    )
+    const secuencia = SECUENCIA_CURRICULAR[ejeParaActividad as "CF" | "CT" | "O"]
     
     let actividadFueExitosa = false
     let mensajeActividad = ""
@@ -476,40 +543,50 @@ export async function POST(request: Request) {
     if (actividadActual && totalHoy > 0) {
       if (promedioHoy >= 70) {
         actividadFueExitosa = true
-        mensajeActividad = `La actividad "${actividadActual}" tuvo excelentes resultados (${promedioHoy}% logro). `
-        if (actividadEnSecuencia) {
-          mensajeActividad += `Esta alineada con la semana ${actividadEnSecuencia.semana} de la secuencia ALBA.`
-        } else {
-          mensajeActividad += `ALBA la incorporara como actividad efectiva para este eje.`
-        }
+        mensajeActividad = `Excelentes resultados (${promedioHoy}% logro). `
       } else if (promedioHoy >= 50) {
-        mensajeActividad = `La actividad "${actividadActual}" tuvo resultados moderados (${promedioHoy}%). Se sugiere repetir con adaptaciones.`
+        mensajeActividad = `Resultados moderados (${promedioHoy}%). Considera repetir. `
       } else {
-        mensajeActividad = `La actividad "${actividadActual}" necesita ajustes (${promedioHoy}%). ALBA sugiere una actividad diferente.`
+        mensajeActividad = `Se necesita refuerzo (${promedioHoy}%). `
       }
     }
 
-    // Generar sugerencia con IA incluyendo la actividad del docente
-    const sugerenciaIA = await generarSugerenciaConIA(historial, ejeActual, stats)
+    // Generar sugerencia con IA
+    const sugerenciaIA = await generarSugerenciaConIA(historial, ejeParaActividad, stats)
     
-    // Combinar mensaje de actividad con sugerencia de IA
-    const razonFinal = mensajeActividad 
-      ? (sugerenciaIA ? `${mensajeActividad} ${sugerenciaIA}` : mensajeActividad)
-      : sugerenciaIA
+    // Construir razon con informacion de la clase semanal
+    const infoClaseSemanal = `Semana ${semanaReal}/25 - Clase ${progreso.claseDeLaSemana}/3 (${
+      progreso.claseDeLaSemana === 1 ? "CF" : progreso.claseDeLaSemana === 2 ? "CT" : "O"
+    }). `
+    
+    const razonFinal = infoClaseSemanal + (mensajeActividad || "") + (sugerenciaIA || "")
 
     // Generar actividad basada en la secuencia curricular
-    const activity = generarActividadSecuencia(ejeActual, semanaActual, decision, razonFinal || undefined)
+    const activity = generarActividadSecuencia(ejeParaActividad, semanaReal, decision, razonFinal || undefined)
+
+    // Agregar info de clase semanal a la actividad
+    const activityConInfo = {
+      ...activity,
+      claseNumero: progreso.totalClasesCompletadas + 1,
+      claseDeLaSemana: progreso.claseDeLaSemana,
+      ejeRecomendado: progreso.ejeParaHoy,
+    }
 
     return NextResponse.json({ 
-      activity,
+      activity: activityConInfo,
+      progreso: {
+        semanaActual: semanaReal,
+        claseDeLaSemana: progreso.claseDeLaSemana,
+        totalClasesCompletadas: progreso.totalClasesCompletadas,
+        ejeParaHoy: progreso.ejeParaHoy,
+        clasesCompletadasPorEje: progreso.clasesCompletadasPorEje,
+      },
       historial: {
-        semanaActual,
         tendencia,
         totalRegistros: historial.totalRegistros,
         promedioHistorico,
         promedioHoy,
         promedioCombinado,
-        diasEvaluados: historial.diasEvaluados[ejeActual],
         decision,
         actividadDocente: actividadActual,
         actividadFueExitosa,
@@ -523,34 +600,44 @@ export async function POST(request: Request) {
   }
 }
 
-// ── GET: Actividad por defecto ─────────────────────────────────────────────
+// ── GET: Actividad por defecto basada en progreso real ─────────────────────
 export async function GET() {
   try {
+    // Obtener progreso REAL de la secuencia
+    const progreso = await obtenerProgresoSecuencia()
     const historial = await obtenerHistorialSeguimiento()
     
-    // Determinar que eje necesita mas atencion
-    let ejeRecomendado = "CF"
-    let menorPorcentajeVerde = 100
-
-    Object.entries(historial.porEje).forEach(([eje, datos]) => {
-      if (datos.total > 0) {
-        const porcentajeVerde = (datos.green / datos.total) * 100
-        if (porcentajeVerde < menorPorcentajeVerde) {
-          menorPorcentajeVerde = porcentajeVerde
-          ejeRecomendado = eje
-        }
-      }
-    })
-
-    const semana = historial.ultimaSemana[ejeRecomendado] || 1
-    const activity = generarActividadSecuencia(ejeRecomendado, semana, "repetir")
+    // El eje recomendado viene del progreso (rotacion CF->CT->O)
+    const ejeRecomendado = progreso.ejeParaHoy
+    const semanaReal = progreso.semanaActual
+    
+    // Generar actividad para el eje que corresponde hoy
+    const activity = generarActividadSecuencia(ejeRecomendado, semanaReal, "repetir")
+    
+    // Agregar info de progreso
+    const activityConInfo = {
+      ...activity,
+      claseNumero: progreso.totalClasesCompletadas + 1,
+      claseDeLaSemana: progreso.claseDeLaSemana,
+      ejeRecomendado: ejeRecomendado,
+    }
 
     return NextResponse.json({ 
-      activity,
+      activity: activityConInfo,
+      progreso: {
+        semanaActual: semanaReal,
+        claseDeLaSemana: progreso.claseDeLaSemana,
+        totalClasesCompletadas: progreso.totalClasesCompletadas,
+        ejeParaHoy: progreso.ejeParaHoy,
+        clasesCompletadasPorEje: progreso.clasesCompletadasPorEje,
+      },
       historial: {
-        semanaActual: semana,
-        ejeRecomendado,
         totalRegistros: historial.totalRegistros,
+        promediosPorEje: {
+          CF: historial.porEje.CF.promedio,
+          CT: historial.porEje.CT.promedio,
+          O: historial.porEje.O.promedio,
+        }
       }
     })
   } catch (err) {
