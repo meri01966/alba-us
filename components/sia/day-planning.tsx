@@ -179,9 +179,12 @@ function SecuenciaModal({
   isOpen: boolean; 
   onClose: () => void;
 }) {
-  const [ejeExpandido, setEjeExpandido] = useState<string | null>("CF")
+  const [ejeExpandido, setEjeExpandido] = useState<string | null>(null)
+  const [tabActivo, setTabActivo] = useState<"CF" | "CT" | "O">("CF")
 
   if (!isOpen) return null
+
+  const ejeActual = SECUENCIA_ANUAL[tabActivo]
 
   return (
     <div 
@@ -193,81 +196,98 @@ function SecuenciaModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>
-              Secuencia Anual ALBA
-            </h2>
-            <p className="text-sm text-slate-500">25 semanas de actividades por eje</p>
+        <div className="p-5 border-b border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>
+                Secuencia Anual ALBA
+              </h2>
+              <p className="text-sm text-slate-500">25 semanas de actividades por eje</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              <X className="w-4 h-4 text-slate-600" />
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
-          >
-            <X className="w-4 h-4 text-slate-600" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="space-y-4">
-            {Object.entries(SECUENCIA_ANUAL).map(([ejeId, eje]) => (
-              <div 
-                key={ejeId} 
-                className="border rounded-xl overflow-hidden"
-                style={{ borderColor: eje.color + "40" }}
+          
+          {/* Tabs de Ejes */}
+          <div className="flex gap-2">
+            {(Object.entries(SECUENCIA_ANUAL) as [string, typeof SECUENCIA_ANUAL.CF][]).map(([ejeId, eje]) => (
+              <button
+                key={ejeId}
+                onClick={() => setTabActivo(ejeId as "CF" | "CT" | "O")}
+                className={`flex-1 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
+                  tabActivo === ejeId 
+                    ? "text-white shadow-lg" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+                style={tabActivo === ejeId ? { backgroundColor: eje.color } : {}}
               >
-                {/* Eje Header - Clickeable */}
-                <button
-                  onClick={() => setEjeExpandido(ejeExpandido === ejeId ? null : ejeId)}
-                  className="w-full p-4 flex items-center gap-3 transition-colors hover:opacity-90"
-                  style={{ backgroundColor: eje.bgColor }}
-                >
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                    style={{ backgroundColor: eje.color }}
-                  >
-                    {ejeId}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold" style={{ color: eje.color }}>{eje.nombre}</p>
-                    <p className="text-xs text-slate-500">{eje.actividades.length} actividades</p>
-                  </div>
-                  {ejeExpandido === ejeId ? (
-                    <ChevronDown className="w-5 h-5" style={{ color: eje.color }} />
-                  ) : (
-                    <ChevronRight className="w-5 h-5" style={{ color: eje.color }} />
-                  )}
-                </button>
-
-                {/* Lista de Actividades */}
-                {ejeExpandido === ejeId && (
-                  <div className="border-t" style={{ borderColor: eje.color + "20" }}>
-                    <div className="max-h-80 overflow-y-auto">
-                      {eje.actividades.map((act, idx) => (
-                        <div 
-                          key={idx}
-                          className="flex items-start gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors"
-                          style={{ borderColor: eje.color + "10" }}
-                        >
-                          <div 
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                            style={{ backgroundColor: eje.color }}
-                          >
-                            {act.semana}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-slate-800">{act.titulo}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{act.objetivo}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                <span className="font-bold">{ejeId}</span>
+                <span className="hidden sm:inline ml-1">
+                  {ejeId === "CF" ? "- Conciencia Fonologica" : ejeId === "CT" ? "- Comprension de Textos" : "- Oralidad"}
+                </span>
+              </button>
             ))}
           </div>
+        </div>
+
+        {/* Info del eje seleccionado */}
+        <div 
+          className="px-5 py-3 border-b"
+          style={{ backgroundColor: ejeActual.bgColor, borderColor: ejeActual.color + "30" }}
+        >
+          <p className="font-semibold text-sm" style={{ color: ejeActual.color }}>
+            {ejeActual.nombre}
+          </p>
+          {ejeActual.metodologia && (
+            <p className="text-xs mt-1" style={{ color: ejeActual.color + "cc" }}>
+              Metodologia: {ejeActual.metodologia}
+            </p>
+          )}
+        </div>
+
+        {/* Content - Lista de actividades del eje seleccionado */}
+        <div className="flex-1 overflow-y-auto">
+          {ejeActual.actividades.map((act, idx) => {
+            const esNuevoBloque = idx === 0 || 
+              (act.metodologia && ejeActual.actividades[idx - 1]?.metodologia !== act.metodologia)
+            
+            return (
+              <div key={idx}>
+                {/* Separador de bloque/metodologia */}
+                {esNuevoBloque && act.metodologia && (
+                  <div 
+                    className="px-5 py-2 text-xs font-bold uppercase tracking-wider border-t border-b"
+                    style={{ 
+                      backgroundColor: ejeActual.color + "10", 
+                      color: ejeActual.color,
+                      borderColor: ejeActual.color + "20"
+                    }}
+                  >
+                    {act.metodologia}
+                  </div>
+                )}
+                <div 
+                  className="flex items-start gap-3 px-5 py-3 border-b hover:bg-slate-50 transition-colors"
+                  style={{ borderColor: "#f1f5f9" }}
+                >
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                    style={{ backgroundColor: ejeActual.color }}
+                  >
+                    {act.semana}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-slate-800">{act.titulo}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{act.objetivo}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Footer */}
