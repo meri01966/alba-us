@@ -607,12 +607,49 @@ export async function GET() {
     const progreso = await obtenerProgresoSecuencia()
     const historial = await obtenerHistorialSeguimiento()
     
-    // El eje recomendado viene del progreso (rotacion CF->CT->O)
-    const ejeRecomendado = progreso.ejeParaHoy
-    const semanaReal = progreso.semanaActual
+    // Analizar promedios de todos los ejes
+    const promediosPorEje = {
+      CF: historial.porEje.CF.promedio,
+      CT: historial.porEje.CT.promedio,
+      O: historial.porEje.O.promedio,
+    }
     
-    // Generar actividad para el eje que corresponde hoy
-    const activity = generarActividadSecuencia(ejeRecomendado, semanaReal, "repetir")
+    // Encontrar el eje con menor promedio (necesita mas trabajo)
+    let ejeRecomendado = progreso.ejeParaHoy
+    let menorPromedio = 100
+    let hayDatosEvaluados = false
+    
+    Object.entries(promediosPorEje).forEach(([eje, promedio]) => {
+      if (promedio > 0) {
+        hayDatosEvaluados = true
+        if (promedio < menorPromedio) {
+          menorPromedio = promedio
+          if (promedio < 50) {
+            ejeRecomendado = eje // Priorizar eje con bajo promedio
+          }
+        }
+      }
+    })
+    
+    // Si no hay datos evaluados, rotar normalmente CF -> CT -> O
+    if (!hayDatosEvaluados) {
+      ejeRecomendado = progreso.ejeParaHoy
+    }
+    
+    // Calcular semana para el eje recomendado
+    const clasesDelEje = progreso.clasesCompletadasPorEje[ejeRecomendado] || 0
+    const semanaDelEje = Math.min(25, clasesDelEje + 1)
+    
+    // Generar actividad para el eje recomendado
+    const nombreEje = ejeRecomendado === "CF" ? "Conciencia Fonologica" : 
+                      ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"
+    
+    let razon = `${nombreEje} - Semana ${semanaDelEje}/25. `
+    if (menorPromedio < 50 && menorPromedio > 0 && ejeRecomendado !== progreso.ejeParaHoy) {
+      razon += `ALBA prioriza este eje por tener promedio bajo (${menorPromedio}%). `
+    }
+    
+    const activity = generarActividadSecuencia(ejeRecomendado, semanaDelEje, "repetir", razon)
     
     // Agregar info de progreso
     const activityConInfo = {
@@ -625,19 +662,16 @@ export async function GET() {
     return NextResponse.json({ 
       activity: activityConInfo,
       progreso: {
-        semanaActual: semanaReal,
+        semanaActual: semanaDelEje,
         claseDeLaSemana: progreso.claseDeLaSemana,
         totalClasesCompletadas: progreso.totalClasesCompletadas,
-        ejeParaHoy: progreso.ejeParaHoy,
+        ejeParaHoy: ejeRecomendado,
+        ejeRotacion: progreso.ejeParaHoy,
         clasesCompletadasPorEje: progreso.clasesCompletadasPorEje,
       },
       historial: {
         totalRegistros: historial.totalRegistros,
-        promediosPorEje: {
-          CF: historial.porEje.CF.promedio,
-          CT: historial.porEje.CT.promedio,
-          O: historial.porEje.O.promedio,
-        }
+        promediosPorEje,
       }
     })
   } catch (err) {
