@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Printer, List, Plus, BookOpen, BrainCircuit } from "lucide-react"
+import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRight } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,107 @@ interface Planning {
   fecha:     string
 }
 
+// ── Secuencia Anual de Actividades por Eje ─────────────────────────────────
+
+const SECUENCIA_ANUAL = {
+  CF: {
+    nombre: "Conciencia Fonologica",
+    color: "#3b82f6",
+    bgColor: "#eff6ff",
+    actividades: [
+      { semana: 1, titulo: "Sonidos del entorno", objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente" },
+      { semana: 2, titulo: "Rimas y canciones", objetivo: "Identificar palabras que riman en canciones conocidas" },
+      { semana: 3, titulo: "Segmentacion silabica", objetivo: "Separar palabras en silabas usando palmadas" },
+      { semana: 4, titulo: "Sonido inicial /a/", objetivo: "Identificar palabras que comienzan con el sonido /a/" },
+      { semana: 5, titulo: "Sonido inicial /e/", objetivo: "Identificar palabras que comienzan con el sonido /e/" },
+      { semana: 6, titulo: "Sonido inicial /i/", objetivo: "Identificar palabras que comienzan con el sonido /i/" },
+      { semana: 7, titulo: "Sonido inicial /o/", objetivo: "Identificar palabras que comienzan con el sonido /o/" },
+      { semana: 8, titulo: "Sonido inicial /u/", objetivo: "Identificar palabras que comienzan con el sonido /u/" },
+      { semana: 9, titulo: "Vocales - Repaso", objetivo: "Consolidar identificacion de sonidos vocalicos iniciales" },
+      { semana: 10, titulo: "Sonido inicial /m/", objetivo: "Identificar palabras que comienzan con el sonido /m/" },
+      { semana: 11, titulo: "Sonido inicial /p/", objetivo: "Identificar palabras que comienzan con el sonido /p/" },
+      { semana: 12, titulo: "Sonido inicial /s/", objetivo: "Identificar palabras que comienzan con el sonido /s/" },
+      { semana: 13, titulo: "Sonido inicial /l/", objetivo: "Identificar palabras que comienzan con el sonido /l/" },
+      { semana: 14, titulo: "Sonido inicial /t/", objetivo: "Identificar palabras que comienzan con el sonido /t/" },
+      { semana: 15, titulo: "Sonido inicial /n/", objetivo: "Identificar palabras que comienzan con el sonido /n/" },
+      { semana: 16, titulo: "Consonantes - Repaso", objetivo: "Consolidar identificacion de sonidos consonanticos" },
+      { semana: 17, titulo: "Sonido final", objetivo: "Identificar el sonido final de palabras cortas" },
+      { semana: 18, titulo: "Sonidos medios", objetivo: "Identificar sonidos en posicion media de palabras" },
+      { semana: 19, titulo: "Sintesis de fonemas", objetivo: "Unir fonemas para formar palabras simples" },
+      { semana: 20, titulo: "Analisis de fonemas", objetivo: "Descomponer palabras en sus fonemas individuales" },
+      { semana: 21, titulo: "Sustitucion de fonemas", objetivo: "Cambiar un fonema para crear palabras nuevas" },
+      { semana: 22, titulo: "Omision de fonemas", objetivo: "Identificar que palabra queda al quitar un fonema" },
+      { semana: 23, titulo: "Adicion de fonemas", objetivo: "Agregar fonemas para crear palabras nuevas" },
+      { semana: 24, titulo: "Manipulacion avanzada", objetivo: "Realizar operaciones complejas con fonemas" },
+      { semana: 25, titulo: "Evaluacion CF", objetivo: "Evaluar el dominio de la conciencia fonologica" },
+    ],
+  },
+  CT: {
+    nombre: "Conocimiento del Texto",
+    color: "#10b981",
+    bgColor: "#ecfdf5",
+    actividades: [
+      { semana: 1, titulo: "El libro como objeto", objetivo: "Explorar las partes del libro (tapa, contratapa, lomo)" },
+      { semana: 2, titulo: "Direccionalidad", objetivo: "Comprender que leemos de izquierda a derecha y arriba a abajo" },
+      { semana: 3, titulo: "Titulo y autor", objetivo: "Identificar el titulo y autor de un libro" },
+      { semana: 4, titulo: "Portada e ilustraciones", objetivo: "Relacionar imagenes con el contenido del texto" },
+      { semana: 5, titulo: "Diferencia texto/imagen", objetivo: "Distinguir entre lo que se lee y lo que se mira" },
+      { semana: 6, titulo: "Funcion del texto", objetivo: "Comprender que el texto transmite un mensaje" },
+      { semana: 7, titulo: "Tipos de texto: cuento", objetivo: "Reconocer caracteristicas de los cuentos" },
+      { semana: 8, titulo: "Tipos de texto: poesia", objetivo: "Reconocer caracteristicas de las poesias" },
+      { semana: 9, titulo: "Tipos de texto: receta", objetivo: "Reconocer caracteristicas de las recetas" },
+      { semana: 10, titulo: "Tipos de texto: carta", objetivo: "Reconocer caracteristicas de las cartas" },
+      { semana: 11, titulo: "Tipos de texto: noticia", objetivo: "Reconocer caracteristicas de las noticias" },
+      { semana: 12, titulo: "Tipos de texto: instructivo", objetivo: "Reconocer caracteristicas de los instructivos" },
+      { semana: 13, titulo: "Palabra y oracion", objetivo: "Diferenciar palabras de oraciones" },
+      { semana: 14, titulo: "Espacios entre palabras", objetivo: "Reconocer que las palabras se separan con espacios" },
+      { semana: 15, titulo: "Signos de puntuacion", objetivo: "Identificar punto, coma y signos de pregunta" },
+      { semana: 16, titulo: "Mayusculas", objetivo: "Reconocer el uso de mayusculas al inicio" },
+      { semana: 17, titulo: "Lectura compartida I", objetivo: "Participar activamente en lectura guiada" },
+      { semana: 18, titulo: "Lectura compartida II", objetivo: "Anticipar contenido a partir del titulo" },
+      { semana: 19, titulo: "Lectura compartida III", objetivo: "Hacer predicciones durante la lectura" },
+      { semana: 20, titulo: "Comprension literal", objetivo: "Responder preguntas sobre informacion explicita" },
+      { semana: 21, titulo: "Comprension inferencial", objetivo: "Inferir informacion no explicita del texto" },
+      { semana: 22, titulo: "Secuencia narrativa", objetivo: "Ordenar eventos de una historia" },
+      { semana: 23, titulo: "Personajes", objetivo: "Identificar personajes principales y secundarios" },
+      { semana: 24, titulo: "Ambiente y tiempo", objetivo: "Identificar donde y cuando ocurre la historia" },
+      { semana: 25, titulo: "Evaluacion CT", objetivo: "Evaluar el conocimiento del texto impreso" },
+    ],
+  },
+  O: {
+    nombre: "Oralidad",
+    color: "#f59e0b",
+    bgColor: "#fffbeb",
+    actividades: [
+      { semana: 1, titulo: "Presentacion personal", objetivo: "Presentarse diciendo nombre y algo que les gusta" },
+      { semana: 2, titulo: "Escucha activa", objetivo: "Practicar escuchar sin interrumpir" },
+      { semana: 3, titulo: "Turnos de habla", objetivo: "Respetar turnos en una conversacion" },
+      { semana: 4, titulo: "Vocabulario cotidiano", objetivo: "Ampliar vocabulario de objetos del aula" },
+      { semana: 5, titulo: "Vocabulario: familia", objetivo: "Ampliar vocabulario relacionado con la familia" },
+      { semana: 6, titulo: "Vocabulario: cuerpo", objetivo: "Ampliar vocabulario de partes del cuerpo" },
+      { semana: 7, titulo: "Vocabulario: alimentos", objetivo: "Ampliar vocabulario de alimentos" },
+      { semana: 8, titulo: "Vocabulario: animales", objetivo: "Ampliar vocabulario de animales" },
+      { semana: 9, titulo: "Descripcion de objetos", objetivo: "Describir objetos usando adjetivos simples" },
+      { semana: 10, titulo: "Descripcion de personas", objetivo: "Describir personas usando caracteristicas fisicas" },
+      { semana: 11, titulo: "Descripcion de lugares", objetivo: "Describir lugares usando vocabulario espacial" },
+      { semana: 12, titulo: "Narracion de experiencias", objetivo: "Contar una experiencia personal con secuencia" },
+      { semana: 13, titulo: "Recontar un cuento", objetivo: "Recontar un cuento escuchado con sus propias palabras" },
+      { semana: 14, titulo: "Crear finales alternativos", objetivo: "Inventar finales diferentes para cuentos" },
+      { semana: 15, titulo: "Dialogos", objetivo: "Participar en dialogos simples con compañeros" },
+      { semana: 16, titulo: "Preguntas y respuestas", objetivo: "Formular y responder preguntas" },
+      { semana: 17, titulo: "Expresion de emociones", objetivo: "Expresar como se sienten usando palabras" },
+      { semana: 18, titulo: "Expresion de opiniones", objetivo: "Dar opiniones simples sobre temas conocidos" },
+      { semana: 19, titulo: "Instrucciones orales", objetivo: "Dar y seguir instrucciones simples" },
+      { semana: 20, titulo: "Explicar procedimientos", objetivo: "Explicar como hacer algo paso a paso" },
+      { semana: 21, titulo: "Recitar poesias", objetivo: "Memorizar y recitar poesias cortas" },
+      { semana: 22, titulo: "Dramatizacion", objetivo: "Participar en dramatizaciones simples" },
+      { semana: 23, titulo: "Exposicion oral", objetivo: "Hacer una breve exposicion sobre un tema" },
+      { semana: 24, titulo: "Debate guiado", objetivo: "Participar en debates simples con argumentos" },
+      { semana: 25, titulo: "Evaluacion O", objetivo: "Evaluar las habilidades de comunicacion oral" },
+    ],
+  },
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function parseSteps(text: string): string[] {
@@ -57,6 +158,123 @@ function parseSteps(text: string): string[] {
     .filter(s => s.length > 0)
 }
 
+// ── Secuencia Modal Component ──────────────────────────────────────────────
+
+function SecuenciaModal({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+}) {
+  const [ejeExpandido, setEjeExpandido] = useState<string | null>("CF")
+
+  if (!isOpen) return null
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>
+              Secuencia Anual ALBA
+            </h2>
+            <p className="text-sm text-slate-500">25 semanas de actividades por eje</p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
+          >
+            <X className="w-4 h-4 text-slate-600" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="space-y-4">
+            {Object.entries(SECUENCIA_ANUAL).map(([ejeId, eje]) => (
+              <div 
+                key={ejeId} 
+                className="border rounded-xl overflow-hidden"
+                style={{ borderColor: eje.color + "40" }}
+              >
+                {/* Eje Header - Clickeable */}
+                <button
+                  onClick={() => setEjeExpandido(ejeExpandido === ejeId ? null : ejeId)}
+                  className="w-full p-4 flex items-center gap-3 transition-colors hover:opacity-90"
+                  style={{ backgroundColor: eje.bgColor }}
+                >
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                    style={{ backgroundColor: eje.color }}
+                  >
+                    {ejeId}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold" style={{ color: eje.color }}>{eje.nombre}</p>
+                    <p className="text-xs text-slate-500">{eje.actividades.length} actividades</p>
+                  </div>
+                  {ejeExpandido === ejeId ? (
+                    <ChevronDown className="w-5 h-5" style={{ color: eje.color }} />
+                  ) : (
+                    <ChevronRight className="w-5 h-5" style={{ color: eje.color }} />
+                  )}
+                </button>
+
+                {/* Lista de Actividades */}
+                {ejeExpandido === ejeId && (
+                  <div className="border-t" style={{ borderColor: eje.color + "20" }}>
+                    <div className="max-h-80 overflow-y-auto">
+                      {eje.actividades.map((act, idx) => (
+                        <div 
+                          key={idx}
+                          className="flex items-start gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors"
+                          style={{ borderColor: eje.color + "10" }}
+                        >
+                          <div 
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                            style={{ backgroundColor: eje.color }}
+                          >
+                            {act.semana}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-slate-800">{act.titulo}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{act.objetivo}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose}>
+              Cerrar
+            </Button>
+            <Button className="flex-1" style={{ backgroundColor: "#1e3a5f" }}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir Secuencia
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function BrainColumn({ activity, isLoading, stats }: { 
@@ -64,7 +282,11 @@ function BrainColumn({ activity, isLoading, stats }: {
   isLoading: boolean;
   stats?: { green: number; yellow: number; red: number; sinEvaluar: number };
 }) {
+  const [showSecuencia, setShowSecuencia] = useState(false)
+  
   return (
+    <>
+    <SecuenciaModal isOpen={showSecuencia} onClose={() => setShowSecuencia(false)} />
     <div className="flex flex-col gap-3 h-full">
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
@@ -135,12 +357,18 @@ function BrainColumn({ activity, isLoading, stats }: {
           <Printer className="w-3.5 h-3.5 mr-1.5" />
           Imprimir fichas
         </Button>
-        <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex-1 h-9 text-xs"
+          onClick={() => setShowSecuencia(true)}
+        >
           <List className="w-3.5 h-3.5 mr-1.5" />
           Ver secuencia
         </Button>
       </div>
     </div>
+    </>
   )
 }
 
