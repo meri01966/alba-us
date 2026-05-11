@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Edit3, Check, Send, Star } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Edit3, Check, Send, Star, UserCheck } from "lucide-react"
 
-type StatusLevel = "green" | "yellow" | "red"
+type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 interface Student {
   id: string
@@ -22,7 +22,7 @@ export interface RegistroCierre {
   evaluacionGeneral: "excelente" | "buena" | "regular" | "necesita_mejora"
   observaciones: string
   sugerenciaParaIA: string
-  stats: { green: number; yellow: number; red: number }
+  stats: { green: number; yellow: number; red: number; blue: number }
 }
 
 // Colores por eje
@@ -77,47 +77,57 @@ const EVAL_OPTIONS: {
   icon: React.ElementType
   activeStyle: React.CSSProperties
   inactiveStyle: React.CSSProperties
-}[] = [
+  }[] = [
   {
-    value: "green",
-    label: "Logrado",
-    nivelCompetencia: "Nivel Avanzado",
-    icon: CheckCircle2,
-    activeStyle: { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" },
-    inactiveStyle: { backgroundColor: "#d1fae5", color: "#10b981", borderColor: "#6ee7b7" },
+  value: "blue",
+  label: "Presente",
+  nivelCompetencia: "Asistencia",
+  icon: UserCheck,
+  activeStyle: { backgroundColor: "#3b82f6", color: "#fff", borderColor: "#3b82f6" },
+  inactiveStyle: { backgroundColor: "#dbeafe", color: "#3b82f6", borderColor: "#93c5fd" },
   },
   {
-    value: "yellow",
-    label: "En proceso",
-    nivelCompetencia: "Nivel Intermedio",
-    icon: Clock,
-    activeStyle: { backgroundColor: "#fbbf24", color: "#fff", borderColor: "#fbbf24" },
-    inactiveStyle: { backgroundColor: "#fef3c7", color: "#d97706", borderColor: "#fcd34d" },
+  value: "green",
+  label: "Logrado",
+  nivelCompetencia: "Nivel Avanzado",
+  icon: CheckCircle2,
+  activeStyle: { backgroundColor: "#10b981", color: "#fff", borderColor: "#10b981" },
+  inactiveStyle: { backgroundColor: "#d1fae5", color: "#10b981", borderColor: "#6ee7b7" },
   },
   {
-    value: "red",
-    label: "Refuerzo",
-    nivelCompetencia: "Requiere Apoyo",
-    icon: AlertCircle,
-    activeStyle: { backgroundColor: "#ef4444", color: "#fff", borderColor: "#ef4444" },
-    inactiveStyle: { backgroundColor: "#fee2e2", color: "#ef4444", borderColor: "#fca5a5" },
+  value: "yellow",
+  label: "En proceso",
+  nivelCompetencia: "Nivel Intermedio",
+  icon: Clock,
+  activeStyle: { backgroundColor: "#fbbf24", color: "#fff", borderColor: "#fbbf24" },
+  inactiveStyle: { backgroundColor: "#fef3c7", color: "#d97706", borderColor: "#fcd34d" },
   },
-]
+  {
+  value: "red",
+  label: "Refuerzo",
+  nivelCompetencia: "Requiere Apoyo",
+  icon: AlertCircle,
+  activeStyle: { backgroundColor: "#ef4444", color: "#fff", borderColor: "#ef4444" },
+  inactiveStyle: { backgroundColor: "#fee2e2", color: "#ef4444", borderColor: "#fca5a5" },
+  },
+  ]
 
 // Obtener color del estado
-function getStatusColor(status: StatusLevel | null): string {
+  function getStatusColor(status: StatusLevel | null): string {
+  if (status === "blue") return "#3b82f6"
   if (status === "green") return "#10b981"
   if (status === "yellow") return "#fbbf24"
   if (status === "red") return "#ef4444"
   return "#94a3b8" // gris para sin evaluar
-}
-
-function getStatusBg(status: StatusLevel | null): string {
+  }
+  
+  function getStatusBg(status: StatusLevel | null): string {
+  if (status === "blue") return "#eff6ff"
   if (status === "green") return "#ecfdf5"
   if (status === "yellow") return "#fef3c7"
   if (status === "red") return "#fef2f2"
   return "#f1f5f9" // gris claro para sin evaluar
-}
+  }
 
 function StudentRow({
   student,
@@ -232,14 +242,15 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
   
   // Calcular stats actuales
   const calcularStats = () => {
-    let green = 0, yellow = 0, red = 0
+    let green = 0, yellow = 0, red = 0, blue = 0
     students.forEach(s => {
       const status = evaluaciones[s.id]
-      if (status === "green") green++
+      if (status === "blue") blue++
+      else if (status === "green") green++
       else if (status === "yellow") yellow++
       else if (status === "red") red++
     })
-    return { green, yellow, red }
+    return { green, yellow, red, blue }
   }
   
   // Enviar registro de cierre
@@ -249,9 +260,12 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
     setEnviandoCierre(true)
     const stats = calcularStats()
     
+    // La actividad del cierre DEBE coincidir con la sugerencia de ALBA
+    const actividadParaCierre = actividadSugeridaALBA || actividadDelDia
+    
     const registro: RegistroCierre = {
       actividadALBA: actividadSugeridaALBA || "",
-      actividadDocente: actividadDelDia,
+      actividadDocente: actividadParaCierre, // Usa la sugerencia de ALBA
       eje: selectedEje,
       evaluacionGeneral: cierreEvaluacion,
       observaciones: cierreObservaciones,
@@ -339,83 +353,25 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
           className="rounded-xl p-3 flex flex-col gap-2"
           style={{ backgroundColor: EJE_COLORS[selectedEje]?.color || "#1e3a5f", color: "#fff" }}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 shrink-0 text-amber-300" />
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                Actividad del dia
-              </span>
-            </div>
-            {!editandoActividad && (
-              <button
-                onClick={() => {
-                  setActividadTemporal(actividadDelDia)
-                  setEditandoActividad(true)
-                }}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                title="Editar actividad"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-300" />
-              </button>
-            )}
+          <div className="flex items-center gap-2 mb-1">
+            <BookOpen className="w-5 h-5 shrink-0 text-white/80" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white/70">
+              Actividad sugerida por ALBA
+            </span>
           </div>
           
-          {editandoActividad ? (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={actividadTemporal}
-                  onChange={(e) => setActividadTemporal(e.target.value)}
-                  placeholder="Escribe tu actividad..."
-                  className="flex-1 h-8 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                  autoFocus
-                />
-                <button
-                  onClick={guardarActividad}
-                  className="p-2 rounded-lg bg-amber-400 hover:bg-amber-500 transition-colors"
-                  title="Guardar"
-                >
-                  <Check className="w-4 h-4 text-slate-900" />
-                </button>
-                <button
-                  onClick={() => setEditandoActividad(false)}
-                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                  title="Cancelar"
-                >
-                  <X className="w-4 h-4 text-white" />
-                </button>
-              </div>
-              {/* Sugerencias de actividades */}
-              <div className="space-y-1">
-                <p className="text-xs text-amber-300/70">Sugerencias para {selectedEje}:</p>
-                <div className="flex flex-wrap gap-1">
-                  {ACTIVIDADES_SUGERIDAS[selectedEje]?.map((act, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => seleccionarActividadSugerida(act)}
-                      className="text-xs px-2 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/90 transition-colors"
-                    >
-                      {act}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold">
-                {actividadDelDia}
-              </span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold">
+              {actividadSugeridaALBA || actividadDelDia || "Cargando sugerencia..."}
+            </span>
+            <div className="flex items-center gap-2">
               <span
                 className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20"
               >
                 {EJE_COLORS[selectedEje]?.nombre || selectedEje}
               </span>
-              <span className="text-xs text-white/70 italic">
-                (Eje sugerido por ALBA)
-              </span>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="flex gap-3 mt-2">
@@ -536,6 +492,11 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
             <div className="pt-2 border-t border-slate-100">
               <p className="text-slate-500 mb-2">Resultados de la clase:</p>
               <div className="flex gap-2 flex-wrap">
+                {calcularStats().blue > 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                    {calcularStats().blue} presente
+                  </span>
+                )}
                 <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
                   {calcularStats().green} logrado
                 </span>
@@ -546,18 +507,18 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
                   {calcularStats().red} necesita refuerzo
                 </span>
               </div>
-              {/* Promedio calculado */}
+              {/* Promedio calculado (solo de evaluaciones pedagogicas, no presencia) */}
               {(() => {
                 const s = calcularStats()
-                const total = s.green + s.yellow + s.red
-                if (total === 0) return null
-                const promedio = Math.round(((s.green * 100) + (s.yellow * 50) + (s.red * 10)) / total)
+                const totalEvaluados = s.green + s.yellow + s.red // No incluye blue
+                if (totalEvaluados === 0) return null
+                const promedio = Math.round(((s.green * 100) + (s.yellow * 50) + (s.red * 10)) / totalEvaluados)
                 return (
                   <div className={`mt-2 px-3 py-1.5 rounded-lg text-center font-bold ${
                     promedio >= 70 ? "bg-green-500 text-white" : 
                     promedio >= 40 ? "bg-yellow-500 text-white" : "bg-red-500 text-white"
                   }`}>
-                    Promedio: {promedio}%
+                    Promedio pedagogico: {promedio}%
                   </div>
                 )
               })()}

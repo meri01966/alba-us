@@ -14,7 +14,7 @@ import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
-type StatusLevel = "green" | "yellow" | "red"
+type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 // Mapeo de actividad a eje pedagogico
 // "Reconocimiento de Letras" -> CF (Conciencia Fonologica)
@@ -29,6 +29,7 @@ const ACTIVIDAD_EJE_MAP: Record<string, "CF" | "CT" | "O"> = {
 // Traduccion de color a porcentaje de avance
 function statusToProgress(status: StatusLevel): number {
   switch (status) {
+    case "blue": return 0     // Presente (solo asistencia, no evalua)
     case "green": return 100  // Logrado
     case "yellow": return 50  // En proceso
     case "red": return 10     // Requiere apoyo

@@ -13,24 +13,24 @@ interface Alert {
   alumnos?: string[]
 }
 
-type StatusLevel = "green" | "yellow" | "red"
+type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 interface AlertsPanelProps {
   students?: { id: string; nombre: string }[]
   evaluaciones?: Record<string, StatusLevel>
 }
 
-// Genera alertas basadas SOLO en evaluaciones reales (no datos por defecto)
+// Genera alertas basadas SOLO en evaluaciones pedagogicas reales (no blue que es solo presencia)
 function generarAlertas(
   evaluaciones: Record<string, StatusLevel>,
   students: { id: string; nombre: string }[]
 ): Alert[] {
   const alertas: Alert[] = []
   
-  // Solo generar alertas si hay evaluaciones reales
-  const alumnosEvaluados = Object.keys(evaluaciones)
-  if (alumnosEvaluados.length === 0) {
-    return [] // Sin evaluaciones = sin alertas
+  // Solo generar alertas si hay evaluaciones pedagogicas reales (no blue)
+  const evaluacionesPedagogicas = Object.entries(evaluaciones).filter(([, status]) => status !== "blue")
+  if (evaluacionesPedagogicas.length === 0) {
+    return [] // Sin evaluaciones pedagogicas = sin alertas
   }
   
   // Contar alumnos que necesitan refuerzo (solo los que fueron evaluados HOY como rojo)
@@ -87,8 +87,9 @@ export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelPro
   const alertas = generarAlertas(evaluaciones, students)
   const alertasVisibles = alertas.filter(a => !alertasResueltas.includes(a.id))
   
-  // Contar evaluaciones reales
-  const totalEvaluados = Object.keys(evaluaciones).length
+  // Contar evaluaciones pedagogicas reales (no incluye blue que es solo presencia)
+  const totalEvaluados = Object.values(evaluaciones).filter(e => e !== "blue").length
+  const totalPresentes = Object.values(evaluaciones).filter(e => e === "blue").length
   
   const marcarResuelta = (id: string) => {
     setAlertasResueltas(prev => [...prev, id])
@@ -111,7 +112,7 @@ export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelPro
       <CardContent className="pt-0">
         {alertasVisibles.length === 0 ? (
           <div className="text-center py-6 text-slate-500">
-            {totalEvaluados === 0 ? (
+            {totalEvaluados === 0 && totalPresentes === 0 ? (
               <>
                 <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center">
                   <AlertTriangle className="w-5 h-5 text-slate-300" />
@@ -119,11 +120,19 @@ export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelPro
                 <p className="text-sm text-slate-400">Sin datos evaluados</p>
                 <p className="text-xs mt-1 text-slate-300">Las alertas apareceran cuando evalues alumnos</p>
               </>
+            ) : totalEvaluados === 0 && totalPresentes > 0 ? (
+              <>
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                </div>
+                <p className="text-sm text-blue-600">{totalPresentes} presente{totalPresentes !== 1 ? "s" : ""} registrado{totalPresentes !== 1 ? "s" : ""}</p>
+                <p className="text-xs mt-1 text-slate-400">Evalua pedagogicamente para generar alertas</p>
+              </>
             ) : (
               <>
                 <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p className="text-sm">Sin alertas por ahora</p>
-                <p className="text-xs mt-1">El grupo avanza bien ({totalEvaluados} evaluados)</p>
+                <p className="text-xs mt-1">El grupo avanza bien ({totalEvaluados} evaluados{totalPresentes > 0 ? `, ${totalPresentes} presentes` : ""})</p>
               </>
             )}
           </div>
