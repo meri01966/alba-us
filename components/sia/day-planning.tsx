@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,13 +19,23 @@ import { Printer, List, Plus, BookOpen, BrainCircuit } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type StatusLevel = "green" | "yellow" | "red"
+
+interface DayPlanningProps {
+  evaluaciones?: Record<string, StatusLevel>
+  ejeActual?: string
+  totalAlumnos?: number
+}
+
 interface BrainActivity {
   id:          string
   dia:         number
   titulo:      string
   descripcion: string
   objetivo:    string
-  source:      "airtable" | "demo"
+  source:      "airtable" | "demo" | "alba"
+  ejeRecomendado?: string
+  razon?: string
 }
 
 interface Planning {
@@ -49,7 +59,11 @@ function parseSteps(text: string): string[] {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; isLoading: boolean }) {
+function BrainColumn({ activity, isLoading, stats }: { 
+  activity: BrainActivity | null; 
+  isLoading: boolean;
+  stats?: { green: number; yellow: number; red: number; sinEvaluar: number };
+}) {
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* Header */}
@@ -62,10 +76,19 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
         </div>
         {activity && (
           <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
-            {activity.source === "demo" ? "Demo" : `Día ${activity.dia}`}
+            {activity.source === "alba" ? "Basado en datos" : activity.source === "demo" ? "Demo" : `Día ${activity.dia}`}
           </span>
         )}
       </div>
+      
+      {/* Stats del dia si hay */}
+      {stats && stats.green + stats.yellow + stats.red > 0 && (
+        <div className="flex gap-2 text-xs">
+          <span className="px-2 py-1 rounded-full bg-green-100 text-green-700">{stats.green} logrado</span>
+          <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">{stats.yellow} proceso</span>
+          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700">{stats.red} refuerzo</span>
+        </div>
+      )}
 
       {/* Content */}
       {isLoading ? (
@@ -78,8 +101,18 @@ function BrainColumn({ activity, isLoading }: { activity: BrainActivity | null; 
         </div>
       ) : (
         <div className="space-y-3 flex-1">
+          {activity.razon && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">
+              {activity.razon}
+            </div>
+          )}
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
+            {activity.ejeRecomendado && (
+              <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                Eje: {activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+              </span>
+            )}
           </div>
           {activity.objetivo && (
             <div>
@@ -308,26 +341,52 @@ function MyPlanningColumn({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning() {
+export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", totalAlumnos = 0 }: DayPlanningProps) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
 
   const [planning,         setPlanning]         = useState<Planning | null>(null)
   const [isPlanningLoading, setIsPlanningLoading] = useState(true)
 
-  // Fetch Cerebro Central
+  // Calcular stats de las evaluaciones del dia
+  const stats = useMemo(() => {
+    const values = Object.values(evaluaciones)
+    return {
+      green: values.filter(v => v === "green").length,
+      yellow: values.filter(v => v === "yellow").length,
+      red: values.filter(v => v === "red").length,
+      sinEvaluar: totalAlumnos - values.length,
+    }
+  }, [evaluaciones, totalAlumnos])
+
+  // Fetch Cerebro Central con datos de evaluaciones
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-      const res  = await fetch("/api/brain")
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          evaluaciones, 
+          ejeActual,
+          stats 
+        }),
+      })
       const data = await res.json()
       setBrain(data.activity ?? null)
     } catch {
-      setBrain(null)
+      // Fallback a GET si POST falla
+      try {
+        const res  = await fetch("/api/brain")
+        const data = await res.json()
+        setBrain(data.activity ?? null)
+      } catch {
+        setBrain(null)
+      }
     } finally {
       setIsBrainLoading(false)
     }
-  }, [])
+  }, [evaluaciones, ejeActual, stats])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {
@@ -359,7 +418,7 @@ export function DayPlanning() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
           {/* Left: Sugerencia SIA */}
           <div className="pb-4 sm:pb-0 sm:pr-4">
-            <BrainColumn activity={brain} isLoading={isBrainLoading} />
+            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} />
           </div>
           {/* Right: Mi Planificacion */}
           <div className="pt-4 sm:pt-0 sm:pl-4">

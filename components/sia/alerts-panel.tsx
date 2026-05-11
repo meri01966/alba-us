@@ -13,9 +13,12 @@ interface Alert {
   alumnos?: string[]
 }
 
+type StatusLevel = "green" | "yellow" | "red"
+
 interface AlertsPanelProps {
   progress?: Record<string, { CF: number; CT: number; O: number }>
   students?: { id: string; nombre: string }[]
+  evaluaciones?: Record<string, StatusLevel>
 }
 
 // Genera alertas basadas en el progreso real
@@ -97,11 +100,23 @@ function generarAlertas(
   return alertas
 }
 
-export function AlertsPanel({ progress = {}, students = [] }: AlertsPanelProps) {
+export function AlertsPanel({ progress = {}, students = [], evaluaciones = {} }: AlertsPanelProps) {
   const [sugerenciaAbierta, setSugerenciaAbierta] = useState<string | null>(null)
   const [alertasResueltas, setAlertasResueltas] = useState<string[]>([])
   
-  const alertas = generarAlertas(progress, students)
+  // Combinar progress con evaluaciones del dia (evaluaciones tienen prioridad)
+  const progressConEvaluaciones = { ...progress }
+  Object.entries(evaluaciones).forEach(([studentId, status]) => {
+    // Convertir semaforo a porcentaje: red=10, yellow=50, green=100
+    const valorCF = status === "green" ? 100 : status === "yellow" ? 50 : 10
+    progressConEvaluaciones[studentId] = {
+      CF: valorCF,
+      CT: progress[studentId]?.CT || 50,
+      O: progress[studentId]?.O || 50,
+    }
+  })
+  
+  const alertas = generarAlertas(progressConEvaluaciones, students)
   const alertasVisibles = alertas.filter(a => !alertasResueltas.includes(a.id))
   
   const marcarResuelta = (id: string) => {

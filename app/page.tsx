@@ -256,6 +256,9 @@ export default function ALBADashboard() {
   
   // Estado centralizado de evaluaciones del dia (persistido en localStorage)
   const [evaluaciones, setEvaluaciones] = useState<Record<string, StatusLevel>>({})
+  
+  // Eje actual seleccionado en el HeatMap (para conectar con DayPlanning)
+  const [ejeActual, setEjeActual] = useState<string>("CF")
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -955,17 +958,22 @@ export default function ALBADashboard() {
             <>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4">
-                  <HeatMap 
+<HeatMap
                     students={students}
                     evaluaciones={evaluaciones}
                     onEvaluacion={handleEvaluacion}
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
+                    onEjeChange={setEjeActual}
                     isLoading={isLoading}
                   />
                 </div>
                 <div className="lg:col-span-8">
-                  <DayPlanning />
+                  <DayPlanning 
+                    evaluaciones={evaluaciones}
+                    ejeActual={ejeActual}
+                    totalAlumnos={students.length}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -973,9 +981,10 @@ export default function ALBADashboard() {
                   ejeDelDia="CF" 
                   actividadDelDia={ACTIVIDAD_DEL_DIA} 
                 />
-                <AlertsPanel 
+<AlertsPanel
                   progress={progress}
                   students={students}
+                  evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
                   actividadDelDia={ACTIVIDAD_DEL_DIA}

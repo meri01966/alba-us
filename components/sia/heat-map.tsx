@@ -19,6 +19,7 @@ interface HeatMapProps {
   onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string) => void
   onClearEvaluacion?: (studentId: string) => void
   onClearAllEvaluaciones?: () => void
+  onEjeChange?: (eje: string) => void
   isLoading?: boolean
 }
 
@@ -142,8 +143,17 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [selectedEje, setSelectedEje] = useState("CF")
+  
+  // Notificar cambio de eje al padre
+  const handleEjeChange = (eje: string) => {
+    setSelectedEje(eje)
+    if (onEjeChange) {
+      onEjeChange(eje)
+    }
+  }
 
   // Si no hay estudiantes y no esta cargando, retornar null
   if (!isLoading && (!students || students.length === 0)) {
@@ -207,6 +217,27 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
           </div>
         </div>
 
+        {/* Selector de Eje */}
+        <div className="flex gap-2 mb-2">
+          {[
+            { id: "CF", label: "Conciencia Fonologica" },
+            { id: "CT", label: "Conocimiento del Texto" },
+            { id: "O", label: "Oralidad" },
+          ].map((eje) => (
+            <button
+              key={eje.id}
+              onClick={() => handleEjeChange(eje.id)}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-all ${
+                selectedEje === eje.id
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary"
+              }`}
+            >
+              {eje.id}
+            </button>
+          ))}
+        </div>
+
         {/* Banner de actividad del dia */}
         <div
           className="rounded-xl p-3 flex flex-col gap-2"
@@ -226,7 +257,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
               className="text-xs font-bold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
             >
-              Eje: Conciencia Fonologica
+              Eje: {selectedEje === "CF" ? "Conciencia Fonologica" : selectedEje === "CT" ? "Conocimiento del Texto" : "Oralidad"}
             </span>
           </div>
         </div>
