@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Edit3, Check } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red"
 
@@ -16,15 +18,38 @@ interface Student {
 interface HeatMapProps {
   students: Student[]
   evaluaciones?: Record<string, StatusLevel>
-  onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string) => void
+  onEvaluacion?: (studentId: string, status: StatusLevel, actividad: string, eje: string) => void
   onClearEvaluacion?: (studentId: string) => void
   onClearAllEvaluaciones?: () => void
   onEjeChange?: (eje: string) => void
+  onActividadChange?: (actividad: string, eje: string) => void
   isLoading?: boolean
 }
 
-// Actividad del dia (mapea a CF segun las reglas de ALBA)
-const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
+// Actividades sugeridas por eje (de la secuencia ALBA)
+const ACTIVIDADES_SUGERIDAS: Record<string, string[]> = {
+  CF: [
+    "Reconocimiento de Sonido Inicial /M/",
+    "Segmentacion silabica con palmadas",
+    "Rimas y canciones",
+    "Sonido inicial /A/",
+    "Sonido inicial /E/",
+  ],
+  CT: [
+    "Lectura Dialogica: Antes de leer",
+    "Cruz de Comprension: QUIEN",
+    "Cruz de Comprension: QUE",
+    "Lectura Dialogica: Durante",
+    "Cruz de Comprension: POR QUE",
+  ],
+  O: [
+    "ECO: Escucha de instrucciones",
+    "ECO: Comprension literal oral",
+    "ECO: Narrar con secuencia",
+    "ECO: Describir con estructura",
+    "ECO: Vocabulario receptivo",
+  ],
+}
 
 const EVAL_OPTIONS: {
   value: StatusLevel
@@ -143,15 +168,44 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onEjeChange, onActividadChange, isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [selectedEje, setSelectedEje] = useState("CF")
+  const [actividadDelDia, setActividadDelDia] = useState(ACTIVIDADES_SUGERIDAS.CF[0])
+  const [editandoActividad, setEditandoActividad] = useState(false)
+  const [actividadTemporal, setActividadTemporal] = useState("")
   
-  // Notificar cambio de eje al padre
+  // Notificar cambio de eje al padre y actualizar actividad sugerida
   const handleEjeChange = (eje: string) => {
     setSelectedEje(eje)
+    // Cambiar a la primera actividad sugerida del nuevo eje
+    const nuevaActividad = ACTIVIDADES_SUGERIDAS[eje]?.[0] || ""
+    setActividadDelDia(nuevaActividad)
     if (onEjeChange) {
       onEjeChange(eje)
+    }
+    if (onActividadChange) {
+      onActividadChange(nuevaActividad, eje)
+    }
+  }
+  
+  // Guardar actividad personalizada
+  const guardarActividad = () => {
+    if (actividadTemporal.trim()) {
+      setActividadDelDia(actividadTemporal.trim())
+      if (onActividadChange) {
+        onActividadChange(actividadTemporal.trim(), selectedEje)
+      }
+    }
+    setEditandoActividad(false)
+  }
+  
+  // Seleccionar actividad sugerida
+  const seleccionarActividadSugerida = (actividad: string) => {
+    setActividadDelDia(actividad)
+    setEditandoActividad(false)
+    if (onActividadChange) {
+      onActividadChange(actividad, selectedEje)
     }
   }
 
@@ -164,7 +218,8 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
     setSavingId(student.id)
 
     if (onEvaluacion) {
-      onEvaluacion(student.id, status, ACTIVIDAD_DEL_DIA)
+      // Enviar actividad Y eje al guardar la evaluacion
+      onEvaluacion(student.id, status, actividadDelDia, selectedEje)
     }
     
     setSavingId(null)
@@ -238,28 +293,86 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
           ))}
         </div>
 
-        {/* Banner de actividad del dia */}
+        {/* Banner de actividad del dia - Editable */}
         <div
           className="rounded-xl p-3 flex flex-col gap-2"
           style={{ backgroundColor: "#1e3a5f", color: "#fff" }}
         >
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 shrink-0 text-amber-300" />
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-              Evaluando hoy
-            </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 shrink-0 text-amber-300" />
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                Actividad del dia
+              </span>
+            </div>
+            {!editandoActividad && (
+              <button
+                onClick={() => {
+                  setActividadTemporal(actividadDelDia)
+                  setEditandoActividad(true)
+                }}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                title="Editar actividad"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-300" />
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold">
-              {ACTIVIDAD_DEL_DIA}
-            </span>
-            <span
-              className="text-xs font-bold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
-            >
-              Eje: {selectedEje === "CF" ? "Conciencia Fonologica" : selectedEje === "CT" ? "Conocimiento del Texto" : "Oralidad"}
-            </span>
-          </div>
+          
+          {editandoActividad ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={actividadTemporal}
+                  onChange={(e) => setActividadTemporal(e.target.value)}
+                  placeholder="Escribe tu actividad..."
+                  className="flex-1 h-8 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  autoFocus
+                />
+                <button
+                  onClick={guardarActividad}
+                  className="p-2 rounded-lg bg-amber-400 hover:bg-amber-500 transition-colors"
+                  title="Guardar"
+                >
+                  <Check className="w-4 h-4 text-slate-900" />
+                </button>
+                <button
+                  onClick={() => setEditandoActividad(false)}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  title="Cancelar"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              {/* Sugerencias de actividades */}
+              <div className="space-y-1">
+                <p className="text-xs text-amber-300/70">Sugerencias para {selectedEje}:</p>
+                <div className="flex flex-wrap gap-1">
+                  {ACTIVIDADES_SUGERIDAS[selectedEje]?.map((act, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => seleccionarActividadSugerida(act)}
+                      className="text-xs px-2 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/90 transition-colors"
+                    >
+                      {act}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold">
+                {actividadDelDia}
+              </span>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: "#fbbf24", color: "#1e3a5f" }}
+              >
+                Eje: {selectedEje === "CF" ? "Conciencia Fonologica" : selectedEje === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-2">

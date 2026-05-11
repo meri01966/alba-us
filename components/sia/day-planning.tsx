@@ -24,6 +24,7 @@ type StatusLevel = "green" | "yellow" | "red"
 interface DayPlanningProps {
   evaluaciones?: Record<string, StatusLevel>
   ejeActual?: string
+  actividadActual?: string
   totalAlumnos?: number
 }
 
@@ -614,7 +615,7 @@ function MyPlanningColumn({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", totalAlumnos = 0 }: DayPlanningProps) {
+export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0 }: DayPlanningProps) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
 
@@ -639,10 +640,11 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", totalAlumnos 
       const res = await fetch("/api/brain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          evaluaciones, 
+body: JSON.stringify({
+          evaluaciones,
           ejeActual,
-          stats 
+          actividadActual,
+          stats
         }),
       })
       const data = await res.json()
@@ -659,7 +661,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", totalAlumnos 
     } finally {
       setIsBrainLoading(false)
     }
-  }, [evaluaciones, ejeActual, stats])
+  }, [evaluaciones, ejeActual, actividadActual, stats])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

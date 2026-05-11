@@ -259,6 +259,15 @@ export default function ALBADashboard() {
   
   // Eje actual seleccionado en el HeatMap (para conectar con DayPlanning)
   const [ejeActual, setEjeActual] = useState<string>("CF")
+  
+  // Actividad actual que esta evaluando el docente
+  const [actividadActual, setActividadActual] = useState<string>("Reconocimiento de Sonido Inicial /M/")
+  
+  // Callback cuando el docente cambia la actividad del dia
+  const handleActividadChange = useCallback((actividad: string, eje: string) => {
+    setActividadActual(actividad)
+    setEjeActual(eje)
+  }, [])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -620,9 +629,9 @@ export default function ALBADashboard() {
 
   // Callback cuando se evalua un alumno en HeatMap
   // Actualiza el progreso en tiempo real y guarda en Supabase
-  const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string) => {
-    // Determinar el eje segun la actividad
-    const eje = ACTIVIDAD_EJE_MAP[actividadDelDia] || "CF"
+  // Ahora recibe el eje directamente desde HeatMap junto con la actividad
+  const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string, eje: string = "CF") => {
+    // El eje ahora viene directamente del HeatMap (ya no necesitamos el map)
     
     // Actualizar estado local inmediatamente (optimistic update)
     setEvaluaciones(prev => ({ ...prev, [studentId]: status }))
@@ -965,6 +974,7 @@ export default function ALBADashboard() {
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
                     onEjeChange={setEjeActual}
+                    onActividadChange={handleActividadChange}
                     isLoading={isLoading}
                   />
                 </div>
@@ -972,6 +982,7 @@ export default function ALBADashboard() {
                   <DayPlanning 
                     evaluaciones={evaluaciones}
                     ejeActual={ejeActual}
+                    actividadActual={actividadActual}
                     totalAlumnos={students.length}
                   />
                 </div>

@@ -421,7 +421,7 @@ function generarActividadSecuencia(
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { ejeActual = "CF", stats = { green: 0, yellow: 0, red: 0 } } = body
+    const { ejeActual = "CF", actividadActual = "", stats = { green: 0, yellow: 0, red: 0 } } = body
 
     // Obtener historial COMPLETO de Supabase
     const historial = await obtenerHistorialSeguimiento()
@@ -445,7 +445,7 @@ export async function POST(request: Request) {
       ? Math.round((promedioHistorico * 0.6) + (promedioHoy * 0.4))
       : promedioHistorico
 
-    // Logica de decision
+    // Logica de decision basada en evaluacion del docente
     if (promedioCombinado >= 70 && tendencia !== "bajando") {
       // Buen promedio y no esta bajando -> AVANZAR
       decision = "avanzar"
@@ -462,11 +462,43 @@ export async function POST(request: Request) {
       decision = "repetir" // Un mal dia no debe hacernos retroceder si el historico es bueno
     }
 
-    // Generar sugerencia con IA incluyendo promedios
+    // Verificar si la actividad del docente coincide con la secuencia
+    // Si tuvo buenos resultados, considerar integrarla
+    const secuencia = SECUENCIA_ANUAL[ejeActual as "CF" | "CT" | "O"]
+    const actividadEnSecuencia = secuencia?.actividades.find(a => 
+      actividadActual.toLowerCase().includes(a.titulo.toLowerCase().split(":")[0]) ||
+      a.titulo.toLowerCase().includes(actividadActual.toLowerCase().split(" ")[0])
+    )
+    
+    let actividadFueExitosa = false
+    let mensajeActividad = ""
+    
+    if (actividadActual && totalHoy > 0) {
+      if (promedioHoy >= 70) {
+        actividadFueExitosa = true
+        mensajeActividad = `La actividad "${actividadActual}" tuvo excelentes resultados (${promedioHoy}% logro). `
+        if (actividadEnSecuencia) {
+          mensajeActividad += `Esta alineada con la semana ${actividadEnSecuencia.semana} de la secuencia ALBA.`
+        } else {
+          mensajeActividad += `ALBA la incorporara como actividad efectiva para este eje.`
+        }
+      } else if (promedioHoy >= 50) {
+        mensajeActividad = `La actividad "${actividadActual}" tuvo resultados moderados (${promedioHoy}%). Se sugiere repetir con adaptaciones.`
+      } else {
+        mensajeActividad = `La actividad "${actividadActual}" necesita ajustes (${promedioHoy}%). ALBA sugiere una actividad diferente.`
+      }
+    }
+
+    // Generar sugerencia con IA incluyendo la actividad del docente
     const sugerenciaIA = await generarSugerenciaConIA(historial, ejeActual, stats)
+    
+    // Combinar mensaje de actividad con sugerencia de IA
+    const razonFinal = mensajeActividad 
+      ? (sugerenciaIA ? `${mensajeActividad} ${sugerenciaIA}` : mensajeActividad)
+      : sugerenciaIA
 
     // Generar actividad basada en la secuencia curricular
-    const activity = generarActividadSecuencia(ejeActual, semanaActual, decision, sugerenciaIA)
+    const activity = generarActividadSecuencia(ejeActual, semanaActual, decision, razonFinal || undefined)
 
     return NextResponse.json({ 
       activity,
@@ -479,6 +511,8 @@ export async function POST(request: Request) {
         promedioCombinado,
         diasEvaluados: historial.diasEvaluados[ejeActual],
         decision,
+        actividadDocente: actividadActual,
+        actividadFueExitosa,
       }
     })
   } catch (err) {
