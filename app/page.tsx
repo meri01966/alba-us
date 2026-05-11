@@ -1096,7 +1096,6 @@ export default function ALBADashboard() {
                   actividadDelDia={ACTIVIDAD_DEL_DIA} 
                 />
 <AlertsPanel
-                  progress={progress}
                   students={students}
                   evaluaciones={evaluaciones}
                 />

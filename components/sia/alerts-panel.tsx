@@ -16,108 +16,79 @@ interface Alert {
 type StatusLevel = "green" | "yellow" | "red"
 
 interface AlertsPanelProps {
-  progress?: Record<string, { CF: number; CT: number; O: number }>
   students?: { id: string; nombre: string }[]
   evaluaciones?: Record<string, StatusLevel>
 }
 
-// Genera alertas basadas en el progreso real
+// Genera alertas basadas SOLO en evaluaciones reales (no datos por defecto)
 function generarAlertas(
-  progress: Record<string, { CF: number; CT: number; O: number }>,
+  evaluaciones: Record<string, StatusLevel>,
   students: { id: string; nombre: string }[]
 ): Alert[] {
   const alertas: Alert[] = []
   
-  // Contar alumnos que necesitan refuerzo por eje
-  const necesitanRefuerzoCF: string[] = []
-  const necesitanRefuerzoCT: string[] = []
-  const necesitanRefuerzoO: string[] = []
-  const dosRojosSeguidos: string[] = []
+  // Solo generar alertas si hay evaluaciones reales
+  const alumnosEvaluados = Object.keys(evaluaciones)
+  if (alumnosEvaluados.length === 0) {
+    return [] // Sin evaluaciones = sin alertas
+  }
+  
+  // Contar alumnos que necesitan refuerzo (solo los que fueron evaluados HOY como rojo)
+  const necesitanRefuerzo: string[] = []
   
   students.forEach(s => {
-    const p = progress[s.id]
-    if (!p) return
-    
-    if (p.CF < 40) necesitanRefuerzoCF.push(s.nombre)
-    if (p.CT < 40) necesitanRefuerzoCT.push(s.nombre)
-    if (p.O < 40) necesitanRefuerzoO.push(s.nombre)
-    
-    // Si tiene 2 o mas ejes en rojo
-    const ejesEnRojo = [p.CF, p.CT, p.O].filter(v => v < 40).length
-    if (ejesEnRojo >= 2) dosRojosSeguidos.push(s.nombre)
+    const evaluacion = evaluaciones[s.id]
+    // Solo considerar si tiene evaluacion real (no undefined)
+    if (evaluacion === "red") {
+      necesitanRefuerzo.push(s.nombre)
+    }
   })
   
-  // Alerta por grupo en CF - muestra nombres
-  if (necesitanRefuerzoCF.length >= 1) {
-    const nombres = necesitanRefuerzoCF.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoCF.length > 4 ? ` y ${necesitanRefuerzoCF.length - 4} mas` : ""
+  // Alerta solo si hay alumnos evaluados en rojo
+  if (necesitanRefuerzo.length >= 1) {
+    const nombres = necesitanRefuerzo.slice(0, 4).join(", ")
+    const yMas = necesitanRefuerzo.length > 4 ? ` y ${necesitanRefuerzo.length - 4} mas` : ""
     alertas.push({
-      id: "cf-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCF.length > 1 ? "n" : ""} refuerzo en Conciencia Fonologica`,
-      tipo: "atencion",
-      sugerencia: "Considera hacer grupos pequenos para trabajar rimas y sonidos iniciales. Usa juegos de aplaudir silabas.",
-      alumnos: necesitanRefuerzoCF
+      id: "refuerzo-hoy",
+      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzo.length > 1 ? "n" : ""} refuerzo adicional hoy`,
+      tipo: necesitanRefuerzo.length >= 3 ? "urgente" : "atencion",
+      sugerencia: "Considera hacer una actividad de refuerzo en grupo pequeno o acompanamiento individual en la proxima clase.",
+      alumnos: necesitanRefuerzo
     })
   }
   
-  // Alerta por grupo en CT - muestra nombres
-  if (necesitanRefuerzoCT.length >= 1) {
-    const nombres = necesitanRefuerzoCT.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoCT.length > 4 ? ` y ${necesitanRefuerzoCT.length - 4} mas` : ""
-    alertas.push({
-      id: "ct-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoCT.length > 1 ? "n" : ""} refuerzo en Conocimiento de Textos`,
-      tipo: "atencion",
-      sugerencia: "Lee cuentos en voz alta y haz preguntas sobre la historia. Usa imagenes para que anticipen que pasara.",
-      alumnos: necesitanRefuerzoCT
-    })
-  }
+  // Alerta si hay muchos en proceso (amarillo)
+  const enProceso: string[] = []
+  students.forEach(s => {
+    if (evaluaciones[s.id] === "yellow") {
+      enProceso.push(s.nombre)
+    }
+  })
   
-  // Alerta por grupo en O - muestra nombres
-  if (necesitanRefuerzoO.length >= 1) {
-    const nombres = necesitanRefuerzoO.slice(0, 4).join(", ")
-    const yMas = necesitanRefuerzoO.length > 4 ? ` y ${necesitanRefuerzoO.length - 4} mas` : ""
+  if (enProceso.length >= 3) {
     alertas.push({
-      id: "o-grupo",
-      mensaje: `${nombres}${yMas} necesita${necesitanRefuerzoO.length > 1 ? "n" : ""} mas oportunidades de expresion oral`,
+      id: "en-proceso-grupo",
+      mensaje: `${enProceso.length} alumnos en proceso - considera repetir la actividad`,
       tipo: "atencion",
-      sugerencia: "Incluye rondas de conversacion donde cada nino cuente algo. Haz preguntas abiertas durante las actividades.",
-      alumnos: necesitanRefuerzoO
-    })
-  }
-  
-  // Alerta urgente por alumnos con multiples ejes en rojo - muestra nombres
-  if (dosRojosSeguidos.length > 0) {
-    alertas.push({
-      id: "multiples-rojos",
-      mensaje: `${dosRojosSeguidos.join(", ")} necesita${dosRojosSeguidos.length > 1 ? "n" : ""} atencion especial (varios ejes)`,
-      tipo: "urgente",
-      sugerencia: "Estos ninos requieren acompanamiento individualizado. Considera hablar con la familia y planificar actividades especificas.",
-      alumnos: dosRojosSeguidos
+      sugerencia: "Un grupo considerable esta en proceso. Puede ser util repetir la actividad con variaciones o trabajar en grupos mas pequenos.",
+      alumnos: enProceso
     })
   }
   
   return alertas
 }
 
-export function AlertsPanel({ progress = {}, students = [], evaluaciones = {} }: AlertsPanelProps) {
+export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelProps) {
   const [sugerenciaAbierta, setSugerenciaAbierta] = useState<string | null>(null)
   const [alertasResueltas, setAlertasResueltas] = useState<string[]>([])
   
-  // Combinar progress con evaluaciones del dia (evaluaciones tienen prioridad)
-  const progressConEvaluaciones = { ...progress }
-  Object.entries(evaluaciones).forEach(([studentId, status]) => {
-    // Convertir semaforo a porcentaje: red=10, yellow=50, green=100
-    const valorCF = status === "green" ? 100 : status === "yellow" ? 50 : 10
-    progressConEvaluaciones[studentId] = {
-      CF: valorCF,
-      CT: progress[studentId]?.CT || 50,
-      O: progress[studentId]?.O || 50,
-    }
-  })
-  
-  const alertas = generarAlertas(progressConEvaluaciones, students)
+  // Generar alertas basadas SOLO en evaluaciones reales del dia
+  // Las alertas se actualizan automaticamente cuando evaluaciones cambia (incluyendo cancelaciones)
+  const alertas = generarAlertas(evaluaciones, students)
   const alertasVisibles = alertas.filter(a => !alertasResueltas.includes(a.id))
+  
+  // Contar evaluaciones reales
+  const totalEvaluados = Object.keys(evaluaciones).length
   
   const marcarResuelta = (id: string) => {
     setAlertasResueltas(prev => [...prev, id])
@@ -140,9 +111,21 @@ export function AlertsPanel({ progress = {}, students = [], evaluaciones = {} }:
       <CardContent className="pt-0">
         {alertasVisibles.length === 0 ? (
           <div className="text-center py-6 text-slate-500">
-            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
-            <p className="text-sm">Sin alertas por ahora</p>
-            <p className="text-xs mt-1">El grupo avanza bien</p>
+            {totalEvaluados === 0 ? (
+              <>
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-slate-300" />
+                </div>
+                <p className="text-sm text-slate-400">Sin datos evaluados</p>
+                <p className="text-xs mt-1 text-slate-300">Las alertas apareceran cuando evalues alumnos</p>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p className="text-sm">Sin alertas por ahora</p>
+                <p className="text-xs mt-1">El grupo avanza bien ({totalEvaluados} evaluados)</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
