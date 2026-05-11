@@ -772,11 +772,13 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             </div>
             
 <p className="text-xs text-blue-600 mt-4 text-center italic">
-  Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
-  </p>
-  </div>
+              Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
+            </p>
+          </div>
             </>
           )}
         </div>
+      )}
+    </div>
   )
 }
