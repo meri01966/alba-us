@@ -16,7 +16,7 @@ export async function GET() {
 
   try {
     const client = createClient(url, key)
-    const { data, error } = await client.from("alumnos").select("count").single()
+    const { data, error } = await client.from("alumnos").select("id, nombre, apellido").limit(10)
 
     if (error) {
       return NextResponse.json({
@@ -30,6 +30,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       mensaje: "Conexion exitosa con Supabase",
+      total_alumnos: data?.length || 0,
       alumnos: data,
     })
   } catch (err: unknown) {
