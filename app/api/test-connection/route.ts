@@ -16,7 +16,7 @@ export async function GET() {
 
   try {
     const client = createClient(url, key)
-    const { data, error } = await client.from("alumnos").select("id, nombre, apellido").limit(10)
+    const { data, error } = await client.from("alumnos").select("*").limit(10)
 
     if (error) {
       return NextResponse.json({
