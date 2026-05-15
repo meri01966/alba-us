@@ -26,6 +26,7 @@ interface DayPlanningProps {
   ejeActual?: string
   actividadActual?: string
   totalAlumnos?: number
+  sala?: string
   onActividadALBA?: (actividad: string) => void
   onEjeALBA?: (eje: string) => void
 }
@@ -642,7 +643,7 @@ function MyPlanningColumn({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, onActividadALBA, onEjeALBA }: DayPlanningProps) {
+export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA }: DayPlanningProps) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
 
@@ -664,16 +665,17 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-      const res = await fetch("/api/brain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-body: JSON.stringify({
-          evaluaciones,
-          ejeActual,
-          actividadActual,
-          stats
-        }),
-      })
+const res = await fetch("/api/brain", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+  evaluaciones,
+  ejeActual,
+  actividadActual,
+  stats,
+  sala
+  }),
+  })
       const data = await res.json()
       setBrain(data.activity ?? null)
       // Notificar la actividad y eje sugeridos por ALBA al componente padre
@@ -684,10 +686,10 @@ body: JSON.stringify({
         onEjeALBA(data.activity.ejeRecomendado)
       }
     } catch {
-      // Fallback a GET si POST falla
-      try {
-        const res  = await fetch("/api/brain")
-        const data = await res.json()
+// Fallback a GET si POST falla
+  try {
+  const res  = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
+  const data = await res.json()
         setBrain(data.activity ?? null)
       } catch {
         setBrain(null)
@@ -695,7 +697,7 @@ body: JSON.stringify({
     } finally {
       setIsBrainLoading(false)
     }
-  }, [evaluaciones, ejeActual, actividadActual, stats, onActividadALBA, onEjeALBA])
+  }, [evaluaciones, ejeActual, actividadActual, stats, sala, onActividadALBA, onEjeALBA])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

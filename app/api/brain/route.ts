@@ -22,6 +22,28 @@ export interface BrainActivity {
   razon?: string
 }
 
+// ── Configuracion de Salas por Edad ────────────────────────────────────────
+// Salas de 5 años: secuencia CF → O → CT (semanal)
+// Salas de 4 años: secuencia O → CF → CT (priorizando oralidad)
+interface SalaConfig {
+  edad: 4 | 5
+  secuenciaEjes: Array<"CF" | "O" | "CT">
+  descripcion: string
+}
+
+const SALAS_CONFIG: Record<string, SalaConfig> = {
+  "Manzanos": { edad: 5, secuenciaEjes: ["CF", "O", "CT"], descripcion: "Sala de 5 años - TM" },
+  "Girasoles": { edad: 5, secuenciaEjes: ["CF", "O", "CT"], descripcion: "Sala de 5 años - TM" },
+  "Alamos": { edad: 5, secuenciaEjes: ["CF", "O", "CT"], descripcion: "Sala de 5 años - TT" },
+  "Nogales TM": { edad: 4, secuenciaEjes: ["O", "CF", "CT"], descripcion: "Sala de 4 años - TM" },
+  "Nogales TT": { edad: 4, secuenciaEjes: ["O", "CF", "CT"], descripcion: "Sala de 4 años - TT" },
+}
+
+// Obtener configuracion de sala (default a 5 años si no existe)
+function getSalaConfig(sala: string): SalaConfig {
+  return SALAS_CONFIG[sala] || { edad: 5, secuenciaEjes: ["CF", "O", "CT"], descripcion: "Sala por defecto" }
+}
+
 interface SecuenciaActividad {
   semana: number
   titulo: string
@@ -167,30 +189,35 @@ function generarDescripcionActividad(eje: string, semana: number): string {
 }
 
 // ── Consultar registros de cierre para calcular progreso real ──────────────
-async function obtenerProgresoSecuencia(): Promise<{
+async function obtenerProgresoSecuencia(sala: string): Promise<{
   totalClasesCompletadas: number
   semanaActual: number
   claseDeLaSemana: number // 1, 2 o 3
   ejeParaHoy: "CF" | "CT" | "O"
   clasesCompletadasPorEje: Record<string, number>
   ultimaFechaClase: string | null
+  salaConfig: SalaConfig
 }> {
+  const salaConfig = getSalaConfig(sala)
+  
   const resultado = {
     totalClasesCompletadas: 0,
     semanaActual: 1,
     claseDeLaSemana: 1,
-    ejeParaHoy: "CF" as "CF" | "CT" | "O",
+    ejeParaHoy: salaConfig.secuenciaEjes[0] as "CF" | "CT" | "O",
     clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 },
     ultimaFechaClase: null as string | null,
+    salaConfig,
   }
 
   if (!supabase) return resultado
 
   try {
-    // Contar registros de cierre completados
+    // Contar registros de cierre completados PARA ESTA SALA
     const { data: cierres, error } = await supabase
       .from("registros_cierre")
-      .select("id, eje, fecha, evaluacion_general")
+      .select("id, eje, fecha, evaluacion_general, sala")
+      .eq("sala", sala)
       .order("fecha", { ascending: true })
 
     if (error || !cierres) return resultado
@@ -209,17 +236,17 @@ async function obtenerProgresoSecuencia(): Promise<{
     }
 
     // Calcular semana actual: cada 3 clases = 1 semana
-    // Semana 1: clases 1,2,3 | Semana 2: clases 4,5,6 | etc.
     resultado.semanaActual = Math.floor(resultado.totalClasesCompletadas / 3) + 1
     resultado.semanaActual = Math.min(25, resultado.semanaActual)
 
     // Calcular clase dentro de la semana (1, 2 o 3)
     resultado.claseDeLaSemana = (resultado.totalClasesCompletadas % 3) + 1
 
-    // Determinar eje para hoy: rotacion CF -> CT -> O
-    // Clase 1 de semana = CF, Clase 2 = CT, Clase 3 = O
-    const ejesRotacion: Array<"CF" | "CT" | "O"> = ["CF", "CT", "O"]
-    resultado.ejeParaHoy = ejesRotacion[(resultado.totalClasesCompletadas) % 3]
+    // Determinar eje para hoy segun la secuencia de la sala (por edad)
+    // Salas de 5 años: CF → O → CT
+    // Salas de 4 años: O → CF → CT
+    const secuenciaEjes = salaConfig.secuenciaEjes
+    resultado.ejeParaHoy = secuenciaEjes[(resultado.totalClasesCompletadas) % 3]
 
     return resultado
   } catch (err) {
@@ -565,10 +592,13 @@ function generarActividadSecuencia(
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { ejeActual, actividadActual = "", stats = { green: 0, yellow: 0, red: 0 } } = body
+    const { ejeActual, actividadActual = "", stats = { green: 0, yellow: 0, red: 0 }, sala = "Girasoles" } = body
 
-    // Obtener progreso REAL de la secuencia basado en registros de cierre
-    const progreso = await obtenerProgresoSecuencia()
+    // Obtener configuracion de la sala (edad y secuencia de ejes)
+    const salaConfig = getSalaConfig(sala)
+    
+    // Obtener progreso REAL de la secuencia basado en registros de cierre DE ESTA SALA
+    const progreso = await obtenerProgresoSecuencia(sala)
     
     // Obtener feedback de cierres anteriores para retroalimentar sugerencias
     const feedbackCierres = await obtenerFeedbackCierres()
@@ -576,8 +606,8 @@ export async function POST(request: Request) {
     // El eje a usar: ALBA decide basado en progreso y feedback
     const ejeParaActividad = progreso.ejeParaHoy
     
-    // Obtener historial de evaluaciones
-    const historial = await obtenerHistorialSeguimiento()
+    // Obtener historial de evaluaciones DE ESTA SALA
+    const historial = await obtenerHistorialSeguimiento(sala)
     const datosEje = historial.porEje[ejeParaActividad as "CF" | "CT" | "O"]
     const promedioHistorico = datosEje?.promedio || 0
     const tendencia = historial.tendencia[ejeParaActividad]
@@ -665,11 +695,15 @@ export async function POST(request: Request) {
     // Generar actividad basada en la secuencia curricular
     const activity = generarActividadSecuencia(ejeParaActividad, semanaReal, decision, razonFinal || undefined)
 
-    // Agregar info de clase semanal a la actividad
+    // Agregar info de clase semanal y sala a la actividad
     const activityConInfo = {
       ...activity,
       claseNumero: progreso.totalClasesCompletadas + 1,
       claseDeLaSemana: progreso.claseDeLaSemana,
+      sala,
+      edadSala: salaConfig.edad,
+      secuenciaEjes: salaConfig.secuenciaEjes,
+      descripcionSala: salaConfig.descripcion,
       ejeRecomendado: progreso.ejeParaHoy,
     }
 
@@ -707,11 +741,18 @@ export async function POST(request: Request) {
 }
 
 // ── GET: Actividad por defecto basada en progreso real ─────────────────────
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Obtener progreso REAL de la secuencia
-    const progreso = await obtenerProgresoSecuencia()
-    const historial = await obtenerHistorialSeguimiento()
+    // Obtener sala del query param
+    const { searchParams } = new URL(request.url)
+    const sala = searchParams.get("sala") || "Girasoles"
+    
+    // Obtener configuracion de la sala (edad y secuencia)
+    const salaConfig = getSalaConfig(sala)
+    
+    // Obtener progreso REAL de la secuencia PARA ESTA SALA
+    const progreso = await obtenerProgresoSecuencia(sala)
+    const historial = await obtenerHistorialSeguimiento(sala)
     
     // Analizar promedios de todos los ejes
     const promediosPorEje = {
@@ -757,12 +798,16 @@ export async function GET() {
     
     const activity = generarActividadSecuencia(ejeRecomendado, semanaDelEje, "repetir", razon)
     
-    // Agregar info de progreso
+    // Agregar info de progreso y sala
     const activityConInfo = {
       ...activity,
       claseNumero: progreso.totalClasesCompletadas + 1,
       claseDeLaSemana: progreso.claseDeLaSemana,
       ejeRecomendado: ejeRecomendado,
+      sala,
+      edadSala: salaConfig.edad,
+      secuenciaEjes: salaConfig.secuenciaEjes,
+      descripcionSala: salaConfig.descripcion,
     }
 
     return NextResponse.json({ 

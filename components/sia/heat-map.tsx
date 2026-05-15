@@ -19,6 +19,7 @@ export interface RegistroCierre {
   actividadALBA: string
   actividadDocente: string
   eje: string
+  sala: string
   evaluacionGeneral: "excelente" | "buena" | "regular" | "necesita_mejora"
   observaciones: string
   sugerenciaParaIA: string
@@ -41,6 +42,7 @@ interface HeatMapProps {
   onRegistroCierre?: (registro: RegistroCierre) => void
   actividadSugeridaALBA?: string
   ejeDeALBA?: string // Eje decidido por ALBA
+  sala?: string // Sala actual para el registro de cierre
   isLoading?: boolean
 }
 
@@ -173,7 +175,7 @@ function StudentRow({
   )
 }
 
-export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onRegistroCierre, actividadSugeridaALBA = "", ejeDeALBA = "CF", isLoading = false }: HeatMapProps) {
+export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClearEvaluacion, onClearAllEvaluaciones, onRegistroCierre, actividadSugeridaALBA = "", ejeDeALBA = "CF", sala = "Girasoles", isLoading = false }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
   
   // El eje viene de ALBA (no se selecciona manualmente)
@@ -214,6 +216,7 @@ export function HeatMap({ students = [], evaluaciones = {}, onEvaluacion, onClea
       actividadALBA: actividadDelDia,
       actividadDocente: actividadDelDia, // Siempre igual a ALBA
       eje: selectedEje,
+      sala: sala, // Incluir la sala para el registro
       evaluacionGeneral: cierreEvaluacion,
       observaciones: cierreObservaciones,
       sugerenciaParaIA: cierreSugerencia,

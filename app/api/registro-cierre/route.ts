@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       actividadALBA,
       actividadDocente,
       eje,
+      sala = "Girasoles",
       evaluacionGeneral,
       observaciones,
       sugerenciaParaIA,
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       actividad_alba: actividadALBA,
       actividad_docente: actividadDocente,
       eje,
+      sala, // Sala para filtrar registros por grupo
       evaluacion_general: evaluacionGeneral,
       observaciones,
       sugerencia_ia: sugerenciaParaIA,

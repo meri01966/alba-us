@@ -1006,6 +1006,7 @@ export default function ALBADashboard() {
                     onRegistroCierre={handleRegistroCierre}
                     actividadSugeridaALBA={actividadSugeridaALBA}
                     ejeDeALBA={ejeActual}
+                    sala={salaActual}
                     isLoading={isLoading}
                   />
                 </div>
@@ -1015,6 +1016,7 @@ export default function ALBADashboard() {
                     ejeActual={ejeActual}
                     actividadActual={actividadActual}
                     totalAlumnos={students.length}
+                    sala={salaActual}
                     onActividadALBA={setActividadSugeridaALBA}
                     onEjeALBA={setEjeActual}
                   />
@@ -1022,8 +1024,8 @@ export default function ALBADashboard() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MicroTraining 
-                  ejeDelDia="CF" 
-                  actividadDelDia={ACTIVIDAD_DEL_DIA} 
+                  ejeDelDia={ejeActual} 
+                  actividadDelDia={actividadSugeridaALBA || actividadActual} 
                 />
 <AlertsPanel
                   students={students}
