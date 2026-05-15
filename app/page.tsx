@@ -361,7 +361,7 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM"]
+const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT"]
 
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
