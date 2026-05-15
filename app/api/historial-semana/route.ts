@@ -10,18 +10,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const sala = searchParams.get("sala") || "Girasoles"
     const desde = searchParams.get("desde")
+    const hasta = searchParams.get("hasta")
     
     if (!desde) {
       return NextResponse.json({ error: "Falta parametro desde" }, { status: 400 })
     }
     
-    // Obtener registros de cierre de la semana para esta sala
-    const { data: registros, error } = await supabase
+    // Obtener registros de cierre para esta sala en el rango de fechas
+    let query = supabase
       .from("registros_cierre")
       .select("fecha, eje, actividad_docente, actividad_alba, evaluacion_general")
       .eq("sala", sala)
       .gte("fecha", desde)
-      .order("fecha", { ascending: true })
+    
+    if (hasta) {
+      query = query.lte("fecha", hasta)
+    }
+    
+    const { data: registros, error } = await query.order("fecha", { ascending: true })
     
     if (error) {
       console.error("Error obteniendo historial:", error)

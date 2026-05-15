@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { Header, type DiaActividad } from "@/components/sia/header"
+import { Header } from "@/components/sia/header"
 import { HeatMap, type RegistroCierre } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
@@ -396,37 +396,56 @@ export default function ALBADashboard() {
   // Actividad sugerida por ALBA (para comparar en el cierre)
   const [actividadSugeridaALBA, setActividadSugeridaALBA] = useState<string>("")
   
-  // Historial de la semana para el calendario
-  const [historialSemana, setHistorialSemana] = useState<Array<{
+  // Historial del mes para el calendario completo
+  const [historialMes, setHistorialMes] = useState<Array<{
     fecha: string
     eje: "CF" | "CT" | "O" | null
-    actividad: string | null
+    actividadDocente: string | null
+    actividadALBA: string | null
     completado: boolean
   }>>([])
   
-  // Cargar historial de la semana al cambiar de sala
-  const fetchHistorialSemana = useCallback(async () => {
+  // Cargar historial del mes al cambiar de sala
+  const fetchHistorialMes = useCallback(async () => {
     try {
       const hoy = new Date()
-      const diaActual = hoy.getDay()
-      const inicio = new Date(hoy)
-      inicio.setDate(hoy.getDate() - (diaActual === 0 ? 6 : diaActual - 1))
+      // Cargar desde hace 2 meses hasta 1 mes adelante
+      const inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1)
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0)
       
-      const res = await fetch(`/api/historial-semana?sala=${encodeURIComponent(salaActual)}&desde=${inicio.toISOString().split("T")[0]}`)
+      const res = await fetch(`/api/historial-semana?sala=${encodeURIComponent(salaActual)}&desde=${inicio.toISOString().split("T")[0]}&hasta=${fin.toISOString().split("T")[0]}`)
       const data = await res.json()
       
       if (data.registros) {
-        setHistorialSemana(data.registros.map((r: { fecha: string; eje: string; actividad_docente: string }) => ({
+        setHistorialMes(data.registros.map((r: { fecha: string; eje: string; actividad_docente: string; actividad_alba: string }) => ({
           fecha: r.fecha.split("T")[0],
           eje: r.eje as "CF" | "CT" | "O",
-          actividad: r.actividad_docente,
+          actividadDocente: r.actividad_docente,
+          actividadALBA: r.actividad_alba,
           completado: true,
         })))
       }
     } catch (err) {
-      console.error("Error cargando historial semana:", err)
+      console.error("Error cargando historial mes:", err)
     }
   }, [salaActual])
+  
+  // Agregar actividad planificada por el docente
+  const handleAgregarActividad = useCallback(async (fecha: string, actividad: string, eje: string) => {
+    try {
+      const res = await fetch("/api/actividad-planificada", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fecha, actividad, eje, sala: salaActual }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchHistorialMes() // Recargar calendario
+      }
+    } catch (err) {
+      console.error("Error agregando actividad:", err)
+    }
+  }, [salaActual, fetchHistorialMes])
   
   // Callback cuando el docente cambia la actividad del dia
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
@@ -446,13 +465,13 @@ export default function ALBADashboard() {
       const data = await response.json()
       
       if (data.success) {
-        // Recargar historial de la semana para actualizar el calendario
-        fetchHistorialSemana()
+        // Recargar historial del mes para actualizar el calendario
+        fetchHistorialMes()
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
     }
-  }, [fetchHistorialSemana])
+  }, [fetchHistorialMes])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -538,8 +557,8 @@ export default function ALBADashboard() {
 
 useEffect(() => {
   fetchProgreso()
-  fetchHistorialSemana()
-  }, [fetchProgreso, fetchHistorialSemana])
+  fetchHistorialMes()
+  }, [fetchProgreso, fetchHistorialMes])
 
   const handleNavigate = (view: ViewType) => {
     setActiveView(view)
@@ -798,7 +817,7 @@ useEffect(() => {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -826,7 +845,7 @@ useEffect(() => {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
         <SalaMap
           students={students}
           progress={progress}
@@ -854,7 +873,7 @@ useEffect(() => {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={student?.nombre}
@@ -878,7 +897,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
