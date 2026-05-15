@@ -27,13 +27,15 @@ const ACTIVIDAD_EJE_MAP: Record<string, "CF" | "CT" | "O"> = {
 }
 
 // Traduccion de color a porcentaje de avance
-function statusToProgress(status: StatusLevel): number {
+// IMPORTANTE: Los no marcados = verde (100%) por defecto
+// Solo azul (ausente) = 0, porque no participo
+function statusToProgress(status: StatusLevel | undefined): number {
   switch (status) {
-    case "blue": return 0     // Presente (solo asistencia, no evalua)
+    case "blue": return 0     // Ausente - no participo
     case "green": return 100  // Logrado
     case "yellow": return 50  // En proceso
     case "red": return 10     // Requiere apoyo
-    default: return 0
+    default: return 100       // No marcado = logrado (verde por defecto)
   }
 }
 
@@ -704,8 +706,9 @@ useEffect(() => {
     setEvaluaciones(prev => ({ ...prev, [studentId]: status }))
     
     // Actualizar progreso en tiempo real
+    // Los no marcados empiezan en 100 (verde), solo se actualiza si hay evaluacion explicita
     setProgress(prev => {
-      const current = prev[studentId] || { CF: 0, CT: 0, O: 0 }
+      const current = prev[studentId] || { CF: 100, CT: 100, O: 100 } // Default verde
       const newProgress = statusToProgress(status)
       return {
         ...prev,
@@ -854,7 +857,7 @@ useEffect(() => {
 
   if (activeView === "perfil" && selectedStudent) {
     const student = students.find(s => s.id === selectedStudent)
-    const studentProgress = progress[selectedStudent] || { CF: 0, CT: 0, O: 0 }
+    const studentProgress = progress[selectedStudent] || { CF: 100, CT: 100, O: 100 } // Default verde
     
     return (
       <div className="min-h-screen bg-background">

@@ -133,9 +133,10 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // Agrupar SOLO por evaluacion del dia (semaforo) - sin fallback a progreso historico
+  // SEMAFORO INTELIGENTE: Los no marcados = Logrado (verde)
+  // Solo amarillo, rojo y azul son evaluaciones explicitas
   const grupos: { label: string; color: string; bgLight: string; alumnos: Student[] }[] = [
-    { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", alumnos: [] },
+    { label: "Ausente",           color: "#6366f1", bgLight: "#e0e7ff", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", alumnos: [] },
     { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", alumnos: [] },
     { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", alumnos: [] },
@@ -144,22 +145,22 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   students.forEach((s) => {
     const evalHoy = evaluaciones[s.id]
     
-    // Agrupar SOLO por evaluacion del dia
-    if (evalHoy === "green") {
-      grupos[3].alumnos.push(s)
-    } else if (evalHoy === "yellow") {
-      grupos[2].alumnos.push(s)
+    // IMPORTANTE: Sin marca = verde (logrado por defecto)
+    if (evalHoy === "blue") {
+      grupos[0].alumnos.push(s) // Ausente
     } else if (evalHoy === "red") {
-      grupos[1].alumnos.push(s)
+      grupos[1].alumnos.push(s) // Refuerzo
+    } else if (evalHoy === "yellow") {
+      grupos[2].alumnos.push(s) // En proceso
     } else {
-      // Sin evaluacion del dia = gris
-      grupos[0].alumnos.push(s)
+      // Sin marca O green explícito = Logrado
+      grupos[3].alumnos.push(s)
     }
   })
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
     e.stopPropagation() // Evitar que se abra el perfil
-    const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
+    const p = progress[student.id] || { CF: 100, CT: 100, O: 100 } // Default verde
     const mensaje = generarReporteFamilia(student.nombre, p)
     setReportModal({ student, mensaje })
   }
