@@ -29,7 +29,64 @@ const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> =
   O: { bg: "#dcfce7", text: "#166534", border: "#22c55e" },
 }
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos" }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos", historialSemana = [], onDiaClick }: HeaderProps) {
+  const [selectedDia, setSelectedDia] = useState<DiaActividad | null>(null)
+  const [showCalendar, setShowCalendar] = useState(false)
+
+  // Dias de la semana actual
+  const diasSemana = ["L", "M", "X", "J", "V"]
+  const hoy = new Date()
+  const diaActual = hoy.getDay() // 0=Dom, 1=Lun...
+
+  // Generar dias de la semana con datos
+  const getSemanaConDatos = () => {
+    const inicio = new Date(hoy)
+    inicio.setDate(hoy.getDate() - (diaActual === 0 ? 6 : diaActual - 1))
+    
+    return diasSemana.map((nombre, i) => {
+      const fecha = new Date(inicio)
+      fecha.setDate(inicio.getDate() + i)
+      const fechaStr = fecha.toISOString().split("T")[0]
+      
+      const registro = historialSemana.find(h => h.fecha === fechaStr)
+      const esHoy = fecha.toDateString() === hoy.toDateString()
+      const esPasado = fecha < hoy && !esHoy
+      
+      return {
+        nombre,
+        fecha: fechaStr,
+        diaNum: fecha.getDate(),
+        esHoy,
+        esPasado,
+        eje: registro?.eje || null,
+        actividad: registro?.actividad || null,
+        completado: registro?.completado || false,
+      }
+    })
+  }
+
+  const semana = getSemanaConDatos()
+
+  const handleDiaClick = (dia: typeof semana[0]) => {
+    if (dia.completado) {
+      setSelectedDia({
+        fecha: dia.fecha,
+        eje: dia.eje,
+        actividad: dia.actividad,
+        completado: dia.completado,
+      })
+      setShowCalendar(true)
+    }
+    if (onDiaClick && dia.completado) {
+      onDiaClick({
+        fecha: dia.fecha,
+        eje: dia.eje,
+        actividad: dia.actividad,
+        completado: dia.completado,
+      })
+    }
+  }
+
   return (
     <header className="bg-primary text-primary-foreground shadow-lg">
       <div className="px-4 py-3 sm:px-6">
@@ -99,10 +156,49 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
               </span>
             </div>
 
-            {/* Day counter */}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary-foreground/60" />
-              <span className="font-semibold">Dia 37</span>
+            {/* Calendario semanal interactivo */}
+            <div className="flex items-center gap-1.5">
+              {semana.map((dia) => (
+                <button
+                  key={dia.fecha}
+                  onClick={() => handleDiaClick(dia)}
+                  className="flex flex-col items-center transition-all"
+                  style={{
+                    opacity: dia.completado ? 1 : 0.5,
+                    cursor: dia.completado ? "pointer" : "default",
+                  }}
+                  disabled={!dia.completado}
+                >
+                  <span className="text-[10px] text-primary-foreground/60">{dia.nombre}</span>
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all"
+                    style={{
+                      backgroundColor: dia.completado && dia.eje
+                        ? EJE_COLORS[dia.eje]?.bg || "rgba(156,163,175,0.3)"
+                        : dia.esHoy
+                        ? "rgba(255,255,255,0.2)"
+                        : "rgba(255,255,255,0.05)",
+                      color: dia.completado && dia.eje
+                        ? EJE_COLORS[dia.eje]?.text || "#6b7280"
+                        : dia.esHoy
+                        ? "#fff"
+                        : "rgba(255,255,255,0.4)",
+                      border: dia.esHoy
+                        ? "2px solid #D4870E"
+                        : dia.completado && dia.eje
+                        ? `1px solid ${EJE_COLORS[dia.eje]?.border || "#9ca3af"}`
+                        : "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {dia.diaNum}
+                  </div>
+                  {dia.completado && dia.eje && (
+                    <span className="text-[8px] font-semibold mt-0.5" style={{ color: EJE_COLORS[dia.eje]?.border }}>
+                      {dia.eje}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
 
             {/* User */}
@@ -118,6 +214,48 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
           </div>
         </div>
       </div>
+
+      {/* Modal de detalle del dia */}
+      {showCalendar && selectedDia && (
+        <div className="absolute top-20 right-4 z-50 bg-white rounded-xl shadow-2xl border p-4 w-72">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-800">
+              {new Date(selectedDia.fecha + "T12:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "short" })}
+            </h3>
+            <button onClick={() => setShowCalendar(false)} className="p-1 hover:bg-gray-100 rounded">
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+          
+          {selectedDia.eje && (
+            <div 
+              className="rounded-lg p-3 mb-3"
+              style={{ 
+                backgroundColor: EJE_COLORS[selectedDia.eje]?.bg,
+                border: `1px solid ${EJE_COLORS[selectedDia.eje]?.border}`,
+              }}
+            >
+              <span 
+                className="text-xs font-bold uppercase"
+                style={{ color: EJE_COLORS[selectedDia.eje]?.text }}
+              >
+                Eje: {selectedDia.eje === "CF" ? "Conciencia Fonologica" : selectedDia.eje === "CT" ? "Comprension de Textos" : "Oralidad"}
+              </span>
+            </div>
+          )}
+          
+          {selectedDia.actividad && (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <span className="text-xs text-gray-500 uppercase font-semibold">Actividad realizada:</span>
+              <p className="text-sm text-gray-800 font-medium mt-1">{selectedDia.actividad}</p>
+            </div>
+          )}
+          
+          {!selectedDia.actividad && (
+            <p className="text-sm text-gray-400 italic">Sin registro de actividad</p>
+          )}
+        </div>
+      )}
     </header>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { Header } from "@/components/sia/header"
+import { Header, type DiaActividad } from "@/components/sia/header"
 import { HeatMap, type RegistroCierre } from "@/components/sia/heat-map"
 import { DayPlanning } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
@@ -396,6 +396,38 @@ export default function ALBADashboard() {
   // Actividad sugerida por ALBA (para comparar en el cierre)
   const [actividadSugeridaALBA, setActividadSugeridaALBA] = useState<string>("")
   
+  // Historial de la semana para el calendario
+  const [historialSemana, setHistorialSemana] = useState<Array<{
+    fecha: string
+    eje: "CF" | "CT" | "O" | null
+    actividad: string | null
+    completado: boolean
+  }>>([])
+  
+  // Cargar historial de la semana al cambiar de sala
+  const fetchHistorialSemana = useCallback(async () => {
+    try {
+      const hoy = new Date()
+      const diaActual = hoy.getDay()
+      const inicio = new Date(hoy)
+      inicio.setDate(hoy.getDate() - (diaActual === 0 ? 6 : diaActual - 1))
+      
+      const res = await fetch(`/api/historial-semana?sala=${encodeURIComponent(salaActual)}&desde=${inicio.toISOString().split("T")[0]}`)
+      const data = await res.json()
+      
+      if (data.registros) {
+        setHistorialSemana(data.registros.map((r: { fecha: string; eje: string; actividad_docente: string }) => ({
+          fecha: r.fecha.split("T")[0],
+          eje: r.eje as "CF" | "CT" | "O",
+          actividad: r.actividad_docente,
+          completado: true,
+        })))
+      }
+    } catch (err) {
+      console.error("Error cargando historial semana:", err)
+    }
+  }, [salaActual])
+  
   // Callback cuando el docente cambia la actividad del dia
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
@@ -414,13 +446,13 @@ export default function ALBADashboard() {
       const data = await response.json()
       
       if (data.success) {
-        // Mostrar feedback al docente (podria ser un toast)
-        console.log("[v0] Registro de cierre guardado:", data.feedback)
+        // Recargar historial de la semana para actualizar el calendario
+        fetchHistorialSemana()
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
     }
-  }, [])
+  }, [fetchHistorialSemana])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -504,9 +536,10 @@ export default function ALBADashboard() {
     setIsLoading(false)
   }, [salaActual])
 
-  useEffect(() => {
-    fetchProgreso()
-  }, [fetchProgreso])
+useEffect(() => {
+  fetchProgreso()
+  fetchHistorialSemana()
+  }, [fetchProgreso, fetchHistorialSemana])
 
   const handleNavigate = (view: ViewType) => {
     setActiveView(view)
@@ -765,7 +798,7 @@ export default function ALBADashboard() {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -793,7 +826,7 @@ export default function ALBADashboard() {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
         <SalaMap
           students={students}
           progress={progress}
@@ -821,7 +854,7 @@ export default function ALBADashboard() {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={student?.nombre}
@@ -845,7 +878,7 @@ export default function ALBADashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialSemana={historialSemana} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
