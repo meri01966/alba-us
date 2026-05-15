@@ -1,14 +1,32 @@
 "use client"
 
-import { User, Calendar, BookOpen, Database, Home, FileText } from "lucide-react"
+import { useState } from "react"
+import { User, Calendar, BookOpen, Database, Home, FileText, X } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
+
+// Registro de actividad por dia
+export interface DiaActividad {
+  fecha: string
+  eje: "CF" | "CT" | "O" | null
+  actividad: string | null
+  completado: boolean
+}
 
 interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
   salaActual?: string
+  historialSemana?: DiaActividad[]
+  onDiaClick?: (dia: DiaActividad) => void
+}
+
+// Colores por eje
+const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  CF: { bg: "#dbeafe", text: "#1e40af", border: "#3b82f6" },
+  CT: { bg: "#fef3c7", text: "#92400e", border: "#f59e0b" },
+  O: { bg: "#dcfce7", text: "#166534", border: "#22c55e" },
 }
 
 export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos" }: HeaderProps) {
