@@ -152,8 +152,138 @@ const SECUENCIA_CURRICULAR: Record<string, { nombre: string; actividades: Secuen
   },
 }
 
+// ── Secuencia diferenciada para 4 anos ─────────────────────────────────────
+// Salas de 4 anos priorizan actividades mas concretas, ludicas y con mas apoyo visual
+const ADAPTACIONES_4_ANOS: Record<string, Record<number, { titulo: string; objetivo: string; adaptacion: string }>> = {
+  CF: {
+    1: { titulo: "Sonidos del entorno con imagenes", objetivo: "Asociar sonidos a imagenes", adaptacion: "Usar tarjetas grandes con imagenes de la fuente sonora" },
+    2: { titulo: "Rimas con movimiento", objetivo: "Identificar rimas a traves del cuerpo", adaptacion: "Agregar movimientos corporales para cada rima" },
+    3: { titulo: "Silabas con saltos", objetivo: "Separar silabas saltando", adaptacion: "Usar circulos en el piso, un salto por silaba" },
+    4: { titulo: "Sonido /a/ con animales", objetivo: "Identificar /a/ en nombres de animales", adaptacion: "Usar peluches o titeres de animales que empiezan con A" },
+  },
+  CT: {
+    1: { titulo: "Exploracion con manipulables", objetivo: "Explorar el libro fisicamente", adaptacion: "Dejar que toquen, abran, cierren el libro libremente" },
+    2: { titulo: "Predicciones con titeres", objetivo: "Formular hipotesis jugando", adaptacion: "Usar un titere que hace las preguntas" },
+    9: { titulo: "QUIEN con fotos", objetivo: "Identificar personajes con apoyo visual", adaptacion: "Usar fotos impresas de los personajes del cuento" },
+  },
+  O: {
+    1: { titulo: "Escucha con instrumentos", objetivo: "Discriminar sonidos de instrumentos", adaptacion: "Usar instrumentos reales que puedan tocar" },
+    17: { titulo: "Nombrar tocando", objetivo: "Nombrar objetos que pueden tocar", adaptacion: "Caja misteriosa: sacar objeto, nombrarlo, describirlo" },
+    19: { titulo: "Narrar con secuencia visual", objetivo: "Contar usando imagenes ordenadas", adaptacion: "Tarjetas grandes con PRIMERO, LUEGO, DESPUES, AL FINAL" },
+  },
+}
+
+// ── Inteligencia Adaptativa por Sala ───────────────────────────────────────
+interface AnalisisSala {
+  nivelGeneral: "inicial" | "en_desarrollo" | "avanzado"
+  ejeDebil: string | null
+  ejeFuerte: string | null
+  necesitaRefuerzo: boolean
+  recomendacionEspecial: string | null
+  actividadesExitosas: string[]
+  actividadesEvitar: string[]
+}
+
+async function analizarSala(sala: string): Promise<AnalisisSala> {
+  const resultado: AnalisisSala = {
+    nivelGeneral: "en_desarrollo",
+    ejeDebil: null,
+    ejeFuerte: null,
+    necesitaRefuerzo: false,
+    recomendacionEspecial: null,
+    actividadesExitosas: [],
+    actividadesEvitar: [],
+  }
+
+  if (!supabase) return resultado
+
+  try {
+    // Obtener registros de cierre de esta sala
+    const { data: cierres } = await supabase
+      .from("registros_cierre")
+      .select("eje, promedio_logro, actividad_efectiva, actividad_docente, sugerencia_ia, evaluacion_general")
+      .eq("sala", sala)
+      .order("fecha", { ascending: false })
+      .limit(30)
+
+    if (!cierres || cierres.length === 0) return resultado
+
+    // Calcular promedios por eje
+    const promediosPorEje: Record<string, { suma: number; count: number }> = {
+      CF: { suma: 0, count: 0 },
+      CT: { suma: 0, count: 0 },
+      O: { suma: 0, count: 0 },
+    }
+
+    cierres.forEach((c: { eje: string; promedio_logro: number; actividad_efectiva: boolean; actividad_docente: string }) => {
+      if (promediosPorEje[c.eje]) {
+        promediosPorEje[c.eje].suma += c.promedio_logro || 0
+        promediosPorEje[c.eje].count++
+      }
+      
+      // Recopilar actividades exitosas y a evitar
+      if (c.actividad_efectiva && c.promedio_logro >= 60) {
+        if (!resultado.actividadesExitosas.includes(c.actividad_docente)) {
+          resultado.actividadesExitosas.push(c.actividad_docente)
+        }
+      } else if (c.promedio_logro < 40) {
+        if (!resultado.actividadesEvitar.includes(c.actividad_docente)) {
+          resultado.actividadesEvitar.push(c.actividad_docente)
+        }
+      }
+    })
+
+    // Determinar eje debil y fuerte
+    let minPromedio = 100, maxPromedio = 0
+    Object.entries(promediosPorEje).forEach(([eje, data]) => {
+      if (data.count > 0) {
+        const promedio = data.suma / data.count
+        if (promedio < minPromedio) {
+          minPromedio = promedio
+          resultado.ejeDebil = eje
+        }
+        if (promedio > maxPromedio) {
+          maxPromedio = promedio
+          resultado.ejeFuerte = eje
+        }
+      }
+    })
+
+    // Determinar nivel general
+    const promedioGeneral = Object.values(promediosPorEje)
+      .filter(d => d.count > 0)
+      .reduce((acc, d) => acc + d.suma / d.count, 0) / 3
+
+    if (promedioGeneral >= 70) resultado.nivelGeneral = "avanzado"
+    else if (promedioGeneral >= 45) resultado.nivelGeneral = "en_desarrollo"
+    else resultado.nivelGeneral = "inicial"
+
+    // Determinar si necesita refuerzo
+    resultado.necesitaRefuerzo = minPromedio < 40
+
+    // Generar recomendacion especial basada en datos
+    if (resultado.ejeDebil && minPromedio < 40) {
+      const nombreEje = resultado.ejeDebil === "CF" ? "Conciencia Fonologica" :
+                        resultado.ejeDebil === "CT" ? "Comprension de Textos" : "Oralidad"
+      resultado.recomendacionEspecial = `La sala muestra dificultades en ${nombreEje}. Se recomienda dedicar mas tiempo a este eje con actividades mas concretas y ludicas.`
+    }
+
+    return resultado
+  } catch (err) {
+    console.error("[v0] Error analizando sala:", err)
+    return resultado
+  }
+}
+
 // ── Descripcion de actividades detalladas ──────────────────────────────────
-function generarDescripcionActividad(eje: string, semana: number): string {
+function generarDescripcionActividad(eje: string, semana: number, edad?: number): string {
+  // Si es sala de 4 anos, buscar adaptacion primero
+  if (edad === 4) {
+    const adaptacion = ADAPTACIONES_4_ANOS[eje]?.[semana]
+    if (adaptacion) {
+      return `ADAPTACION PARA 4 ANOS:\n${adaptacion.adaptacion}\n\nActividad: ${adaptacion.titulo}\nObjetivo: ${adaptacion.objetivo}`
+    }
+  }
   const descripciones: Record<string, Record<number, string>> = {
     CF: {
       1: "1. Cerrar los ojos y escuchar sonidos del aula.\n2. Identificar cada sonido (puerta, pasos, voces).\n3. Imitar los sonidos escuchados.\n4. Juego: adivinar el sonido con ojos cerrados.\n5. Clasificar sonidos fuertes vs suaves.",
@@ -540,8 +670,9 @@ function generarActividadSecuencia(
   eje: string,
   semana: number,
   decision: "avanzar" | "repetir" | "reforzar",
-  razonIA?: string | null
-): BrainActivity {
+  razonIA?: string | null,
+  edad: number = 5
+  ): BrainActivity {
   const secuencia = SECUENCIA_CURRICULAR[eje]
   if (!secuencia) {
     return {
@@ -573,20 +704,35 @@ function generarActividadSecuencia(
       break
   }
 
-  const actividad = secuencia.actividades[semanaObjetivo - 1]
-
-  return {
-    id: `${eje}-sem${semanaObjetivo}`,
-    dia: semanaObjetivo,
-    semana: semanaObjetivo,
-    titulo: actividad.titulo,
-    descripcion: generarDescripcionActividad(eje, semanaObjetivo),
-    objetivo: actividad.objetivo,
-    source: razonIA ? "alba-ia" : "secuencia",
-    ejeRecomendado: eje,
-    razon: razonIA || razon,
+const actividad = secuencia.actividades[semanaObjetivo - 1]
+  
+  // Si es sala de 4 anos, buscar adaptacion especial
+  let tituloFinal = actividad.titulo
+  let objetivoFinal = actividad.objetivo
+  
+  if (edad === 4) {
+    const adaptacion = ADAPTACIONES_4_ANOS[eje]?.[semanaObjetivo]
+    if (adaptacion) {
+      tituloFinal = `${adaptacion.titulo} (4 anos)`
+      objetivoFinal = adaptacion.objetivo
+    } else {
+      // Agregar indicador de adaptacion requerida
+      tituloFinal = `${actividad.titulo} (adaptar para 4 anos)`
+    }
   }
-}
+  
+  return {
+  id: `${eje}-sem${semanaObjetivo}`,
+  dia: semanaObjetivo,
+  semana: semanaObjetivo,
+  titulo: tituloFinal,
+  descripcion: generarDescripcionActividad(eje, semanaObjetivo, edad),
+  objetivo: objetivoFinal,
+  source: razonIA ? "alba-ia" : "secuencia",
+  ejeRecomendado: eje,
+  razon: razonIA || razon,
+  }
+  }
 
 // ── POST: Analisis inteligente basado en promedio de la sala ───────────────
 export async function POST(request: Request) {
@@ -600,11 +746,23 @@ export async function POST(request: Request) {
     // Obtener progreso REAL de la secuencia basado en registros de cierre DE ESTA SALA
     const progreso = await obtenerProgresoSecuencia(sala)
     
+    // NUEVO: Analisis inteligente de la sala
+    const analisisSala = await analizarSala(sala)
+    
     // Obtener feedback de cierres anteriores para retroalimentar sugerencias
     const feedbackCierres = await obtenerFeedbackCierres()
     
-    // El eje a usar: ALBA decide basado en progreso y feedback
-    const ejeParaActividad = progreso.ejeParaHoy
+    // INTELIGENCIA: Decidir eje basado en analisis
+    // Si la sala tiene un eje muy debil, priorizarlo cada 2 clases
+    let ejeParaActividad = progreso.ejeParaHoy
+    
+    // Si hay un eje debil y el rendimiento es muy bajo, intervenir
+    if (analisisSala.necesitaRefuerzo && analisisSala.ejeDebil) {
+      // Cada 2 clases, insertar refuerzo del eje debil
+      if (progreso.totalClasesCompletadas % 2 === 1) {
+        ejeParaActividad = analisisSala.ejeDebil as "CF" | "CT" | "O"
+      }
+    }
     
     // Obtener historial de evaluaciones DE ESTA SALA
     const historial = await obtenerHistorialSeguimiento(sala)
@@ -690,12 +848,25 @@ export async function POST(request: Request) {
       infoActividadesEfectivas = `Actividades probadas: ${actividadesEfectivas.slice(0, 2).join(", ")}. `
     }
     
-    const razonFinal = infoClaseSemanal + feedbackUltimoCierre + (mensajeActividad || "") + infoActividadesEfectivas + (sugerenciaIA || "")
+    // Incluir analisis inteligente de la sala
+    let infoAnalisisSala = ""
+    if (analisisSala.recomendacionEspecial) {
+      infoAnalisisSala = analisisSala.recomendacionEspecial + " "
+    } else if (analisisSala.nivelGeneral === "avanzado") {
+      infoAnalisisSala = "Sala con buen rendimiento general. "
+    } else if (analisisSala.nivelGeneral === "inicial") {
+      infoAnalisisSala = "Sala requiere actividades mas concretas y ludicas. "
+    }
+    
+    // Indicar si es sala de 4 anos
+    const infoEdad = salaConfig.edad === 4 ? "[Sala 4 anos - actividades adaptadas] " : ""
+    
+    const razonFinal = infoEdad + infoClaseSemanal + infoAnalisisSala + feedbackUltimoCierre + (mensajeActividad || "") + infoActividadesEfectivas + (sugerenciaIA || "")
 
-    // Generar actividad basada en la secuencia curricular
-    const activity = generarActividadSecuencia(ejeParaActividad, semanaReal, decision, razonFinal || undefined)
+    // Generar actividad basada en la secuencia curricular (con edad para adaptaciones)
+    const activity = generarActividadSecuencia(ejeParaActividad, semanaReal, decision, razonFinal || undefined, salaConfig.edad)
 
-    // Agregar info de clase semanal y sala a la actividad
+    // Agregar info de clase semanal, sala y analisis a la actividad
     const activityConInfo = {
       ...activity,
       claseNumero: progreso.totalClasesCompletadas + 1,
@@ -704,7 +875,16 @@ export async function POST(request: Request) {
       edadSala: salaConfig.edad,
       secuenciaEjes: salaConfig.secuenciaEjes,
       descripcionSala: salaConfig.descripcion,
-      ejeRecomendado: progreso.ejeParaHoy,
+      ejeRecomendado: ejeParaActividad, // Puede ser diferente si hay refuerzo
+      // Datos de inteligencia de ALBA
+      analisisSala: {
+        nivelGeneral: analisisSala.nivelGeneral,
+        ejeDebil: analisisSala.ejeDebil,
+        ejeFuerte: analisisSala.ejeFuerte,
+        necesitaRefuerzo: analisisSala.necesitaRefuerzo,
+        actividadesExitosas: analisisSala.actividadesExitosas.slice(0, 3),
+        actividadesEvitar: analisisSala.actividadesEvitar.slice(0, 3),
+      },
     }
 
     return NextResponse.json({ 
@@ -754,6 +934,9 @@ export async function GET(request: Request) {
     const progreso = await obtenerProgresoSecuencia(sala)
     const historial = await obtenerHistorialSeguimiento(sala)
     
+    // Analisis inteligente de la sala
+    const analisisSala = await analizarSala(sala)
+    
     // Analizar promedios de todos los ejes
     const promediosPorEje = {
       CF: historial.porEje.CF.promedio,
@@ -791,14 +974,15 @@ export async function GET(request: Request) {
     const nombreEje = ejeRecomendado === "CF" ? "Conciencia Fonologica" : 
                       ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"
     
-    let razon = `${nombreEje} - Semana ${semanaDelEje}/25. `
+    let razon = salaConfig.edad === 4 ? `[Sala 4 anos] ` : ""
+    razon += `${nombreEje} - Semana ${semanaDelEje}/25. `
     if (menorPromedio < 50 && menorPromedio > 0 && ejeRecomendado !== progreso.ejeParaHoy) {
       razon += `ALBA prioriza este eje por tener promedio bajo (${menorPromedio}%). `
     }
     
-    const activity = generarActividadSecuencia(ejeRecomendado, semanaDelEje, "repetir", razon)
+    const activity = generarActividadSecuencia(ejeRecomendado, semanaDelEje, "repetir", razon, salaConfig.edad)
     
-    // Agregar info de progreso y sala
+    // Agregar info de progreso, sala y analisis
     const activityConInfo = {
       ...activity,
       claseNumero: progreso.totalClasesCompletadas + 1,
@@ -808,6 +992,13 @@ export async function GET(request: Request) {
       edadSala: salaConfig.edad,
       secuenciaEjes: salaConfig.secuenciaEjes,
       descripcionSala: salaConfig.descripcion,
+      // Datos de inteligencia
+      analisisSala: {
+        nivelGeneral: analisisSala.nivelGeneral,
+        ejeDebil: analisisSala.ejeDebil,
+        ejeFuerte: analisisSala.ejeFuerte,
+        necesitaRefuerzo: analisisSala.necesitaRefuerzo,
+      },
     }
 
     return NextResponse.json({ 
