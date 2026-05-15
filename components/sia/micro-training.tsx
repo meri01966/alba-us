@@ -54,6 +54,25 @@ const QUE_DEBEN_APRENDER: Record<string, string[]> = {
   ]
 }
 
+// Fundamento pedagogico por eje
+const FUNDAMENTO_PEDAGOGICO: Record<string, { teoria: string; autor: string; descripcion: string }> = {
+  CF: {
+    teoria: "Conciencia Fonologica",
+    autor: "Marilyn Adams, 1990 / Defior, 1996",
+    descripcion: "La conciencia fonologica es la capacidad de reconocer y manipular los sonidos del lenguaje hablado. Es el predictor mas fuerte del exito en la lectura inicial. Los ninos que desarrollan esta habilidad antes de aprender a leer tienen ventajas significativas porque comprenden que las palabras estan compuestas por unidades de sonido (fonemas) que se corresponden con letras."
+  },
+  CT: {
+    teoria: "Comprension Lectora Emergente",
+    autor: "Sulzby & Teale, 1991 / Scarborough, 2001",
+    descripcion: "La comprension de textos en nivel inicial se construye a traves de la lectura compartida y dialogica. Los ninos desarrollan esquemas narrativos (inicio, desarrollo, cierre) que les permiten anticipar, inferir y conectar historias con sus experiencias. Esta capacidad de construir significado es la base de la comprension lectora futura."
+  },
+  O: {
+    teoria: "Desarrollo del Lenguaje Oral",
+    autor: "Vygotsky, 1978 / Bruner, 1983",
+    descripcion: "El lenguaje oral es el andamiaje fundamental para el desarrollo cognitivo y la alfabetizacion. A traves de la interaccion social y el dialogo, los ninos amplian su vocabulario, estructuran su pensamiento y desarrollan habilidades comunicativas. El adulto actua como mediador, expandiendo y enriqueciendo las expresiones infantiles."
+  }
+}
+
 interface MicroTrainingProps {
   ejeDelDia?: "CF" | "CT" | "O"
   actividadDelDia?: string
@@ -62,9 +81,11 @@ interface MicroTrainingProps {
 export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
   const consejos = CONSEJOS_ALBA[ejeDelDia]
   const aprendizajes = QUE_DEBEN_APRENDER[ejeDelDia]
+  const fundamento = FUNDAMENTO_PEDAGOGICO[ejeDelDia]
   
   const [consejoIndex, setConsejoIndex] = useState(0)
   const [showAprendizajes, setShowAprendizajes] = useState(false)
+  const [showFundamento, setShowFundamento] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isTalking, setIsTalking] = useState(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -206,7 +227,7 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
         </div>
 
         {/* Lo que deben aprender - colapsable */}
-        <div className="mx-4 mb-4 bg-slate-50 rounded-lg px-4 py-3">
+        <div className="mx-4 mb-2 bg-slate-50 rounded-lg px-4 py-3">
           <button 
             type="button"
             onClick={() => setShowAprendizajes(!showAprendizajes)}
@@ -226,6 +247,33 @@ export function MicroTraining({ ejeDelDia = "CF" }: MicroTrainingProps) {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        {/* Fundamento Pedagogico - colapsable */}
+        <div className="mx-4 mb-4 bg-blue-50 rounded-lg px-4 py-3 border border-blue-100">
+          <button 
+            type="button"
+            onClick={() => setShowFundamento(!showFundamento)}
+            className="w-full text-left flex items-center justify-between text-xs font-semibold"
+            style={{ color: "#1e3a5f" }}
+          >
+            <span>Fundamento pedagogico</span>
+            <span className="text-slate-400">{showFundamento ? "−" : "+"}</span>
+          </button>
+          
+          {showFundamento && (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-blue-700">{fundamento.teoria}</span>
+              </div>
+              <p className="text-xs text-blue-600 italic">
+                {fundamento.autor}
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {fundamento.descripcion}
+              </p>
+            </div>
           )}
         </div>
       </div>
