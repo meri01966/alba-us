@@ -475,81 +475,31 @@ export default function ALBADashboard() {
   const fetchProgreso = useCallback(async () => {
     setIsLoading(true)
     
-    // Si Supabase esta configurado, cargar de ahi
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        // Cargar alumnos filtrados por sala
-        const { data: alumnosData, error: alumnosError } = await supabase
-          .from('alumnos')
-          .select('*')
-          .eq('sala', salaActual)
-          .order('nombre')
-
-        if (alumnosError) {
-          console.error("Error cargando alumnos de Supabase:", alumnosError)
-          // Continuar - lista vacia es valido
-        }
-        
-        // Siempre setear los alumnos (puede ser array vacio)
-        const mappedStudents = (alumnosData || []).map((al: any) => ({
-          id: al.id,
-          name: al.nombre,
-          nombre: al.nombre,
-          sala: al.sala,
-        }))
-        setStudents(mappedStudents)
-
-        // Cargar seguimiento/evaluaciones si hay alumnos
-        if (alumnosData && alumnosData.length > 0) {
-          const alumnoIds = alumnosData.map((al: any) => al.id)
-          const { data: seguimientoData } = await supabase
-            .from('seguimiento')
-            .select('*')
-            .in('alumno_id', alumnoIds)
-
-          const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-          if (!savedProgress && seguimientoData) {
-            const newProgress: Record<string, { CF: number; CT: number; O: number }> = {}
-            alumnosData.forEach((al: any) => {
-              const registros = seguimientoData.filter((s: any) => s.alumno_id === al.id)
-              const getAverage = (eje: string) => {
-                const ejeRegs = registros.filter((r: any) => r.eje === eje)
-                if (ejeRegs.length === 0) return 0
-                const last = ejeRegs[ejeRegs.length - 1]
-                if (last.resultado === 'green') return 100
-                if (last.resultado === 'yellow') return 50
-                return 10
-              }
-              newProgress[al.id] = {
-                CF: getAverage('CF'),
-                CT: getAverage('CT'),
-                O: getAverage('O'),
-              }
-            })
-            setProgress(newProgress)
-          }
-        }
-        
-        setIsLoading(false)
-        return // Salir - usamos Supabase (aunque sea vacio)
-      } catch (err) {
-        console.error("Error con Supabase:", err)
-      }
-    }
-
-    // Sin Supabase configurado: cargar de localStorage (modo demo)
     try {
-      const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
-      if (savedStudents) {
-        const allStudents = JSON.parse(savedStudents)
-        // Filtrar por sala actual
-        const salaStudents = allStudents.filter((s: any) => s.sala === salaActual)
-        setStudents(salaStudents)
-      } else {
-        setStudents([])
+      // Cargar alumnos via API (usa service_role en el servidor)
+      const res = await fetch(`/api/students?sala=${encodeURIComponent(salaActual)}`)
+      const data = await res.json()
+      
+      if (data.error) {
+        console.error("Error cargando alumnos:", data.error)
       }
-    } catch {
-      setStudents([])
+      
+      // Mapear alumnos
+      const mappedStudents = (data.students || []).map((al: any) => ({
+        id: al.id,
+        name: al.nombre,
+        nombre: al.nombre,
+        sala: al.sala,
+      }))
+      setStudents(mappedStudents)
+
+        // Cargar progreso desde localStorage si existe
+      const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+      if (savedProgress) {
+        setProgress(JSON.parse(savedProgress))
+      }
+    } catch (err) {
+      console.error("Error cargando datos:", err)
     }
     setIsLoading(false)
   }, [salaActual])
@@ -573,45 +523,19 @@ export default function ALBADashboard() {
     
     setAddingStudent(true)
     try {
-      if (isSupabaseConfigured() && supabase) {
-        const { error } = await supabase
-          .from('alumnos')
-          .insert([{ nombre: nombreEstandarizado, sala: salaActual }])
-
-        if (error) {
-          console.error("Error agregando alumno:", error)
-          alert("Error al agregar alumno: " + error.message)
-        } else {
-          // Re-fetch automatico para sincronizar con la base de datos
-          setNewStudentName("")
-          setShowAddStudent(false)
-          await fetchProgreso()
-        }
+      const res = await fetch("/api/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nombreEstandarizado, sala: salaActual }),
+      })
+      const data = await res.json()
+      
+      if (data.error) {
+        alert("Error al agregar alumno: " + data.error)
       } else {
-        // Demo mode - guardar en localStorage
-        const newId = `demo-${Date.now()}`
-        const newStudent = {
-          id: newId,
-          name: nombreEstandarizado,
-          nombre: nombreEstandarizado,
-          sala: salaActual,
-        }
-        
-        // Actualizar estado local
-        setStudents(prev => [...prev, newStudent])
-        
-        // Persistir en localStorage
-        try {
-          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
-          const allStudents = savedStudents ? JSON.parse(savedStudents) : []
-          allStudents.push(newStudent)
-          localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(allStudents))
-        } catch (err) {
-          console.error("Error guardando en localStorage:", err)
-        }
-        
         setNewStudentName("")
         setShowAddStudent(false)
+        await fetchProgreso()
       }
     } catch (err) {
       console.error("Error agregando alumno:", err)
@@ -631,48 +555,20 @@ export default function ALBADashboard() {
     
     setAddingBulk(true)
     try {
-      if (isSupabaseConfigured() && supabase) {
-        const inserts = nombres.map(nombre => ({ nombre, sala: salaActual }))
-        const { error } = await supabase
-          .from('alumnos')
-          .insert(inserts)
-
-        if (error) {
-          console.error("Error agregando alumnos:", error)
-          alert("Error al agregar alumnos: " + error.message)
-        } else {
-          // Re-fetch automatico para sincronizar con la base de datos
-          setBulkNames("")
-          setShowConfigSala(false)
-          await fetchProgreso()
-        }
-      } else {
-        // Demo mode - guardar en localStorage
-        const newStudents = nombres.map((nombre, i) => ({
-          id: `demo-${Date.now()}-${i}`,
-          name: nombre,
-          nombre: nombre,
-          sala: salaActual,
-        }))
-        
-        // Actualizar estado local
-        setStudents(prev => [...prev, ...newStudents])
-        
-        // Persistir en localStorage
-        try {
-          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
-          const allStudents = savedStudents ? JSON.parse(savedStudents) : []
-          allStudents.push(...newStudents)
-          localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(allStudents))
-        } catch (err) {
-          console.error("Error guardando en localStorage:", err)
-        }
-        
-        setBulkNames("")
-        setShowConfigSala(false)
+      // Agregar cada alumno via API
+      for (const nombre of nombres) {
+        await fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, sala: salaActual }),
+        })
       }
+      setBulkNames("")
+      setShowConfigSala(false)
+      await fetchProgreso()
     } catch (err) {
       console.error("Error agregando alumnos:", err)
+      alert("Error al agregar alumnos")
     } finally {
       setAddingBulk(false)
     }
@@ -683,35 +579,16 @@ export default function ALBADashboard() {
     if (!confirm("Estas seguro de eliminar este alumno?")) return
     
     try {
-      if (isSupabaseConfigured() && supabase) {
-        const { error } = await supabase
-          .from('alumnos')
-          .delete()
-          .eq('id', studentId)
-
-        if (error) {
-          console.error("Error eliminando alumno:", error)
-          alert("Error al eliminar: " + error.message)
-          return
-        }
+      const res = await fetch(`/api/students?id=${studentId}`, { method: "DELETE" })
+      const data = await res.json()
+      
+      if (data.error) {
+        alert("Error al eliminar: " + data.error)
+        return
       }
       
       // Actualizar estado local
       setStudents(prev => prev.filter(s => s.id !== studentId))
-      
-      // Actualizar localStorage en modo demo
-      if (!isSupabaseConfigured()) {
-        try {
-          const savedStudents = localStorage.getItem(STORAGE_STUDENTS_KEY)
-          if (savedStudents) {
-            const allStudents = JSON.parse(savedStudents)
-            const filtered = allStudents.filter((s: any) => s.id !== studentId)
-            localStorage.setItem(STORAGE_STUDENTS_KEY, JSON.stringify(filtered))
-          }
-        } catch (err) {
-          console.error("Error actualizando localStorage:", err)
-        }
-      }
       
       // Limpiar progreso y evaluaciones del alumno eliminado
       setProgress(prev => {
