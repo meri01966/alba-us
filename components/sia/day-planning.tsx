@@ -38,6 +38,7 @@ interface BrainActivity {
   titulo:      string
   descripcion: string
   objetivo:    string
+  materiales?: string[]
   source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
   razon?: string
@@ -414,6 +415,19 @@ function BrainColumn({ activity, isLoading, stats }: {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
               <p className="text-sm text-foreground leading-relaxed">{activity.objetivo}</p>
+            </div>
+          )}
+          {activity.materiales && activity.materiales.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-2">Materiales</p>
+              <ul className="text-sm text-amber-800 space-y-1">
+                {activity.materiales.map((mat, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span>{mat}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {activity.descripcion && (
