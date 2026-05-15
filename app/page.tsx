@@ -430,22 +430,7 @@ export default function ALBADashboard() {
     }
   }, [salaActual])
   
-  // Agregar actividad planificada por el docente
-  const handleAgregarActividad = useCallback(async (fecha: string, actividad: string, eje: string) => {
-    try {
-      const res = await fetch("/api/actividad-planificada", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fecha, actividad, eje, sala: salaActual }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        fetchHistorialMes() // Recargar calendario
-      }
-    } catch (err) {
-      console.error("Error agregando actividad:", err)
-    }
-  }, [salaActual, fetchHistorialMes])
+  
   
   // Callback cuando el docente cambia la actividad del dia
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
@@ -817,7 +802,7 @@ useEffect(() => {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -845,7 +830,7 @@ useEffect(() => {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
         <SalaMap
           students={students}
           progress={progress}
@@ -873,7 +858,7 @@ useEffect(() => {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={student?.nombre}
@@ -897,7 +882,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} onAgregarActividad={handleAgregarActividad} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
