@@ -2,11 +2,11 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 // Cliente Supabase lazy — se crea dentro del handler, nunca a nivel de modulo
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return createClient(url, key)
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 }
 
 // ─── SECUENCIA ANUAL POR EJE ───────────────────────────────────────────────
@@ -148,9 +148,6 @@ export async function GET(req: Request) {
   }
 
   const supabase = getSupabase()
-  if (!supabase) {
-    return fallbackSugerencia(sala)
-  }
 
   try {
     // 1. Cargar alumnos de la sala

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return createClient(url, key)
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 }
 
 // POST: Guardar registro de cierre que nutre a la IA
@@ -51,16 +51,12 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase()
-    // Guardar en Supabase si esta disponible
-    if (supabase) {
-      const { error } = await supabase
-        .from("registro_cierre")
-        .insert([registro])
+    const { error } = await supabase
+      .from("registro_cierre")
+      .insert([registro])
 
-      if (error) {
-        console.error("[v0] Error guardando registro de cierre:", error)
-        // Continuar aunque falle Supabase
-      }
+    if (error) {
+      console.error("[v0] Error guardando registro:", error.message)
     }
 
     // Generar feedback para el docente
