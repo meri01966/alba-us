@@ -777,7 +777,7 @@ useEffect(() => {
             }])
 
           if (error) {
-            console.error("Error insertando en Supabase:", error)
+            // Tabla 'seguimiento' puede no existir aun — continua con estado local
           }
         }
         return // Salir si guardamos en Supabase
