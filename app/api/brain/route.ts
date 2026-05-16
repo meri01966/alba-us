@@ -89,25 +89,33 @@ const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; m
   ],
 }
 
+// ─── SALAS POR EDAD ──────────────────────────────────────────────────────────
+// Nogales TT / Nogales TM → 4 años (secuencia simplificada, mas sensorial)
+// Manzanos, Girasoles, Alamos → 5 años (secuencia completa)
+const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
+function esde4Anios(sala: string): boolean {
+  const s = sala.toLowerCase().replace(/\s/g, "")
+  return SALAS_4_ANIOS.some(ref => s.includes(ref.replace(/\s/g, "")))
+}
+
 // ─── CALCULAR SIGUIENTE ACTIVIDAD SEGUN CLASES COMPLETADAS ────────────────
-// Cada fecha distinta con registros en ese eje = 1 clase completada
-// Si el promedio del eje es bajo (muchos rojos), ALBA no avanza y repite
 function calcularActividadDelDia(
   eje: "CF" | "CT" | "O",
   clasesCompletadasEnEje: number,
-  promedioEje: number
+  promedioEje: number,
+  sala = "Manzanos"
 ): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean } {
-  const seq = SECUENCIA[eje]
-  let indice = Math.min(clasesCompletadasEnEje, seq.length - 1)
+  const fullSeq = SECUENCIA[eje]
+  // 4 años: tope de actividades por eje (mas sencillas y sensoriales)
+  const limites4 = { CF: 12, CT: 8, O: 10 }
+  const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
 
-  // Si el promedio del eje es menor al 40% (muchos rojos/amarillos),
-  // ALBA repite la actividad anterior para consolidar antes de avanzar
+  let indice = Math.min(clasesCompletadasEnEje, seq.length - 1)
   let esRepeticion = false
   if (promedioEje < 40 && indice > 0) {
     indice = Math.max(0, indice - 1)
     esRepeticion = true
   }
-
   return { actividad: seq[indice], indice, esRepeticion }
 }
 
@@ -238,7 +246,10 @@ export async function GET(req: Request) {
     )
 
     // Razon explicada
-    const totalEnSecuencia = getSecuencia(ejeSugerido, sala).length
+    const limites4 = { CF: 12, CT: 8, O: 10 }
+    const totalEnSecuencia = esde4Anios(sala)
+      ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
+      : SECUENCIA[ejeSugerido].length
     const edadLabel = esde4Anios(sala) ? " (4 años)" : " (5 años)"
     const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO Estructurado)"
     const razonBase = analisis[ejeSugerido].alumnosEnRojo.length > 0
