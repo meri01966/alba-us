@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft, User, Lightbulb, Clock, TrendingUp, TrendingDown, Minus, BookOpen, MessageCircle, Music, ChevronDown, ChevronRight, Printer } from "lucide-react"
+import { ArrowLeft, User, Lightbulb, Clock, TrendingUp, TrendingDown, Minus, BookOpen, MessageCircle, Music, ChevronDown, ChevronRight, Printer, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface StudentProfileProps {

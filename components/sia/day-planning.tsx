@@ -19,7 +19,7 @@ import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRig
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type StatusLevel = "green" | "yellow" | "red"
+type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 interface DayPlanningProps {
   evaluaciones?: Record<string, StatusLevel>
@@ -57,7 +57,22 @@ interface Planning {
 
 // ── Secuencia Anual de Actividades por Eje ─────────────────────────────────
 
-const SECUENCIA_ANUAL = {
+interface ActividadSecuencia {
+  semana: number
+  titulo: string
+  objetivo: string
+  metodologia?: string
+}
+
+interface EjeSecuencia {
+  nombre: string
+  color: string
+  bgColor: string
+  metodologia?: string
+  actividades: ActividadSecuencia[]
+}
+
+const SECUENCIA_ANUAL: Record<string, EjeSecuencia> = {
   CF: {
     nombre: "Conciencia Fonologica",
     color: "#3b82f6",

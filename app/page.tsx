@@ -1050,8 +1050,8 @@ useEffect(() => {
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 
-                    evaluaciones={evaluaciones}
-                    ejeActual={ejeActual}
+                    evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
+                    ejeActual={ejeActual as "CF" | "CT" | "O"}
                     actividadActual={actividadActual}
                     totalAlumnos={students.length}
                     sala={salaActual}
