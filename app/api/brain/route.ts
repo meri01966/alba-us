@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-)
+// El cliente se crea lazy dentro del handler para no crashear si las env vars no estan disponibles
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return null
+  return createClient(url, key)
+}
 
 // ─── SECUENCIA ANUAL POR EJE ───────────────────────────────────────────────
 // Cada clase completada en un eje avanza a la siguiente actividad de esa secuencia.
@@ -123,6 +126,32 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sala = searchParams.get("sala") || "Manzanos"
 
+  // Fallback local cuando no hay Supabase configurado
+  const fallbackSugerencia = (salaName: string) => {
+    const eje = "CF" as const
+    const limites4 = { CF: 12, CT: 8, O: 10 }
+    const seq = esde4Anios(salaName) ? SECUENCIA.CF.slice(0, limites4.CF) : SECUENCIA.CF
+    const act = seq[0]
+    return NextResponse.json({
+      sugerencia: {
+        eje,
+        actividad: act.titulo,
+        objetivo: act.objetivo,
+        materiales: act.materiales,
+        razon: `Inicio de secuencia — Conciencia Fonologica${esde4Anios(salaName) ? " (4 años)" : " (5 años)"}.`,
+        indiceEnSecuencia: 0,
+        totalEnSecuencia: seq.length,
+        esRepeticion: false,
+      },
+      analisis: { CF: { promedio: 0, total: 0 }, CT: { promedio: 0, total: 0 }, O: { promedio: 0, total: 0 } },
+    })
+  }
+
+  const supabase = getSupabase()
+  if (!supabase) {
+    return fallbackSugerencia(sala)
+  }
+
   try {
     // 1. Cargar alumnos de la sala
     const { data: alumnos } = await supabase
@@ -131,14 +160,14 @@ export async function GET(req: Request) {
       .eq("sala", sala)
 
     if (!alumnos || alumnos.length === 0) {
-      const actividadInicial = SECUENCIA.CF[0]
+      const actividadInicial = esde4Anios(sala) ? SECUENCIA.CF.slice(0, 12)[0] : SECUENCIA.CF[0]
       return NextResponse.json({
         sugerencia: {
           eje: "CF",
           actividad: actividadInicial.titulo,
           objetivo: actividadInicial.objetivo,
           materiales: actividadInicial.materiales,
-          razon: "Inicio del año. Comenzamos con Conciencia Fonologica: discriminacion auditiva.",
+          razon: `Inicio del año. Comenzamos con Conciencia Fonologica${esde4Anios(sala) ? " (4 años)" : " (5 años)"}.`,
           alumnosEnRiesgo: 0,
           totalAlumnos: 0,
           tendencia: "estancado",
