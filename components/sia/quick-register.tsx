@@ -1,32 +1,54 @@
 "use client"
 
 import { useState } from "react"
-import { Send, ThumbsUp, Minus, AlertCircle, CheckCircle2, Pencil } from "lucide-react"
+import { Send, ThumbsUp, Minus, AlertCircle, CheckCircle2, Pencil, MessageSquare } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 
 interface QuickRegisterProps {
   actividadDelDia?: string
   evaluados?: number
   totalAlumnos?: number
+  statsVerdes?: number
+  statsAmarillos?: number
+  statsRojos?: number
+  statsAusentes?: number
+  onGuardar?: (data: {
+    evaluacion: string
+    observaciones: string
+    sugerencia: string
+  }) => void
 }
 
 export function QuickRegister({
-  actividadDelDia = "Reconocimiento de Sonido Inicial /M/",
+  actividadDelDia = "",
   evaluados = 0,
   totalAlumnos = 0,
+  statsVerdes = 0,
+  statsAmarillos = 0,
+  statsRojos = 0,
+  statsAusentes = 0,
+  onGuardar,
 }: QuickRegisterProps) {
-  const [mostrarModal, setMostrarModal] = useState(false)
-  const [feedback, setFeedback] = useState<"bien" | "parcial" | "ajustar" | null>(null)
-  const [observaciones, setObservaciones] = useState("")
-  const [enviado, setEnviado] = useState(false)
+  const [mostrarModal, setMostrarModal]       = useState(false)
+  const [evaluacion, setEvaluacion]           = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | null>(null)
+  const [observaciones, setObservaciones]     = useState("")
+  const [sugerencia, setSugerencia]           = useState("")
+  const [guardado, setGuardado]               = useState(false)
 
-  function handleEnviar() {
-    if (!feedback) return
-    setEnviado(true)
+  const totalEvaluados = statsVerdes + statsAmarillos + statsRojos
+  const promedio = totalEvaluados > 0
+    ? Math.round(((statsVerdes * 100) + (statsAmarillos * 50) + (statsRojos * 10)) / totalEvaluados)
+    : 0
+
+  function handleGuardar() {
+    if (!evaluacion) return
+    onGuardar?.({ evaluacion, observaciones, sugerencia })
+    setGuardado(true)
     setMostrarModal(false)
   }
 
   function handleEditar() {
-    setEnviado(false)
+    setGuardado(false)
     setMostrarModal(true)
   }
 
@@ -38,7 +60,7 @@ export function QuickRegister({
           Finalizar Jornada
         </h3>
 
-        {enviado ? (
+        {guardado ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
               <CheckCircle2 className="w-4 h-4" />
@@ -64,84 +86,135 @@ export function QuickRegister({
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal Finalizar Jornada */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
             {/* Header azul */}
-            <div className="p-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
+            <div
+              className="p-4 flex items-center justify-between sticky top-0"
+              style={{ backgroundColor: "#1e40af" }}
+            >
               <h3 className="font-bold text-white text-base">Finalizar Jornada</h3>
               <button
                 onClick={() => setMostrarModal(false)}
                 className="p-1.5 hover:bg-white/20 rounded-lg text-white"
+                aria-label="Cerrar"
               >
-                ✕
+                <span className="text-lg leading-none">✕</span>
               </button>
             </div>
 
             <div className="p-5 flex flex-col gap-4">
               {/* Actividad del dia */}
-              <div className="p-3 rounded-lg bg-slate-50 text-sm">
-                <span className="text-slate-500">Actividad:</span>
-                <span className="ml-1 font-medium text-slate-700">{actividadDelDia}</span>
-                {totalAlumnos > 0 && (
-                  <span className="ml-2 text-slate-400">({evaluados}/{totalAlumnos} evaluados)</span>
+              {actividadDelDia ? (
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
+                  <span className="text-slate-500 font-medium">Actividad:</span>
+                  <span className="ml-1 text-slate-700">{actividadDelDia}</span>
+                  {totalAlumnos > 0 && (
+                    <span className="ml-2 text-slate-400 text-xs">
+                      ({evaluados}/{totalAlumnos} evaluados)
+                    </span>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Resumen de la jornada */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-sm font-medium text-slate-700 mb-3">Resumen de la jornada</p>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="bg-green-100 rounded-lg p-2">
+                    <div className="text-xl font-bold text-green-700">{statsVerdes}</div>
+                    <div className="text-[10px] text-green-600">Logrado</div>
+                  </div>
+                  <div className="bg-yellow-100 rounded-lg p-2">
+                    <div className="text-xl font-bold text-yellow-700">{statsAmarillos}</div>
+                    <div className="text-[10px] text-yellow-600">En proceso</div>
+                  </div>
+                  <div className="bg-red-100 rounded-lg p-2">
+                    <div className="text-xl font-bold text-red-700">{statsRojos}</div>
+                    <div className="text-[10px] text-red-600">Refuerzo</div>
+                  </div>
+                  <div className="bg-indigo-100 rounded-lg p-2">
+                    <div className="text-xl font-bold text-indigo-700">{statsAusentes}</div>
+                    <div className="text-[10px] text-indigo-600">Ausentes</div>
+                  </div>
+                </div>
+                {totalEvaluados > 0 && (
+                  <div
+                    className={`mt-3 px-4 py-2 rounded-lg text-center font-bold text-white text-sm ${
+                      promedio >= 70 ? "bg-green-500" : promedio >= 40 ? "bg-yellow-500" : "bg-red-500"
+                    }`}
+                  >
+                    Promedio del grupo: {promedio}%
+                  </div>
                 )}
               </div>
 
-              {/* Como funciono */}
+              {/* Como fue la actividad */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-600">
-                  Como funciono la actividad?
+                <label className="text-sm font-medium text-slate-700">
+                  Como fue la actividad?
                 </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFeedback("bien")}
-                    className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
-                      ${feedback === "bien" ? "text-white bg-green-500 border-green-500" : "bg-white text-slate-600 border-slate-200 hover:border-green-300"}`}
-                  >
-                    <ThumbsUp className="w-4 h-4 mb-0.5" />
-                    Bien
-                  </button>
-                  <button
-                    onClick={() => setFeedback("parcial")}
-                    className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
-                      ${feedback === "parcial" ? "text-white bg-amber-500 border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"}`}
-                  >
-                    <Minus className="w-4 h-4 mb-0.5" />
-                    Parcial
-                  </button>
-                  <button
-                    onClick={() => setFeedback("ajustar")}
-                    className={`flex-1 h-12 text-xs flex flex-col items-center justify-center rounded-lg border-2 transition-all
-                      ${feedback === "ajustar" ? "text-white bg-red-500 border-red-500" : "bg-white text-slate-600 border-slate-200 hover:border-red-300"}`}
-                  >
-                    <AlertCircle className="w-4 h-4 mb-0.5" />
-                    Ajustar
-                  </button>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "excelente",      label: "Excelente",       color: "#10b981" },
+                    { value: "buena",           label: "Buena",           color: "#3b82f6" },
+                    { value: "regular",         label: "Regular",         color: "#f59e0b" },
+                    { value: "necesita_mejora", label: "Necesita mejora", color: "#ef4444" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setEvaluacion(opt.value as typeof evaluacion)}
+                      className="px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all"
+                      style={
+                        evaluacion === opt.value
+                          ? { backgroundColor: opt.color, color: "#fff", borderColor: opt.color }
+                          : { backgroundColor: "#fff", color: opt.color, borderColor: opt.color + "50" }
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Observaciones */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-slate-600">Observaciones (opcional)</label>
-                <textarea
-                  placeholder="Algo que quieras recordar..."
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Observaciones (opcional)
+                </label>
+                <Textarea
+                  placeholder="Que observaste durante la actividad?"
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
-                  className="min-h-[70px] text-sm resize-none p-2.5 rounded-lg border border-slate-200 focus:border-blue-400 focus:outline-none"
+                  className="min-h-[70px] text-sm resize-none"
                 />
               </div>
 
-              {/* Boton Enviar */}
+              {/* Sugerencia */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-slate-700">
+                  Sugerencia para la proxima clase (opcional)
+                </label>
+                <Textarea
+                  placeholder="Ej: Repetir con mas imagenes, usar musica..."
+                  value={sugerencia}
+                  onChange={(e) => setSugerencia(e.target.value)}
+                  className="min-h-[56px] text-sm resize-none"
+                />
+              </div>
+
+              {/* Boton Guardar */}
               <button
-                onClick={handleEnviar}
-                disabled={!feedback}
-                className="w-full h-11 text-sm font-semibold text-white rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+                onClick={handleGuardar}
+                disabled={!evaluacion}
+                className="w-full h-11 text-sm font-semibold text-white rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-40 hover:opacity-90"
                 style={{ backgroundColor: "#1e40af" }}
               >
-                <Send className="w-4 h-4" />
-                Enviar
+                <CheckCircle2 className="w-4 h-4" />
+                Guardar
               </button>
             </div>
           </div>

@@ -1088,9 +1088,14 @@ useEffect(() => {
                   evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
-                  actividadDelDia={ACTIVIDAD_DEL_DIA}
-                  evaluados={Object.keys(evaluaciones).length}
+                  actividadDelDia={actividadSugeridaALBA || ACTIVIDAD_DEL_DIA}
+                  evaluados={Object.keys(evaluaciones).filter(id => evaluaciones[id]).length}
                   totalAlumnos={students.length}
+                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green").length}
+                  statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
+                  statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
+                  statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
+                  onGuardar={handleRegistroCierre as any}
                 />
               </div>
             </>

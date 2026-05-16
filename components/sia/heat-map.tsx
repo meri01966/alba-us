@@ -1,11 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Spinner } from "@/components/ui/spinner"
-import { Button } from "@/components/ui/button"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Send, Star, UserX, MessageSquare } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, UserX, MessageSquare } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red" | "blue"
 
@@ -230,28 +227,9 @@ export function HeatMap({
   isLoading = false 
 }: HeatMapProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [mostrarCierre, setMostrarCierre] = useState(false)
-  const [mostrarReportes, setMostrarReportes] = useState(false)
-  const [cierreEvaluacion, setCierreEvaluacion] = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | null>(null)
-  const [cierreObservaciones, setCierreObservaciones] = useState("")
-  const [cierreSugerencia, setCierreSugerencia] = useState("")
-  const [enviandoCierre, setEnviandoCierre] = useState(false)
   
-  const selectedEje = ejeDeALBA
-  const actividadDelDia = actividadSugeridaALBA || "Cargando sugerencia de ALBA..."
-  
-  // Calcular stats - los no marcados cuentan como verde
-  const calcularStats = useMemo(() => {
-    let green = 0, yellow = 0, red = 0, blue = 0
-    students.forEach(s => {
-      const status = evaluaciones[s.id]
-      if (status === "blue") blue++
-      else if (status === "yellow") yellow++
-      else if (status === "red") red++
-      else green++ // Sin marca = verde (logrado)
-    })
-    return { green, yellow, red, blue }
-  }, [students, evaluaciones])
+  const actividadDelDia = actividadSugeridaALBA || "Cargando sugerencia..."
+
   
   // Generar reportes para todos los alumnos
   const reportes = useMemo(() => {
@@ -432,206 +410,6 @@ export function HeatMap({
         )}
       </CardContent>
       
-      {/* Botones de accion */}
-      <div className="p-3 border-t border-slate-100">
-        {/* Finalizar jornada */}
-        <Button
-          onClick={() => setMostrarCierre(true)}
-          className="w-full font-semibold text-white"
-          style={{ backgroundColor: "#1e40af" }}
-        >
-          <Send className="w-4 h-4 mr-2" />
-          Finalizar Jornada
-        </Button>
-      </div>
-
-      {/* Modal Vista Previa de Reportes */}
-      {mostrarReportes && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                <h2 className="font-bold">Vista Previa de Reportes para Padres</h2>
-              </div>
-              <button onClick={() => setMostrarReportes(false)} className="p-2 hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-xs text-blue-700">
-                  <strong>Actividad de hoy:</strong> {actividadDelDia}
-                </p>
-              </div>
-              
-              {reportes.map((r) => (
-                <div 
-                  key={r.id} 
-                  className="p-3 rounded-xl border"
-                  style={{ 
-                    backgroundColor: getStatusBg(r.estado as StatusLevel),
-                    borderColor: getStatusColor(r.estado as StatusLevel) + "40"
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div 
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: getStatusColor(r.estado as StatusLevel) }}
-                    />
-                    <span className="font-semibold text-sm">{r.nombre}</span>
-                    <span 
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto"
-                      style={{ 
-                        backgroundColor: getStatusColor(r.estado as StatusLevel),
-                        color: "#fff"
-                      }}
-                    >
-                      {r.estado === "green" ? "Logrado" : 
-                       r.estado === "yellow" ? "En proceso" : 
-                       r.estado === "red" ? "Refuerzo" : "Ausente"}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 italic">
-                    &quot;{r.reporte}&quot;
-                  </p>
-                </div>
-              ))}
-            </div>
-            
-            <div className="p-4 border-t bg-gray-50">
-              <p className="text-xs text-gray-500 text-center">
-                Estos reportes se generan automaticamente basados en la actividad y el estado de cada alumno
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Modal Finalizar Jornada */}
-      {mostrarCierre && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
-              <div className="flex items-center gap-2 text-white">
-                <Star className="w-5 h-5" />
-                <h3 className="font-bold">Finalizar Jornada</h3>
-              </div>
-              <button onClick={() => setMostrarCierre(false)} className="p-2 hover:bg-white/10 rounded-lg text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-4 space-y-4">
-              {/* Resumen */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-sm font-medium text-gray-700 mb-3">Resumen de la jornada:</p>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="bg-green-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-green-700">{calcularStats.green}</div>
-                    <div className="text-[10px] text-green-600">Logrado</div>
-                  </div>
-                  <div className="bg-yellow-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-yellow-700">{calcularStats.yellow}</div>
-                    <div className="text-[10px] text-yellow-600">En proceso</div>
-                  </div>
-                  <div className="bg-red-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-red-700">{calcularStats.red}</div>
-                    <div className="text-[10px] text-red-600">Refuerzo</div>
-                  </div>
-                  <div className="bg-indigo-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-indigo-700">{calcularStats.blue}</div>
-                    <div className="text-[10px] text-indigo-600">Ausentes</div>
-                  </div>
-                </div>
-                
-                {/* Promedio */}
-                {(() => {
-                  const total = calcularStats.green + calcularStats.yellow + calcularStats.red
-                  if (total === 0) return null
-                  const promedio = Math.round(((calcularStats.green * 100) + (calcularStats.yellow * 50) + (calcularStats.red * 10)) / total)
-                  return (
-                    <div className={`mt-3 px-4 py-2 rounded-lg text-center font-bold text-white ${
-                      promedio >= 70 ? "bg-green-500" : promedio >= 40 ? "bg-yellow-500" : "bg-red-500"
-                    }`}>
-                      Promedio del grupo: {promedio}%
-                    </div>
-                  )
-                })()}
-              </div>
-              
-              {/* Evaluacion de la actividad */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Como fue la actividad?</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: "excelente", label: "Excelente", color: "#10b981" },
-                    { value: "buena", label: "Buena", color: "#3b82f6" },
-                    { value: "regular", label: "Regular", color: "#f59e0b" },
-                    { value: "necesita_mejora", label: "Necesita mejora", color: "#ef4444" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setCierreEvaluacion(opt.value as typeof cierreEvaluacion)}
-                      className="px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all"
-                      style={
-                        cierreEvaluacion === opt.value
-                          ? { backgroundColor: opt.color, color: "#fff", borderColor: opt.color }
-                          : { backgroundColor: "#fff", color: opt.color, borderColor: opt.color + "40" }
-                      }
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Observaciones */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Observaciones (opcional)
-                </label>
-                <Textarea
-                  value={cierreObservaciones}
-                  onChange={(e) => setCierreObservaciones(e.target.value)}
-                  placeholder="Que observaste durante la actividad?"
-                  className="text-sm h-20 resize-none"
-                />
-              </div>
-              
-              {/* Sugerencia */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Sugerencia para ALBA (opcional)
-                </label>
-                <Textarea
-                  value={cierreSugerencia}
-                  onChange={(e) => setCierreSugerencia(e.target.value)}
-                  placeholder="Ej: Repetir con mas imagenes, usar musica..."
-                  className="text-sm h-16 resize-none"
-                />
-              </div>
-              
-              {/* Boton enviar */}
-              <Button
-                onClick={enviarRegistroCierre}
-                disabled={!cierreEvaluacion || enviandoCierre}
-                className="w-full font-semibold text-white"
-                style={{ backgroundColor: "#1e40af" }}
-              >
-                {enviandoCierre ? (
-                  <Spinner className="w-4 h-4 mr-2" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Enviar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </Card>
   )
 }
