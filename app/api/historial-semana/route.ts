@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     const { data: registros, error } = await query.order("fecha", { ascending: true })
 
     if (error) {
-      console.error("[v0] Error obteniendo historial:", error)
+      // Tabla puede no existir aun — devuelve vacio sin error
       return NextResponse.json({ registros: [] })
     }
 

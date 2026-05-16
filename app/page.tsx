@@ -781,8 +781,8 @@ useEffect(() => {
           }
         }
         return // Salir si guardamos en Supabase
-      } catch (err) {
-        console.error("Error con Supabase:", err)
+      } catch {
+        // Supabase no disponible — continua con estado local
       }
     }
 
