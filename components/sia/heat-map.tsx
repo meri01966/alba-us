@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Send, Star, UserX, Eye, FileText, MessageSquare } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, Send, Star, UserX, MessageSquare } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
 type StatusLevel = "green" | "yellow" | "red" | "blue"
@@ -433,22 +433,12 @@ export function HeatMap({
       </CardContent>
       
       {/* Botones de accion */}
-      <div className="p-3 border-t border-slate-100 space-y-2">
-        {/* Vista previa de reportes */}
-        <Button
-          variant="outline"
-          onClick={() => setMostrarReportes(true)}
-          className="w-full text-sm"
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Vista Previa de Reportes para Padres
-        </Button>
-        
+      <div className="p-3 border-t border-slate-100">
         {/* Finalizar jornada */}
         <Button
           onClick={() => setMostrarCierre(true)}
-          className="w-full"
-          style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
+          className="w-full font-semibold text-white"
+          style={{ backgroundColor: "#1e40af" }}
         >
           <Send className="w-4 h-4 mr-2" />
           Finalizar Jornada
@@ -519,14 +509,11 @@ export function HeatMap({
         </div>
       )}
       
-      {/* Panel de Registro de Cierre */}
+      {/* Modal Finalizar Jornada */}
       {mostrarCierre && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div 
-              className="p-4 flex items-center justify-between"
-              style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
-            >
+            <div className="p-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
               <div className="flex items-center gap-2 text-white">
                 <Star className="w-5 h-5" />
                 <h3 className="font-bold">Finalizar Jornada</h3>
@@ -627,19 +614,19 @@ export function HeatMap({
                 />
               </div>
               
-              {/* Boton guardar */}
+              {/* Boton enviar */}
               <Button
                 onClick={enviarRegistroCierre}
                 disabled={!cierreEvaluacion || enviandoCierre}
                 className="w-full font-semibold text-white"
-                style={{ backgroundColor: "#1e3a5f" }}
+                style={{ backgroundColor: "#1e40af" }}
               >
                 {enviandoCierre ? (
                   <Spinner className="w-4 h-4 mr-2" />
                 ) : (
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  <Send className="w-4 h-4 mr-2" />
                 )}
-                Guardar
+                Enviar
               </Button>
             </div>
           </div>
