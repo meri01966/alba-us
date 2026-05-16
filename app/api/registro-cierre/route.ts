@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       usar_en_futuro: usarEnFuturo,
     }
 
+    const supabase = getSupabase()
     // Guardar en Supabase si esta disponible
     if (supabase) {
       const { error } = await supabase
@@ -125,6 +126,7 @@ export async function GET(request: Request) {
     const eje = searchParams.get("eje")
     const limit = parseInt(searchParams.get("limit") || "50")
 
+    const supabase = getSupabase()
     if (!supabase) {
       return NextResponse.json({ registros: [], message: "Supabase no configurado" })
     }
