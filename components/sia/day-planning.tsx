@@ -690,43 +690,38 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
     }
   }, [evaluaciones, totalAlumnos])
 
-  // Fetch Cerebro Central con datos de evaluaciones
+  // Fetch Cerebro Central — usa GET mapeando data.sugerencia
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-const res = await fetch("/api/brain", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-  evaluaciones,
-  ejeActual,
-  actividadActual,
-  stats,
-  sala
-  }),
-  })
+      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
       const data = await res.json()
-      setBrain(data.activity ?? null)
-      // Notificar la actividad y eje sugeridos por ALBA al componente padre
-      if (data.activity?.titulo && onActividadALBA) {
-        onActividadALBA(data.activity.titulo)
-      }
-      if (data.activity?.ejeRecomendado && onEjeALBA) {
-        onEjeALBA(data.activity.ejeRecomendado)
-      }
-    } catch {
-// Fallback a GET si POST falla
-  try {
-  const res  = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
-  const data = await res.json()
-        setBrain(data.activity ?? null)
-      } catch {
+      const sugerencia = data.sugerencia ?? null
+      if (sugerencia) {
+        // Normalizar la respuesta al formato que espera BrainColumn
+        const activity: BrainActivity = {
+          id: `${sugerencia.eje}-${Date.now()}`,
+          dia: 1,
+          titulo: sugerencia.actividad,
+          descripcion: "",
+          objetivo: sugerencia.objetivo,
+          materiales: sugerencia.materiales || [],
+          razon: sugerencia.razon,
+          source: "secuencia",
+          ejeRecomendado: sugerencia.eje,
+        }
+        setBrain(activity)
+        if (onActividadALBA) onActividadALBA(sugerencia.actividad)
+        if (onEjeALBA) onEjeALBA(sugerencia.eje)
+      } else {
         setBrain(null)
       }
+    } catch {
+      setBrain(null)
     } finally {
       setIsBrainLoading(false)
     }
-  }, [evaluaciones, ejeActual, actividadActual, stats, sala, onActividadALBA, onEjeALBA])
+  }, [sala, onActividadALBA, onEjeALBA])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

@@ -182,48 +182,98 @@ const CONSEJOS_GENERICOS: Record<string, string[]> = {
   ]
 }
 
-// Lo que deben aprender los ninos
-const QUE_DEBEN_APRENDER: Record<string, string[]> = {
-  CF: [
-    "Asociar el dibujo de la letra con su sonido",
-    "Reconocer que las palabras estan formadas por sonidos",
-    "Identificar el sonido inicial de una palabra",
-    "Encontrar palabras que empiezan igual",
-    "Separar palabras en silabas con palmadas"
-  ],
-  CT: [
-    "Entender que los textos cuentan historias",
-    "Anticipar que puede pasar en un cuento",
-    "Recordar la secuencia: inicio, desarrollo, final",
-    "Conectar la historia con sus propias experiencias",
-    "Reconocer personajes principales"
-  ],
-  O: [
-    "Expresar ideas con oraciones completas",
-    "Ampliar su vocabulario con palabras nuevas",
-    "Escuchar a los demas cuando hablan",
-    "Contar experiencias en orden",
-    "Hacer preguntas cuando no entienden"
-  ]
+// Lo que deben aprender los ninos — mapeado por actividad especifica
+const QUE_DEBEN_APRENDER_ACT: Record<string, string[]> = {
+  // CF
+  "Sonidos del entorno": ["Identificar diferentes sonidos del ambiente", "Asociar un sonido con su fuente", "Discriminar sonidos fuertes y suaves", "Desarrollar atencion auditiva sostenida"],
+  "Rimas con nombres": ["Reconocer palabras que terminan con el mismo sonido", "Producir palabras que riman", "Disfrutar del juego con los sonidos del lenguaje"],
+  "Separacion en silabas": ["Entender que las palabras se pueden dividir en partes", "Contar cuantas silabas tiene una palabra", "Comparar palabras largas y cortas"],
+  "Sonido inicial /m/": ["Reconocer el sonido /m/ al inicio de palabras", "Producir el sonido /m/ de forma aislada", "Asociar el sonido /m/ con la letra M"],
+  "Sonido inicial /p/": ["Reconocer el sonido /p/ al inicio de palabras", "Sentir el aire que sale al decir /p/", "Asociar el sonido /p/ con la letra P"],
+  "Sonido inicial /s/": ["Reconocer el sonido /s/ al inicio de palabras", "Producir /s/ sostenido como una serpiente", "Asociar el sonido /s/ con la letra S"],
+  "Sonido inicial /l/": ["Reconocer el sonido /l/ al inicio de palabras", "Asociar el sonido /l/ con la letra L"],
+  "Sonido inicial /t/": ["Reconocer el sonido /t/ al inicio de palabras", "Asociar el sonido /t/ con la letra T"],
+  "Sonido inicial /n/": ["Reconocer el sonido /n/ al inicio de palabras", "Asociar el sonido /n/ con la letra N"],
+  "Sonido inicial /a/": ["Reconocer el sonido vocalico /a/", "Identificar palabras que empiezan con A"],
+  "Sonido inicial /e/": ["Reconocer el sonido vocalico /e/", "Identificar palabras que empiezan con E"],
+  "Sonido inicial /i/": ["Reconocer el sonido vocalico /i/", "Identificar palabras que empiezan con I"],
+  "Sonido inicial /o/": ["Reconocer el sonido vocalico /o/", "Identificar palabras que empiezan con O"],
+  "Sonido inicial /u/": ["Reconocer el sonido vocalico /u/", "Identificar palabras que empiezan con U"],
+  "Sonido final": ["Prestar atencion al final de las palabras", "Identificar el ultimo sonido de una palabra", "Encontrar palabras que terminan igual"],
+  "Sintesis de fonemas": ["Unir sonidos separados para formar palabras", "Escuchar un sonido por vez y adivinar la palabra"],
+  "Analisis de fonemas": ["Separar cada sonido de una palabra", "Contar cuantos sonidos tiene una palabra"],
+  // CT
+  "Exploracion del libro": ["Manipular el libro correctamente", "Reconocer tapa, contratapa y paginas", "Entender que las imagenes cuentan una historia"],
+  "Antes de leer: Predicciones": ["Usar imagenes para anticipar el contenido", "Formular hipotesis sobre la historia", "Activar conocimientos previos"],
+  "Lectura dialogica: Pausas": ["Participar activamente durante la lectura", "Responder preguntas sobre el cuento", "Conectar la historia con sus experiencias"],
+  "Vocabulario en contexto": ["Deducir el significado de palabras nuevas por el contexto", "Incorporar palabras nuevas al vocabulario"],
+  "Recontar la historia": ["Ordenar los eventos del cuento", "Usar conectores: primero, luego, al final", "Contar con sus propias palabras"],
+  "Cruz: Quien - Identificar personajes": ["Nombrar a los personajes del cuento", "Distinguir personajes principales de secundarios", "Responder: Quien?"],
+  "Cruz: Que - Identificar acciones": ["Identificar que sucede en el cuento", "Responder: Que paso?"],
+  "Cruz: Donde - Identificar lugar": ["Identificar el lugar donde ocurre la historia", "Responder: Donde?"],
+  "Cruz: Cuando - Identificar tiempo": ["Identificar el tiempo en que ocurre la historia", "Usar marcadores temporales"],
+  "Cruz: Por que - causas": ["Identificar causas y efectos en el cuento", "Responder: Por que?", "Relacionar acciones con sus consecuencias"],
+  "Cruz: Que opinas": ["Expresar opinion sobre el texto", "Argumentar con razon", "Escuchar la opinion de otros"],
+  // O — ECO Estructurado
+  "ECO-E: Sonidos del entorno": ["Identificar y discriminar sonidos ambientales", "Responder con oracion completa: Yo escucho...", "Desarrollar atencion auditiva sostenida"],
+  "ECO-E: Escucha de voces": ["Reconocer voces y responder con oracion: Esa es la voz de...", "Mantener atencion auditiva"],
+  "ECO-E: Instrucciones simples": ["Seguir instrucciones de un paso", "Verbalizar la accion realizada: Yo hice...", "Usar estructura sujeto + verbo"],
+  "ECO-E: Instrucciones complejas": ["Seguir dos instrucciones seguidas", "Verbalizar con conectores: Primero... y despues...", "Mantener secuencia en la respuesta"],
+  "ECO-C: Vocabulario nuevo": ["Comprender palabras nuevas en contexto", "Usar la palabra nueva en oracion completa", "Responder: Esto es un/una..."],
+  "ECO-C: Comprension literal": ["Responder preguntas sobre lo escuchado", "Usar evidencia del texto: En el cuento...", "Responder con oracion completa"],
+  "ECO-C: Inferencias simples": ["Deducir emociones y causas", "Responder con causa: ... porque...", "Conectar acciones con consecuencias"],
+  "ECO-O: Nombrar con estructura": ["Producir oraciones completas al nombrar objetos", "Usar estructura: El/La objeto es...", "No responder con palabras sueltas"],
+  "ECO-O: Narrar con secuenciadores": ["Contar usando: primero, luego, despues, al final", "Incluir conectores temporales obligatorios", "Construir narraciones coherentes"],
+  "ECO-O: Argumentar con PORQUE": ["Dar razones con la estructura: ...porque...", "Expresar opinion fundamentada", "Usar el conector PORQUE"],
+  "ECO-O: Turnos de dialogo": ["Respetar el turno para hablar", "Responder con oracion completa antes de pasar el turno", "Escuchar activamente a los companeros"],
+  "ECO-O: Exposicion oral": ["Presentar con estructura inicio/desarrollo/cierre", "Comenzar con: Hoy voy a hablar de...", "Cerrar con: Eso es todo sobre..."],
 }
 
-// Fundamento pedagogico por eje
-const FUNDAMENTO_PEDAGOGICO: Record<string, { teoria: string; autor: string; descripcion: string }> = {
-  CF: {
-    teoria: "Conciencia Fonologica",
-    autor: "Marilyn Adams, 1990 / Defior, 1996",
-    descripcion: "La conciencia fonologica es la capacidad de reconocer y manipular los sonidos del lenguaje hablado. Es el predictor mas fuerte del exito en la lectura inicial."
-  },
-  CT: {
-    teoria: "Comprension Lectora Emergente",
-    autor: "Sulzby & Teale, 1991 / Scarborough, 2001",
-    descripcion: "La comprension de textos en nivel inicial se construye a traves de la lectura compartida y dialogica. Los ninos desarrollan esquemas narrativos que les permiten anticipar e inferir."
-  },
-  O: {
-    teoria: "Desarrollo del Lenguaje Oral",
-    autor: "Vygotsky, 1978 / Bruner, 1983",
-    descripcion: "El lenguaje oral es el andamiaje fundamental para el desarrollo cognitivo y la alfabetizacion. El adulto actua como mediador, expandiendo las expresiones infantiles."
+// Fallback por eje
+const QUE_DEBEN_APRENDER_EJE: Record<string, string[]> = {
+  CF: ["Reconocer que las palabras estan formadas por sonidos", "Identificar el sonido inicial de una palabra", "Separar palabras en silabas con palmadas", "Desarrollar atencion auditiva"],
+  CT: ["Entender que los textos cuentan historias", "Anticipar que puede pasar en un cuento", "Recordar la secuencia: inicio, desarrollo, final", "Conectar la historia con sus propias experiencias"],
+  O: ["Expresar ideas con oraciones completas", "Escuchar a los demas cuando hablan", "Usar conectores para ordenar ideas", "Argumentar con razones"]
+}
+
+// Fundamento pedagogico — mapeado por actividad
+const FUNDAMENTO_ACT: Record<string, { teoria: string; autor: string; descripcion: string }> = {
+  "Sonidos del entorno": { teoria: "Discriminacion Auditiva", autor: "Tomatis, 1991 / Tallal, 1980", descripcion: "La discriminacion de sonidos ambientales es el primer paso para la conciencia fonologica. Entrena la atencion auditiva selectiva." },
+  "Rimas con nombres": { teoria: "Sensibilidad Fonologica", autor: "Goswami & Bryant, 1990", descripcion: "Las rimas desarrollan la sensibilidad a los sonidos finales, una de las primeras habilidades fonologicas en emerger." },
+  "Separacion en silabas": { teoria: "Conciencia Silabica", autor: "Liberman et al., 1974", descripcion: "La segmentacion silabica es mas accesible que la fonemica y sirve como puente hacia la manipulacion de fonemas." },
+  "Sonido inicial /m/": { teoria: "Conciencia del Fonema Inicial", autor: "Adams, 1990 / Defior, 1996", descripcion: "La identificacion del fonema inicial es clave para la decodificacion. La /m/ es continua y sonora, ideal para aislar y sostener." },
+  "Sonido inicial /p/": { teoria: "Conciencia del Fonema Inicial", autor: "Adams, 1990", descripcion: "La /p/ es oclusiva y permite sentir el aire, conectando la produccion oral con la percepcion del fonema." },
+  "Sonido inicial /s/": { teoria: "Conciencia del Fonema Inicial", autor: "Adams, 1990", descripcion: "La /s/ es fricativa y puede sostenerse, lo que facilita aislarla y reconocerla al inicio de palabras." },
+  "Exploracion del libro": { teoria: "Alfabetizacion Emergente", autor: "Clay, 1966 / Teale & Sulzby, 1986", descripcion: "El contacto temprano con libros desarrolla conceptos sobre lo impreso: direccionalidad, funcion del texto e imagenes." },
+  "Antes de leer: Predicciones": { teoria: "Lectura como Proceso Predictivo", autor: "Goodman, 1967 / Smith, 1971", descripcion: "Anticipar el contenido activa esquemas mentales y prepara al lector para construir significado antes de leer." },
+  "Lectura dialogica: Pausas": { teoria: "Lectura Dialogica", autor: "Whitehurst et al., 1988", descripcion: "La interaccion durante la lectura en voz alta es mas efectiva que la lectura pasiva para el desarrollo del lenguaje." },
+  "Cruz: Quien - Identificar personajes": { teoria: "Estructura Narrativa", autor: "Stein & Glenn, 1979", descripcion: "La Cruz de Comprension organiza las preguntas de forma visual. QUIEN entrena la comprension literal de los agentes de la historia." },
+  "Cruz: Por que - causas": { teoria: "Comprension Inferencial", autor: "Kintsch, 1988 / Cain & Oakhill, 1999", descripcion: "Las inferencias causales conectan lo explicito con el conocimiento previo, construyendo una representacion coherente del texto." },
+  "ECO-E: Sonidos del entorno": { teoria: "ECO Estructurado — Escuchar", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Escuchar del ECO desarrolla la atencion auditiva como base para la comprension y produccion oral con estructura completa." },
+  "ECO-C: Comprension literal": { teoria: "ECO Estructurado — Comprender", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Comprender del ECO trabaja la comprension oral como paso previo a la produccion. Se enfoca en respuestas con evidencia del texto." },
+  "ECO-O: Nombrar con estructura": { teoria: "ECO Estructurado — Oralizar (No aceptacion de palabras sueltas)", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Oralizar aplica el principio central del ECO: no aceptar palabras sueltas. El docente modela la oracion completa y espera que el alumno la repita antes de continuar." },
+  "ECO-O: Narrar con secuenciadores": { teoria: "Narrativa con Andamiaje", autor: "Bruner, 1986 / Vygotsky, 1978", descripcion: "Los conectores temporales (primero, luego, al final) son andamios cognitivos que organizan el pensamiento narrativo y la produccion oral coherente." },
+  "ECO-O: Argumentar con PORQUE": { teoria: "Lenguaje Argumentativo Emergente", autor: "Veneziano & Sinclair, 1995", descripcion: "El uso del conector PORQUE marca el inicio del razonamiento causal en el lenguaje. Es una habilidad metalinguistica clave para el pensamiento critico." },
+}
+
+// Fallback por eje
+const FUNDAMENTO_EJE: Record<string, { teoria: string; autor: string; descripcion: string }> = {
+  CF: { teoria: "Conciencia Fonologica", autor: "Marilyn Adams, 1990 / Defior, 1996", descripcion: "La conciencia fonologica es la capacidad de reconocer y manipular los sonidos del lenguaje hablado. Es el predictor mas fuerte del exito en la lectura inicial." },
+  CT: { teoria: "Comprension Lectora Emergente", autor: "Sulzby & Teale, 1991 / Scarborough, 2001", descripcion: "La comprension de textos en nivel inicial se construye a traves de la lectura compartida y dialogica. Los ninos desarrollan esquemas narrativos que les permiten anticipar e inferir." },
+  O: { teoria: "ECO Estructurado — Oralidad Expandida", autor: "Vygotsky, 1978 / Bruner, 1983", descripcion: "El lenguaje oral es el andamiaje fundamental para el desarrollo cognitivo. El modelo ECO propone tres fases: Escuchar, Comprender y Oralizar, con estructura completa de oracion." }
+}
+
+function buscarPorActividad<T>(actividad: string | undefined, mapa: Record<string, T>, fallback: T): T {
+  if (!actividad) return fallback
+  const lower = actividad.toLowerCase()
+  for (const [clave, valor] of Object.entries(mapa)) {
+    if (lower.includes(clave.toLowerCase()) || clave.toLowerCase().includes(lower)) return valor
   }
+  const palabras = lower.split(" ")
+  for (const [clave, valor] of Object.entries(mapa)) {
+    if (palabras.some(p => p.length > 3 && clave.toLowerCase().includes(p))) return valor
+  }
+  return fallback
 }
 
 interface MicroTrainingProps {
@@ -234,14 +284,12 @@ interface MicroTrainingProps {
 // Buscar consejos por actividad o usar genericos
 function obtenerConsejos(actividad: string | undefined, eje: string): string[] {
   if (actividad) {
-    // Buscar coincidencia parcial en el titulo de la actividad
     const actividadLower = actividad.toLowerCase()
     for (const [titulo, consejos] of Object.entries(CONSEJOS_POR_ACTIVIDAD)) {
       if (actividadLower.includes(titulo.toLowerCase()) || titulo.toLowerCase().includes(actividadLower)) {
         return consejos
       }
     }
-    // Buscar por palabras clave
     const palabrasClave = actividadLower.split(" ")
     for (const [titulo, consejos] of Object.entries(CONSEJOS_POR_ACTIVIDAD)) {
       const tituloLower = titulo.toLowerCase()
@@ -250,14 +298,13 @@ function obtenerConsejos(actividad: string | undefined, eje: string): string[] {
       }
     }
   }
-  // Fallback a consejos genericos del eje
   return CONSEJOS_GENERICOS[eje] || CONSEJOS_GENERICOS.CF
 }
 
 export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroTrainingProps) {
-  const consejos = obtenerConsejos(actividadDelDia, ejeDelDia)
-  const aprendizajes = QUE_DEBEN_APRENDER[ejeDelDia]
-  const fundamento = FUNDAMENTO_PEDAGOGICO[ejeDelDia]
+  const consejos   = obtenerConsejos(actividadDelDia, ejeDelDia)
+  const aprendizajes = buscarPorActividad(actividadDelDia, QUE_DEBEN_APRENDER_ACT, QUE_DEBEN_APRENDER_EJE[ejeDelDia] || QUE_DEBEN_APRENDER_EJE.CF)
+  const fundamento   = buscarPorActividad(actividadDelDia, FUNDAMENTO_ACT, FUNDAMENTO_EJE[ejeDelDia] || FUNDAMENTO_EJE.CF)
   
   const [consejoIndex, setConsejoIndex] = useState(0)
   const [showAprendizajes, setShowAprendizajes] = useState(false)

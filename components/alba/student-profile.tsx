@@ -553,7 +553,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       <div className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: eje.bgColor }}>
                         <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" style={{ color: eje.color }} />
                         <div>
-                          <p className="text-xs font-medium" style={{ color: eje.color }}>Recomendacion ALBA:</p>
+                          <p className="text-xs font-medium" style={{ color: eje.color }}>Recomendacion:</p>
                           <p className="text-sm text-gray-600 mt-0.5">{sugerencia}</p>
                         </div>
                       </div>
@@ -701,7 +701,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                 <span>
                   <strong>Continuar fortaleciendo {sintesis.fortaleza.label}</strong>: El alumno muestra buen desempeno. 
-                  Avanzar en la secuencia ALBA hacia actividades mas complejas.
+                  Avanzar hacia actividades mas complejas en este eje.
                 </span>
               </li>
               <li className="flex items-start gap-2">
