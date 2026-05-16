@@ -45,62 +45,6 @@ const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 
-// ── Torta de Progreso por Eje ──────────────────────────────────────────────
-// Mini grafico de referencia que muestra el promedio del grupo por CF, CT y O
-// ALBA usa estos datos para decidir eje y actividad del dia
-function ProgresoEjesTorta({
-  progress,
-  students,
-}: {
-  progress: Record<string, { CF: number; CT: number; O: number }>
-  students: { id: string; nombre: string }[]
-}) {
-  const ejes = [
-    { key: "CF", label: "C. Fonologica", color: "#3b82f6" },
-    { key: "CT", label: "Comprension",   color: "#8b5cf6" },
-    { key: "O",  label: "Oralidad",      color: "#f59e0b" },
-  ] as const
-
-  const totalAlumnos = students.length
-  if (totalAlumnos === 0) return null
-
-  // Calcular promedio por eje solo de alumnos con al menos 1 registro (> 0)
-  const promedios = ejes.map(({ key, label, color }) => {
-    const vals = students.map(s => (progress[s.id]?.[key] ?? 0))
-    const conDatos = vals.filter(v => v > 0)
-    const promedio = conDatos.length > 0 ? Math.round(conDatos.reduce((a, b) => a + b, 0) / conDatos.length) : 0
-    return { key, label, color, promedio, evaluados: conDatos.length }
-  })
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Progreso del grupo por eje</p>
-      <div className="flex gap-2 items-end justify-between">
-        {promedios.map(({ key, label, color, promedio, evaluados }) => {
-          // Mini barra vertical
-          const altura = Math.max(4, Math.round(promedio * 0.44)) // max ~44px
-          return (
-            <div key={key} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-xs font-bold" style={{ color }}>
-                {evaluados > 0 ? `${promedio}%` : "—"}
-              </span>
-              <div className="w-full rounded-t-lg" style={{ height: 44, backgroundColor: "#f1f5f9", position: "relative" }}>
-                <div
-                  className="w-full rounded-t-lg absolute bottom-0 transition-all duration-700"
-                  style={{ height: `${altura}px`, backgroundColor: color, opacity: 0.85 }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 text-center leading-tight">{label}</span>
-              <span className="text-[10px] text-slate-400">{evaluados}/{totalAlumnos}</span>
-            </div>
-          )
-        })}
-      </div>
-      <p className="text-[10px] text-slate-400 mt-2 text-center">Solo incluye alumnos evaluados</p>
-    </div>
-  )
-}
-
 // ── Sintesis Pedagogica Cuatrimestral ──────────────────────────────────────
 function SintesisPedagogicaModal({ 
   progress,
@@ -1121,8 +1065,6 @@ useEffect(() => {
                     sala={salaActual}
                     isLoading={isLoading}
                   />
-                  {/* Torta de progreso por eje — referencia para la planificacion */}
-                  <ProgresoEjesTorta progress={progress} students={students} />
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 

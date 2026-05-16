@@ -47,7 +47,7 @@ interface HeatMapProps {
 }
 
 // LOGICA DEL SEMAFORO INTELIGENTE:
-// - Por defecto todos empiezan en VERDE (logrado) de forma invisible
+// - Por defecto todos empiezan en GRIS (sin evaluar)
 // - El docente SOLO marca: Amarillo (en proceso), Rojo (refuerzo), Azul (ausente)
 // - Al finalizar jornada, los no marcados quedan automaticamente en Verde
 
@@ -393,7 +393,7 @@ export function HeatMap({
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-2">
           <p className="text-xs text-slate-600 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-            <span>Marca rojo, amarillo o ausente. Al cerrar el dia, los sin marcar se registran como logrado.</span>
+            <span>Marca rojo, amarillo o ausente. Al finalizar la jornada, los sin marcar se registran como logrado.</span>
           </p>
         </div>
 
@@ -631,15 +631,15 @@ export function HeatMap({
               <Button
                 onClick={enviarRegistroCierre}
                 disabled={!cierreEvaluacion || enviandoCierre}
-                className="w-full"
-                style={{ backgroundColor: EJE_COLORS[selectedEje]?.color }}
+                className="w-full font-semibold text-white"
+                style={{ backgroundColor: "#1e3a5f" }}
               >
                 {enviandoCierre ? (
                   <Spinner className="w-4 h-4 mr-2" />
                 ) : (
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                 )}
-                Guardar y Finalizar Jornada
+                Guardar
               </Button>
             </div>
           </div>
