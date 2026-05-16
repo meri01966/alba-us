@@ -26,16 +26,14 @@ const ACTIVIDAD_EJE_MAP: Record<string, "CF" | "CT" | "O"> = {
   "Narracion Oral": "O",
 }
 
-// Traduccion de color a porcentaje de avance
-// IMPORTANTE: Los no marcados = verde (100%) por defecto
-// Solo azul (ausente) = 0, porque no participo
+// default (sin evaluar) = 0 -> gris en el mapa hasta que la docente marque
 function statusToProgress(status: StatusLevel | undefined): number {
   switch (status) {
-    case "blue": return 0     // Ausente - no participo
-    case "green": return 100  // Logrado
-    case "yellow": return 50  // En proceso
-    case "red": return 10     // Requiere apoyo
-    default: return 100       // No marcado = logrado (verde por defecto)
+    case "blue":   return 0    // Ausente
+    case "red":    return 10   // Necesita refuerzo
+    case "yellow": return 50   // En proceso
+    case "green":  return 100  // Logrado
+    default:       return 0    // Sin evaluar = gris
   }
 }
 
