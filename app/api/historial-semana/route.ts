@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     
     // Obtener registros de cierre para esta sala en el rango de fechas
     let query = supabase
-      .from("registros_cierre")
+      .from("registro_cierre")
       .select("fecha, eje, actividad_docente, actividad_alba, evaluacion_general")
       .eq("sala", sala)
       .gte("fecha", desde)
