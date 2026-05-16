@@ -1062,7 +1062,7 @@ useEffect(() => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MicroTraining 
-                  ejeDelDia={ejeActual} 
+                  ejeDelDia={ejeActual as "CF" | "CT" | "O"} 
                   actividadDelDia={actividadSugeridaALBA || actividadActual} 
                 />
 <AlertsPanel
