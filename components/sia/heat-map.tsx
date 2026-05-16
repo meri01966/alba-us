@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
 import { CheckCircle2, Clock, AlertCircle, BookOpen, X, RotateCcw, UserX, MessageSquare } from "lucide-react"
 
 type StatusLevel = "green" | "yellow" | "red" | "blue"
@@ -229,55 +230,11 @@ export function HeatMap({
   const [savingId, setSavingId] = useState<string | null>(null)
   
   const actividadDelDia = actividadSugeridaALBA || "Cargando sugerencia..."
-
-  
-  // Generar reportes para todos los alumnos
-  const reportes = useMemo(() => {
-    return students.map(s => ({
-      id: s.id,
-      nombre: s.name || s.nombre || "Sin nombre",
-      estado: evaluaciones[s.id] || "green",
-      reporte: generarReportePadre(
-        s.name || s.nombre || "Alumno",
-        evaluaciones[s.id] || null,
-        actividadDelDia
-      )
-    }))
-  }, [students, evaluaciones, actividadDelDia])
-  
-  // Enviar registro de cierre - automaticamente marca verde a los no marcados
-  const enviarRegistroCierre = async () => {
-    if (!cierreEvaluacion) return
-    
-    setEnviandoCierre(true)
-    
-    // Primero, guardar verde para todos los alumnos sin marca
-    students.forEach(s => {
-      if (!evaluaciones[s.id] && onEvaluacion) {
-        onEvaluacion(s.id, "green", actividadDelDia, selectedEje)
-      }
-    })
-    
-    const registro: RegistroCierre = {
-      actividadALBA: actividadDelDia,
-      actividadDocente: actividadDelDia,
-      eje: selectedEje,
-      sala: sala,
-      evaluacionGeneral: cierreEvaluacion,
-      observaciones: cierreObservaciones,
-      sugerenciaParaIA: cierreSugerencia,
-      stats: calcularStats,
-    }
-    
-    if (onRegistroCierre) {
-      await onRegistroCierre(registro)
-    }
-    
-    setMostrarCierre(false)
-    setCierreEvaluacion(null)
-    setCierreObservaciones("")
-    setCierreSugerencia("")
-    setEnviandoCierre(false)
+  const stats = {
+    green:  students.filter(s => (evaluaciones[s.id] || "") === "green").length,
+    yellow: students.filter(s => evaluaciones[s.id] === "yellow").length,
+    red:    students.filter(s => evaluaciones[s.id] === "red").length,
+    blue:   students.filter(s => evaluaciones[s.id] === "blue").length,
   }
 
   if (!isLoading && (!students || students.length === 0)) {
@@ -287,7 +244,7 @@ export function HeatMap({
   async function handleMark(student: Student, status: StatusLevel) {
     setSavingId(student.id)
     if (onEvaluacion) {
-      onEvaluacion(student.id, status, actividadDelDia, selectedEje)
+      onEvaluacion(student.id, status, actividadDelDia, ejeDeALBA)
     }
     setSavingId(null)
   }
@@ -330,21 +287,21 @@ export function HeatMap({
               </button>
             )}
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
-              {calcularStats.green} logrado
+              {stats.green} logrado
             </span>
-            {calcularStats.yellow > 0 && (
+            {stats.yellow > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
-                {calcularStats.yellow}
+                {stats.yellow}
               </span>
             )}
-            {calcularStats.red > 0 && (
+            {stats.red > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
-                {calcularStats.red}
+                {stats.red}
               </span>
             )}
-            {calcularStats.blue > 0 && (
+            {stats.blue > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-100 text-indigo-700">
-                {calcularStats.blue} aus.
+                {stats.blue} aus.
               </span>
             )}
           </div>
@@ -353,7 +310,7 @@ export function HeatMap({
         {/* Banner de actividad ALBA */}
         <div
           className="rounded-xl p-3 flex flex-col gap-2"
-          style={{ backgroundColor: EJE_COLORS[selectedEje]?.color || "#1e3a5f", color: "#fff" }}
+          style={{ backgroundColor: EJE_COLORS[ejeDeALBA]?.color || "#1e3a5f", color: "#fff" }}
         >
           <div className="flex items-center gap-2 mb-1">
             <BookOpen className="w-5 h-5 shrink-0 text-white/80" />
@@ -363,7 +320,7 @@ export function HeatMap({
           </div>
           <span className="text-sm font-bold">{actividadDelDia}</span>
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 self-start">
-            {EJE_COLORS[selectedEje]?.nombre || selectedEje}
+            {EJE_COLORS[ejeDeALBA]?.nombre || ejeDeALBA}
           </span>
         </div>
 
