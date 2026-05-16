@@ -367,6 +367,7 @@ export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
+  const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
 
   // Inicializar progreso de alumno en 0 (gris) — solo se actualiza con evaluacion explicita
   function initProgress(studentId: string) {
@@ -470,6 +471,8 @@ export default function ALBADashboard() {
       const data = await response.json()
       if (data.success) {
         fetchHistorialMes()
+        // ALBA re-analiza y sugiere la siguiente actividad
+        setBrainKey(k => k + 1)
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
@@ -1068,6 +1071,7 @@ useEffect(() => {
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 
+                    key={brainKey}
                     evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
                     ejeActual={ejeActual as "CF" | "CT" | "O"}
                     actividadActual={actividadActual}
