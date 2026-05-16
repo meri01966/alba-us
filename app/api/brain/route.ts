@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-// El cliente se crea lazy dentro del handler para no crashear si las env vars no estan disponibles
+// Cliente Supabase lazy — se crea dentro del handler, nunca a nivel de modulo
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
