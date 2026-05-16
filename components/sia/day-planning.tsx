@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -679,6 +679,12 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
   const [planning,         setPlanning]         = useState<Planning | null>(null)
   const [isPlanningLoading, setIsPlanningLoading] = useState(true)
 
+  // Refs para los callbacks — evitan que fetchBrain se recree en cada render del padre
+  const onActividadRef = useRef(onActividadALBA)
+  const onEjeRef       = useRef(onEjeALBA)
+  useEffect(() => { onActividadRef.current = onActividadALBA }, [onActividadALBA])
+  useEffect(() => { onEjeRef.current       = onEjeALBA },       [onEjeALBA])
+
   // Calcular stats de las evaluaciones del dia
   const stats = useMemo(() => {
     const values = Object.values(evaluaciones)
@@ -698,7 +704,6 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
       const data = await res.json()
       const sugerencia = data.sugerencia ?? null
       if (sugerencia) {
-        // Normalizar la respuesta al formato que espera BrainColumn
         const activity: BrainActivity = {
           id: `${sugerencia.eje}-${Date.now()}`,
           dia: 1,
@@ -711,17 +716,30 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
           ejeRecomendado: sugerencia.eje,
         }
         setBrain(activity)
-        if (onActividadALBA) onActividadALBA(sugerencia.actividad)
-        if (onEjeALBA) onEjeALBA(sugerencia.eje)
+        if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
+        if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
       } else {
         setBrain(null)
       }
     } catch {
-      setBrain(null)
+      // Si falla la API, mostrar la primera actividad de CF como fallback local
+      setBrain({
+        id: "fallback-CF-1",
+        dia: 1,
+        titulo: "Sonidos del entorno",
+        descripcion: "",
+        objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",
+        materiales: ["Campana o triangulo", "Grabadora con sonidos", "Tarjetas con imagenes de fuentes sonoras"],
+        razon: "Inicio de secuencia — Conciencia Fonologica",
+        source: "secuencia",
+        ejeRecomendado: "CF",
+      })
+      if (onActividadRef.current) onActividadRef.current("Sonidos del entorno")
+      if (onEjeRef.current)       onEjeRef.current("CF")
     } finally {
       setIsBrainLoading(false)
     }
-  }, [sala, onActividadALBA, onEjeALBA])
+  }, [sala]) // solo sala como dependencia — los callbacks van por ref
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {
