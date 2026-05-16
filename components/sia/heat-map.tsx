@@ -47,7 +47,7 @@ interface HeatMapProps {
 }
 
 // LOGICA DEL SEMAFORO INTELIGENTE:
-// - Por defecto todos empiezan en GRIS (sin evaluar)
+// HeatMap v2 — Finalizar Jornada
 // - El docente SOLO marca: Amarillo (en proceso), Rojo (refuerzo), Azul (ausente)
 // - Al finalizar jornada, los no marcados quedan automaticamente en Verde
 
