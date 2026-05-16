@@ -45,6 +45,62 @@ const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 
+// ── Torta de Progreso por Eje ──────────────────────────────────────────────
+// Mini grafico de referencia que muestra el promedio del grupo por CF, CT y O
+// ALBA usa estos datos para decidir eje y actividad del dia
+function ProgresoEjesTorta({
+  progress,
+  students,
+}: {
+  progress: Record<string, { CF: number; CT: number; O: number }>
+  students: { id: string; nombre: string }[]
+}) {
+  const ejes = [
+    { key: "CF", label: "C. Fonologica", color: "#3b82f6" },
+    { key: "CT", label: "Comprension",   color: "#8b5cf6" },
+    { key: "O",  label: "Oralidad",      color: "#f59e0b" },
+  ] as const
+
+  const totalAlumnos = students.length
+  if (totalAlumnos === 0) return null
+
+  // Calcular promedio por eje solo de alumnos con al menos 1 registro (> 0)
+  const promedios = ejes.map(({ key, label, color }) => {
+    const vals = students.map(s => (progress[s.id]?.[key] ?? 0))
+    const conDatos = vals.filter(v => v > 0)
+    const promedio = conDatos.length > 0 ? Math.round(conDatos.reduce((a, b) => a + b, 0) / conDatos.length) : 0
+    return { key, label, color, promedio, evaluados: conDatos.length }
+  })
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Progreso del grupo por eje</p>
+      <div className="flex gap-2 items-end justify-between">
+        {promedios.map(({ key, label, color, promedio, evaluados }) => {
+          // Mini barra vertical
+          const altura = Math.max(4, Math.round(promedio * 0.44)) // max ~44px
+          return (
+            <div key={key} className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-xs font-bold" style={{ color }}>
+                {evaluados > 0 ? `${promedio}%` : "—"}
+              </span>
+              <div className="w-full rounded-t-lg" style={{ height: 44, backgroundColor: "#f1f5f9", position: "relative" }}>
+                <div
+                  className="w-full rounded-t-lg absolute bottom-0 transition-all duration-700"
+                  style={{ height: `${altura}px`, backgroundColor: color, opacity: 0.85 }}
+                />
+              </div>
+              <span className="text-[10px] text-slate-500 text-center leading-tight">{label}</span>
+              <span className="text-[10px] text-slate-400">{evaluados}/{totalAlumnos}</span>
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-[10px] text-slate-400 mt-2 text-center">Solo incluye alumnos evaluados</p>
+    </div>
+  )
+}
+
 // ── Sintesis Pedagogica Cuatrimestral ──────────────────────────────────────
 function SintesisPedagogicaModal({ 
   progress,
@@ -367,7 +423,11 @@ export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+
+  // Inicializar progreso de alumno en 0 (gris) — solo se actualiza con evaluacion explicita
+  function initProgress(studentId: string) {
+    return { CF: 0, CT: 0, O: 0 }
+  }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
   
   // Gestion de sala
@@ -438,25 +498,39 @@ export default function ALBADashboard() {
     setEjeActual(eje)
   }, [])
   
-  // Callback para el registro de cierre
+  // Callback para el registro de cierre del dia
+  // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
   const handleRegistroCierre = useCallback(async (registro: RegistroCierre) => {
+    // 1. Marcar como verde todos los alumnos sin evaluacion explicita
+    const sinEvaluar = students.filter(s => !evaluaciones[s.id])
+    if (sinEvaluar.length > 0) {
+      const nuevasEvals = { ...evaluaciones }
+      const nuevosProgress = { ...progress }
+      sinEvaluar.forEach(s => {
+        nuevasEvals[s.id] = "green"
+        nuevosProgress[s.id] = {
+          ...(nuevosProgress[s.id] || initProgress(s.id)),
+          [ejeActual]: 100,
+        }
+      })
+      setEvaluaciones(nuevasEvals)
+      setProgress(nuevosProgress)
+    }
+
     try {
       const response = await fetch("/api/registro-cierre", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(registro),
       })
-      
       const data = await response.json()
-      
       if (data.success) {
-        // Recargar historial del mes para actualizar el calendario
         fetchHistorialMes()
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
     }
-  }, [fetchHistorialMes])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -706,7 +780,7 @@ useEffect(() => {
     // Actualizar progreso en tiempo real
     // Los no marcados empiezan en 100 (verde), solo se actualiza si hay evaluacion explicita
     setProgress(prev => {
-      const current = prev[studentId] || { CF: 100, CT: 100, O: 100 } // Default verde
+      const current = prev[studentId] || initProgress(studentId)
       const newProgress = statusToProgress(status)
       return {
         ...prev,
@@ -855,7 +929,7 @@ useEffect(() => {
 
   if (activeView === "perfil" && selectedStudent) {
     const student = students.find(s => s.id === selectedStudent)
-    const studentProgress = progress[selectedStudent] || { CF: 100, CT: 100, O: 100 } // Default verde
+    const studentProgress = progress[selectedStudent] || { CF: 0, CT: 0, O: 0 }
     
     return (
       <div className="min-h-screen bg-background">
@@ -1034,8 +1108,8 @@ useEffect(() => {
           ) : (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-4">
-<HeatMap
+                <div className="lg:col-span-4 flex flex-col gap-3">
+                  <HeatMap
                     students={students}
                     evaluaciones={evaluaciones}
                     onEvaluacion={handleEvaluacion}
@@ -1047,6 +1121,8 @@ useEffect(() => {
                     sala={salaActual}
                     isLoading={isLoading}
                   />
+                  {/* Torta de progreso por eje — referencia para la planificacion */}
+                  <ProgresoEjesTorta progress={progress} students={students} />
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 

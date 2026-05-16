@@ -233,17 +233,20 @@ export async function GET(req: Request) {
     const { actividad, indice, esRepeticion } = calcularActividadDelDia(
       ejeSugerido,
       analisis[ejeSugerido].clasesCompletadas,
-      analisis[ejeSugerido].promedio
+      analisis[ejeSugerido].promedio,
+      sala
     )
 
     // Razon explicada
+    const totalEnSecuencia = getSecuencia(ejeSugerido, sala).length
+    const edadLabel = esde4Anios(sala) ? " (4 años)" : " (5 años)"
     const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO Estructurado)"
     const razonBase = analisis[ejeSugerido].alumnosEnRojo.length > 0
-      ? `${analisis[ejeSugerido].alumnosEnRojo.length} alumno${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "s" : ""} necesita${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}.`
-      : `Continuamos avanzando en ${ejeNombre}.`
+      ? `${analisis[ejeSugerido].alumnosEnRojo.length} alumno${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "s" : ""} necesita${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}${edadLabel}.`
+      : `Continuamos avanzando en ${ejeNombre}${edadLabel}.`
     const razonSecuencia = esRepeticion
-      ? ` ALBA sugiere repetir la actividad anterior para consolidar (promedio bajo: ${analisis[ejeSugerido].promedio}%).`
-      : ` Clase ${indice + 1} de ${SECUENCIA[ejeSugerido].length} en la secuencia anual.`
+      ? ` Repetimos actividad anterior para consolidar (promedio bajo: ${analisis[ejeSugerido].promedio}%).`
+      : ` Clase ${indice + 1} de ${totalEnSecuencia} en la secuencia anual.`
 
     // 6. ALERTAS
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []

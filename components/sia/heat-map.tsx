@@ -389,11 +389,11 @@ export function HeatMap({
           </span>
         </div>
 
-        {/* Instruccion del semaforo inteligente */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
-          <p className="text-xs text-green-700 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span><strong>Todos empiezan en Logrado.</strong> Solo marca los que estan en proceso, necesitan refuerzo o estan ausentes.</span>
+        {/* Instruccion del semaforo */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-2">
+          <p className="text-xs text-slate-600 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+            <span>Marca rojo, amarillo o ausente. Al cerrar el dia, los sin marcar se registran como logrado.</span>
           </p>
         </div>
 
