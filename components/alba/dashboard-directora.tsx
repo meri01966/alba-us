@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, TrendingUp, TrendingDown, Eye, Users, ChevronDown, ArrowLeft, BarChart3, Sparkles } from "lucide-react"
+import { AlertTriangle, TrendingUp, TrendingDown, Eye, Users, ChevronDown, ArrowLeft, BarChart3, Sparkles, RefreshCw, BellRing } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 // ═══ TIPOS ═══
@@ -131,32 +131,135 @@ export default function DashboardDirectora() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [registros, setRegistros] = useState<Registro[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [ejeFiltro, setEjeFiltro] = useState<"todos" | Eje>("todos")
   const [salaSeleccionada, setSalaSeleccionada] = useState<string | null>(null)
   const [alumnoModal, setAlumnoModal] = useState<string | null>(null)
   const [showEjeDropdown, setShowEjeDropdown] = useState(false)
 
-  // Cargar datos de toda la escuela
-  useEffect(() => {
-    async function fetchData() {
-      if (!isSupabaseConfigured() || !supabase) {
-        setLoading(false)
-        return
-      }
-      try {
-        const { data: als } = await supabase.from("alumnos").select("*").order("nombre")
-        const { data: regs } = await supabase.from("seguimiento").select("*").order("fecha", { ascending: true })
-        setAlumnos(als || [])
-        setRegistros(regs || [])
-      } catch (err) {
-        console.error("Error cargando datos:", err)
-      }
+  // ── Cargar y refrescar datos cada 30 segundos ────────────────────────────
+  async function fetchData() {
+    if (!isSupabaseConfigured() || !supabase) {
       setLoading(false)
+      return
     }
+    try {
+      const { data: als } = await supabase.from("alumnos").select("*").order("nombre")
+      const { data: regs } = await supabase.from("seguimiento").select("*").order("fecha", { ascending: true })
+      setAlumnos(als || [])
+      setRegistros(regs || [])
+      setLastUpdated(new Date())
+    } catch (err) {
+      console.error("[v0] Error cargando datos directora:", err)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
     fetchData()
+    // Polling cada 30 segundos para recibir evaluaciones en tiempo real
+    const interval = setInterval(fetchData, 30000)
+    // Suscripcion Supabase Realtime a la tabla seguimiento
+    if (isSupabaseConfigured() && supabase) {
+      const channel = supabase
+        .channel("seguimiento-directora")
+        .on("postgres_changes", { event: "*", schema: "public", table: "seguimiento" }, () => {
+          fetchData()
+        })
+        .subscribe()
+      return () => {
+        clearInterval(interval)
+        supabase.removeChannel(channel)
+      }
+    }
+    return () => clearInterval(interval)
   }, [])
 
-  // ═══ CÁLCULOS ═══
+  // ── Alertas inteligentes generadas desde los datos reales ────────────────
+  type AlertaDirectora = { urgencia: "alta" | "media" | "info"; sala: string; mensaje: string; eje?: string }
+
+  function calcularAlertas(): AlertaDirectora[] {
+    const alertas: AlertaDirectora[] = []
+    const ahora = Date.now()
+    const hace7dias = ahora - 7 * 86400000
+    const hace14dias = ahora - 14 * 86400000
+
+    SALAS.forEach(s => {
+      const alumnosSala = alumnos.filter(a => a.sala === s.nombre)
+      if (alumnosSala.length === 0) return
+      const ids = alumnosSala.map(a => a.id)
+      const regsSala = registros.filter(r => ids.includes(r.alumno_id))
+
+      // 1. Sala sin actividad en los ultimos 7 dias
+      const ultimaActividad = regsSala.length > 0
+        ? new Date(regsSala[regsSala.length - 1].fecha).getTime()
+        : 0
+      if (ultimaActividad === 0) {
+        alertas.push({ urgencia: "alta", sala: s.nombre, mensaje: `Sin actividades registradas. ALBA no tiene datos para sugerir.` })
+      } else if (ultimaActividad < hace7dias) {
+        const diasSinActividad = Math.round((ahora - ultimaActividad) / 86400000)
+        alertas.push({ urgencia: "alta", sala: s.nombre, mensaje: `Sin registros hace ${diasSinActividad} dias. Verificar si se esta usando el sistema.` })
+      }
+
+      // 2. Promedio general bajo (< 40%) con al menos 5 evaluaciones
+      if (regsSala.length >= 5) {
+        const promedioSala = alumnosSala.reduce((acc, a) => {
+          const cf = regsSala.filter(r => r.alumno_id === a.id && r.eje === "CF")
+          const ct = regsSala.filter(r => r.alumno_id === a.id && r.eje === "CT")
+          const o = regsSala.filter(r => r.alumno_id === a.id && r.eje === "O")
+          const prom = (cf.length > 0 ? (cf.filter(r => r.resultado === "green").length / cf.length) * 100 : 0)
+            + (ct.length > 0 ? (ct.filter(r => r.resultado === "green").length / ct.length) * 100 : 0)
+            + (o.length > 0 ? (o.filter(r => r.resultado === "green").length / o.length) * 100 : 0)
+          return acc + (prom / 3)
+        }, 0) / alumnosSala.length
+        if (promedioSala < 35) {
+          alertas.push({ urgencia: "alta", sala: s.nombre, mensaje: `Promedio general muy bajo (${Math.round(promedioSala)}%). La sala necesita atencion inmediata.` })
+        } else if (promedioSala < 50) {
+          alertas.push({ urgencia: "media", sala: s.nombre, mensaje: `Promedio general por debajo del 50% (${Math.round(promedioSala)}%). Revisar estrategia docente.` })
+        }
+      }
+
+      // 3. Tendencia negativa por eje: compara semana actual vs semana anterior
+      const ejes: Eje[] = ["CF", "CT", "O"]
+      ejes.forEach(eje => {
+        const regsEje = regsSala.filter(r => r.eje === eje)
+        const semActual = regsEje.filter(r => new Date(r.fecha).getTime() >= hace7dias)
+        const semAnterior = regsEje.filter(r => new Date(r.fecha).getTime() >= hace14dias && new Date(r.fecha).getTime() < hace7dias)
+        if (semActual.length >= 3 && semAnterior.length >= 3) {
+          const promA = semAnterior.filter(r => r.resultado === "green").length / semAnterior.length
+          const promB = semActual.filter(r => r.resultado === "green").length / semActual.length
+          if (promB < promA - 0.2) {
+            alertas.push({ urgencia: "media", sala: s.nombre, eje, mensaje: `Retroceso en ${EJES[eje].label}: bajo de ${Math.round(promA * 100)}% a ${Math.round(promB * 100)}% esta semana.` })
+          }
+        }
+      })
+
+      // 4. Muchos alumnos en rojo en un eje (> 40% del grupo)
+      ejes.forEach(eje => {
+        const enRojo = alumnosSala.filter(a => {
+          const ultReg = regsSala.filter(r => r.alumno_id === a.id && r.eje === eje).slice(-1)[0]
+          return ultReg?.resultado === "red"
+        }).length
+        if (enRojo > alumnosSala.length * 0.4 && enRojo >= 3) {
+          alertas.push({ urgencia: "alta", sala: s.nombre, eje, mensaje: `${enRojo} de ${alumnosSala.length} alumnos en rojo en ${EJES[eje].label}. Revisar actividad y materiales.` })
+        }
+      })
+
+      // 5. Sin datos en algun eje (la docente no trabajo ese eje todavia)
+      ejes.forEach(eje => {
+        const tieneEje = regsSala.some(r => r.eje === eje)
+        if (!tieneEje && regsSala.length >= 5) {
+          alertas.push({ urgencia: "info", sala: s.nombre, eje, mensaje: `${EJES[eje].label} aun sin evaluar. ALBA recomendara actividades cuando se registre la primera.` })
+        }
+      })
+    })
+
+    // Ordenar: alta primero, luego media, luego info
+    const orden = { alta: 0, media: 1, info: 2 }
+    return alertas.sort((a, b) => orden[a.urgencia] - orden[b.urgencia]).slice(0, 12)
+  }
+
+  // ── Calculos ──────────────────────────────────────────────────────────────
   function getUltimoEstado(alumnoId: string, eje?: string): Estado | null {
     let regs = registros.filter(r => r.alumno_id === alumnoId)
     if (eje) regs = regs.filter(r => r.eje === eje)
@@ -296,7 +399,7 @@ export default function DashboardDirectora() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {(["CF", "CT", "O"] as Eje[]).map(eje => (
                   <div key={eje} className="rounded-xl p-3 text-center border" style={{ borderColor: EJES[eje].color + "30", backgroundColor: EJES[eje].color + "08" }}>
-                    <div className="text-lg">{EJES[eje].icon}</div>
+                    <div className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1 text-white" style={{ backgroundColor: EJES[eje].color }}>{eje}</div>
                     <div className="text-2xl font-light" style={{ color: EJES[eje].color }}>{resumen.promedios[eje]}%</div>
                     <div className="text-[10px] text-slate-500">{EJES[eje].label}</div>
                   </div>
@@ -394,31 +497,81 @@ export default function DashboardDirectora() {
               <span style={{ color: "#1e3a5f" }}>LBA</span>
             </h1>
             <div className="w-px h-5 bg-slate-200" />
-            <span className="text-sm font-medium" style={{ color: "#1e3a5f" }}>Vista Dirección</span>
+            <span className="text-sm font-medium" style={{ color: "#1e3a5f" }}>Vista Direccion</span>
           </div>
 
-          {/* Filtro de eje */}
-          <div className="relative">
-            <button onClick={() => setShowEjeDropdown(!showEjeDropdown)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm">
-              <BarChart3 className="w-3.5 h-3.5 text-slate-400" />
-              <span>{ejeFiltro === "todos" ? "Todos los ejes" : EJES[ejeFiltro].icon + " " + EJES[ejeFiltro].label}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-            {showEjeDropdown && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20 min-w-[180px]">
-                <button onClick={() => { setEjeFiltro("todos"); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Todos los ejes</button>
-                {(["CF", "CT", "O"] as Eje[]).map(eje => (
-                  <button key={eje} onClick={() => { setEjeFiltro(eje); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">
-                    {EJES[eje].icon} {EJES[eje].label}
-                  </button>
-                ))}
-              </div>
+          <div className="flex items-center gap-3">
+            {/* Ultima actualizacion */}
+            {lastUpdated && (
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" />
+                {lastUpdated.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+
+            {/* Filtro de eje */}
+            <div className="relative">
+              <button onClick={() => setShowEjeDropdown(!showEjeDropdown)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm">
+                <BarChart3 className="w-3.5 h-3.5 text-slate-400" />
+                <span>{ejeFiltro === "todos" ? "Todos los ejes" : EJES[ejeFiltro].label}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              {showEjeDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20 min-w-[200px]">
+                  <button onClick={() => { setEjeFiltro("todos"); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Todos los ejes</button>
+                  {(["CF", "CT", "O"] as Eje[]).map(eje => (
+                    <button key={eje} onClick={() => { setEjeFiltro(eje); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje].color }}>{eje}</span>
+                      {EJES[eje].label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
             )}
           </div>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto p-4 space-y-4">
+
+        {/* Panel de alertas inteligentes */}
+        {(() => {
+          const alertas = calcularAlertas()
+          if (alertas.length === 0) return null
+          const altasYMedias = alertas.filter(a => a.urgencia !== "info")
+          if (altasYMedias.length === 0) return null
+          return (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BellRing className="w-4 h-4 text-red-500" />
+                <span className="text-sm font-semibold text-red-700">Alertas ALBA — {altasYMedias.length} situacion{altasYMedias.length > 1 ? "es" : ""} que requieren atencion</span>
+              </div>
+              <div className="space-y-2">
+                {alertas.map((a, i) => (
+                  <div key={i} className={`flex items-start gap-2 text-sm rounded-lg px-3 py-2 ${
+                    a.urgencia === "alta" ? "bg-red-100 text-red-800" :
+                    a.urgencia === "media" ? "bg-amber-100 text-amber-800" :
+                    "bg-blue-50 text-blue-700"
+                  }`}>
+                    <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                      a.urgencia === "alta" ? "bg-red-500" :
+                      a.urgencia === "media" ? "bg-amber-500" : "bg-blue-400"
+                    }`} />
+                    <div>
+                      <span className="font-semibold">{a.sala}</span>
+                      {a.eje && <span className="ml-1 text-[10px] font-bold px-1 py-0.5 rounded text-white" style={{ backgroundColor: EJES[a.eje as Eje]?.color }}>{a.eje}</span>}
+                      <span className="ml-1">{a.mensaje}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* KPIs */}
         <div className="grid grid-cols-4 gap-3">
