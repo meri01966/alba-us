@@ -19,11 +19,18 @@ export async function GET() {
     if (errAlumnos) console.error("[v0] directora-data alumnos error:", errAlumnos)
     if (errRegistros) console.error("[v0] directora-data registros error:", errRegistros)
 
+    const alumnosMap = new Map((alumnos || []).map(a => [a.id, a]))
+    const registrosEnriquecidos = (registros || []).map(r => ({
+      ...r,
+      alumno_nombre: alumnosMap.get(r.alumno_id)?.nombre || "",
+      sala: r.sala || alumnosMap.get(r.alumno_id)?.sala || "",
+    }))
+
     return NextResponse.json(
       {
         ok: true,
         alumnos: alumnos || [],
-        registros: registros || [],
+        registros: registrosEnriquecidos,
         timestamp: new Date().toISOString(),
       },
       {
