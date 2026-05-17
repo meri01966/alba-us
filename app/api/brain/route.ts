@@ -114,30 +114,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sala = searchParams.get("sala") || "Manzanos"
 
-  const fallbackSugerencia = (salaName: string) => {
-  const eje = "CF" as const
-  const limites4 = { CF: 12, CT: 8, O: 10 }
-  const seqInicio = esde4Anios(salaName) ? SECUENCIA.CF.slice(0, limites4.CF) : SECUENCIA.CF
-  const actInicio = seqInicio[0]
-  return NextResponse.json({
-    sugerencia: {
-      eje,
-      actividad: actInicio.titulo,
-      descripcion: actInicio.descripcion,
-      objetivo: actInicio.objetivo,
-      materiales: actInicio.materiales,
-      razon: "Inicio de secuencia. Conciencia Fonologica " + (esde4Anios(salaName) ? "(4 anos)" : "(5 anos)") + ".",
-      indiceEnSecuencia: 0,
-      totalEnSecuencia: seqInicio.length,
-      esRepeticion: false,
-    },
-    analisis: { CF: { promedio: 0, total: 0 }, CT: { promedio: 0, total: 0 }, O: { promedio: 0, total: 0 } },
-  })
-  }
-
   const supabase = getSupabase()
 
   try {
+    // ── 1. Alumnos de esta sala ────────────────────────────────────────────
     const { data: alumnos } = await supabase
       .from("alumnos")
       .select("id, nombre")
@@ -157,6 +137,7 @@ export async function GET(req: Request) {
           totalAlumnos: 0,
           tendencia: "estancado",
           aprendidoDeLaRed: false,
+          salaRed: null,
           numeroClase: 1,
           esRepeticion: false,
         },
@@ -168,6 +149,7 @@ export async function GET(req: Request) {
 
     const ids = alumnos.map((a) => a.id)
 
+    // ── 2. Registros de ESTA sala ──────────────────────────────────────────
     const { data: registros } = await supabase
       .from("seguimiento")
       .select("*")
@@ -176,6 +158,36 @@ export async function GET(req: Request) {
 
     const regs = registros || []
 
+    // ── 3. Inteligencia inter-salas: actividades exitosas en la RED ─────────
+    // Consulta seguimiento de todas las salas excluyendo la actual
+    const { data: registrosRed } = await supabase
+      .from("seguimiento")
+      .select("actividad, eje, resultado, sala")
+      .not("sala", "eq", sala)
+      .not("sala", "is", null)
+
+    // Calcular tasa de exito por actividad/eje en toda la red
+    type MapaRed = Record<string, { total: number; verdes: number; salas: Set<string> }>
+    const mapaRed: MapaRed = {}
+    for (const r of registrosRed || []) {
+      const key = `${r.eje}::${r.actividad}`
+      if (!mapaRed[key]) mapaRed[key] = { total: 0, verdes: 0, salas: new Set() }
+      mapaRed[key].total++
+      if (r.resultado === "green") mapaRed[key].verdes++
+      if (r.sala) mapaRed[key].salas.add(r.sala)
+    }
+    // Actividades de la red con tasa >= 70% y al menos 5 registros en 2+ salas
+    const exitosasRed: Record<string, { actividad: string; tasa: number; salas: number }[]> = { CF: [], CT: [], O: [] }
+    for (const [key, d] of Object.entries(mapaRed)) {
+      const [eje, actividad] = key.split("::")
+      if (!actividad || !["CF", "CT", "O"].includes(eje)) continue
+      const tasa = Math.round((d.verdes / d.total) * 100)
+      if (d.total >= 5 && d.salas.size >= 2 && tasa >= 70) {
+        exitosasRed[eje].push({ actividad, tasa, salas: d.salas.size })
+      }
+    }
+
+    // ── 4. Analisis por eje de esta sala ───────────────────────────────────
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
       total: number
@@ -184,9 +196,10 @@ export async function GET(req: Request) {
       rojos: number
       promedio: number
       alumnosEnRojo: string[]
-      actividadesExitosas: { actividad: string; tasa: number }[]
+      actividadesExitosasLocales: { actividad: string; tasa: number }[]
       tendencia: "mejorando" | "estancado" | "empeorando"
       clasesCompletadas: number
+      ultimasClasesEnRojo: number
     }> = {} as any
 
     for (const eje of ejes) {
@@ -197,8 +210,19 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      const fechasDistintas = new Set(regsEje.map((r) => r.fecha?.split("T")[0])).size
-      const clasesCompletadas = fechasDistintas
+      const fechasDistintas = [...new Set(regsEje.map((r) => r.fecha?.split("T")[0]))].sort()
+      const clasesCompletadas = fechasDistintas.length
+
+      // Ultimas 2 fechas en rojo (para bajar nivel en secuencia)
+      const ultimas2Fechas = fechasDistintas.slice(-2)
+      let ultimasClasesEnRojo = 0
+      for (const f of ultimas2Fechas) {
+        const regsEsaFecha = regsEje.filter((r) => r.fecha?.split("T")[0] === f)
+        const promFecha = regsEsaFecha.length > 0
+          ? regsEsaFecha.filter((r) => r.resultado === "green").length / regsEsaFecha.length
+          : 1
+        if (promFecha < 0.4) ultimasClasesEnRojo++
+      }
 
       const alumnosEnRojo: string[] = []
       for (const al of alumnos) {
@@ -213,9 +237,9 @@ export async function GET(req: Request) {
         actMap[r.actividad].total++
         if (r.resultado === "green") actMap[r.actividad].verdes++
       }
-      const actividadesExitosas = Object.entries(actMap)
-        .map(([actividad, d]) => ({ actividad, tasa: d.total > 2 ? Math.round((d.verdes / d.total) * 100) : 0 }))
-        .filter((a) => a.tasa > 0)
+      const actividadesExitosasLocales = Object.entries(actMap)
+        .map(([actividad, d]) => ({ actividad, tasa: d.total >= 3 ? Math.round((d.verdes / d.total) * 100) : 0 }))
+        .filter((a) => a.tasa >= 60)
         .sort((a, b) => b.tasa - a.tasa)
         .slice(0, 5)
 
@@ -230,40 +254,84 @@ export async function GET(req: Request) {
       if (promSemActual > promSemAnterior + 0.1) tendencia = "mejorando"
       if (promSemActual < promSemAnterior - 0.1) tendencia = "empeorando"
 
-      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosas, tendencia, clasesCompletadas }
+      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
+    // ── 5. Elegir eje: el mas debil con mas urgencia ───────────────────────
     let ejeSugerido: "CF" | "CT" | "O" = "CF"
     let peorScore = 999
     for (const eje of ejes) {
       const a = analisis[eje]
-      const score = a.promedio - (a.alumnosEnRojo.length * 10) - (a.tendencia === "empeorando" ? 20 : 0)
+      const score = a.promedio
+        - (a.alumnosEnRojo.length * 10)
+        - (a.tendencia === "empeorando" ? 20 : 0)
+        - (a.ultimasClasesEnRojo >= 2 ? 15 : 0)
       if (score < peorScore) {
         peorScore = score
         ejeSugerido = eje
       }
     }
 
+    // ── 6. Elegir actividad: combinar secuencia + evidencia inter-salas ────
+    const ejeDatos = analisis[ejeSugerido]
+
+    // Si hay 2+ clases seguidas con promedio bajo, retroceder en la secuencia
+    let clasesParaCalculo = ejeDatos.clasesCompletadas
+    if (ejeDatos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 0) {
+      clasesParaCalculo = Math.max(0, clasesParaCalculo - 1)
+    }
+
     const { actividad, indice, esRepeticion } = calcularActividadDelDia(
       ejeSugerido,
-      analisis[ejeSugerido].clasesCompletadas,
-      analisis[ejeSugerido].promedio,
+      clasesParaCalculo,
+      ejeDatos.promedio,
       sala
     )
 
+    // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
+    // Si es asi, y hay una actividad de la red con >= 70%, usar esa
+    const actividadLocal = analisis[ejeSugerido].actividadesExitosasLocales
+    const actTasaLocal = actividadLocal.find(a => a.actividad === actividad.titulo)
+    const tasaLocal = actTasaLocal ? actTasaLocal.tasa : -1 // -1 = sin datos
+
+    const redParaEje = exitosasRed[ejeSugerido] || []
+    // Buscar en la SECUENCIA la actividad de la red que no hayamos hecho aun
+    const actividadesHechasEnEste = new Set(regs.filter(r => r.eje === ejeSugerido).map(r => r.actividad))
+    const candidataRed = redParaEje
+      .filter(r => !actividadesHechasEnEste.has(r.actividad))
+      .sort((a, b) => b.tasa - a.tasa)[0]
+
+    // Usar actividad de la red solo si la secuencia actual tiene tasa local mala Y hay candidata de la red
+    const usarRed = tasaLocal !== -1 && tasaLocal < 30 && candidataRed != null
+    const actividadFinal = usarRed
+      ? (SECUENCIA[ejeSugerido].find(a => a.titulo === candidataRed.actividad) ?? actividad)
+      : actividad
+    const aprendidoDeLaRed = usarRed
+    const salaRedNombre = usarRed && candidataRed ? `${candidataRed.salas} sala${candidataRed.salas > 1 ? "s" : ""} de la red` : null
+
+    // ── 7. Construir respuesta ─────────────────────────────────────────────
     const limites4 = { CF: 12, CT: 8, O: 10 }
     const totalEnSecuencia = esde4Anios(sala)
       ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
       : SECUENCIA[ejeSugerido].length
     const edadLabel = esde4Anios(sala) ? " (4 anos)" : " (5 anos)"
-    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO Estructurado)"
-    const razonBase = analisis[ejeSugerido].alumnosEnRojo.length > 0
-      ? `${analisis[ejeSugerido].alumnosEnRojo.length} alumno${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "s" : ""} necesita${analisis[ejeSugerido].alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}${edadLabel}.`
-      : `Continuamos avanzando en ${ejeNombre}${edadLabel}.`
-    const razonSecuencia = esRepeticion
-      ? ` Repetimos actividad anterior para consolidar (promedio bajo: ${analisis[ejeSugerido].promedio}%).`
-      : ` Clase ${indice + 1} de ${totalEnSecuencia} en la secuencia anual.`
+    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO)"
 
+    let razon = ejeDatos.alumnosEnRojo.length > 0
+      ? `${ejeDatos.alumnosEnRojo.length} alumno${ejeDatos.alumnosEnRojo.length > 1 ? "s" : ""} necesita${ejeDatos.alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}${edadLabel}.`
+      : `Continuamos avanzando en ${ejeNombre}${edadLabel}.`
+
+    if (aprendidoDeLaRed && salaRedNombre) {
+      razon += ` Actividad sugerida por la red ALBA (exitosa en ${salaRedNombre} con ${candidataRed?.tasa}% de logro).`
+    } else if (ejeDatos.ultimasClasesEnRojo >= 2) {
+      razon += ` El grupo tuvo 2 clases seguidas con dificultad. Se retrocedio en la secuencia para consolidar.`
+    } else if (esRepeticion) {
+      razon += ` Repetimos para consolidar (promedio: ${ejeDatos.promedio}%).`
+    } else {
+      razon += ` Clase ${indice + 1} de ${totalEnSecuencia} en la secuencia anual.`
+    }
+
+    // ── 8. Alertas ─────────────────────────────────────────────────────────
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []
     for (const eje of ejes) {
       const a = analisis[eje]
@@ -275,17 +343,15 @@ export async function GET(req: Request) {
       for (const al of alumnos) {
         const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-3)
         if (regsAl.length >= 3 && regsAl.every((r) => r.resultado === "red")) {
-          alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ registros en rojo en ${nombre}. Considerar intervencion diferenciada.`, urgencia: "alta" })
-        }
-      }
-      for (const al of alumnos) {
-        const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-2)
-        if (regsAl.length === 2 && regsAl[0].resultado !== "red" && regsAl[1].resultado === "red") {
-          alertas.push({ tipo: "regresion", mensaje: `${al.nombre} retrocedio en ${nombre}. Revisar que cambio.`, urgencia: "media" })
+          alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ registros en rojo en ${nombre}.`, urgencia: "alta" })
         }
       }
       if (a.tendencia === "empeorando") {
         alertas.push({ tipo: "tendencia", mensaje: `${nombre} muestra tendencia negativa esta semana.`, urgencia: "media" })
+      }
+      // Alerta positiva: actividad de la red disponible
+      if (exitosasRed[eje].length > 0) {
+        alertas.push({ tipo: "red_exitosa", mensaje: `La red ALBA tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >70% de logro en ${nombre}. ALBA las priorizara automaticamente.`, urgencia: "info" })
       }
     }
 
@@ -296,15 +362,16 @@ export async function GET(req: Request) {
     return NextResponse.json({
       sugerencia: {
         eje: ejeSugerido,
-        actividad: actividad.titulo,
-        descripcion: actividad.descripcion,
-        objetivo: actividad.objetivo,
-        materiales: actividad.materiales,
-        razon: razonBase + razonSecuencia,
-        alumnosEnRiesgo: analisis[ejeSugerido].alumnosEnRojo.length,
+        actividad: actividadFinal.titulo,
+        descripcion: actividadFinal.descripcion,
+        objetivo: actividadFinal.objetivo,
+        materiales: actividadFinal.materiales,
+        razon,
+        alumnosEnRiesgo: ejeDatos.alumnosEnRojo.length,
         totalAlumnos: alumnos.length,
-        tendencia: analisis[ejeSugerido].tendencia,
-        aprendidoDeLaRed: analisis[ejeSugerido].actividadesExitosas.length > 0,
+        tendencia: ejeDatos.tendencia,
+        aprendidoDeLaRed,
+        salaRed: salaRedNombre,
         numeroClase: indice + 1,
         esRepeticion,
       },
@@ -312,7 +379,8 @@ export async function GET(req: Request) {
       historial: {
         promediosPorEje: { CF: analisis.CF.promedio, CT: analisis.CT.promedio, O: analisis.O.promedio },
         tendencias: { CF: analisis.CF.tendencia, CT: analisis.CT.tendencia, O: analisis.O.tendencia },
-        actividadesExitosas: { CF: analisis.CF.actividadesExitosas, CT: analisis.CT.actividadesExitosas, O: analisis.O.actividadesExitosas },
+        actividadesExitosasLocales: { CF: analisis.CF.actividadesExitosasLocales, CT: analisis.CT.actividadesExitosasLocales, O: analisis.O.actividadesExitosasLocales },
+        exitosasRed,
       },
       progreso: {
         totalClasesCompletadas: totalClases,
@@ -325,7 +393,7 @@ export async function GET(req: Request) {
       },
     })
   } catch (err) {
-    console.error("Error en /api/brain:", err)
+    console.error("[v0] Error en /api/brain:", err)
     const actividadInicial = SECUENCIA.CF[0]
     return NextResponse.json({
       sugerencia: {
@@ -335,6 +403,8 @@ export async function GET(req: Request) {
         objetivo: actividadInicial.objetivo,
         materiales: actividadInicial.materiales,
         razon: "Inicio del recorrido. Comenzamos con Conciencia Fonologica.",
+        aprendidoDeLaRed: false,
+        salaRed: null,
         numeroClase: 1,
         esRepeticion: false,
       },

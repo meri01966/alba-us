@@ -684,6 +684,7 @@ useEffect(() => {
             .update({
               resultado: status,
               actividad: actividadDelDia,
+              sala: salaActual,
               fecha: new Date().toISOString()
             })
             .eq('id', existing.id)
@@ -700,7 +701,8 @@ useEffect(() => {
               eje: eje,
               resultado: status,
               actividad: actividadDelDia,
-              fecha: new Date().toISOString()
+              fecha: new Date().toISOString(),
+              sala: salaActual,
             }])
 
           if (error) {

@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRight } from "lucide-react"
+import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRight, Network } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +44,8 @@ interface BrainActivity {
   razon?: string
   claseNumero?: number
   claseDeLaSemana?: number
+  aprendidoDeLaRed?: boolean
+  salaRed?: string | null
 }
 
 interface Planning {
@@ -358,7 +360,12 @@ function BrainColumn({ activity, isLoading, stats }: {
             </span>
           )}
         </div>
-        {/* Info de clase semanal y eje */}
+          {activity && activity.aprendidoDeLaRed && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold flex items-center gap-1">
+              <Network className="w-3 h-3" />
+              Red ALBA{activity.salaRed ? ` (${activity.salaRed})` : ""}
+            </span>
+          )}
         {activity && (
           <div className="flex items-center gap-2 flex-wrap">
             {activity.claseNumero && (
@@ -715,6 +722,8 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
           razon: sugerencia.razon,
           source: "secuencia",
           ejeRecomendado: sugerencia.eje,
+          aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
+          salaRed: sugerencia.salaRed || null,
         }
         setBrain(activity)
         if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
