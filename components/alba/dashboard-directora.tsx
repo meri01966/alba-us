@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, TrendingUp, TrendingDown, Eye, Users, ChevronDown, ArrowLeft, BarChart3, Sparkles, RefreshCw, BellRing } from "lucide-react"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 // ═══ TIPOS ═══
 type Eje = "CF" | "CT" | "O"
