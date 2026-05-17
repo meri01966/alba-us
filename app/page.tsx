@@ -93,7 +93,7 @@ function SintesisPedagogicaModal({
   useEffect(() => {
     async function fetchReporte() {
       try {
-        const res = await fetch("/api/reporte-padres")
+        const res = await fetch(`/api/reporte-padres?sala=${encodeURIComponent(salaName)}`)
         const data = await res.json()
         setReporte(data)
       } catch (err) {

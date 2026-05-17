@@ -59,12 +59,21 @@ function sugerenciaParaCasa(eje: string, promedio: number): string {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const alumnoId = searchParams.get("alumnoId")
-  const salaId = searchParams.get("salaId")
+  const sala = searchParams.get("sala")
 
   const supabase = getSupabase()
 
   try {
-    // Buscar evaluaciones del alumno (o de toda la sala si no hay alumnoId)
+    // Si no se pasa sala ni alumnoId no se puede generar reporte
+    if (!alumnoId && !sala) {
+      return NextResponse.json({
+        ok: true,
+        sinDatos: true,
+        mensaje: "No se especifico sala ni alumno. El reporte requiere al menos uno de los dos parametros.",
+        ejes: [],
+      })
+    }
+
     let query = supabase
       .from("seguimiento")
       .select("*")
@@ -72,8 +81,9 @@ export async function GET(req: NextRequest) {
 
     if (alumnoId) {
       query = query.eq("alumno_id", alumnoId)
-    } else if (salaId) {
-      query = query.eq("sala_id", salaId)
+    } else if (sala) {
+      // Filtra por el nombre de sala guardado en el campo "sala"
+      query = query.eq("sala", sala)
     }
 
     const { data: evaluaciones, error } = await query
@@ -84,7 +94,7 @@ export async function GET(req: NextRequest) {
 
     const registros = evaluaciones || []
 
-    // Agrupar por eje - SOLO ejes con actividades reales
+    // Agrupar por eje - SOLO ejes con actividades realmente registradas
     const porEje: Record<string, { resultados: string[]; actividades: string[]; fechas: string[] }> = {}
 
     for (const r of registros) {
@@ -102,14 +112,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Construir reporte SOLO para ejes con datos
+    // Solo los ejes que tienen evaluaciones reales
     const ejesConDatos = Object.keys(porEje).filter(eje => porEje[eje].resultados.length > 0)
 
     if (ejesConDatos.length === 0) {
       return NextResponse.json({
         ok: true,
         sinDatos: true,
-        mensaje: "Todavia no hay actividades registradas para este alumno. El reporte estara disponible cuando la docente registre evaluaciones en el aula.",
+        mensaje: "Todavia no hay actividades registradas. El reporte se generara automaticamente cuando la docente evalúe actividades en el aula.",
         ejes: [],
       })
     }
@@ -117,13 +127,11 @@ export async function GET(req: NextRequest) {
     const ejesReporte = ejesConDatos.map(eje => {
       const datos = porEje[eje]
       const total = datos.resultados.length
-      const verdes = datos.resultados.filter(r => r === "green" || r === "logrado").length
+      const verdes   = datos.resultados.filter(r => r === "green"  || r === "logrado").length
       const amarillos = datos.resultados.filter(r => r === "yellow" || r === "proceso").length
-      const rojos = datos.resultados.filter(r => r === "red" || r === "refuerzo").length
+      const rojos    = datos.resultados.filter(r => r === "red"    || r === "refuerzo").length
 
-      const promedio = Math.round(
-        ((verdes * 100) + (amarillos * 50) + (rojos * 10)) / total
-      )
+      const promedio = Math.round(((verdes * 100) + (amarillos * 50) + (rojos * 10)) / total)
 
       const nivel = nivelLogro(promedio)
       const fechaInicio = datos.fechas.length > 0
