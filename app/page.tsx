@@ -45,84 +45,72 @@ const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
 
-// ── Sintesis Pedagogica Cuatrimestral ──────────────────────────────────────
+// ── Colores por eje
+const COLOR_EJE: Record<string, string> = {
+  CF: "#3b82f6",
+  CT: "#10b981",
+  O: "#f59e0b",
+}
+const BG_EJE: Record<string, string> = {
+  CF: "#eff6ff",
+  CT: "#f0fdf4",
+  O: "#fffbeb",
+}
+
+// ── Reporte para Padres - generado desde datos reales de Supabase
 function SintesisPedagogicaModal({ 
-  progress,
   totalStudents,
   salaName,
   onClose 
 }: { 
-  progress: Record<string, { CF: number; CT: number; O: number }>
   totalStudents: number
   salaName: string
   onClose: () => void 
 }) {
   const [loading, setLoading] = useState(true)
-  const [datosALBA, setDatosALBA] = useState<{
-    promedios: { CF: number; CT: number; O: number }
-    totalClases: number
-    semanaActual: number
-    clasesCompletadasPorEje: { CF: number; CT: number; O: number }
+  const [reporte, setReporte] = useState<{
+    sinDatos: boolean
+    mensaje?: string
+    totalRegistros?: number
+    ejesConDatos?: number
+    ejes: Array<{
+      eje: string
+      nombre: string
+      promedio: number
+      nivel: string | null
+      totalActividades: number
+      actividadesUnicas: number
+      verdes: number
+      amarillos: number
+      rojos: number
+      fechaInicio: string | null
+      fechaUltima: string | null
+      mensaje: string
+      sugerenciaCasa: string
+    }>
   } | null>(null)
 
-  // Cargar datos reales de ALBA
   useEffect(() => {
-    async function fetchDatosALBA() {
+    async function fetchReporte() {
       try {
-        const res = await fetch("/api/brain")
+        const res = await fetch("/api/reporte-padres")
         const data = await res.json()
-        
-        if (data.historial?.promediosPorEje || data.progreso) {
-          setDatosALBA({
-            promedios: {
-              CF: data.historial?.promediosPorEje?.CF || 0,
-              CT: data.historial?.promediosPorEje?.CT || 0,
-              O: data.historial?.promediosPorEje?.O || 0,
-            },
-            totalClases: data.progreso?.totalClasesCompletadas || 0,
-            semanaActual: data.progreso?.semanaActual || 1,
-            clasesCompletadasPorEje: data.progreso?.clasesCompletadasPorEje || { CF: 0, CT: 0, O: 0 },
-          })
-        }
+        setReporte(data)
       } catch (err) {
-        console.error("Error fetching sintesis data:", err)
+        console.error("[v0] Error fetching reporte padres:", err)
+        setReporte({ sinDatos: true, ejes: [], mensaje: "Error al cargar el reporte. Intenta nuevamente." })
       } finally {
         setLoading(false)
       }
     }
-    fetchDatosALBA()
+    fetchReporte()
   }, [])
 
-  // Verificar si hay datos suficientes para generar la sintesis
-  const hayDatos = datosALBA && datosALBA.totalClases > 0
-
-  // Funciones de analisis
-  const getNivelTexto = (promedio: number) => {
-    if (promedio >= 70) return "muy buen avance"
-    if (promedio >= 40) return "avance sostenido"
-    if (promedio > 0) return "en desarrollo"
-    return null
-  }
-
-  const getEjeMasFuerte = () => {
-    if (!datosALBA) return null
-    const { CF, CT, O } = datosALBA.promedios
-    if (CF >= CT && CF >= O && CF > 0) return { nombre: "Conciencia Fonologica", promedio: CF }
-    if (CT >= CF && CT >= O && CT > 0) return { nombre: "Comprension de Textos", promedio: CT }
-    if (O > 0) return { nombre: "Oralidad", promedio: O }
-    return null
-  }
-
-  const getEjeAReforzar = () => {
-    if (!datosALBA) return null
-    const { CF, CT, O } = datosALBA.promedios
-    const ejesConDatos = [
-      { nombre: "Conciencia Fonologica", promedio: CF },
-      { nombre: "Comprension de Textos", promedio: CT },
-      { nombre: "Oralidad", promedio: O },
-    ].filter(e => e.promedio > 0)
-    if (ejesConDatos.length === 0) return null
-    return ejesConDatos.reduce((min, e) => e.promedio < min.promedio ? e : min)
+  const nivelColor = (nivel: string | null) => {
+    if (nivel === "Muy bien") return "bg-green-100 text-green-700"
+    if (nivel === "En proceso") return "bg-yellow-100 text-yellow-700"
+    if (nivel === "Necesita refuerzo") return "bg-red-100 text-red-700"
+    return "bg-slate-100 text-slate-500"
   }
 
   return (
@@ -139,9 +127,11 @@ function SintesisPedagogicaModal({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-                Sintesis Pedagogica Cuatrimestral
+                Reporte para Familias
               </h2>
-              <p className="text-sm text-slate-500">Sala {salaName} · Primer Cuatrimestre 2025</p>
+              <p className="text-sm text-slate-500">
+                Sala {salaName} · {totalStudents} alumnos · Generado desde datos reales de ALBA
+              </p>
             </div>
             <button 
               onClick={onClose}
@@ -157,191 +147,127 @@ function SintesisPedagogicaModal({
         <div className="p-5 space-y-5 text-slate-700 leading-relaxed max-h-[70vh] overflow-y-auto">
           
           {loading && (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-10">
               <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              <span className="ml-2 text-sm text-slate-500">Analizando datos de ALBA...</span>
+              <span className="ml-3 text-sm text-slate-500">Leyendo datos del aula desde ALBA...</span>
             </div>
           )}
-          
-          {!loading && !hayDatos && (
+
+          {!loading && reporte?.sinDatos && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
               <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <h3 className="font-semibold text-slate-600 mb-2">Sin datos para generar sintesis</h3>
-              <p className="text-sm text-slate-500">
-                La sintesis se generara cuando haya clases registradas en el sistema.
-                Utiliza el Registro del Aula para evaluar actividades y ALBA recopilara los datos.
+              <h3 className="font-semibold text-slate-600 mb-2">Aun no hay actividades registradas</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                {reporte.mensaje || "El reporte se generara automaticamente cuando la docente registre evaluaciones en el aula."}
+              </p>
+              <p className="text-xs text-slate-400 mt-3">
+                Solo se generan reportes de los ejes que ya fueron trabajados en el aula.
               </p>
             </div>
           )}
-          
-          {!loading && hayDatos && datosALBA && (
+
+          {!loading && reporte && !reporte.sinDatos && reporte.ejes.length > 0 && (
             <>
-              {/* Resumen de datos */}
-              <div className="bg-blue-50 rounded-xl p-4">
+              {/* Resumen */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
-                  <span className="font-semibold text-blue-800">Analisis basado en datos de ALBA</span>
+                  <Sparkles className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-semibold text-blue-800">
+                    Este reporte refleja lo que realmente sucedio en el aula
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="bg-white rounded-lg p-2">
-                    <p className="text-2xl font-bold text-blue-600">{datosALBA.totalClases}</p>
-                    <p className="text-xs text-slate-500">Clases registradas</p>
+                    <p className="text-xl font-bold text-blue-600">{reporte.totalRegistros}</p>
+                    <p className="text-xs text-slate-500">Evaluaciones registradas</p>
                   </div>
                   <div className="bg-white rounded-lg p-2">
-                    <p className="text-2xl font-bold text-blue-600">{datosALBA.semanaActual}</p>
-                    <p className="text-xs text-slate-500">Semana actual</p>
+                    <p className="text-xl font-bold text-blue-600">{reporte.ejesConDatos}</p>
+                    <p className="text-xs text-slate-500">{reporte.ejesConDatos === 1 ? "Eje trabajado" : "Ejes trabajados"}</p>
                   </div>
                   <div className="bg-white rounded-lg p-2">
-                    <p className="text-2xl font-bold text-blue-600">{totalStudents}</p>
+                    <p className="text-xl font-bold text-blue-600">{totalStudents}</p>
                     <p className="text-xs text-slate-500">Alumnos</p>
                   </div>
                 </div>
               </div>
 
-              {/* QUE SE ENSENO */}
-              <section>
-                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#1e3a5f" }}>
-                  <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm">1</span>
-                  Que se enseno
-                </h3>
-                <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Conciencia Fonologica</span>
-                    <span className="text-sm text-slate-500">{datosALBA.clasesCompletadasPorEje.CF || 0} clases</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Comprension de Textos</span>
-                    <span className="text-sm text-slate-500">{datosALBA.clasesCompletadasPorEje.CT || 0} clases</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-700">Oralidad</span>
-                    <span className="text-sm text-slate-500">{datosALBA.clasesCompletadasPorEje.O || 0} clases</span>
-                  </div>
-                </div>
-              </section>
-
-              {/* COMO SE HIZO */}
-              <section>
-                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#1e3a5f" }}>
-                  <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm">2</span>
-                  Como se trabajo
-                </h3>
-                <p className="text-sm">
-                  Se utilizo la metodologia ALBA con 3 estimulos semanales (uno por eje), 
-                  evaluando el desempeno grupal mediante el semaforo pedagogico. 
-                  Las actividades fueron ajustadas segun la retroalimentacion diaria 
-                  del Registro de Cierre.
-                </p>
-              </section>
-
-              {/* QUE LOGRARON */}
-              <section>
-                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#1e3a5f" }}>
-                  <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm">3</span>
-                  Que lograron los alumnos
-                </h3>
-                
-                <div className="space-y-3">
-                  {/* CF */}
-                  <div className="bg-slate-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{ color: "#3b82f6" }}>Conciencia Fonologica</span>
-                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
-                        datosALBA.promedios.CF >= 70 ? "bg-green-100 text-green-700" :
-                        datosALBA.promedios.CF >= 40 ? "bg-yellow-100 text-yellow-700" :
-                        datosALBA.promedios.CF > 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {datosALBA.promedios.CF > 0 ? `${datosALBA.promedios.CF}%` : "Sin datos"}
+              {/* Un bloque por eje trabajado */}
+              {reporte.ejes.map((eje, idx) => (
+                <section key={eje.eje} className="rounded-xl border overflow-hidden" style={{ borderColor: COLOR_EJE[eje.eje] + "40" }}>
+                  {/* Cabecera del eje */}
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: BG_EJE[eje.eje] }}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: COLOR_EJE[eje.eje] }}>
+                        {idx + 1}
                       </span>
+                      <span className="font-semibold text-sm" style={{ color: COLOR_EJE[eje.eje] }}>{eje.nombre}</span>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all" 
-                        style={{ 
-                          width: `${datosALBA.promedios.CF}%`,
-                          backgroundColor: datosALBA.promedios.CF >= 70 ? "#10b981" : datosALBA.promedios.CF >= 40 ? "#fbbf24" : "#ef4444"
-                        }}
-                      />
+                    <div className="flex items-center gap-2">
+                      {eje.nivel && (
+                        <span className={"text-xs font-bold px-2 py-0.5 rounded-full " + nivelColor(eje.nivel)}>
+                          {eje.nivel}
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-500">{eje.totalActividades} clases</span>
                     </div>
-                    {getNivelTexto(datosALBA.promedios.CF) && (
-                      <p className="text-xs text-slate-500 mt-1">El grupo muestra {getNivelTexto(datosALBA.promedios.CF)}</p>
-                    )}
                   </div>
-                  
-                  {/* CT */}
-                  <div className="bg-slate-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{ color: "#10b981" }}>Comprension de Textos</span>
-                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
-                        datosALBA.promedios.CT >= 70 ? "bg-green-100 text-green-700" :
-                        datosALBA.promedios.CT >= 40 ? "bg-yellow-100 text-yellow-700" :
-                        datosALBA.promedios.CT > 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {datosALBA.promedios.CT > 0 ? `${datosALBA.promedios.CT}%` : "Sin datos"}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all" 
-                        style={{ 
-                          width: `${datosALBA.promedios.CT}%`,
-                          backgroundColor: datosALBA.promedios.CT >= 70 ? "#10b981" : datosALBA.promedios.CT >= 40 ? "#fbbf24" : "#ef4444"
-                        }}
-                      />
-                    </div>
-                    {getNivelTexto(datosALBA.promedios.CT) && (
-                      <p className="text-xs text-slate-500 mt-1">El grupo muestra {getNivelTexto(datosALBA.promedios.CT)}</p>
-                    )}
-                  </div>
-                  
-                  {/* O */}
-                  <div className="bg-slate-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{ color: "#f59e0b" }}>Oralidad</span>
-                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
-                        datosALBA.promedios.O >= 70 ? "bg-green-100 text-green-700" :
-                        datosALBA.promedios.O >= 40 ? "bg-yellow-100 text-yellow-700" :
-                        datosALBA.promedios.O > 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {datosALBA.promedios.O > 0 ? `${datosALBA.promedios.O}%` : "Sin datos"}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all" 
-                        style={{ 
-                          width: `${datosALBA.promedios.O}%`,
-                          backgroundColor: datosALBA.promedios.O >= 70 ? "#10b981" : datosALBA.promedios.O >= 40 ? "#fbbf24" : "#ef4444"
-                        }}
-                      />
-                    </div>
-                    {getNivelTexto(datosALBA.promedios.O) && (
-                      <p className="text-xs text-slate-500 mt-1">El grupo muestra {getNivelTexto(datosALBA.promedios.O)}</p>
-                    )}
-                  </div>
-                </div>
-              </section>
 
-              {/* CONCLUSION */}
-              <section>
-                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#1e3a5f" }}>
-                  <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm">4</span>
-                  Conclusion y proyecciones
-                </h3>
-                <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 space-y-3">
-                  {getEjeMasFuerte() && (
-                    <p className="text-sm">
-                      <strong>Fortaleza del grupo:</strong> {getEjeMasFuerte()?.nombre} con {getEjeMasFuerte()?.promedio}% de logro.
-                    </p>
-                  )}
-                  {getEjeAReforzar() && getEjeAReforzar()?.promedio !== getEjeMasFuerte()?.promedio && (
-                    <p className="text-sm">
-                      <strong>Area a reforzar:</strong> {getEjeAReforzar()?.nombre} ({getEjeAReforzar()?.promedio}%). 
-                      Se recomienda priorizar este eje en el proximo cuatrimestre.
-                    </p>
-                  )}
+                  <div className="p-4 space-y-3 bg-white">
+                    {/* Barra de progreso */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-slate-500">Nivel de logro grupal</span>
+                        <span className="text-xs font-bold text-slate-700">{eje.promedio}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full transition-all"
+                          style={{
+                            width: eje.promedio + "%",
+                            backgroundColor: eje.promedio >= 70 ? "#10b981" : eje.promedio >= 40 ? "#fbbf24" : "#ef4444"
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-green-600">{eje.verdes} logrado</span>
+                        <span className="text-xs text-yellow-600">{eje.amarillos} en proceso</span>
+                        <span className="text-xs text-red-500">{eje.rojos} refuerzo</span>
+                      </div>
+                    </div>
+
+                    {/* Fechas */}
+                    {eje.fechaInicio && (
+                      <p className="text-xs text-slate-400">
+                        Trabajado desde el {eje.fechaInicio}
+                        {eje.fechaUltima && eje.fechaUltima !== eje.fechaInicio ? " hasta el " + eje.fechaUltima : ""}
+                      </p>
+                    )}
+
+                    {/* Mensaje para la familia */}
+                    <p className="text-sm text-slate-700 leading-relaxed">{eje.mensaje}</p>
+
+                    {/* Sugerencia para casa */}
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Para hacer en casa</p>
+                      <p className="text-sm text-slate-600 leading-relaxed">{eje.sugerenciaCasa}</p>
+                    </div>
+                  </div>
+                </section>
+              ))}
+
+              {/* Nota sobre ejes no reportados */}
+              {reporte.ejesConDatos && reporte.ejesConDatos < 3 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm text-amber-700">
+                    <strong>Nota:</strong> Este reporte incluye solo los ejes trabajados hasta la fecha.
+                    Los ejes de {["Conciencia Fonologica", "Comprension de Textos", "Oralidad"]
+                      .filter(n => !reporte.ejes.find(e => e.nombre === n))
+                      .join(" y ")} aun no tienen actividades registradas y se incluiran cuando la docente los trabaje en el aula.
+                  </p>
                 </div>
-              </section>
+              )}
             </>
           )}
         </div>
@@ -349,10 +275,8 @@ function SintesisPedagogicaModal({
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
           <p className="text-xs text-slate-400 text-center">
-            {hayDatos 
-              ? "Informe generado por ALBA a partir de los datos registrados en el sistema."
-              : "Registra clases para generar la sintesis automaticamente."
-            }
+            Reporte generado automaticamente por ALBA a partir de los datos registrados en el aula.
+            Solo se reportan los ejes efectivamente trabajados.
           </p>
         </div>
       </div>
@@ -839,7 +763,6 @@ useEffect(() => {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            progress={progress}
             totalStudents={students.length}
             salaName={salaActual}
             onClose={() => setShowSintesis(false)}
@@ -864,7 +787,6 @@ useEffect(() => {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            progress={progress}
             totalStudents={students.length}
             salaName={salaActual}
             onClose={() => setShowSintesis(false)}
@@ -892,7 +814,6 @@ useEffect(() => {
         />
         {showSintesis && (
           <SintesisPedagogicaModal
-            progress={progress}
             totalStudents={students.length}
             salaName={salaActual}
             onClose={() => setShowSintesis(false)}
