@@ -1239,7 +1239,6 @@ useEffect(() => {
       {/* Sintesis Pedagogica Modal */}
       {showSintesis && (
         <SintesisPedagogicaModal
-          progress={progress}
           totalStudents={students.length}
           salaName={salaActual}
           onClose={() => setShowSintesis(false)}
