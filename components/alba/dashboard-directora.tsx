@@ -53,9 +53,9 @@ const SALAS = [
 ]
 
 const EJES: Record<Eje, { label: string; color: string; icon: string }> = {
-  CF: { label: "Conciencia Fonologica", color: "#3b82f6", icon: "CF" },
-  CT: { label: "Comprension de Textos", color: "#10b981", icon: "CT" },
-  O:  { label: "Oralidad", color: "#f59e0b", icon: "O" },
+  CF: { label: "Conciencia Fonológica", color: "#6366F1", icon: "🔊" },
+  CT: { label: "Comprensión de Textos", color: "#0D9488", icon: "📖" },
+  O:  { label: "Oralidad", color: "#D97706", icon: "🗣️" },
 }
 
 const COLORES = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
@@ -296,7 +296,7 @@ export default function DashboardDirectora() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {(["CF", "CT", "O"] as Eje[]).map(eje => (
                   <div key={eje} className="rounded-xl p-3 text-center border" style={{ borderColor: EJES[eje].color + "30", backgroundColor: EJES[eje].color + "08" }}>
-                    <div className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1 text-white" style={{ backgroundColor: EJES[eje].color }}>{EJES[eje].icon}</div>
+                    <div className="text-lg">{EJES[eje].icon}</div>
                     <div className="text-2xl font-light" style={{ color: EJES[eje].color }}>{resumen.promedios[eje]}%</div>
                     <div className="text-[10px] text-slate-500">{EJES[eje].label}</div>
                   </div>
@@ -360,7 +360,7 @@ export default function DashboardDirectora() {
               return (
                 <div key={eje}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje].color }}>{EJES[eje].icon}</span>
+                    <span className="text-sm">{EJES[eje].icon}</span>
                     <span className="text-xs font-bold" style={{ color: EJES[eje].color }}>{EJES[eje].label}</span>
                     <span className="text-xs text-slate-400 ml-auto">{regs.length} registros</span>
                   </div>
@@ -401,16 +401,15 @@ export default function DashboardDirectora() {
           <div className="relative">
             <button onClick={() => setShowEjeDropdown(!showEjeDropdown)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm">
               <BarChart3 className="w-3.5 h-3.5 text-slate-400" />
-              <span>{ejeFiltro === "todos" ? "Todos los ejes" : EJES[ejeFiltro].label}</span>
+              <span>{ejeFiltro === "todos" ? "Todos los ejes" : EJES[ejeFiltro].icon + " " + EJES[ejeFiltro].label}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
             {showEjeDropdown && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20 min-w-[180px]">
                 <button onClick={() => { setEjeFiltro("todos"); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Todos los ejes</button>
                 {(["CF", "CT", "O"] as Eje[]).map(eje => (
-                  <button key={eje} onClick={() => { setEjeFiltro(eje); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje].color }}>{eje}</span>
-                    {EJES[eje].label}
+                  <button key={eje} onClick={() => { setEjeFiltro(eje); setShowEjeDropdown(false) }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">
+                    {EJES[eje].icon} {EJES[eje].label}
                   </button>
                 ))}
               </div>
@@ -457,7 +456,7 @@ export default function DashboardDirectora() {
         <Card className="shadow-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold" style={{ color: "#1e3a5f" }}>
-              Estado por sala {ejeFiltro !== "todos" && <span className="text-sm font-normal text-slate-400">· <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[ejeFiltro].color }}>{ejeFiltro}</span> {EJES[ejeFiltro].label}</span>}
+              Estado por sala {ejeFiltro !== "todos" && <span className="text-sm font-normal text-slate-400">· {EJES[ejeFiltro].icon} {EJES[ejeFiltro].label}</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
