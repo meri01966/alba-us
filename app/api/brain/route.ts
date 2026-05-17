@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 // Cliente Supabase lazy - se crea dentro del handler, nunca a nivel de modulo
@@ -91,7 +91,7 @@ const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; d
 
 // ─── SALAS POR EDAD ──────────────────────────────────────────────────────────
 // Nogales TT / Nogales TM → 4 años (secuencia simplificada, mas sensorial)
-// Manzanos, Girasoles, Alamos → 5 años (secuencia completa)
+// Manzanos, Girasoles, Alamos ��� 5 años (secuencia completa)
 const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
 function esde4Anios(sala: string): boolean {
   const s = sala.toLowerCase().replace(/\s/g, "")
