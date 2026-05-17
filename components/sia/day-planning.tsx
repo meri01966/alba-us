@@ -61,6 +61,7 @@ interface ActividadSecuencia {
   semana: number
   titulo: string
   objetivo: string
+  descripcion?: string
   metodologia?: string
 }
 
