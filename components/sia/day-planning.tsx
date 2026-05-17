@@ -429,7 +429,7 @@ function BrainColumn({ activity, isLoading, stats }: {
           </div>
           {activity.descripcion && (
             <div className="bg-primary/5 rounded-lg p-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Descripcion</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Desarrollo de la actividad</p>
               <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
             </div>
           )}
@@ -709,7 +709,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
           id: `${sugerencia.eje}-${Date.now()}`,
           dia: 1,
           titulo: sugerencia.actividad,
-          descripcion: "",
+          descripcion: sugerencia.descripcion || "",
           objetivo: sugerencia.objetivo,
           materiales: sugerencia.materiales || [],
           razon: sugerencia.razon,
@@ -728,7 +728,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
         id: "fallback-CF-1",
         dia: 1,
         titulo: "Sonidos del entorno",
-        descripcion: "",
+        descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.",
         objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",
         materiales: ["Campana o triangulo", "Grabadora con sonidos", "Tarjetas con imagenes de fuentes sonoras"],
         razon: "Inicio de secuencia — Conciencia Fonologica",
