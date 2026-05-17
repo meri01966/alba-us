@@ -60,6 +60,72 @@ const EJES: Record<Eje, { label: string; color: string; icon: string }> = {
 
 const COLORES = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
+// ═══ TORTA SVG — sin dependencias externas ═══
+function TortaSVG({
+  segmentos,
+  promedio,
+  color,
+  size = 112,
+}: {
+  segmentos: { pct: number; color: string; label: string; n: number }[]
+  promedio: number
+  color: string
+  size?: number
+}) {
+  const cx = size / 2
+  const cy = size / 2
+  const r = size * 0.42
+  const stroke = size * 0.13
+
+  // Generar arcos SVG
+  function describeArc(startAngle: number, endAngle: number) {
+    const start = polarToCartesian(cx, cy, r, endAngle - 90)
+    const end = polarToCartesian(cx, cy, r, startAngle - 90)
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`
+  }
+
+  function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+    const rad = (angleDeg * Math.PI) / 180
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  }
+
+  let currentAngle = 0
+  const arcs = segmentos
+    .filter(s => s.pct > 0)
+    .map(s => {
+      const sweep = s.pct * 360
+      const path = describeArc(currentAngle, currentAngle + sweep)
+      currentAngle += sweep
+      return { ...s, path }
+    })
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* Fondo gris */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
+      {/* Arcos de datos */}
+      {arcs.map((arc, i) => (
+        <path
+          key={i}
+          d={arc.path}
+          fill="none"
+          stroke={arc.color}
+          strokeWidth={stroke}
+          strokeLinecap="butt"
+        />
+      ))}
+      {/* Texto central: porcentaje */}
+      <text x={cx} y={cy - size * 0.04} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.2} fontWeight="300" fill={color}>
+        {promedio}
+      </text>
+      <text x={cx} y={cy + size * 0.16} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.09} fill="#94a3b8">
+        %
+      </text>
+    </svg>
+  )
+}
+
 // ═══ COMPONENTE PRINCIPAL ═══
 export default function DashboardDirectora() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
@@ -484,7 +550,103 @@ export default function DashboardDirectora() {
 
       </div>
 
-      {/* Footer */}
+      {/* ═══ TORTAS: porcentaje por eje y alfabetizacion general ═══ */}
+      <div className="max-w-5xl mx-auto px-4 pb-4">
+        <Card className="shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2" style={{ color: "#1e3a5f" }}>
+              <BarChart3 className="w-4 h-4" style={{ color: "#D4870E" }} />
+              Comparacion por eje — distribucion institucional
+            </CardTitle>
+            <p className="text-xs text-slate-400">Porcentaje de alumnos en cada nivel de logro por eje y promedio general de alfabetizacion</p>
+          </CardHeader>
+          <CardContent>
+            {registros.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">Sin datos registrados. Las tortas apareceran cuando la docente evalúe actividades.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-start justify-items-center">
+                {/* Torta por cada eje */}
+                {(["CF", "CT", "O"] as Eje[]).map(eje => {
+                  const alumnosConDatos = alumnos.filter(a => registros.some(r => r.alumno_id === a.id && r.eje === eje))
+                  const total = alumnosConDatos.length
+                  if (total === 0) return (
+                    <div key={eje} className="flex flex-col items-center gap-2">
+                      <div className="w-28 h-28 rounded-full border-4 border-slate-100 flex items-center justify-center">
+                        <span className="text-xs text-slate-400">Sin datos</span>
+                      </div>
+                      <span className="text-xs font-semibold" style={{ color: EJES[eje].color }}>{EJES[eje].label}</span>
+                    </div>
+                  )
+                  const v = alumnosConDatos.filter(a => getUltimoEstado(a.id, eje) === "green").length
+                  const am = alumnosConDatos.filter(a => getUltimoEstado(a.id, eje) === "yellow").length
+                  const r = alumnosConDatos.filter(a => getUltimoEstado(a.id, eje) === "red").length
+                  const promedio = total > 0 ? Math.round(((v * 100) + (am * 50) + (r * 10)) / total) : 0
+                  const segmentos = [
+                    { pct: v / total, color: "#22c55e", label: "Logrado", n: v },
+                    { pct: am / total, color: "#eab308", label: "En proceso", n: am },
+                    { pct: r / total, color: "#ef4444", label: "Refuerzo", n: r },
+                  ]
+                  return (
+                    <div key={eje} className="flex flex-col items-center gap-3">
+                      <TortaSVG segmentos={segmentos} promedio={promedio} color={EJES[eje].color} />
+                      <div className="text-center">
+                        <p className="text-xs font-bold" style={{ color: EJES[eje].color }}>{EJES[eje].label}</p>
+                        <p className="text-[10px] text-slate-400">{total} evaluados</p>
+                        <div className="flex gap-2 mt-1 justify-center flex-wrap">
+                          {segmentos.map(s => s.n > 0 && (
+                            <span key={s.label} className="text-[9px] flex items-center gap-0.5">
+                              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                              {s.n}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Torta global de alfabetizacion */}
+                {(() => {
+                  const alumnosConAlgunDato = alumnos.filter(a => registros.some(r => r.alumno_id === a.id))
+                  const total = alumnosConAlgunDato.length
+                  if (total === 0) return null
+                  const v = alumnosConAlgunDato.filter(a => getEstadoGeneral(a.id) === "green").length
+                  const am = alumnosConAlgunDato.filter(a => getEstadoGeneral(a.id) === "yellow").length
+                  const r = alumnosConAlgunDato.filter(a => getEstadoGeneral(a.id) === "red").length
+                  const promedio = total > 0 ? Math.round(((v * 100) + (am * 50) + (r * 10)) / total) : 0
+                  const segmentos = [
+                    { pct: v / total, color: "#22c55e", label: "Logrado", n: v },
+                    { pct: am / total, color: "#eab308", label: "En proceso", n: am },
+                    { pct: r / total, color: "#ef4444", label: "Refuerzo", n: r },
+                  ]
+                  return (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative">
+                        <TortaSVG segmentos={segmentos} promedio={promedio} color="#1e3a5f" size={116} />
+                        <div className="absolute -top-1 -right-1 bg-amber-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          GENERAL
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-bold" style={{ color: "#1e3a5f" }}>Alfabetizacion General</p>
+                        <p className="text-[10px] text-slate-400">Promedio de los 3 ejes</p>
+                        <div className="flex gap-2 mt-1 justify-center flex-wrap">
+                          {segmentos.map(s => s.n > 0 && (
+                            <span key={s.label} className="text-[9px] flex items-center gap-0.5">
+                              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                              {s.n}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       <footer className="py-3 px-4 text-center text-xs text-slate-400 border-t border-slate-200 mt-6">
         ALBA · Vista Dirección · {totalRegistros} registros acumulados
       </footer>
