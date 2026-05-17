@@ -115,24 +115,24 @@ export async function GET(req: Request) {
   const sala = searchParams.get("sala") || "Manzanos"
 
   const fallbackSugerencia = (salaName: string) => {
-    const eje = "CF" as const
-    const limites4 = { CF: 12, CT: 8, O: 10 }
-    const seq = esde4Anios(salaName) ? SECUENCIA.CF.slice(0, limites4.CF) : SECUENCIA.CF
-    const act = seq[0]
-    return NextResponse.json({
-      sugerencia: {
-        eje,
-        actividad: act.titulo,
-        descripcion: act.descripcion,
-        objetivo: act.objetivo,
-        materiales: act.materiales,
-        razon: "Inicio de secuencia. Conciencia Fonologica " + (esde4Anios(salaName) ? "(4 anos)" : "(5 anos)") + ".",
-        indiceEnSecuencia: 0,
-        totalEnSecuencia: seq.length,
-        esRepeticion: false,
-      },
-      analisis: { CF: { promedio: 0, total: 0 }, CT: { promedio: 0, total: 0 }, O: { promedio: 0, total: 0 } },
-    })
+  const eje = "CF" as const
+  const limites4 = { CF: 12, CT: 8, O: 10 }
+  const seqInicio = esde4Anios(salaName) ? SECUENCIA.CF.slice(0, limites4.CF) : SECUENCIA.CF
+  const actInicio = seqInicio[0]
+  return NextResponse.json({
+    sugerencia: {
+      eje,
+      actividad: actInicio.titulo,
+      descripcion: actInicio.descripcion,
+      objetivo: actInicio.objetivo,
+      materiales: actInicio.materiales,
+      razon: "Inicio de secuencia. Conciencia Fonologica " + (esde4Anios(salaName) ? "(4 anos)" : "(5 anos)") + ".",
+      indiceEnSecuencia: 0,
+      totalEnSecuencia: seqInicio.length,
+      esRepeticion: false,
+    },
+    analisis: { CF: { promedio: 0, total: 0 }, CT: { promedio: 0, total: 0 }, O: { promedio: 0, total: 0 } },
+  })
   }
 
   const supabase = getSupabase()
