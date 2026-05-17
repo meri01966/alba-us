@@ -159,12 +159,13 @@ export async function GET(req: Request) {
     const regs = registros || []
 
     // ── 3. Inteligencia inter-salas: actividades exitosas en la RED ─────────
-    // Consulta seguimiento de todas las salas excluyendo la actual
-    const { data: registrosRed } = await supabase
+    // Consulta seguimiento de todas las salas (filtramos la actual en JS para evitar conflicto de filtros PostgREST)
+    const { data: registrosRedRaw } = await supabase
       .from("seguimiento")
       .select("actividad, eje, resultado, sala")
-      .not("sala", "eq", sala)
-      .not("sala", "is", null)
+      .neq("sala", sala)
+
+    const registrosRed = (registrosRedRaw || []).filter(r => r.sala != null && r.sala !== "")
 
     // Calcular tasa de exito por actividad/eje en toda la red
     type MapaRed = Record<string, { total: number; verdes: number; salas: Set<string> }>
