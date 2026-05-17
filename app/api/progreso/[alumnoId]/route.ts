@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null
+function getSupabase() {
+  return createClient(SUPABASE_URL, SUPABASE_KEY)
+}
 
 // Mapeo de actividades a semanas de la secuencia ALBA
 const SECUENCIA_SEMANAS = {
@@ -82,20 +82,7 @@ export async function GET(
   { params }: { params: Promise<{ alumnoId: string }> }
 ) {
   const { alumnoId } = await params
-
-  // Si no hay Supabase, devolver datos vacios (sin evaluar)
-  if (!supabase) {
-    return NextResponse.json({
-      ok: true,
-      source: "demo",
-      alumno: { id: alumnoId, nombre: "Sin", apellido: "Datos" },
-      progreso: {
-        CF: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-        CT: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-        O: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-      },
-    })
-  }
+  const supabase = getSupabase()
 
   try {
     // Buscar datos del alumno
