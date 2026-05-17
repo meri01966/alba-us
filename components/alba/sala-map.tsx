@@ -136,7 +136,7 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // 5 grupos — el orden importa: primero los extremos, al final "sin evaluar" (gris)
+  // 5 grupos - el orden importa: primero los extremos, al final "sin evaluar" (gris)
   const grupos: { label: string; color: string; bgLight: string; borderColor: string; alumnos: Student[] }[] = [
     { label: "Ausente",           color: "#6366f1", bgLight: "#f5f3ff", borderColor: "#c4b5fd", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },

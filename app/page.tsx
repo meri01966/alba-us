@@ -369,7 +369,7 @@ export default function ALBADashboard() {
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
   const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
 
-  // Inicializar progreso de alumno en 0 (gris) — solo se actualiza con evaluacion explicita
+  // Inicializar progreso de alumno en 0 (gris) - solo se actualiza con evaluacion explicita
   function initProgress(studentId: string) {
     return { CF: 0, CT: 0, O: 0 }
   }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
@@ -780,12 +780,12 @@ useEffect(() => {
             }])
 
           if (error) {
-            // Tabla 'seguimiento' puede no existir aun — continua con estado local
+            // Tabla 'seguimiento' puede no existir aun - continua con estado local
           }
         }
         return // Salir si guardamos en Supabase
       } catch {
-        // Supabase no disponible — continua con estado local
+        // Supabase no disponible - continua con estado local
       }
     }
 

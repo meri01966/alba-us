@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const { data: registros, error } = await query.order("fecha", { ascending: true })
 
     if (error) {
-      // Tabla puede no existir aun — devuelve vacio sin error
+      // Tabla puede no existir aun - devuelve vacio sin error
       return NextResponse.json({ registros: [] })
     }
 

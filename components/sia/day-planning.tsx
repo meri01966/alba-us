@@ -680,7 +680,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
   const [planning,         setPlanning]         = useState<Planning | null>(null)
   const [isPlanningLoading, setIsPlanningLoading] = useState(true)
 
-  // Refs para los callbacks — evitan que fetchBrain se recree en cada render del padre
+  // Refs para los callbacks - evitan que fetchBrain se recree en cada render del padre
   const onActividadRef = useRef(onActividadALBA)
   const onEjeRef       = useRef(onEjeALBA)
   useEffect(() => { onActividadRef.current = onActividadALBA }, [onActividadALBA])
@@ -697,7 +697,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
     }
   }, [evaluaciones, totalAlumnos])
 
-  // Fetch Cerebro Central — usa GET mapeando data.sugerencia
+  // Fetch Cerebro Central - usa GET mapeando data.sugerencia
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
@@ -731,7 +731,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
         descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.",
         objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",
         materiales: ["Campana o triangulo", "Grabadora con sonidos", "Tarjetas con imagenes de fuentes sonoras"],
-        razon: "Inicio de secuencia — Conciencia Fonologica",
+        razon: "Inicio de secuencia - Conciencia Fonologica",
         source: "secuencia",
         ejeRecomendado: "CF",
       })
@@ -740,7 +740,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
     } finally {
       setIsBrainLoading(false)
     }
-  }, [sala]) // solo sala como dependencia — los callbacks van por ref
+  }, [sala]) // solo sala como dependencia - los callbacks van por ref
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

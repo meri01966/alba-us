@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
     // Support both old format (studentId, field, status) and new format (eje, actividad, lograron, refuerzo)
     if (body.studentId) {
-      // Old format — PATCH single student
+      // Old format - PATCH single student
       const { studentId, field, status } = body
       if (!AIRTABLE_TOKEN) {
         return NextResponse.json({ success: true, source: "demo" })
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, source: "airtable" })
     }
 
-    // New format — batch create records
+    // New format - batch create records
     const { eje, actividad, actividadIndex, lograron, refuerzo, fecha } = body
 
     if (!AIRTABLE_TOKEN) {

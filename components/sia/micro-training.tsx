@@ -182,7 +182,7 @@ const CONSEJOS_GENERICOS: Record<string, string[]> = {
   ]
 }
 
-// Lo que deben aprender los ninos — mapeado por actividad especifica
+// Lo que deben aprender los ninos - mapeado por actividad especifica
 const QUE_DEBEN_APRENDER_ACT: Record<string, string[]> = {
   // CF
   "Sonidos del entorno": ["Identificar diferentes sonidos del ambiente", "Asociar un sonido con su fuente", "Discriminar sonidos fuertes y suaves", "Desarrollar atencion auditiva sostenida"],
@@ -214,7 +214,7 @@ const QUE_DEBEN_APRENDER_ACT: Record<string, string[]> = {
   "Cruz: Cuando - Identificar tiempo": ["Identificar el tiempo en que ocurre la historia", "Usar marcadores temporales"],
   "Cruz: Por que - causas": ["Identificar causas y efectos en el cuento", "Responder: Por que?", "Relacionar acciones con sus consecuencias"],
   "Cruz: Que opinas": ["Expresar opinion sobre el texto", "Argumentar con razon", "Escuchar la opinion de otros"],
-  // O — ECO Estructurado
+  // O - ECO Estructurado
   "ECO-E: Sonidos del entorno": ["Identificar y discriminar sonidos ambientales", "Responder con oracion completa: Yo escucho...", "Desarrollar atencion auditiva sostenida"],
   "ECO-E: Escucha de voces": ["Reconocer voces y responder con oracion: Esa es la voz de...", "Mantener atencion auditiva"],
   "ECO-E: Instrucciones simples": ["Seguir instrucciones de un paso", "Verbalizar la accion realizada: Yo hice...", "Usar estructura sujeto + verbo"],
@@ -236,7 +236,7 @@ const QUE_DEBEN_APRENDER_EJE: Record<string, string[]> = {
   O: ["Expresar ideas con oraciones completas", "Escuchar a los demas cuando hablan", "Usar conectores para ordenar ideas", "Argumentar con razones"]
 }
 
-// Fundamento pedagogico — mapeado por actividad
+// Fundamento pedagogico - mapeado por actividad
 const FUNDAMENTO_ACT: Record<string, { teoria: string; autor: string; descripcion: string }> = {
   "Sonidos del entorno": { teoria: "Discriminacion Auditiva", autor: "Tomatis, 1991 / Tallal, 1980", descripcion: "La discriminacion de sonidos ambientales es el primer paso para la conciencia fonologica. Entrena la atencion auditiva selectiva." },
   "Rimas con nombres": { teoria: "Sensibilidad Fonologica", autor: "Goswami & Bryant, 1990", descripcion: "Las rimas desarrollan la sensibilidad a los sonidos finales, una de las primeras habilidades fonologicas en emerger." },
@@ -249,9 +249,9 @@ const FUNDAMENTO_ACT: Record<string, { teoria: string; autor: string; descripcio
   "Lectura dialogica: Pausas": { teoria: "Lectura Dialogica", autor: "Whitehurst et al., 1988", descripcion: "La interaccion durante la lectura en voz alta es mas efectiva que la lectura pasiva para el desarrollo del lenguaje." },
   "Cruz: Quien - Identificar personajes": { teoria: "Estructura Narrativa", autor: "Stein & Glenn, 1979", descripcion: "La Cruz de Comprension organiza las preguntas de forma visual. QUIEN entrena la comprension literal de los agentes de la historia." },
   "Cruz: Por que - causas": { teoria: "Comprension Inferencial", autor: "Kintsch, 1988 / Cain & Oakhill, 1999", descripcion: "Las inferencias causales conectan lo explicito con el conocimiento previo, construyendo una representacion coherente del texto." },
-  "ECO-E: Sonidos del entorno": { teoria: "ECO Estructurado — Escuchar", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Escuchar del ECO desarrolla la atencion auditiva como base para la comprension y produccion oral con estructura completa." },
-  "ECO-C: Comprension literal": { teoria: "ECO Estructurado — Comprender", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Comprender del ECO trabaja la comprension oral como paso previo a la produccion. Se enfoca en respuestas con evidencia del texto." },
-  "ECO-O: Nombrar con estructura": { teoria: "ECO Estructurado — Oralizar (No aceptacion de palabras sueltas)", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Oralizar aplica el principio central del ECO: no aceptar palabras sueltas. El docente modela la oracion completa y espera que el alumno la repita antes de continuar." },
+  "ECO-E: Sonidos del entorno": { teoria: "ECO Estructurado - Escuchar", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Escuchar del ECO desarrolla la atencion auditiva como base para la comprension y produccion oral con estructura completa." },
+  "ECO-C: Comprension literal": { teoria: "ECO Estructurado - Comprender", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Comprender del ECO trabaja la comprension oral como paso previo a la produccion. Se enfoca en respuestas con evidencia del texto." },
+  "ECO-O: Nombrar con estructura": { teoria: "ECO Estructurado - Oralizar (No aceptacion de palabras sueltas)", autor: "Modelo ECO (Oralidad Expandida)", descripcion: "La fase Oralizar aplica el principio central del ECO: no aceptar palabras sueltas. El docente modela la oracion completa y espera que el alumno la repita antes de continuar." },
   "ECO-O: Narrar con secuenciadores": { teoria: "Narrativa con Andamiaje", autor: "Bruner, 1986 / Vygotsky, 1978", descripcion: "Los conectores temporales (primero, luego, al final) son andamios cognitivos que organizan el pensamiento narrativo y la produccion oral coherente." },
   "ECO-O: Argumentar con PORQUE": { teoria: "Lenguaje Argumentativo Emergente", autor: "Veneziano & Sinclair, 1995", descripcion: "El uso del conector PORQUE marca el inicio del razonamiento causal en el lenguaje. Es una habilidad metalinguistica clave para el pensamiento critico." },
 }
@@ -260,7 +260,7 @@ const FUNDAMENTO_ACT: Record<string, { teoria: string; autor: string; descripcio
 const FUNDAMENTO_EJE: Record<string, { teoria: string; autor: string; descripcion: string }> = {
   CF: { teoria: "Conciencia Fonologica", autor: "Marilyn Adams, 1990 / Defior, 1996", descripcion: "La conciencia fonologica es la capacidad de reconocer y manipular los sonidos del lenguaje hablado. Es el predictor mas fuerte del exito en la lectura inicial." },
   CT: { teoria: "Comprension Lectora Emergente", autor: "Sulzby & Teale, 1991 / Scarborough, 2001", descripcion: "La comprension de textos en nivel inicial se construye a traves de la lectura compartida y dialogica. Los ninos desarrollan esquemas narrativos que les permiten anticipar e inferir." },
-  O: { teoria: "ECO Estructurado — Oralidad Expandida", autor: "Vygotsky, 1978 / Bruner, 1983", descripcion: "El lenguaje oral es el andamiaje fundamental para el desarrollo cognitivo. El modelo ECO propone tres fases: Escuchar, Comprender y Oralizar, con estructura completa de oracion." }
+  O: { teoria: "ECO Estructurado - Oralidad Expandida", autor: "Vygotsky, 1978 / Bruner, 1983", descripcion: "El lenguaje oral es el andamiaje fundamental para el desarrollo cognitivo. El modelo ECO propone tres fases: Escuchar, Comprender y Oralizar, con estructura completa de oracion." }
 }
 
 function buscarPorActividad<T>(actividad: string | undefined, mapa: Record<string, T>, fallback: T): T {
