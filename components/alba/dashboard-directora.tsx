@@ -60,8 +60,18 @@ export default function DashboardDirectora() {
 
   async function cargarDatos() {
     try {
-      const res = await fetch("/api/directora-data", { cache: "no-store" })
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      const res = await fetch(`${base}/api/directora-data`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      })
+      if (!res.ok) {
+        console.log("[v0] directora-data status:", res.status, res.statusText)
+        setLoading(false)
+        return
+      }
       const json = await res.json()
+      console.log("[v0] directora-data ok:", json.ok, "alumnos:", json.alumnos?.length, "regs:", json.registros?.length)
       if (json.ok) {
         setAlumnos(json.alumnos || [])
         setRegistros(json.registros || [])
