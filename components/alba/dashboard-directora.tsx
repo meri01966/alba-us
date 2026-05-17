@@ -106,9 +106,11 @@ export default function DashboardDirectora() {
   }
 
   function statsSala(sala: string, eje?: string) {
+    const idsSala = alumnos.filter(a => a.sala === sala).map(a => a.id)
+    if (idsSala.length === 0) return null
     const regs = eje
-      ? registros.filter(r => r.sala === sala && r.eje === eje)
-      : registros.filter(r => r.sala === sala)
+      ? registros.filter(r => idsSala.includes(r.alumno_id) && r.eje === eje)
+      : registros.filter(r => idsSala.includes(r.alumno_id))
     if (regs.length === 0) return null
     const v = regs.filter(r => r.resultado === "green").length
     const am = regs.filter(r => r.resultado === "yellow").length
