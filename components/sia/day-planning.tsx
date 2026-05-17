@@ -78,31 +78,31 @@ const SECUENCIA_ANUAL: Record<string, EjeSecuencia> = {
     color: "#3b82f6",
     bgColor: "#eff6ff",
     actividades: [
-      { semana: 1, titulo: "Sonidos del entorno", objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente" },
-      { semana: 2, titulo: "Rimas y canciones", objetivo: "Identificar palabras que riman en canciones conocidas" },
-      { semana: 3, titulo: "Segmentacion silabica", objetivo: "Separar palabras en silabas usando palmadas" },
-      { semana: 4, titulo: "Sonido inicial /a/", objetivo: "Identificar palabras que comienzan con el sonido /a/" },
-      { semana: 5, titulo: "Sonido inicial /e/", objetivo: "Identificar palabras que comienzan con el sonido /e/" },
-      { semana: 6, titulo: "Sonido inicial /i/", objetivo: "Identificar palabras que comienzan con el sonido /i/" },
-      { semana: 7, titulo: "Sonido inicial /o/", objetivo: "Identificar palabras que comienzan con el sonido /o/" },
-      { semana: 8, titulo: "Sonido inicial /u/", objetivo: "Identificar palabras que comienzan con el sonido /u/" },
-      { semana: 9, titulo: "Vocales - Repaso", objetivo: "Consolidar identificacion de sonidos vocalicos iniciales" },
-      { semana: 10, titulo: "Sonido inicial /m/", objetivo: "Identificar palabras que comienzan con el sonido /m/" },
-      { semana: 11, titulo: "Sonido inicial /p/", objetivo: "Identificar palabras que comienzan con el sonido /p/" },
-      { semana: 12, titulo: "Sonido inicial /s/", objetivo: "Identificar palabras que comienzan con el sonido /s/" },
-      { semana: 13, titulo: "Sonido inicial /l/", objetivo: "Identificar palabras que comienzan con el sonido /l/" },
-      { semana: 14, titulo: "Sonido inicial /t/", objetivo: "Identificar palabras que comienzan con el sonido /t/" },
-      { semana: 15, titulo: "Sonido inicial /n/", objetivo: "Identificar palabras que comienzan con el sonido /n/" },
-      { semana: 16, titulo: "Consonantes - Repaso", objetivo: "Consolidar identificacion de sonidos consonanticos" },
-      { semana: 17, titulo: "Sonido final", objetivo: "Identificar el sonido final de palabras cortas" },
-      { semana: 18, titulo: "Sonidos medios", objetivo: "Identificar sonidos en posicion media de palabras" },
-      { semana: 19, titulo: "Sintesis de fonemas", objetivo: "Unir fonemas para formar palabras simples" },
-      { semana: 20, titulo: "Analisis de fonemas", objetivo: "Descomponer palabras en sus fonemas individuales" },
-      { semana: 21, titulo: "Sustitucion de fonemas", objetivo: "Cambiar un fonema para crear palabras nuevas" },
-      { semana: 22, titulo: "Omision de fonemas", objetivo: "Identificar que palabra queda al quitar un fonema" },
-      { semana: 23, titulo: "Adicion de fonemas", objetivo: "Agregar fonemas para crear palabras nuevas" },
-      { semana: 24, titulo: "Manipulacion avanzada", objetivo: "Realizar operaciones complejas con fonemas" },
-      { semana: 25, titulo: "Evaluacion CF", objetivo: "Evaluar el dominio de la conciencia fonologica" },
+      { semana: 1,  titulo: "Sonidos del entorno",       objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",             descripcion: "Los ninos escuchan grabaciones o sonidos en vivo (campana, agua, animales) y los asocian a tarjetas con imagenes. Luego reproducen el sonido con su voz o cuerpo." },
+      { semana: 2,  titulo: "Rimas y canciones",         objetivo: "Identificar palabras que riman en canciones conocidas",                  descripcion: "La docente canta canciones rimadas y pide a los ninos completar el par rimado. Se juega a rimar nombres de la sala." },
+      { semana: 3,  titulo: "Segmentacion silabica",      objetivo: "Separar palabras en silabas usando palmadas",                          descripcion: "Se dan palmadas por silabas al nombrar objetos del aula. Se cuenta cuantas palmadas tiene cada palabra y se comparan." },
+      { semana: 4,  titulo: "Sonido inicial /a/",         objetivo: "Identificar palabras que comienzan con el sonido /a/",                  descripcion: "La docente muestra imagenes y los ninos levantan la mano cuando la palabra empieza con /a/. Se arma un mural con recortes de palabras con ese sonido." },
+      { semana: 5,  titulo: "Sonido inicial /e/",         objetivo: "Identificar palabras que comienzan con el sonido /e/",                  descripcion: "Juego de 'busca y encuentra': los ninos recorren el aula buscando objetos cuyo nombre empieza con /e/. Luego los nombran en grupo." },
+      { semana: 6,  titulo: "Sonido inicial /i/",         objetivo: "Identificar palabras que comienzan con el sonido /i/",                  descripcion: "Se usa el cuerpo: los ninos forman la letra I con brazos estirados cuando escuchan una palabra que empieza con /i/." },
+      { semana: 7,  titulo: "Sonido inicial /o/",         objetivo: "Identificar palabras que comienzan con el sonido /o/",                  descripcion: "La docente lee una lista de palabras y los ninos aplauden solo si empieza con /o/. Se crea un dictado grafico colectivo." },
+      { semana: 8,  titulo: "Sonido inicial /u/",         objetivo: "Identificar palabras que comienzan con el sonido /u/",                  descripcion: "Juego de memoria: tarjetas con imagen y sonido inicial. Los ninos las emparejan identificando cuales empiezan con /u/." },
+      { semana: 9,  titulo: "Vocales - Repaso",           objetivo: "Consolidar identificacion de sonidos vocalicos iniciales",              descripcion: "Ruleta de vocales: la docente gira una ruleta con vocales y los ninos dicen palabras que empiezan con esa vocal. Se registra en pizarron." },
+      { semana: 10, titulo: "Sonido inicial /m/",         objetivo: "Identificar palabras que comienzan con el sonido /m/",                  descripcion: "Los ninos imitan el sonido /m/ y buscan en laminas palabras que comiencen con ese sonido. Construyen una oracion con una de ellas." },
+      { semana: 11, titulo: "Sonido inicial /p/",         objetivo: "Identificar palabras que comienzan con el sonido /p/",                  descripcion: "Juego de 'pesca': los ninos 'pescan' tarjetas con imagenes y clasifican las que empiezan con /p/ en un canasto especial." },
+      { semana: 12, titulo: "Sonido inicial /s/",         objetivo: "Identificar palabras que comienzan con el sonido /s/",                  descripcion: "Trabajo en parejas: un nino dice una palabra y el otro decide si empieza con /s/. Luego se intercambian roles." },
+      { semana: 13, titulo: "Sonido inicial /l/",         objetivo: "Identificar palabras que comienzan con el sonido /l/",                  descripcion: "La docente presenta un cuento con muchas palabras que empiezan con /l/. Los ninos levantan su tarjeta cada vez que escuchan una." },
+      { semana: 14, titulo: "Sonido inicial /t/",         objetivo: "Identificar palabras que comienzan con el sonido /t/",                  descripcion: "Se usa un dado con imagenes: al girar, si la imagen empieza con /t/ el nino suma un punto. Se juega en equipos." },
+      { semana: 15, titulo: "Sonido inicial /n/",         objetivo: "Identificar palabras que comienzan con el sonido /n/",                  descripcion: "Los ninos nombran sus objetos personales y de la sala que empiezan con /n/. Se registra en un grafico colectivo." },
+      { semana: 16, titulo: "Consonantes - Repaso",       objetivo: "Consolidar identificacion de sonidos consonanticos",                    descripcion: "Bingo de sonidos iniciales: cada nino tiene un cartero con consonantes trabajadas y marca cuando escucha una palabra que empieza con ese sonido." },
+      { semana: 17, titulo: "Sonido final",               objetivo: "Identificar el sonido final de palabras cortas",                        descripcion: "La docente dice palabras de dos silabas y los ninos 'atrapan' el ultimo sonido estirando la ultima silaba. Se registra el sonido final en tarjetas." },
+      { semana: 18, titulo: "Sonidos medios",             objetivo: "Identificar sonidos en posicion media de palabras",                     descripcion: "Se trabaja con palabras de tres silabas. Los ninos 'abren' la palabra separando inicio-medio-final con las manos y dicen el sonido del medio." },
+      { semana: 19, titulo: "Sintesis de fonemas",        objetivo: "Unir fonemas para formar palabras simples",                            descripcion: "La docente pronuncia fonemas separados (/m/...../a/...../r/) y los ninos adivinan la palabra que se forma. Se usan palabras del entorno cotidiano." },
+      { semana: 20, titulo: "Analisis de fonemas",        objetivo: "Descomponer palabras en sus fonemas individuales",                     descripcion: "Los ninos reciben una palabra y con fichas o bloques representan cada fonema. Luego cuentan cuantos fonemas tiene." },
+      { semana: 21, titulo: "Sustitucion de fonemas",     objetivo: "Cambiar un fonema para crear palabras nuevas",                         descripcion: "La docente dice una palabra y propone cambiar el primer sonido. Los ninos descubren la nueva palabra. Ejemplo: 'pato' → cambiar /p/ por /g/ → 'gato'." },
+      { semana: 22, titulo: "Omision de fonemas",         objetivo: "Identificar que palabra queda al quitar un fonema",                    descripcion: "Se practica quitar el sonido inicial o final de una palabra y decir lo que queda. Ejemplo: 'sol' sin /s/ → 'ol'. Se usa apoyo visual." },
+      { semana: 23, titulo: "Adicion de fonemas",         objetivo: "Agregar fonemas para crear palabras nuevas",                           descripcion: "Los ninos reciben palabras cortas y agregan un fonema al inicio o al final para crear palabras nuevas. Se comparan los resultados en grupo." },
+      { semana: 24, titulo: "Manipulacion avanzada",      objetivo: "Realizar operaciones complejas con fonemas",                           descripcion: "Desafio grupal: los ninos reciben una serie de operaciones con fonemas (quitar, agregar, sustituir) y descifran la palabra resultante." },
+      { semana: 25, titulo: "Evaluacion CF",              objetivo: "Evaluar el dominio de la conciencia fonologica",                        descripcion: "Actividad de cierre: cada nino participa en estaciones de evaluacion (rimas, segmentacion, sonido inicial) mientras la docente registra los logros." },
     ],
   },
   CT: {
@@ -112,35 +112,35 @@ const SECUENCIA_ANUAL: Record<string, EjeSecuencia> = {
     metodologia: "Lectura Dialogica + Cruz de Comprension",
     actividades: [
       // BLOQUE 1: Lectura Dialogica - Fundamentos (Semanas 1-8)
-      { semana: 1, titulo: "LD: Antes de leer - Exploracion del libro", objetivo: "Activar conocimientos previos observando portada, titulo e ilustraciones", metodologia: "Lectura Dialogica - Antes" },
-      { semana: 2, titulo: "LD: Antes de leer - Predicciones", objetivo: "Formular hipotesis sobre el contenido a partir de elementos paratextuales", metodologia: "Lectura Dialogica - Antes" },
-      { semana: 3, titulo: "LD: Durante la lectura - Pausas dialogicas", objetivo: "Participar activamente con preguntas durante la lectura en voz alta", metodologia: "Lectura Dialogica - Durante" },
-      { semana: 4, titulo: "LD: Durante la lectura - Vocabulario en contexto", objetivo: "Inferir significado de palabras nuevas usando el contexto", metodologia: "Lectura Dialogica - Durante" },
-      { semana: 5, titulo: "LD: Despues de leer - Recontar", objetivo: "Recontar la historia usando sus propias palabras", metodologia: "Lectura Dialogica - Despues" },
-      { semana: 6, titulo: "LD: Despues de leer - Conexiones", objetivo: "Conectar el texto con experiencias personales", metodologia: "Lectura Dialogica - Despues" },
-      { semana: 7, titulo: "LD: Ciclo completo I", objetivo: "Aplicar las tres fases de lectura dialogica con un cuento", metodologia: "Lectura Dialogica - Ciclo Completo" },
-      { semana: 8, titulo: "LD: Ciclo completo II", objetivo: "Aplicar lectura dialogica con texto informativo", metodologia: "Lectura Dialogica - Ciclo Completo" },
+      { semana: 1,  titulo: "LD: Antes de leer - Exploracion del libro",  objetivo: "Activar conocimientos previos observando portada, titulo e ilustraciones",          descripcion: "La docente presenta el libro cerrado. Los ninos observan la tapa, el titulo y las ilustraciones. En ronda responden: de que creen que trata el libro? Quienes apareceran?", metodologia: "Lectura Dialogica - Antes" },
+      { semana: 2,  titulo: "LD: Antes de leer - Predicciones",           objetivo: "Formular hipotesis sobre el contenido a partir de elementos paratextuales",        descripcion: "Antes de leer, cada nino dice en voz alta su prediccion sobre la historia. Se registran las predicciones en el pizarron y al finalizar la lectura se verifican.", metodologia: "Lectura Dialogica - Antes" },
+      { semana: 3,  titulo: "LD: Durante la lectura - Pausas dialogicas", objetivo: "Participar activamente con preguntas durante la lectura en voz alta",              descripcion: "La docente lee en voz alta y hace pausas estrategicas para preguntar: que creen que pasara? por que hizo eso el personaje? Se estimula la participacion de todos.", metodologia: "Lectura Dialogica - Durante" },
+      { semana: 4,  titulo: "LD: Durante la lectura - Vocabulario",       objetivo: "Inferir significado de palabras nuevas usando el contexto",                        descripcion: "Al encontrar una palabra dificil, la docente detiene la lectura y entre todos intentan adivinar su significado por el contexto. Se anota en el 'muro de palabras'.", metodologia: "Lectura Dialogica - Durante" },
+      { semana: 5,  titulo: "LD: Despues de leer - Recontar",             objetivo: "Recontar la historia usando sus propias palabras",                                descripcion: "Usando los apoyos visuales del libro (o imagenes en el pizarron), los ninos recuentan la historia en cadena: cada uno aporta un fragmento.", metodologia: "Lectura Dialogica - Despues" },
+      { semana: 6,  titulo: "LD: Despues de leer - Conexiones",           objetivo: "Conectar el texto con experiencias personales",                                   descripcion: "La docente propone preguntas de conexion personal: esto te paso a vos alguna vez? conoces a alguien como este personaje? Los ninos comparten en parejas.", metodologia: "Lectura Dialogica - Despues" },
+      { semana: 7,  titulo: "LD: Ciclo completo I",                       objetivo: "Aplicar las tres fases de lectura dialogica con un cuento",                       descripcion: "Se realiza el ciclo completo Antes-Durante-Despues con un cuento nuevo. La docente guia cada fase y los ninos lideran las preguntas de su fase asignada.", metodologia: "Lectura Dialogica - Ciclo Completo" },
+      { semana: 8,  titulo: "LD: Ciclo completo II",                      objetivo: "Aplicar lectura dialogica con texto informativo",                                 descripcion: "Se aplica el ciclo completo usando un texto informativo (enciclopedia, afiche, receta). Los ninos adaptan sus estrategias al tipo de texto.", metodologia: "Lectura Dialogica - Ciclo Completo" },
       // BLOQUE 2: Cruz de Comprension - Nivel Literal (Semanas 9-13)
-      { semana: 9, titulo: "Cruz: Quien - Identificar personajes", objetivo: "Responder QUIEN usando evidencia del texto (comprension literal)", metodologia: "Cruz de Comprension - Literal" },
-      { semana: 10, titulo: "Cruz: Que - Identificar acciones", objetivo: "Responder QUE sucede usando informacion explicita del texto", metodologia: "Cruz de Comprension - Literal" },
-      { semana: 11, titulo: "Cruz: Donde - Identificar lugar", objetivo: "Responder DONDE ocurre la historia con evidencia textual", metodologia: "Cruz de Comprension - Literal" },
-      { semana: 12, titulo: "Cruz: Cuando - Identificar tiempo", objetivo: "Responder CUANDO suceden los eventos del texto", metodologia: "Cruz de Comprension - Literal" },
-      { semana: 13, titulo: "Cruz: Integracion literal", objetivo: "Usar las 4 preguntas de la cruz para comprension literal completa", metodologia: "Cruz de Comprension - Literal" },
+      { semana: 9,  titulo: "Cruz: Quien - Identificar personajes",       objetivo: "Responder QUIEN usando evidencia del texto",                                      descripcion: "Despues de la lectura, se coloca la pregunta QUIEN en el centro de la cruz. Los ninos responden con evidencia del texto y se registra en el diagrama.", metodologia: "Cruz de Comprension - Literal" },
+      { semana: 10, titulo: "Cruz: Que - Identificar acciones",           objetivo: "Responder QUE sucede usando informacion explicita del texto",                     descripcion: "Se completa el brazo QUE de la cruz. Los ninos identifican las acciones principales del texto y las ordenan por importancia.", metodologia: "Cruz de Comprension - Literal" },
+      { semana: 11, titulo: "Cruz: Donde - Identificar lugar",            objetivo: "Responder DONDE ocurre la historia con evidencia textual",                        descripcion: "Se completa el brazo DONDE. Los ninos buscan en el texto frases que indican el lugar y las registran. Se dibuja el escenario.", metodologia: "Cruz de Comprension - Literal" },
+      { semana: 12, titulo: "Cruz: Cuando - Identificar tiempo",          objetivo: "Responder CUANDO suceden los eventos del texto",                                  descripcion: "Se completa el brazo CUANDO. Los ninos identifican indicadores de tiempo en el texto (de manana, en verano, hace mucho tiempo) y los ubican en una linea temporal.", metodologia: "Cruz de Comprension - Literal" },
+      { semana: 13, titulo: "Cruz: Integracion literal",                  objetivo: "Usar las 4 preguntas de la cruz para comprension literal completa",               descripcion: "Se completa la cruz entera con un texto nuevo. Los ninos trabajan en grupos, cada uno a cargo de un brazo, y luego presentan al resto.", metodologia: "Cruz de Comprension - Literal" },
       // BLOQUE 3: Cruz de Comprension - Nivel Inferencial (Semanas 14-18)
-      { semana: 14, titulo: "Cruz: Por que - Causas", objetivo: "Inferir POR QUE suceden las cosas (causa-efecto)", metodologia: "Cruz de Comprension - Inferencial" },
-      { semana: 15, titulo: "Cruz: Como - Procesos", objetivo: "Inferir COMO suceden las acciones y procesos", metodologia: "Cruz de Comprension - Inferencial" },
-      { semana: 16, titulo: "Cruz: Para que - Propositos", objetivo: "Inferir PARA QUE se realizan las acciones (intencion)", metodologia: "Cruz de Comprension - Inferencial" },
-      { semana: 17, titulo: "Cruz: Que pasaria si - Hipotesis", objetivo: "Formular hipotesis sobre situaciones alternativas", metodologia: "Cruz de Comprension - Inferencial" },
-      { semana: 18, titulo: "Cruz: Integracion inferencial", objetivo: "Combinar preguntas inferenciales para comprension profunda", metodologia: "Cruz de Comprension - Inferencial" },
+      { semana: 14, titulo: "Cruz: Por que - Causas",                     objetivo: "Inferir POR QUE suceden las cosas (causa-efecto)",                                descripcion: "Se agrega el brazo POR QUE a la cruz. Los ninos infieren causas que el texto no dice explicitamente. Se debate: como lo sabemos si no esta escrito?", metodologia: "Cruz de Comprension - Inferencial" },
+      { semana: 15, titulo: "Cruz: Como - Procesos",                      objetivo: "Inferir COMO suceden las acciones y procesos",                                   descripcion: "Se trabaja el brazo COMO inferencial. Los ninos explican los procesos que llevan a los eventos del texto, usando vocabulario de secuencia.", metodologia: "Cruz de Comprension - Inferencial" },
+      { semana: 16, titulo: "Cruz: Para que - Propositos",                objetivo: "Inferir PARA QUE se realizan las acciones (intencion)",                          descripcion: "Se completa el brazo PARA QUE. Los ninos identifican intenciones de los personajes y del autor. Debate: por que creen que el autor escribio esto?", metodologia: "Cruz de Comprension - Inferencial" },
+      { semana: 17, titulo: "Cruz: Que pasaria si - Hipotesis",           objetivo: "Formular hipotesis sobre situaciones alternativas",                               descripcion: "Brazo especial QUE PASARIA SI. Los ninos cambian un elemento del texto y predicen como cambiaria la historia. Se comparan las diferentes versiones.", metodologia: "Cruz de Comprension - Inferencial" },
+      { semana: 18, titulo: "Cruz: Integracion inferencial",              objetivo: "Combinar preguntas inferenciales para comprension profunda",                     descripcion: "Cruz completa incluyendo los brazos inferenciales. Los ninos trabajan con un texto desafiante y justifican cada respuesta con evidencia.", metodologia: "Cruz de Comprension - Inferencial" },
       // BLOQUE 4: Cruz de Comprension - Nivel Critico (Semanas 19-22)
-      { semana: 19, titulo: "Cruz: Que opinas - Valoracion", objetivo: "Expresar opinion fundamentada sobre el texto", metodologia: "Cruz de Comprension - Critico" },
-      { semana: 20, titulo: "Cruz: Esta bien o mal - Juicio", objetivo: "Emitir juicios eticos sobre acciones de personajes", metodologia: "Cruz de Comprension - Critico" },
-      { semana: 21, titulo: "Cruz: Que harias tu - Aplicacion", objetivo: "Aplicar lo aprendido a situaciones propias", metodologia: "Cruz de Comprension - Critico" },
-      { semana: 22, titulo: "Cruz: Integracion critica", objetivo: "Desarrollar pensamiento critico completo sobre textos", metodologia: "Cruz de Comprension - Critico" },
+      { semana: 19, titulo: "Cruz: Que opinas - Valoracion",              objetivo: "Expresar opinion fundamentada sobre el texto",                                    descripcion: "Los ninos expresan su opinion sobre el texto usando la estructura: 'Yo opino que... porque en el texto dice...' Se registran en globos de opinion.", metodologia: "Cruz de Comprension - Critico" },
+      { semana: 20, titulo: "Cruz: Esta bien o mal - Juicio",             objetivo: "Emitir juicios eticos sobre acciones de personajes",                             descripcion: "Se analiza una accion del personaje. Los ninos debaten si estuvo bien o mal y por que. Se elabora un juicio colectivo fundamentado.", metodologia: "Cruz de Comprension - Critico" },
+      { semana: 21, titulo: "Cruz: Que harias tu - Aplicacion",           objetivo: "Aplicar lo aprendido a situaciones propias",                                     descripcion: "Los ninos transfieren el mensaje del texto a su vida: si yo estuviera en esa situacion yo haria... Se dramatiza brevemente.", metodologia: "Cruz de Comprension - Critico" },
+      { semana: 22, titulo: "Cruz: Integracion critica",                  objetivo: "Desarrollar pensamiento critico completo sobre textos",                          descripcion: "Cruz completa en todos los niveles (literal, inferencial, critico) con un texto nuevo seleccionado por los ninos. La docente facilita el debate.", metodologia: "Cruz de Comprension - Critico" },
       // BLOQUE 5: Integracion LD + Cruz (Semanas 23-25)
-      { semana: 23, titulo: "Integracion: LD + Cruz Literal", objetivo: "Combinar lectura dialogica con preguntas literales de la cruz", metodologia: "Integracion LD + Cruz" },
-      { semana: 24, titulo: "Integracion: LD + Cruz Completa", objetivo: "Aplicar ambas metodologias en secuencia completa", metodologia: "Integracion LD + Cruz" },
-      { semana: 25, titulo: "Evaluacion CT", objetivo: "Evaluar comprension usando Lectura Dialogica y Cruz de Comprension", metodologia: "Evaluacion" },
+      { semana: 23, titulo: "Integracion: LD + Cruz Literal",             objetivo: "Combinar lectura dialogica con preguntas literales de la cruz",                  descripcion: "Se realiza una lectura dialogica completa y luego se completa la cruz literal. Los ninos identifican como las preguntas del Antes/Durante/Despues se conectan con la cruz.", metodologia: "Integracion LD + Cruz" },
+      { semana: 24, titulo: "Integracion: LD + Cruz Completa",            objetivo: "Aplicar ambas metodologias en secuencia completa",                               descripcion: "Lectura dialogica completa + Cruz de Comprension en todos los niveles. Actividad de cierre anual: los ninos eligen el texto y lideran las fases.", metodologia: "Integracion LD + Cruz" },
+      { semana: 25, titulo: "Evaluacion CT",                              objetivo: "Evaluar comprension usando Lectura Dialogica y Cruz de Comprension",             descripcion: "Evaluacion formativa: la docente registra el nivel de participacion en cada fase y el dominio de los brazos de la cruz. Se devuelve feedback personalizado.", metodologia: "Evaluacion" },
     ],
   },
   O: {
@@ -426,6 +426,12 @@ function BrainColumn({ activity, isLoading, stats }: {
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
           </div>
+          {activity.descripcion && (
+            <div className="bg-primary/5 rounded-lg p-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Descripcion</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
+            </div>
+          )}
           {activity.objetivo && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
@@ -443,12 +449,6 @@ function BrainColumn({ activity, isLoading, stats }: {
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-          {activity.descripcion && (
-            <div className="bg-primary/5 rounded-lg p-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Actividad</p>
-              <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
             </div>
           )}
         </div>
