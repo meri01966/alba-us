@@ -531,10 +531,6 @@ export default function DashboardDirectora() {
           </div>
         </div>
       </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-5xl mx-auto p-4 space-y-4">
 
