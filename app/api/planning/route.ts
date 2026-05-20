@@ -1,55 +1,51 @@
 import { NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase"
 
-const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN
-const BASE_ID = process.env.AIRTABLE_BASE_ID || "appvmkxMrMWhGbclm"
-const TABLE_ID = "tblPlanificaciones"
+export const dynamic = "force-dynamic"
 
-interface AirtableRecord {
+interface Planning {
   id: string
-  fields: Record<string, string>
+  titulo: string
+  objetivo: string
+  actividad: string
+  recursos: string
+  fecha: string
+  sala?: string
 }
 
-function recordToPlanning(record: AirtableRecord) {
-  return {
-    id: record.id,
-    titulo:   record.fields["Titulo"]   || "",
-    objetivo: record.fields["Objetivo"] || "",
-    actividad: record.fields["Actividad"] || "",
-    recursos:  record.fields["Recursos"]  || "",
-    fecha:     record.fields["Fecha"]     || new Date().toISOString().split("T")[0],
-  }
-}
-
-export async function GET() {
-  if (!AIRTABLE_TOKEN) {
-    return NextResponse.json({ planning: null, source: "no-token" })
-  }
-
+export async function GET(request: Request) {
   try {
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}?maxRecords=1&sort%5B0%5D%5Bfield%5D=Fecha&sort%5B0%5D%5Bdirection%5D=desc`
+    const { searchParams } = new URL(request.url)
+    const sala = searchParams.get("sala") || "Manzanos"
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${AIRTABLE_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
+    const { data, error } = await supabase
+      .from("planificaciones")
+      .select("*")
+      .eq("sala", sala)
+      .order("fecha", { ascending: false })
+      .limit(1)
 
-    if (!response.ok) {
-      console.error("[v0] Airtable planning GET error:", response.status)
+    if (error) {
+      console.error("[v0] Error fetching planning from Supabase:", error.message)
       return NextResponse.json({ planning: null, source: "error" })
     }
 
-    const data = await response.json()
-
-    if (!data.records || data.records.length === 0) {
-      return NextResponse.json({ planning: null, source: "airtable" })
+    if (!data || data.length === 0) {
+      return NextResponse.json({ planning: null, source: "supabase" })
     }
 
+    const record = data[0]
     return NextResponse.json({
-      planning: recordToPlanning(data.records[0]),
-      source: "airtable",
+      planning: {
+        id: record.id,
+        titulo: record.contenido_maestra?.split("\n")[0] || "Mi planificacion",
+        objetivo: "",
+        actividad: record.contenido_maestra || "",
+        recursos: "",
+        fecha: record.fecha?.split("T")[0] || new Date().toISOString().split("T")[0],
+        sala: record.sala,
+      } as Planning,
+      source: "supabase",
     })
   } catch (error) {
     console.error("[v0] Error fetching planning:", error)
@@ -58,54 +54,90 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!AIRTABLE_TOKEN) {
-    return NextResponse.json({ error: "AIRTABLE_TOKEN no configurado" }, { status: 500 })
-  }
-
   try {
     const body = await request.json()
-    const { titulo, objetivo, actividad, recursos } = body
+    const { titulo, objetivo, actividad, recursos, sala = "Manzanos" } = body
 
-    const response = await fetch(
-      `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${AIRTABLE_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          records: [
-            {
-              fields: {
-                Titulo:    titulo,
-                Objetivo:  objetivo,
-                Actividad: actividad,
-                Recursos:  recursos,
-                Fecha:     new Date().toISOString().split("T")[0],
-              },
-            },
-          ],
-        }),
+    // Combinar titulo, objetivo, actividad y recursos en contenido_maestra
+    const contenidoCompleto = [
+      titulo,
+      objetivo && `Objetivo: ${objetivo}`,
+      actividad,
+      recursos && `Recursos: ${recursos}`,
+    ].filter(Boolean).join("\n\n")
+
+    // Verificar si ya existe planificacion para hoy en esta sala
+    const today = new Date().toISOString().split("T")[0]
+    const { data: existing } = await supabase
+      .from("planificaciones")
+      .select("id")
+      .eq("sala", sala)
+      .gte("fecha", `${today}T00:00:00`)
+      .lte("fecha", `${today}T23:59:59`)
+      .single()
+
+    if (existing) {
+      // Actualizar existente
+      const { data, error } = await supabase
+        .from("planificaciones")
+        .update({
+          contenido_maestra: contenidoCompleto,
+        })
+        .eq("id", existing.id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error("[v0] Error updating planning:", error.message)
+        return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
       }
-    )
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("[v0] Airtable POST error:", errorData)
-      return NextResponse.json(
-        { error: "Error al guardar en Airtable", details: errorData },
-        { status: response.status }
-      )
+      return NextResponse.json({
+        planning: {
+          id: data.id,
+          titulo: titulo || contenidoCompleto.split("\n")[0],
+          objetivo: objetivo || "",
+          actividad: actividad || "",
+          recursos: recursos || "",
+          fecha: data.fecha?.split("T")[0] || today,
+          sala: data.sala,
+        },
+        success: true,
+      })
     }
 
-    const data = await response.json()
+    // Insertar nuevo
+    const { data, error } = await supabase
+      .from("planificaciones")
+      .insert([{
+        fecha: new Date().toISOString(),
+        sala,
+        contenido_maestra: contenidoCompleto,
+        sugerencia_alba: "",
+        estado: "pendiente",
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[v0] Error saving planning:", error.message)
+      return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
+    }
+
     return NextResponse.json({
-      planning: recordToPlanning(data.records[0]),
+      planning: {
+        id: data.id,
+        titulo: titulo || contenidoCompleto.split("\n")[0],
+        objetivo: objetivo || "",
+        actividad: actividad || "",
+        recursos: recursos || "",
+        fecha: data.fecha?.split("T")[0] || today,
+        sala: data.sala,
+      },
       success: true,
     })
   } catch (error) {
     console.error("[v0] Error saving planning:", error)
-    return NextResponse.json({ error: "Error al guardar la planificación" }, { status: 500 })
+    return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
   }
 }

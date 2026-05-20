@@ -487,10 +487,12 @@ function MyPlanningColumn({
   planning,
   isLoading,
   onSaved,
+  sala,
 }: {
   planning: Planning | null
   isLoading: boolean
   onSaved: (p: Planning) => void
+  sala: string
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSaving, setIsSaving]       = useState(false)
@@ -514,7 +516,7 @@ function MyPlanningColumn({
       const response = await fetch("/api/planning", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(formData),
+        body:    JSON.stringify({ ...formData, sala }),
       })
       const data = await response.json()
       if (data.success && data.planning) {
@@ -789,6 +791,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
               planning={planning}
               isLoading={isPlanningLoading}
               onSaved={setPlanning}
+              sala={sala}
             />
           </div>
         </div>
