@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 interface StudentProfileProps {
   alumnoId: string
   alumnoNombre?: string
-  progressData?: { CF: number; CT: number; O: number }
+  progressData?: { CF: number | null; CT: number | null; O: number | null }
   onBack: () => void
 }
 
@@ -271,11 +271,11 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
           setProgreso(data.progreso)
           if (data.alumno) setAlumno(data.alumno)
         } else if (progressData) {
-          // Fallback a datos del padre si API falla
+          // Fallback a datos del padre si API falla — solo ejes con datos reales (no null)
           setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O, actividades: [], tendencia: "estable", semanaActual: 1 },
+            CF: { logradas: [], porcentaje: progressData.CF ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+            CT: { logradas: [], porcentaje: progressData.CT ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+            O: { logradas: [], porcentaje: progressData.O ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
           })
         }
       } catch (err) {
@@ -283,9 +283,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         // Fallback
         if (progressData) {
           setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O, actividades: [], tendencia: "estable", semanaActual: 1 },
+            CF: { logradas: [], porcentaje: progressData.CF ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+            CT: { logradas: [], porcentaje: progressData.CT ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
+            O: { logradas: [], porcentaje: progressData.O ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
           })
         }
       } finally {

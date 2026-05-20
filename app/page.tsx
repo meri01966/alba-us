@@ -293,9 +293,9 @@ export default function ALBADashboard() {
   const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
   const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
 
-  // Inicializar progreso de alumno en 0 (gris) - solo se actualiza con evaluacion explicita
-  function initProgress(studentId: string) {
-    return { CF: 0, CT: 0, O: 0 }
+  // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita de Supabase
+  function initProgress(_studentId: string) {
+    return { CF: null as number | null, CT: null as number | null, O: null as number | null }
   }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
   
@@ -800,7 +800,7 @@ useEffect(() => {
 
   if (activeView === "perfil" && selectedStudent) {
     const student = students.find(s => s.id === selectedStudent)
-    const studentProgress = progress[selectedStudent] || { CF: 0, CT: 0, O: 0 }
+    const studentProgress = progress[selectedStudent] || { CF: null, CT: null, O: null }
     
     return (
       <div className="min-h-screen bg-background">

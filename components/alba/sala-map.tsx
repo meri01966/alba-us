@@ -18,39 +18,48 @@ type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 interface SalaMapProps {
   students: Student[]
-  progress: Record<string, { CF: number; CT: number; O: number }>
+  progress: Record<string, { CF: number | null; CT: number | null; O: number | null }>
   evaluaciones?: Record<string, StatusLevel>
   onStudentClick: (id: string) => void
 }
 
 // Genera el mensaje de reporte para la familia basado en el progreso - SIN porcentajes
-function generarReporteFamilia(nombre: string, progress: { CF: number; CT: number; O: number }): string {
+// Solo incluye ejes que tienen datos reales (no null)
+function generarReporteFamilia(nombre: string, progress: { CF: number | null; CT: number | null; O: number | null }): string {
   const getNivel = (percent: number) => {
     if (percent >= 70) return "avanza muy bien"
     if (percent >= 40) return "esta progresando"
     return "necesita un poco mas de practica"
   }
 
-  const cf = getNivel(progress.CF)
-  const ct = getNivel(progress.CT)
-  const o = getNivel(progress.O)
+  const lineas: string[] = []
+  const apoyo: string[] = []
+
+  if (progress.CF !== null) {
+    lineas.push(`En Conciencia Fonologica (reconocer sonidos): ${getNivel(progress.CF)}.`)
+    if (progress.CF < 40) apoyo.push("jugar con rimas y sonidos")
+  }
+  if (progress.CT !== null) {
+    lineas.push(`En Comprension de Textos (entender cuentos): ${getNivel(progress.CT)}.`)
+    if (progress.CT < 40) apoyo.push("leer cuentos juntos")
+  }
+  if (progress.O !== null) {
+    lineas.push(`En Oralidad (expresarse): ${getNivel(progress.O)}.`)
+    if (progress.O < 40) apoyo.push("conversar sobre el dia")
+  }
+
+  if (lineas.length === 0) {
+    return ""
+  }
 
   let mensaje = `Hola! Les comparto como viene ${nombre} en el aula:\n\n`
-  mensaje += `En Conciencia Fonologica (reconocer sonidos): ${cf}.\n`
-  mensaje += `En Conocimiento de Textos (entender cuentos): ${ct}.\n`
-  mensaje += `En Oralidad (expresarse): ${o}.\n`
-
-  const apoyo = []
-  if (progress.CF < 40) apoyo.push("jugar con rimas y sonidos")
-  if (progress.CT < 40) apoyo.push("leer cuentos juntos")
-  if (progress.O < 40) apoyo.push("conversar sobre el dia")
+  mensaje += lineas.join("\n") + "\n"
 
   if (apoyo.length > 0) {
     mensaje += `\nEn casa pueden ayudar con: ${apoyo.join(", ")}.`
   }
 
   mensaje += "\n\nSaludos!"
-
   return mensaje
 }
 
@@ -127,8 +136,10 @@ function getColor(percent: number): string {
   return "#ef4444" // rojo
 }
 
-function getAverage(p: { CF: number; CT: number; O: number }): number {
-  return Math.round((p.CF + p.CT + p.O) / 3)
+function getAverage(p: { CF: number | null; CT: number | null; O: number | null }): number {
+  const vals = [p.CF, p.CT, p.O].filter(v => v !== null) as number[]
+  if (vals.length === 0) return 0
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 }
 
 export default function SalaMap({ students, progress, evaluaciones = {}, onStudentClick }: SalaMapProps) {
@@ -156,13 +167,7 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
     e.stopPropagation()
-    const eval_ = evaluaciones[student.id]
-    // Sin evaluacion = reporte en blanco (no hay datos todavia)
-    if (!eval_) {
-      setReportModal({ student, mensaje: "" })
-      return
-    }
-    const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
+    const p = progress[student.id] || { CF: null, CT: null, O: null }
     const mensaje = generarReporteFamilia(student.nombre, p)
     setReportModal({ student, mensaje })
   }
