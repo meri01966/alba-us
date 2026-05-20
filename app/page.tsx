@@ -373,18 +373,36 @@ export default function ALBADashboard() {
   // Callback para el registro de cierre del dia
   // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
   const handleRegistroCierre = useCallback(async (registro: RegistroCierre) => {
-    // 1. Marcar como verde todos los alumnos sin evaluacion explicita
+    // 1. Marcar como verde todos los alumnos sin evaluacion explicita y GUARDAR en Supabase
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
     if (sinEvaluar.length > 0) {
       const nuevasEvals = { ...evaluaciones }
       const nuevosProgress = { ...progress }
-      sinEvaluar.forEach(s => {
+      
+      // Guardar cada alumno sin evaluar como verde en Supabase
+      for (const s of sinEvaluar) {
         nuevasEvals[s.id] = "green"
         nuevosProgress[s.id] = {
           ...(nuevosProgress[s.id] || initProgress(s.id)),
           [ejeActual]: 100,
         }
-      })
+        // Guardar en Supabase via handleStatusChange interno
+        try {
+          await fetch("/api/seguimiento", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              alumno_id: s.id,
+              eje: ejeActual,
+              estado: "green",
+              progreso: 100,
+              sala: salaActual,
+            }),
+          })
+        } catch (e) {
+          console.error("[v0] Error guardando alumno sin evaluar:", e)
+        }
+      }
       setEvaluaciones(nuevasEvals)
       setProgress(nuevosProgress)
     }
@@ -398,13 +416,12 @@ export default function ALBADashboard() {
       const data = await response.json()
       if (data.success) {
         fetchHistorialMes()
-        // ALBA re-analiza y sugiere la siguiente actividad
         setBrainKey(k => k + 1)
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
