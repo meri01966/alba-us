@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSupabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 export const dynamic = "force-dynamic"
 
@@ -13,7 +13,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Sala requerida" }, { status: 400 })
     }
 
-    const supabase = getSupabase()
     const { data, error } = await supabase
       .from("planificaciones")
       .select("*")
@@ -43,8 +42,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const supabase = getSupabase()
-    
     // Verificar si ya existe planificacion para hoy en esta sala
     const today = new Date().toISOString().split("T")[0]
     const { data: existing } = await supabase
@@ -104,7 +101,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const supabase = getSupabase()
     const { error } = await supabase
       .from("planificaciones")
       .update({ estado })
