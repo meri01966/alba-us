@@ -417,6 +417,9 @@ export default function ALBADashboard() {
       if (data.success) {
         fetchHistorialMes()
         setBrainKey(k => k + 1)
+        // IMPORTANTE: Resetear evaluaciones para la nueva actividad
+        setEvaluaciones({})
+        setProgress({})
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
