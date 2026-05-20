@@ -18,7 +18,7 @@ interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
-  onPlanificacion?: () => void
+  onPlanificacion?: (modo: "escribir" | "historial") => void
   salaActual?: string
   historialMes?: DiaActividad[]
 }
@@ -209,14 +209,26 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanifi
               </button>
             )}
 
-            {/* Boton Mi Planificacion */}
+            {/* Boton Mi Planificacion - para ESCRIBIR */}
             {onPlanificacion && (
               <button
-                onClick={onPlanificacion}
+                onClick={() => onPlanificacion("escribir")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
                 style={{ backgroundColor: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.5)", color: "#10b981" }}
               >
                 <NotebookPen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mi Planificacion</span>
+              </button>
+            )}
+
+            {/* Boton Mi Plan - para VER HISTORIAL */}
+            {onPlanificacion && (
+              <button
+                onClick={() => onPlanificacion("historial")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                style={{ backgroundColor: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.5)", color: "#3b82f6" }}
+              >
+                <Calendar className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Mi Plan</span>
               </button>
             )}

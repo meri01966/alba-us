@@ -8,6 +8,7 @@ interface PlanificacionModalProps {
   onClose: () => void
   sala: string
   sugerenciaAlba?: string
+  modo?: "escribir" | "historial" // escribir = Mi Planificacion, historial = Mi Plan
 }
 
 interface Planificacion {
@@ -18,12 +19,14 @@ interface Planificacion {
   estado: "pendiente" | "completada"
 }
 
-export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba }: PlanificacionModalProps) {
+export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo = "escribir" }: PlanificacionModalProps) {
   const [planificaciones, setPlanificaciones] = useState<Planificacion[]>([])
   const [contenido, setContenido] = useState("")
   const [loading, setLoading] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const [activeTab, setActiveTab] = useState<"nueva" | "historial">("nueva")
+
+  // Si modo es "historial" (Mi Plan), mostrar solo historial. Si es "escribir" (Mi Planificacion), mostrar input + historial
+  const soloHistorial = modo === "historial"
 
   useEffect(() => {
     if (isOpen) {
@@ -96,7 +99,7 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba }: Pl
               <NotebookPen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Mi Planificacion</h2>
+              <h2 className="text-lg font-bold text-white">{soloHistorial ? "Mi Plan" : "Mi Planificacion"}</h2>
               <p className="text-xs text-white/80">{hoy}</p>
             </div>
           </div>
@@ -105,30 +108,11 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba }: Pl
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b">
-          <button
-            onClick={() => setActiveTab("nueva")}
-            className={`flex-1 py-3 text-sm font-medium transition ${
-              activeTab === "nueva" ? "text-emerald-600 border-b-2 border-emerald-500" : "text-gray-500"
-            }`}
-          >
-            Nueva Planificacion
-          </button>
-          <button
-            onClick={() => setActiveTab("historial")}
-            className={`flex-1 py-3 text-sm font-medium transition ${
-              activeTab === "historial" ? "text-emerald-600 border-b-2 border-emerald-500" : "text-gray-500"
-            }`}
-          >
-            Historial ({planificaciones.length})
-          </button>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-          {activeTab === "nueva" ? (
-            <div className="space-y-4">
+          {/* Mi Planificacion: campo para escribir + historial debajo */}
+          {!soloHistorial && (
+            <div className="space-y-4 mb-6">
               {/* Sugerencia de ALBA */}
               {sugerenciaAlba && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -170,61 +154,69 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba }: Pl
                   </>
                 )}
               </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+
+              {/* Separador */}
+              {planificaciones.length > 0 && (
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-sm font-medium text-gray-600 mb-3">Historial reciente</p>
                 </div>
-              ) : planificaciones.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">No hay planificaciones guardadas</p>
-                </div>
-              ) : (
-                planificaciones.map((p, i) => (
-                  <div
-                    key={p.id || i}
-                    className={`border rounded-xl p-4 ${
-                      p.estado === "completada" ? "bg-gray-50 border-gray-200" : "bg-white border-emerald-200"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-500">
-                            {new Date(p.fecha).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
-                          </span>
-                          {p.estado === "completada" && (
-                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                              Completada
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-800">{p.contenido_maestra}</p>
-                        {p.sugerencia_alba && (
-                          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" />
-                            {p.sugerencia_alba}
-                          </p>
-                        )}
-                      </div>
-                      {p.estado !== "completada" && p.id && (
-                        <button
-                          onClick={() => marcarCompletada(p.id!)}
-                          className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-600"
-                          title="Marcar como completada"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
               )}
             </div>
           )}
+
+          {/* Historial - siempre visible */}
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+              </div>
+            ) : planificaciones.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">{soloHistorial ? "No hay planificaciones guardadas todavia" : "Todavia no guardaste ninguna planificacion"}</p>
+              </div>
+            ) : (
+              planificaciones.map((p, i) => (
+                <div
+                  key={p.id || i}
+                  className={`border rounded-xl p-4 ${
+                    p.estado === "completada" ? "bg-gray-50 border-gray-200" : "bg-white border-emerald-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium text-gray-500">
+                          {new Date(p.fecha).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })}
+                        </span>
+                        {p.estado === "completada" && (
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                            Completada
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-800">{p.contenido_maestra}</p>
+                      {p.sugerencia_alba && (
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          {p.sugerencia_alba}
+                        </p>
+                      )}
+                    </div>
+                    {p.estado !== "completada" && p.id && !soloHistorial && (
+                      <button
+                        onClick={() => marcarCompletada(p.id!)}
+                        className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-600"
+                        title="Marcar como completada"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
