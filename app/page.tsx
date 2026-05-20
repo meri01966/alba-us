@@ -300,6 +300,7 @@ export default function ALBADashboard() {
   }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
+  const [sugerenciaAlba, setSugerenciaAlba] = useState("")
   
   // Gestion de sala
   const [salaActual, setSalaActual] = useState("Manzanos")
