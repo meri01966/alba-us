@@ -773,7 +773,7 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
-        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
       </div>
     )
   }
@@ -798,7 +798,7 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
-        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
       </div>
     )
   }
@@ -826,7 +826,7 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
-        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
       </div>
     )
   }
@@ -1253,7 +1253,7 @@ useEffect(() => {
       )}
 
       {/* Planificacion Modal */}
-      <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
+      <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
     </div>
   )
 }
