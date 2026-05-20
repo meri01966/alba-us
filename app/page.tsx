@@ -859,6 +859,7 @@ useEffect(() => {
                         type="button"
                         onClick={() => {
                           setSalaActual(sala)
+                          setBrainKey(k => k + 1) // Forzar re-fetch de ALBA al cambiar sala
                           setShowSalaDropdown(false)
                         }}
                         className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 ${sala === salaActual ? "font-semibold bg-slate-50" : ""}`}
