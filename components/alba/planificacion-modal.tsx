@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, NotebookPen, Calendar, Loader2 } from "lucide-react"
+import { X, NotebookPen, Calendar, Loader2, Sparkles } from "lucide-react"
 
 interface PlanificacionModalProps {
   isOpen: boolean
@@ -17,15 +17,17 @@ interface Planificacion {
   estado: "pendiente" | "completada"
 }
 
-// Este modal SOLO muestra el historial de planificaciones
-// La maestra escribe nuevas planificaciones desde la tarjeta "Mi Planificacion" en el tablero
+// Este modal muestra el historial de planificaciones + sugerencia inteligente de ALBA
 export function PlanificacionModal({ isOpen, onClose, sala }: PlanificacionModalProps) {
   const [planificaciones, setPlanificaciones] = useState<Planificacion[]>([])
   const [loading, setLoading] = useState(false)
+  const [sugerenciaAlba, setSugerenciaAlba] = useState<string>("")
+  const [loadingSugerencia, setLoadingSugerencia] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       cargarPlanificaciones()
+      cargarSugerenciaAlba()
     }
   }, [isOpen, sala])
 
@@ -41,6 +43,27 @@ export function PlanificacionModal({ isOpen, onClose, sala }: PlanificacionModal
       console.error("Error cargando planificaciones:", e)
     }
     setLoading(false)
+  }
+
+  async function cargarSugerenciaAlba() {
+    setLoadingSugerencia(true)
+    try {
+      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
+      if (res.ok) {
+        const data = await res.json()
+        // Construir sugerencia basada en datos de la sala
+        if (data.actividadSugerida) {
+          const sugerencia = `Para hoy te sugiero: "${data.actividadSugerida}". ${data.microCapacitacion || ""}`
+          setSugerenciaAlba(sugerencia)
+        } else {
+          setSugerenciaAlba("")
+        }
+      }
+    } catch (e) {
+      console.error("Error cargando sugerencia ALBA:", e)
+      setSugerenciaAlba("")
+    }
+    setLoadingSugerencia(false)
   }
 
   if (!isOpen) return null
@@ -64,8 +87,25 @@ export function PlanificacionModal({ isOpen, onClose, sala }: PlanificacionModal
           </button>
         </div>
 
-        {/* Content - Solo historial */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Sugerencia inteligente de ALBA */}
+          {loadingSugerencia ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+              <span className="text-sm text-amber-700">Cargando sugerencia de ALBA...</span>
+            </div>
+          ) : sugerenciaAlba && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-semibold text-amber-800">Sugerencia de ALBA</span>
+              </div>
+              <p className="text-sm text-amber-700">{sugerenciaAlba}</p>
+            </div>
+          )}
+
+          {/* Historial */}
           <div className="space-y-3">
             {loading ? (
               <div className="flex items-center justify-center py-8">
