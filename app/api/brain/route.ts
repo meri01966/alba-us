@@ -362,18 +362,29 @@ export async function GET(req: Request) {
 
     // ── 9. Micro-capacitacion just-in-time vinculada a la actividad ──────────
     const microCapacitaciones: Record<string, { titulo: string; contenido: string; tips: string[] }> = {
-      // CF
-      "Rimas con nombres": { titulo: "Como ensenar rimas", contenido: "Las rimas ayudan a desarrollar la conciencia fonologica. Use nombres de los ninos para hacerlo personal.", tips: ["Empiece con rimas simples", "Use gestos al rimar", "Repita varias veces"] },
-      "Sonido inicial": { titulo: "Identificacion de sonidos", contenido: "Enfoque en el primer sonido de las palabras. Use objetos concretos.", tips: ["Exagere el sonido inicial", "Use espejo para ver la boca", "Agrupe por sonido"] },
-      "Silabas con palmas": { titulo: "Segmentacion silabica", contenido: "Dividir palabras en silabas usando palmas desarrolla la conciencia fonologica.", tips: ["Empiece con palabras cortas", "Use el nombre del nino", "Agregue movimiento corporal"] },
-      // CT
-      "Partes del libro": { titulo: "Conociendo el libro", contenido: "Ensenamos tapa, contratapa, lomo, paginas. Los ninos manipulan libros reales.", tips: ["Deje que exploren", "Nombre cada parte", "Compare libros diferentes"] },
-      "Lectura compartida": { titulo: "Lectura interactiva", contenido: "Leer juntos desarrolla comprension y amor por la lectura.", tips: ["Haga preguntas durante la lectura", "Senale las ilustraciones", "Relacione con su vida"] },
-      // O
-      "Descripcion de imagenes": { titulo: "Expresion oral", contenido: "Describir imagenes desarrolla vocabulario y estructura oracional.", tips: ["Pregunte que ven", "Expanda sus respuestas", "Use vocabulario rico"] },
-      "Narracion de experiencias": { titulo: "Contar historias", contenido: "Los ninos cuentan algo que vivieron, desarrollando secuencia narrativa.", tips: ["Pregunte inicio-medio-fin", "Escuche con atencion", "Haga preguntas abiertas"] },
+      // CF - Conciencia Fonologica
+      "Sonidos del entorno": { titulo: "Escucha activa", contenido: "Desarrolle la capacidad de escucha discriminando sonidos ambientales.", tips: ["Pida silencio total", "Use grabaciones variadas", "Relacione con imagenes"] },
+      "Rimas con nombres": { titulo: "Ensenar rimas", contenido: "Las rimas desarrollan conciencia fonologica. Use nombres de los ninos.", tips: ["Empiece simple", "Use gestos", "Repita varias veces"] },
+      "Separacion en silabas": { titulo: "Segmentacion silabica", contenido: "Dividir palabras con palmas desarrolla conciencia fonologica.", tips: ["Palabras cortas primero", "Use nombres", "Agregue movimiento"] },
+      "Sonido inicial /a/": { titulo: "Vocal A", contenido: "Enfoque en /a/ al inicio de palabras.", tips: ["Exagere el sonido", "Use espejo", "Busque objetos con A"] },
+      "Sonido inicial /e/": { titulo: "Vocal E", contenido: "Identificar palabras que empiezan con /e/.", tips: ["Recorra el aula", "Liste en pizarron", "Ejemplos cotidianos"] },
+      "Sonido inicial /i/": { titulo: "Vocal I", contenido: "Use el cuerpo para formar la I.", tips: ["Brazos estirados = I", "Alterne palabras", "Dictado grafico"] },
+      "Sonido inicial /o/": { titulo: "Vocal O", contenido: "Aplaudir con palabras que empiezan con /o/.", tips: ["Una palmada = O", "Dibujen cosas con O", "Lista colectiva"] },
+      "Sonido inicial /u/": { titulo: "Vocal U", contenido: "Juego de memoria con sonido inicial.", tips: ["Trabajen en parejas", "Emparejen imagen-sonido", "Celebre aciertos"] },
+      "Vocales - Repaso": { titulo: "Consolidar vocales", contenido: "Ruleta de vocales para repasar.", tips: ["3 palabras por vocal", "Cuente cual tuvo mas", "Registre"] },
+      "Sonido inicial /m/": { titulo: "Consonante M", contenido: "Imitar /m/ cerrando labios.", tips: ["Use espejo", "Senale laminas", "Creen oraciones"] },
+      "Sonido inicial /p/": { titulo: "Consonante P", contenido: "Juego de pesca con palabras.", tips: ["Pescar tarjetas", "Clasificar", "Canastos de colores"] },
+      "Sonido inicial /s/": { titulo: "Consonante S", contenido: "Trabajo en parejas con /s/.", tips: ["Pulgar arriba/abajo", "Intercambien roles", "Compartan"] },
+      // CT - Conocimiento Textual
+      "Exploracion del libro": { titulo: "Conocer el libro", contenido: "Manipular y explorar portada e ilustraciones.", tips: ["Observen tapa", "Predigan contenido", "Registre hipotesis"] },
+      "Antes de leer: Predicciones": { titulo: "Predicciones", contenido: "Formular hipotesis mirando la tapa.", tips: ["Use post-its", "Verifiquen al final", "Celebre aciertos"] },
+      "Lectura dialogica: Pausas": { titulo: "Lectura interactiva", contenido: "Pausas estrategicas para preguntas.", tips: ["Que pasara?", "Por que hizo eso?", "Como se siente?"] },
+      // O - Oralidad
+      "ECO-E: Sonidos del entorno": { titulo: "Escucha y respuesta", contenido: "Nombrar sonidos en oracion completa.", tips: ["Ojos cerrados", "Oracion completa", "Modele si necesario"] },
+      "ECO-E: Escucha de voces": { titulo: "Reconocer voces", contenido: "Responder con oracion completa.", tips: ["Use grabaciones", "Esa es la voz de...", "Espere oracion"] },
+      "ECO-E: Instrucciones simples": { titulo: "Seguir instrucciones", contenido: "Ejecutar y verbalizar acciones.", tips: ["Un paso a la vez", "Yo levante el...", "No avance sin verbalizacion"] },
     }
-    const microDefault = { titulo: "Tip del dia", contenido: "Observe a cada nino y adapte la actividad a sus necesidades.", tips: ["Sea paciente", "Celebre los logros", "Repita si es necesario"] }
+    const microDefault = { titulo: "Tip del dia", contenido: "Observe a cada nino y adapte la actividad a sus necesidades.", tips: ["Sea paciente", "Celebre logros", "Repita si necesario"] }
     const microCapacitacion = microCapacitaciones[actividadFinal.titulo] || microDefault
 
     return NextResponse.json({
