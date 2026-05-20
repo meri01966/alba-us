@@ -372,7 +372,24 @@ export default function ALBADashboard() {
   
   // Callback para el registro de cierre del dia
   // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
-  const handleRegistroCierre = useCallback(async (registro: RegistroCierre) => {
+  const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
+    // Construir registro completo con sala y eje
+    const registro: RegistroCierre = {
+      fecha: new Date().toISOString(),
+      sala: salaActual,
+      eje: ejeActual,
+      actividad: actividadActual,
+      evaluacion_actividad: datos.evaluacion,
+      observaciones: datos.observaciones,
+      sugerencia_maestra: datos.sugerencia,
+      stats: {
+        verdes: Object.values(evaluaciones).filter(e => e === "green").length,
+        amarillos: Object.values(evaluaciones).filter(e => e === "yellow").length,
+        rojos: Object.values(evaluaciones).filter(e => e === "red").length,
+        ausentes: Object.values(evaluaciones).filter(e => e === "blue").length,
+      }
+    }
+
     // 1. Marcar como verde todos los alumnos sin evaluacion explicita y GUARDAR en Supabase
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
     if (sinEvaluar.length > 0) {
@@ -430,7 +447,7 @@ export default function ALBADashboard() {
       console.error("[v0] Error guardando registro de cierre:", err)
       alert("Error al guardar. Intenta de nuevo.")
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual])
 
   // Cargar evaluaciones guardadas de localStorage al iniciar
   useEffect(() => {
@@ -1056,7 +1073,7 @@ useEffect(() => {
                   statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
                   statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
                   statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
-                  onGuardar={handleRegistroCierre as any}
+                  onGuardar={handleRegistroCierre}
                 />
               </div>
             </>
