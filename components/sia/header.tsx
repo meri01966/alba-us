@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight, NotebookPen } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
@@ -18,6 +18,7 @@ interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
+  onPlanificacion?: () => void
   salaActual?: string
   historialMes?: DiaActividad[]
 }
@@ -32,7 +33,7 @@ const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> =
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [mesActual, setMesActual] = useState(new Date().getMonth())
   const [anioActual, setAnioActual] = useState(new Date().getFullYear())
@@ -205,6 +206,18 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Sintesis</span>
+              </button>
+            )}
+
+            {/* Boton Mi Planificacion */}
+            {onPlanificacion && (
+              <button
+                onClick={onPlanificacion}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                style={{ backgroundColor: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.5)", color: "#10b981" }}
+              >
+                <NotebookPen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mi Plan</span>
               </button>
             )}
             

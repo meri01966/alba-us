@@ -12,6 +12,7 @@ import { QuickRegister } from "@/components/sia/quick-register"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
+import { PlanificacionModal } from "@/components/alba/planificacion-modal"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 type StatusLevel = "green" | "yellow" | "red" | "blue"
@@ -285,7 +286,7 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT"]
+const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
 
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
@@ -298,6 +299,7 @@ export default function ALBADashboard() {
     return { CF: null as number | null, CT: null as number | null, O: null as number | null }
   }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
+  const [showPlanificacion, setShowPlanificacion] = useState(false)
   
   // Gestion de sala
   const [salaActual, setSalaActual] = useState("Manzanos")
@@ -750,7 +752,7 @@ useEffect(() => {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -770,6 +772,7 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
       </div>
     )
   }
@@ -777,7 +780,7 @@ useEffect(() => {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
         <SalaMap
           students={students}
           progress={progress}
@@ -794,6 +797,7 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
       </div>
     )
   }
@@ -804,7 +808,7 @@ useEffect(() => {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={student?.nombre}
@@ -821,13 +825,14 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
       </div>
     )
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
@@ -1244,6 +1249,9 @@ useEffect(() => {
           onClose={() => setShowSintesis(false)}
         />
       )}
+
+      {/* Planificacion Modal */}
+      <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} sugerenciaAlba={sugerenciaAlba} />
     </div>
   )
 }

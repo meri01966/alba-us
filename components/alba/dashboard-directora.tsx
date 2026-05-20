@@ -28,7 +28,7 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   O:  { label: "Oralidad", color: "#f59e0b" },
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Álamos", "Nogales TT", "Nogales TM"]
+const SALAS = ["Manzanos", "Girasoles", "Álamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
 function Torta({ pct, color, size = 110 }: { pct: number; color: string; size?: number }) {
