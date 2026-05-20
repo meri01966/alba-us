@@ -373,19 +373,19 @@ export default function ALBADashboard() {
   // Callback para el registro de cierre del dia
   // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
   const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
-    // Construir registro completo con sala y eje
-    const registro: RegistroCierre = {
-      fecha: new Date().toISOString(),
-      sala: salaActual,
+    // Construir registro con los campos que espera la API
+    const registro = {
+      actividadALBA: actividadActual,
+      actividadDocente: actividadActual,
       eje: ejeActual,
-      actividad: actividadActual,
-      evaluacion_actividad: datos.evaluacion,
+      sala: salaActual,
+      evaluacionGeneral: datos.evaluacion,
       observaciones: datos.observaciones,
-      sugerencia_maestra: datos.sugerencia,
+      sugerenciaParaIA: datos.sugerencia,
       stats: {
-        verdes: Object.values(evaluaciones).filter(e => e === "green").length,
-        amarillos: Object.values(evaluaciones).filter(e => e === "yellow").length,
-        rojos: Object.values(evaluaciones).filter(e => e === "red").length,
+        green: Object.values(evaluaciones).filter(e => e === "green").length,
+        yellow: Object.values(evaluaciones).filter(e => e === "yellow").length,
+        red: Object.values(evaluaciones).filter(e => e === "red").length,
         ausentes: Object.values(evaluaciones).filter(e => e === "blue").length,
       }
     }
@@ -412,8 +412,6 @@ export default function ALBADashboard() {
               alumno_id: s.id,
               eje: ejeActual,
               estado: "green",
-              progreso: 100,
-              sala: salaActual,
             }),
           })
         } catch (e) {

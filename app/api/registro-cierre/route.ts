@@ -20,13 +20,14 @@ export async function POST(request: Request) {
       evaluacionGeneral,
       observaciones,
       sugerenciaParaIA,
-      stats,
+      stats = { green: 0, yellow: 0, red: 0, ausentes: 0 },
     } = body
 
-    // Calcular promedio del dia
-    const total = stats.green + stats.yellow + stats.red
+    // Calcular promedio del dia (con fallback si stats no viene)
+    const safeStats = stats || { green: 0, yellow: 0, red: 0 }
+    const total = (safeStats.green || 0) + (safeStats.yellow || 0) + (safeStats.red || 0)
     const promedio = total > 0 
-      ? Math.round(((stats.green * 100) + (stats.yellow * 50) + (stats.red * 10)) / total)
+      ? Math.round((((safeStats.green || 0) * 100) + ((safeStats.yellow || 0) * 50) + ((safeStats.red || 0) * 10)) / total)
       : 0
 
     // Determinar si la actividad fue efectiva
@@ -43,9 +44,9 @@ export async function POST(request: Request) {
       observaciones,
       sugerencia_ia: sugerenciaParaIA,
       promedio_logro: promedio,
-      stats_green: stats.green,
-      stats_yellow: stats.yellow,
-      stats_red: stats.red,
+      stats_green: safeStats.green || 0,
+      stats_yellow: safeStats.yellow || 0,
+      stats_red: safeStats.red || 0,
       actividad_efectiva: actividadEfectiva,
       usar_en_futuro: usarEnFuturo,
     }

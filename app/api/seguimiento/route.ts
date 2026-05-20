@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { alumno_id, eje, estado, progreso, sala } = body
+    const { alumno_id, eje, estado, sala } = body
 
     if (!alumno_id || !eje || !estado) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
@@ -22,13 +22,13 @@ export async function POST(request: Request) {
       .eq("eje", eje)
       .gte("fecha", `${today}T00:00:00`)
       .lte("fecha", `${today}T23:59:59`)
-      .single()
+      .maybeSingle()
 
     if (existing) {
-      // Actualizar existente
+      // Actualizar existente - solo campos que existen en la tabla
       const { error } = await supabase
         .from("seguimiento")
-        .update({ estado, progreso: progreso || 100 })
+        .update({ resultado: estado })
         .eq("id", existing.id)
 
       if (error) {
@@ -36,14 +36,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
     } else {
-      // Insertar nuevo
+      // Insertar nuevo - solo campos que existen en la tabla
       const { error } = await supabase.from("seguimiento").insert([{
         alumno_id,
         eje,
-        estado,
-        progreso: progreso || 100,
+        resultado: estado,
         fecha: new Date().toISOString(),
-        sala: sala || "Manzanos",
       }])
 
       if (error) {
