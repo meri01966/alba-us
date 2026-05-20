@@ -420,9 +420,15 @@ export default function ALBADashboard() {
         // IMPORTANTE: Resetear evaluaciones para la nueva actividad
         setEvaluaciones({})
         setProgress({})
+        // Limpiar localStorage tambien
+        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(STORAGE_PROGRESS_KEY)
+        // Mostrar confirmacion
+        alert("Jornada finalizada! ALBA analizo el progreso y actualizo la sugerencia para manana.")
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
+      alert("Error al guardar. Intenta de nuevo.")
     }
   }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual])
 

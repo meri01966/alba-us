@@ -459,6 +459,23 @@ function BrainColumn({ activity, isLoading, stats }: {
               </ul>
             </div>
           )}
+          {/* Micro-capacitacion just-in-time */}
+          {microCapacitacion && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2">Micro-capacitacion: {microCapacitacion.titulo}</p>
+              <p className="text-sm text-purple-800 mb-2">{microCapacitacion.contenido}</p>
+              {microCapacitacion.tips && microCapacitacion.tips.length > 0 && (
+                <ul className="text-xs text-purple-700 space-y-1">
+                  {microCapacitacion.tips.map((tip, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <span className="text-purple-500">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -685,6 +702,7 @@ function MyPlanningColumn({
 export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA }: DayPlanningProps) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
+  const [microCapacitacion, setMicroCapacitacion] = useState<{ titulo: string; contenido: string; tips: string[] } | null>(null)
 
   const [planning,         setPlanning]         = useState<Planning | null>(null)
   const [isPlanningLoading, setIsPlanningLoading] = useState(true)
@@ -728,6 +746,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
           salaRed: sugerencia.salaRed || null,
         }
         setBrain(activity)
+        setMicroCapacitacion(data.microCapacitacion || null)
         if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
         if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
       } else {

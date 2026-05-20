@@ -360,6 +360,22 @@ export async function GET(req: Request) {
     const primerRegistro = regs.length > 0 ? new Date(regs[0].fecha) : new Date()
     const semanaActual = Math.max(1, Math.ceil((Date.now() - primerRegistro.getTime()) / (7 * 86400000)))
 
+    // ── 9. Micro-capacitacion just-in-time vinculada a la actividad ──────────
+    const microCapacitaciones: Record<string, { titulo: string; contenido: string; tips: string[] }> = {
+      // CF
+      "Rimas con nombres": { titulo: "Como ensenar rimas", contenido: "Las rimas ayudan a desarrollar la conciencia fonologica. Use nombres de los ninos para hacerlo personal.", tips: ["Empiece con rimas simples", "Use gestos al rimar", "Repita varias veces"] },
+      "Sonido inicial": { titulo: "Identificacion de sonidos", contenido: "Enfoque en el primer sonido de las palabras. Use objetos concretos.", tips: ["Exagere el sonido inicial", "Use espejo para ver la boca", "Agrupe por sonido"] },
+      "Silabas con palmas": { titulo: "Segmentacion silabica", contenido: "Dividir palabras en silabas usando palmas desarrolla la conciencia fonologica.", tips: ["Empiece con palabras cortas", "Use el nombre del nino", "Agregue movimiento corporal"] },
+      // CT
+      "Partes del libro": { titulo: "Conociendo el libro", contenido: "Ensenamos tapa, contratapa, lomo, paginas. Los ninos manipulan libros reales.", tips: ["Deje que exploren", "Nombre cada parte", "Compare libros diferentes"] },
+      "Lectura compartida": { titulo: "Lectura interactiva", contenido: "Leer juntos desarrolla comprension y amor por la lectura.", tips: ["Haga preguntas durante la lectura", "Senale las ilustraciones", "Relacione con su vida"] },
+      // O
+      "Descripcion de imagenes": { titulo: "Expresion oral", contenido: "Describir imagenes desarrolla vocabulario y estructura oracional.", tips: ["Pregunte que ven", "Expanda sus respuestas", "Use vocabulario rico"] },
+      "Narracion de experiencias": { titulo: "Contar historias", contenido: "Los ninos cuentan algo que vivieron, desarrollando secuencia narrativa.", tips: ["Pregunte inicio-medio-fin", "Escuche con atencion", "Haga preguntas abiertas"] },
+    }
+    const microDefault = { titulo: "Tip del dia", contenido: "Observe a cada nino y adapte la actividad a sus necesidades.", tips: ["Sea paciente", "Celebre los logros", "Repita si es necesario"] }
+    const microCapacitacion = microCapacitaciones[actividadFinal.titulo] || microDefault
+
     return NextResponse.json({
       sugerencia: {
         eje: ejeSugerido,
@@ -376,6 +392,7 @@ export async function GET(req: Request) {
         numeroClase: indice + 1,
         esRepeticion,
       },
+      microCapacitacion,
       alertas: alertas.slice(0, 8),
       historial: {
         promediosPorEje: { CF: analisis.CF.promedio, CT: analisis.CT.promedio, O: analisis.O.promedio },
