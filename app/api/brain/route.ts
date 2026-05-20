@@ -189,13 +189,16 @@ export async function GET(req: Request) {
     }
 
     // ── 4. Analisis por eje de esta sala ───────────────────────────────────
-    // Contar clases completadas desde registro_cierre (donde se guarda Finalizar Jornada)
+    // Contar TOTAL de clases completadas desde registro_cierre (cada cierre = 1 clase)
     const { data: cierresData } = await supabase
       .from("registro_cierre")
-      .select("fecha, eje")
+      .select("id, fecha, eje")
       .eq("sala", sala)
       .order("fecha", { ascending: true })
     const cierres = cierresData || []
+    // Total de clases = cantidad de registros de cierre para esta sala
+    const totalClasesCompletadasGlobal = cierres.length
+    console.log("[ALBA] Sala:", sala, "Total cierres encontrados:", totalClasesCompletadasGlobal)
     
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
@@ -219,15 +222,14 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      // Contar clases completadas desde registro_cierre para este eje
-      const cierresEje = cierres.filter((c) => c.eje === eje)
-      const fechasCierre = [...new Set(cierresEje.map((c) => c.fecha?.split("T")[0]))].sort()
-      const clasesCompletadas = fechasCierre.length
+      // Usar total global de clases completadas (cada Finalizar Jornada = 1 clase)
+      const clasesCompletadas = totalClasesCompletadasGlobal
 
       // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
-      const ultimas2Fechas = fechasCierre.slice(-2)
+      const ultimos2Cierres = cierres.slice(-2)
       let ultimasClasesEnRojo = 0
-      for (const f of ultimas2Fechas) {
+      for (const c of ultimos2Cierres) {
+        const f = c.fecha?.split("T")[0]
         const regsEsaFecha = regsEje.filter((r) => r.fecha?.split("T")[0] === f)
         const promFecha = regsEsaFecha.length > 0
           ? regsEsaFecha.filter((r) => r.resultado === "green").length / regsEsaFecha.length
