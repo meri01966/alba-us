@@ -3,30 +3,25 @@ import { supabase } from "@/lib/supabase"
 
 export const dynamic = "force-dynamic"
 
-interface Planning {
-  id: string
-  titulo: string
-  objetivo: string
-  actividad: string
-  recursos: string
-  fecha: string
-  sala?: string
-}
+// Usamos registro_cierre para guardar planificaciones temporalmente
+// hasta que se cree la tabla planificaciones en Supabase
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const sala = searchParams.get("sala") || "Manzanos"
 
+    // Buscar en registro_cierre con tipo "planificacion"
     const { data, error } = await supabase
-      .from("planificaciones")
+      .from("registro_cierre")
       .select("*")
       .eq("sala", sala)
+      .eq("tipo", "planificacion")
       .order("fecha", { ascending: false })
       .limit(1)
 
     if (error) {
-      console.error("[v0] Error fetching planning from Supabase:", error.message)
+      console.error("[v0] Error fetching planning:", error.message)
       return NextResponse.json({ planning: null, source: "error" })
     }
 
@@ -38,13 +33,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       planning: {
         id: record.id,
-        titulo: record.contenido_maestra?.split("\n")[0] || "Mi planificacion",
+        titulo: record.observaciones?.split("\n")[0] || "Mi planificacion",
         objetivo: "",
-        actividad: record.contenido_maestra || "",
+        actividad: record.observaciones || "",
         recursos: "",
         fecha: record.fecha?.split("T")[0] || new Date().toISOString().split("T")[0],
         sala: record.sala,
-      } as Planning,
+      },
       source: "supabase",
     })
   } catch (error) {
@@ -58,7 +53,6 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { titulo, objetivo, actividad, recursos, sala = "Manzanos" } = body
 
-    // Combinar titulo, objetivo, actividad y recursos en contenido_maestra
     const contenidoCompleto = [
       titulo,
       objetivo && `Objetivo: ${objetivo}`,
@@ -66,30 +60,29 @@ export async function POST(request: Request) {
       recursos && `Recursos: ${recursos}`,
     ].filter(Boolean).join("\n\n")
 
-    // Verificar si ya existe planificacion para hoy en esta sala
     const today = new Date().toISOString().split("T")[0]
+
+    // Verificar si ya existe planificacion para hoy
     const { data: existing } = await supabase
-      .from("planificaciones")
+      .from("registro_cierre")
       .select("id")
       .eq("sala", sala)
+      .eq("tipo", "planificacion")
       .gte("fecha", `${today}T00:00:00`)
       .lte("fecha", `${today}T23:59:59`)
       .single()
 
     if (existing) {
-      // Actualizar existente
       const { data, error } = await supabase
-        .from("planificaciones")
-        .update({
-          contenido_maestra: contenidoCompleto,
-        })
+        .from("registro_cierre")
+        .update({ observaciones: contenidoCompleto })
         .eq("id", existing.id)
         .select()
         .single()
 
       if (error) {
         console.error("[v0] Error updating planning:", error.message)
-        return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
+        return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
       }
 
       return NextResponse.json({
@@ -99,8 +92,8 @@ export async function POST(request: Request) {
           objetivo: objetivo || "",
           actividad: actividad || "",
           recursos: recursos || "",
-          fecha: data.fecha?.split("T")[0] || today,
-          sala: data.sala,
+          fecha: today,
+          sala,
         },
         success: true,
       })
@@ -108,20 +101,24 @@ export async function POST(request: Request) {
 
     // Insertar nuevo
     const { data, error } = await supabase
-      .from("planificaciones")
+      .from("registro_cierre")
       .insert([{
         fecha: new Date().toISOString(),
         sala,
-        contenido_maestra: contenidoCompleto,
-        sugerencia_alba: "",
-        estado: "pendiente",
+        eje: "planificacion",
+        tipo: "planificacion",
+        clase_completada: "",
+        observaciones: contenidoCompleto,
+        logrados: 0,
+        en_proceso: 0,
+        necesita_refuerzo: 0,
       }])
       .select()
       .single()
 
     if (error) {
       console.error("[v0] Error saving planning:", error.message)
-      return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
+      return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -131,13 +128,13 @@ export async function POST(request: Request) {
         objetivo: objetivo || "",
         actividad: actividad || "",
         recursos: recursos || "",
-        fecha: data.fecha?.split("T")[0] || today,
-        sala: data.sala,
+        fecha: today,
+        sala,
       },
       success: true,
     })
   } catch (error) {
     console.error("[v0] Error saving planning:", error)
-    return NextResponse.json({ error: "Error al guardar la planificacion" }, { status: 500 })
+    return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
   }
 }
