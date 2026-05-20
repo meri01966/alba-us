@@ -189,6 +189,14 @@ export async function GET(req: Request) {
     }
 
     // ── 4. Analisis por eje de esta sala ───────────────────────────────────
+    // Contar clases completadas desde registro_cierre (donde se guarda Finalizar Jornada)
+    const { data: cierresData } = await supabase
+      .from("registro_cierre")
+      .select("fecha, eje")
+      .eq("sala", sala)
+      .order("fecha", { ascending: true })
+    const cierres = cierresData || []
+    
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
       total: number
@@ -211,11 +219,13 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      const fechasDistintas = [...new Set(regsEje.map((r) => r.fecha?.split("T")[0]))].sort()
-      const clasesCompletadas = fechasDistintas.length
+      // Contar clases completadas desde registro_cierre para este eje
+      const cierresEje = cierres.filter((c) => c.eje === eje)
+      const fechasCierre = [...new Set(cierresEje.map((c) => c.fecha?.split("T")[0]))].sort()
+      const clasesCompletadas = fechasCierre.length
 
-      // Ultimas 2 fechas en rojo (para bajar nivel en secuencia)
-      const ultimas2Fechas = fechasDistintas.slice(-2)
+      // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
+      const ultimas2Fechas = fechasCierre.slice(-2)
       let ultimasClasesEnRojo = 0
       for (const f of ultimas2Fechas) {
         const regsEsaFecha = regsEje.filter((r) => r.fecha?.split("T")[0] === f)
