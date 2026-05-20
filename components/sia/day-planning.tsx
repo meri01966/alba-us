@@ -334,10 +334,11 @@ function SecuenciaModal({
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function BrainColumn({ activity, isLoading, stats }: { 
+function BrainColumn({ activity, isLoading, stats, microCapacitacion }: { 
   activity: BrainActivity | null; 
   isLoading: boolean;
   stats?: { green: number; yellow: number; red: number; sinEvaluar: number };
+  microCapacitacion?: { titulo: string; contenido: string; tips: string[] } | null;
 }) {
   const [showSecuencia, setShowSecuencia] = useState(false)
   
@@ -802,7 +803,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
           {/* Left: Sugerencia SIA */}
           <div className="pb-4 sm:pb-0 sm:pr-4">
-            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} />
+            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
           </div>
           {/* Right: Mi Planificacion */}
           <div className="pt-4 sm:pt-0 sm:pl-4">

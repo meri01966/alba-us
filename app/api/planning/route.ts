@@ -11,37 +11,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const sala = searchParams.get("sala") || "Manzanos"
 
-    // Buscar en registro_cierre con tipo "planificacion"
-    const { data, error } = await supabase
-      .from("registro_cierre")
-      .select("*")
-      .eq("sala", sala)
-      .eq("tipo", "planificacion")
-      .order("fecha", { ascending: false })
-      .limit(1)
-
-    if (error) {
-      console.error("[v0] Error fetching planning:", error.message)
-      return NextResponse.json({ planning: null, source: "error" })
-    }
-
-    if (!data || data.length === 0) {
-      return NextResponse.json({ planning: null, source: "supabase" })
-    }
-
-    const record = data[0]
-    return NextResponse.json({
-      planning: {
-        id: record.id,
-        titulo: record.observaciones?.split("\n")[0] || "Mi planificacion",
-        objetivo: "",
-        actividad: record.observaciones || "",
-        recursos: "",
-        fecha: record.fecha?.split("T")[0] || new Date().toISOString().split("T")[0],
-        sala: record.sala,
-      },
-      source: "supabase",
-    })
+    // Por ahora retornamos null ya que no hay tabla planificaciones
+    // Las planificaciones se muestran desde el modal que usa /api/planificaciones
+    return NextResponse.json({ planning: null, source: "none" })
   } catch (error) {
     console.error("[v0] Error fetching planning:", error)
     return NextResponse.json({ planning: null, source: "error" })
