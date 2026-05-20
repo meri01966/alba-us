@@ -876,6 +876,7 @@ useEffect(() => {
                         type="button"
                         onClick={() => {
                           setSalaActual(sala)
+                          setEvaluaciones({}) // Limpiar evaluaciones de la sala anterior
                           setBrainKey(k => k + 1) // Forzar re-fetch de ALBA al cambiar sala
                           setShowSalaDropdown(false)
                         }}
