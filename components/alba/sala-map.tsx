@@ -147,22 +147,21 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // 5 grupos - el orden importa: primero los extremos, al final "sin evaluar" (gris)
+  // 4 grupos - los no marcados van directo a Logrado (verde)
   const grupos: { label: string; color: string; bgLight: string; borderColor: string; alumnos: Student[] }[] = [
     { label: "Ausente",           color: "#6366f1", bgLight: "#f5f3ff", borderColor: "#c4b5fd", alumnos: [] },
     { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },
     { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", borderColor: "#fcd34d", alumnos: [] },
     { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", borderColor: "#6ee7b7", alumnos: [] },
-    { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", borderColor: "#cbd5e1", alumnos: [] },
   ]
 
+  // ALBA: los alumnos no marcados (ni rojo ni amarillo ni ausente) se consideran verdes automaticamente
   students.forEach((s) => {
     const eval_ = evaluaciones[s.id]
     if      (eval_ === "blue")   grupos[0].alumnos.push(s)  // Ausente
     else if (eval_ === "red")    grupos[1].alumnos.push(s)  // Refuerzo
     else if (eval_ === "yellow") grupos[2].alumnos.push(s)  // En proceso
-    else if (eval_ === "green")  grupos[3].alumnos.push(s)  // Logrado (marcado)
-    else                         grupos[4].alumnos.push(s)  // Sin evaluar (gris)
+    else                         grupos[3].alumnos.push(s)  // Logrado (verde por defecto o marcado)
   })
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
