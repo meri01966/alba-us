@@ -8,7 +8,6 @@ interface PlanificacionModalProps {
   onClose: () => void
   sala: string
   sugerenciaAlba?: string
-  modo?: "escribir" | "historial" // escribir = Mi Planificacion, historial = Mi Plan
 }
 
 interface Planificacion {
@@ -19,14 +18,11 @@ interface Planificacion {
   estado: "pendiente" | "completada"
 }
 
-export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo = "escribir" }: PlanificacionModalProps) {
+export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba }: PlanificacionModalProps) {
   const [planificaciones, setPlanificaciones] = useState<Planificacion[]>([])
   const [contenido, setContenido] = useState("")
   const [loading, setLoading] = useState(false)
   const [guardando, setGuardando] = useState(false)
-
-  // Si modo es "historial" (Mi Plan), mostrar solo historial. Si es "escribir" (Mi Planificacion), mostrar input + historial
-  const soloHistorial = modo === "historial"
 
   useEffect(() => {
     if (isOpen) {
@@ -99,7 +95,7 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo
               <NotebookPen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{soloHistorial ? "Mi Plan" : "Mi Planificacion"}</h2>
+              <h2 className="text-lg font-bold text-white">Mi Planificacion</h2>
               <p className="text-xs text-white/80">{hoy}</p>
             </div>
           </div>
@@ -108,11 +104,10 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo
           </button>
         </div>
 
-        {/* Content */}
+        {/* Content - siempre muestra input + historial */}
         <div className="flex-1 overflow-y-auto p-5">
-          {/* Mi Planificacion: campo para escribir + historial debajo */}
-          {!soloHistorial && (
-            <div className="space-y-4 mb-6">
+          {/* Campo para escribir la planificacion del dia */}
+          <div className="space-y-4 mb-6">
               {/* Sugerencia de ALBA */}
               {sugerenciaAlba && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -155,14 +150,13 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo
                 )}
               </button>
 
-              {/* Separador */}
+              {/* Separador y titulo historial */}
               {planificaciones.length > 0 && (
                 <div className="border-t pt-4 mt-4">
-                  <p className="text-sm font-medium text-gray-600 mb-3">Historial reciente</p>
+                  <p className="text-sm font-medium text-gray-600 mb-3">Historial de planificaciones</p>
                 </div>
               )}
             </div>
-          )}
 
           {/* Historial - siempre visible */}
           <div className="space-y-3">
@@ -173,7 +167,7 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo
             ) : planificaciones.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">{soloHistorial ? "No hay planificaciones guardadas todavia" : "Todavia no guardaste ninguna planificacion"}</p>
+                <p className="text-sm">Todavia no guardaste ninguna planificacion</p>
               </div>
             ) : (
               planificaciones.map((p, i) => (
@@ -203,7 +197,7 @@ export function PlanificacionModal({ isOpen, onClose, sala, sugerenciaAlba, modo
                         </p>
                       )}
                     </div>
-                    {p.estado !== "completada" && p.id && !soloHistorial && (
+                    {p.estado !== "completada" && p.id && (
                       <button
                         onClick={() => marcarCompletada(p.id!)}
                         className="p-2 rounded-lg hover:bg-emerald-100 text-emerald-600"
