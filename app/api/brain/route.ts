@@ -300,6 +300,7 @@ export async function GET(req: Request) {
       ejeDatos.promedio,
       sala
     )
+    console.log("[ALBA] clasesParaCalculo:", clasesParaCalculo, "indice:", indice, "actividad:", actividad.titulo)
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
     // Si es asi, y hay una actividad de la red con >= 70%, usar esa
