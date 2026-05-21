@@ -1,4 +1,4 @@
-// ALBA Brain API v6 - totalClases usa cierres para avanzar actividades correctamente
+// ALBA Brain API v8 - totalClases = cierres.length para avanzar actividades
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
