@@ -336,6 +336,22 @@ export default function ALBADashboard() {
     actividadALBA: string | null
     completado: boolean
   }>>([])
+
+  // Cargar evaluaciones de hoy desde Supabase para la sala actual
+  const cargarEvaluacionesDeSala = useCallback(async (sala: string) => {
+    try {
+      const today = new Date().toISOString().split("T")[0]
+      const res = await fetch(`/api/evaluaciones-hoy?sala=${encodeURIComponent(sala)}&fecha=${today}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.evaluaciones) {
+          setEvaluaciones(data.evaluaciones)
+        }
+      }
+    } catch (e) {
+      console.error("[v0] Error cargando evaluaciones:", e)
+    }
+  }, [])
   
   // Cargar historial del mes al cambiar de sala
   const fetchHistorialMes = useCallback(async () => {
@@ -433,14 +449,12 @@ export default function ALBADashboard() {
       if (data.success) {
         fetchHistorialMes()
         setBrainKey(k => k + 1)
-        // IMPORTANTE: Resetear evaluaciones para la nueva actividad
-        setEvaluaciones({})
-        setProgress({})
-        // Limpiar localStorage tambien
+        // Las evaluaciones YA estan guardadas en Supabase, no las borramos
+        // Solo limpiamos localStorage ya que Supabase es la fuente de verdad
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(STORAGE_PROGRESS_KEY)
         // Mostrar confirmacion
-        alert("Jornada finalizada! ALBA analizo el progreso y actualizo la sugerencia para manana.")
+        alert("Jornada finalizada! ALBA analizo el progreso y actualizo la sugerencia.")
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
@@ -448,26 +462,13 @@ export default function ALBADashboard() {
     }
   }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual])
 
-  // Cargar evaluaciones guardadas de localStorage al iniciar
+  // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        // Verificar que sea del mismo dia
-        const today = new Date().toDateString()
-        if (parsed.fecha === today) {
-          setEvaluaciones(parsed.evaluaciones || {})
-        } else {
-          // Limpiar si es de otro dia
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
+    cargarEvaluacionesDeSala(salaActual)
+  }, [salaActual, cargarEvaluacionesDeSala])
     
-    // Cargar progreso guardado
+  // Cargar progreso guardado de localStorage
+  useEffect(() => {
     const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
     if (savedProgress) {
       try {
@@ -901,7 +902,7 @@ useEffect(() => {
                         type="button"
                         onClick={() => {
                           setSalaActual(sala)
-                          setEvaluaciones({}) // Limpiar evaluaciones de la sala anterior
+                          cargarEvaluacionesDeSala(sala) // Cargar evaluaciones de la nueva sala desde Supabase
                           setBrainKey(k => k + 1) // Forzar re-fetch de ALBA al cambiar sala
                           setShowSalaDropdown(false)
                         }}
