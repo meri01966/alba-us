@@ -51,9 +51,10 @@ export function PlanificacionModal({ isOpen, onClose, sala }: PlanificacionModal
       const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
       if (res.ok) {
         const data = await res.json()
-        // Construir sugerencia basada en datos de la sala
-        if (data.actividadSugerida) {
-          const sugerencia = `Para hoy te sugiero: "${data.actividadSugerida}". ${data.microCapacitacion || ""}`
+        // Leer correctamente de data.sugerencia
+        if (data.sugerencia?.actividad) {
+          const micro = data.microCapacitacion?.contenido || ""
+          const sugerencia = `Para hoy te sugiero: "${data.sugerencia.actividad}" (${data.sugerencia.eje}). ${micro}`
           setSugerenciaAlba(sugerencia)
         } else {
           setSugerenciaAlba("")
