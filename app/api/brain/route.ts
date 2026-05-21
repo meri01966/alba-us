@@ -218,15 +218,20 @@ export async function GET(req: Request) {
 
     // ── 4. Analisis por eje de esta sala ───────────────────────────────────
     // Contar TOTAL de clases completadas desde registro_cierre (cada cierre = 1 clase)
-    const { data: cierresData } = await supabase
+    const { data: cierresData, error: cierresError } = await supabase
       .from("registro_cierre")
       .select("id, fecha, eje")
       .eq("sala", sala)
       .order("fecha", { ascending: true })
+    
+    if (cierresError) {
+      console.log("[ALBA] Error cargando cierres:", cierresError.message)
+    }
+    
     const cierres = cierresData || []
     // Total de clases = cantidad de registros de cierre para esta sala
     const totalClasesCompletadasGlobal = cierres.length
-    console.log("[ALBA] Sala:", sala, "Total cierres encontrados:", totalClasesCompletadasGlobal)
+    console.log("[ALBA v4] Sala:", sala, "Cierres:", totalClasesCompletadasGlobal, "IDs:", cierres.map(c => c.id).slice(0, 3))
     
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
