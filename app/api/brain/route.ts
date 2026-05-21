@@ -1,4 +1,4 @@
-// ALBA Brain API v2 - con conteo de cierres para avance de actividades
+// ALBA Brain API v3 - cuenta cierres para avanzar actividades incluso sin alumnos
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
