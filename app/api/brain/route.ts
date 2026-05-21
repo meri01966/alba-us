@@ -1,4 +1,4 @@
-// ALBA Brain API v3 - cuenta cierres para avanzar actividades incluso sin alumnos
+// ALBA Brain API v4 - cuenta cierres para avanzar actividades (12 cierres = clase 13)
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
