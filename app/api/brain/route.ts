@@ -459,7 +459,7 @@ export async function GET(req: Request) {
         exitosasRed,
       },
       progreso: {
-        totalClasesCompletadas: totalClases,
+        totalClasesCompletadas: totalClases, // v7: usa cierres
         semanaActual,
         clasesCompletadasPorEje: {
           CF: analisis.CF.clasesCompletadas,
