@@ -402,8 +402,9 @@ export async function GET(req: Request) {
       }
     }
 
-    const totalClases = new Set(regs.map((r) => r.fecha?.split("T")[0])).size
-    const primerRegistro = regs.length > 0 ? new Date(regs[0].fecha) : new Date()
+    // Usar totalClasesCompletadasGlobal que cuenta los cierres (Finalizar Jornada)
+    const totalClases = totalClasesCompletadasGlobal
+    const primerRegistro = cierres.length > 0 ? new Date(cierres[0].fecha) : new Date()
     const semanaActual = Math.max(1, Math.ceil((Date.now() - primerRegistro.getTime()) / (7 * 86400000)))
 
     // ── 9. Micro-capacitacion just-in-time vinculada a la actividad ──────────
