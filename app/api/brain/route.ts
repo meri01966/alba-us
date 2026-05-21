@@ -9,6 +9,22 @@ function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 }
 
+// Micro-capacitaciones por actividad
+function getMicroCapacitacion(titulo: string) {
+  const micro: Record<string, { titulo: string; contenido: string; tips: string[] }> = {
+    "Sonidos del entorno": { titulo: "Escucha activa", contenido: "Desarrolle la capacidad de escucha discriminando sonidos ambientales.", tips: ["Pida silencio total", "Use grabaciones variadas", "Relacione con imagenes"] },
+    "Rimas con nombres": { titulo: "Ensenar rimas", contenido: "Las rimas desarrollan conciencia fonologica. Use nombres de los ninos.", tips: ["Empiece simple", "Use gestos", "Repita varias veces"] },
+    "Separacion en silabas": { titulo: "Segmentacion silabica", contenido: "Dividir palabras con palmas desarrolla conciencia fonologica.", tips: ["Palabras cortas primero", "Use nombres", "Agregue movimiento"] },
+    "Sonido inicial /a/": { titulo: "Vocal A", contenido: "Enfoque en /a/ al inicio de palabras.", tips: ["Exagere el sonido", "Use espejo", "Busque objetos con A"] },
+    "Sonido inicial /e/": { titulo: "Vocal E", contenido: "Identificar palabras que empiezan con /e/.", tips: ["Recorra el aula", "Liste en pizarron", "Ejemplos cotidianos"] },
+    "Sonido inicial /i/": { titulo: "Vocal I", contenido: "Use el cuerpo para formar la I.", tips: ["Brazos estirados = I", "Alterne palabras", "Dictado grafico"] },
+    "Sonido inicial /o/": { titulo: "Vocal O", contenido: "Aplaudir con palabras que empiezan con /o/.", tips: ["Una palmada = O", "Dibujen cosas con O", "Lista colectiva"] },
+    "Sonido inicial /u/": { titulo: "Vocal U", contenido: "Juego de memoria con sonido inicial.", tips: ["Trabajen en parejas", "Emparejen imagen-sonido", "Celebre aciertos"] },
+    "Vocales - Repaso": { titulo: "Consolidar vocales", contenido: "Ruleta de vocales para repasar.", tips: ["3 palabras por vocal", "Cuente cual tuvo mas", "Registre"] },
+  }
+  return micro[titulo] || { titulo: "Tip del dia", contenido: "Observe a cada nino y adapte la actividad.", tips: ["Sea paciente", "Celebre logros", "Repita si necesario"] }
+}
+
 const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; descripcion: string; materiales: string[] }[]> = {
   CF: [
     { titulo: "Sonidos del entorno", objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente", descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.", materiales: ["Campana o triangulo", "Grabadora con sonidos del entorno", "Tarjetas con imagenes de fuentes sonoras", "Antifaz"] },
@@ -124,7 +140,17 @@ export async function GET(req: Request) {
       .eq("sala", sala)
 
     if (!alumnos || alumnos.length === 0) {
-      const actividadInicial = esde4Anios(sala) ? SECUENCIA.CF.slice(0, 12)[0] : SECUENCIA.CF[0]
+      // Aunque no hay alumnos, contamos los cierres para avanzar en la secuencia
+      const { data: cierresData } = await supabase
+        .from("registro_cierre")
+        .select("id")
+        .eq("sala", sala)
+      const totalCierres = cierresData?.length || 0
+      
+      const secuenciaCF = esde4Anios(sala) ? SECUENCIA.CF.slice(0, 12) : SECUENCIA.CF
+      const indiceActividad = totalCierres % secuenciaCF.length
+      const actividadInicial = secuenciaCF[indiceActividad]
+      
       return NextResponse.json({
         sugerencia: {
           eje: "CF",
@@ -132,18 +158,19 @@ export async function GET(req: Request) {
           descripcion: actividadInicial.descripcion,
           objetivo: actividadInicial.objetivo,
           materiales: actividadInicial.materiales,
-          razon: "Inicio del ano. Conciencia Fonologica " + (esde4Anios(sala) ? "(4 anos)" : "(5 anos)") + ".",
+          razon: `Clase ${totalCierres + 1}. Conciencia Fonologica ` + (esde4Anios(sala) ? "(4 anos)" : "(5 anos)") + ".",
           alumnosEnRiesgo: 0,
           totalAlumnos: 0,
           tendencia: "estancado",
           aprendidoDeLaRed: false,
           salaRed: null,
-          numeroClase: 1,
+          numeroClase: totalCierres + 1,
           esRepeticion: false,
         },
+        microCapacitacion: getMicroCapacitacion(actividadInicial.titulo),
         alertas: [],
         historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
-        progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+        progreso: { totalClasesCompletadas: totalCierres, semanaActual: 1, clasesCompletadasPorEje: { CF: totalCierres, CT: 0, O: 0 } },
       })
     }
 
@@ -345,7 +372,7 @@ export async function GET(req: Request) {
       razon += ` Clase ${indice + 1} de ${totalEnSecuencia} en la secuencia anual.`
     }
 
-    // ── 8. Alertas ─────────────────────────────────────────────────────────
+    // ── 8. Alertas ───────────────────────────────────────────���─────────────
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []
     for (const eje of ejes) {
       const a = analisis[eje]
