@@ -412,6 +412,7 @@ export default function ALBADashboard() {
               alumno_id: s.id,
               eje: ejeActual,
               estado: "green",
+              sala: salaActual,
             }),
           })
         } catch (e) {

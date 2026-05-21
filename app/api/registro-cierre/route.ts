@@ -35,20 +35,15 @@ export async function POST(request: Request) {
     const usarEnFuturo = actividadEfectiva && promedio >= 60
 
     const registro = {
-      fecha: new Date().toISOString(),
+      fecha: new Date().toISOString().split("T")[0],
       actividad_alba: actividadALBA,
       actividad_docente: actividadDocente,
       eje,
-      sala, // Sala para filtrar registros por grupo
+      sala,
       evaluacion_general: evaluacionGeneral,
       observaciones,
       sugerencia_ia: sugerenciaParaIA,
-      promedio_logro: promedio,
-      stats_green: safeStats.green || 0,
-      stats_yellow: safeStats.yellow || 0,
-      stats_red: safeStats.red || 0,
-      actividad_efectiva: actividadEfectiva,
-      usar_en_futuro: usarEnFuturo,
+      stats: safeStats,
     }
 
     const supabase = getSupabase()
@@ -60,9 +55,8 @@ export async function POST(request: Request) {
       .select("id")
       .eq("sala", sala)
       .eq("eje", eje)
-      .gte("fecha", `${today}T00:00:00`)
-      .lte("fecha", `${today}T23:59:59`)
-      .single()
+      .eq("fecha", today)
+      .maybeSingle()
 
     if (existingCierre) {
       // Actualizar registro existente en lugar de insertar duplicado
