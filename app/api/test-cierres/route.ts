@@ -1,3 +1,4 @@
+// Test endpoint to debug cierres query - DO NOT DELETE
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
