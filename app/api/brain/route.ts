@@ -225,13 +225,12 @@ export async function GET(req: Request) {
       .order("fecha", { ascending: true })
     
     if (cierresError) {
-      console.log("[ALBA] Error cargando cierres:", cierresError.message)
+      console.log("[ALBA v8] Error cargando cierres:", cierresError.message)
     }
     
     const cierres = cierresData || []
-    // Total de clases = cantidad de registros de cierre para esta sala
     const totalClasesCompletadasGlobal = cierres.length
-    console.log("[ALBA v4] Sala:", sala, "Cierres:", totalClasesCompletadasGlobal, "IDs:", cierres.map(c => c.id).slice(0, 3))
+    console.log("[ALBA v8] SALA:", JSON.stringify(sala), "Cierres:", totalClasesCompletadasGlobal)
     
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
