@@ -435,11 +435,13 @@ export default function ALBADashboard() {
   
   
   
-  // Callback cuando ALBA cambia la sugerencia de actividad/eje
-  // NO borra evaluaciones: la docente puede evaluar la clase con cualquier actividad activa
+  // Callback cuando ALBA cambia la actividad sugerida
+  // Limpia los botones del dia (pizarron nuevo) pero NO toca el Mapa de Progreso
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
     setEjeActual(eje)
+    setEvaluaciones({})
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
   
   // Finalizar jornada: 
