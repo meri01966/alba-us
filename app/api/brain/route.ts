@@ -231,7 +231,7 @@ export async function GET(req: Request) {
         microCapacitacion: getMicroCapacitacion(actividadInicial.titulo),
         alertas: [],
         historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
-        progreso: { totalClasesCompletadas: totalCierres, semanaActual: 1, clasesCompletadasPorEje: { CF: totalCierres, CT: 0, O: 0 } },
+        progreso: { totalClasesCompletadas: totalCierres, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
       })
     }
 
@@ -314,8 +314,9 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      // Usar total global de clases completadas (cada Finalizar Jornada = 1 clase)
-      const clasesCompletadas = totalClasesCompletadasGlobal
+      // Clases completadas para ESTE eje = fechas distintas en que se evaluaron alumnos en este eje
+      const fechasDeEje = new Set(regsEje.map((r) => r.fecha?.split("T")[0]).filter(Boolean))
+      const clasesCompletadas = fechasDeEje.size
 
       // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
       const ultimos2Cierres = cierres.slice(-2)
