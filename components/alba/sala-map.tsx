@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { User, Send, CheckCircle2, X } from "lucide-react"
-import { Spinner } from "@/components/ui/spinner"
 
 interface Student {
   id: string
@@ -11,9 +9,6 @@ interface Student {
   mesa?: string
 }
 
-// blue = ausente (marcado explicitamente)
-// undefined = sin evaluar aun (gris - dia 0 o clase sin marcar)
-// green/yellow/red = marcado explicitamente por la docente
 type StatusLevel = "green" | "yellow" | "red" | "blue"
 
 interface SalaMapProps {
@@ -23,251 +18,216 @@ interface SalaMapProps {
   onStudentClick: (id: string) => void
 }
 
-// Genera el mensaje de reporte para la familia basado en el progreso - SIN porcentajes
-// Solo incluye ejes que tienen datos reales (no null)
-function generarReporteFamilia(nombre: string, progress: { CF: number | null; CT: number | null; O: number | null }): string {
-  const getNivel = (percent: number) => {
-    if (percent >= 70) return "avanza muy bien"
-    if (percent >= 40) return "esta progresando"
-    return "necesita un poco mas de practica"
-  }
+const EJES: { key: "CF" | "CT" | "O"; label: string; short: string }[] = [
+  { key: "CF", label: "Conciencia Fonologica", short: "CF" },
+  { key: "CT", label: "Comprension de Textos", short: "CT" },
+  { key: "O",  label: "Oralidad",              short: "O"  },
+]
 
-  const lineas: string[] = []
-  const apoyo: string[] = []
+const NIVELES: {
+  key: "rojo" | "amarillo" | "verde" | "sin"
+  label: string
+  color: string
+  bg: string
+  border: string
+  textColor: string
+  range: [number, number] | null
+}[] = [
+  { key: "rojo",     label: "Apoyo prioritario", color: "#ef4444", bg: "#fef2f2", border: "#fca5a5", textColor: "#b91c1c", range: [0, 39] },
+  { key: "amarillo", label: "En proceso",         color: "#f59e0b", bg: "#fffbeb", border: "#fcd34d", textColor: "#92400e", range: [40, 69] },
+  { key: "verde",    label: "Logrado",            color: "#10b981", bg: "#ecfdf5", border: "#6ee7b7", textColor: "#065f46", range: [70, 100] },
+  { key: "sin",      label: "Sin evaluar",        color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", textColor: "#475569", range: null },
+]
 
-  if (progress.CF !== null) {
-    lineas.push(`En Conciencia Fonologica (reconocer sonidos): ${getNivel(progress.CF)}.`)
-    if (progress.CF < 40) apoyo.push("jugar con rimas y sonidos")
-  }
-  if (progress.CT !== null) {
-    lineas.push(`En Comprension de Textos (entender cuentos): ${getNivel(progress.CT)}.`)
-    if (progress.CT < 40) apoyo.push("leer cuentos juntos")
-  }
-  if (progress.O !== null) {
-    lineas.push(`En Oralidad (expresarse): ${getNivel(progress.O)}.`)
-    if (progress.O < 40) apoyo.push("conversar sobre el dia")
-  }
-
-  if (lineas.length === 0) {
-    return ""
-  }
-
-  let mensaje = `Hola! Les comparto como viene ${nombre} en el aula:\n\n`
-  mensaje += lineas.join("\n") + "\n"
-
-  if (apoyo.length > 0) {
-    mensaje += `\nEn casa pueden ayudar con: ${apoyo.join(", ")}.`
-  }
-
-  mensaje += "\n\nSaludos!"
-  return mensaje
+// Clasifica a un alumno en un nivel para un eje dado
+function clasificar(val: number | null | undefined): "rojo" | "amarillo" | "verde" | "sin" {
+  if (val === null || val === undefined) return "sin"
+  if (val >= 70) return "verde"
+  if (val >= 40) return "amarillo"
+  return "rojo"
 }
 
-// Modal de reporte
-function ReportModal({
-  nombre,
-  mensaje,
-  onClose,
-  onSend,
-  sending,
-}: {
-  nombre: string
-  mensaje: string
-  onClose: () => void
-  onSend: () => void
-  sending: boolean
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-            Reporte para familia de {nombre}
-          </h3>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {mensaje ? (
-          <>
-            <div
-              className="rounded-xl p-4 mb-4 text-sm leading-relaxed whitespace-pre-line"
-              style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
-            >
-              {mensaje}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50">
-                Cancelar
-              </button>
-              <button
-                onClick={onSend}
-                disabled={sending}
-                className="flex-1 py-2.5 rounded-xl font-medium text-white flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ backgroundColor: "#1e3a5f" }}
-              >
-                {sending ? <><Spinner className="w-4 h-4" /> Enviando...</> : <><Send className="w-4 h-4" /> Enviar</>}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="rounded-xl p-5 mb-4 text-center bg-slate-50 border border-slate-200">
-              <p className="text-sm font-semibold text-slate-600 mb-1">Sin datos todavia</p>
-              <p className="text-xs text-slate-400">El reporte se generara cuando la docente marque al alumno durante la clase.</p>
-            </div>
-            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50">
-              Cerrar
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function getColor(percent: number): string {
-  if (percent >= 70) return "#10b981" // verde
-  if (percent >= 40) return "#f59e0b" // amarillo
-  return "#ef4444" // rojo
-}
-
-function getAverage(p: { CF: number | null; CT: number | null; O: number | null }): number {
-  const vals = [p.CF, p.CT, p.O].filter(v => v !== null) as number[]
-  if (vals.length === 0) return 0
-  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-}
-
-export default function SalaMap({ students, progress, evaluaciones = {}, onStudentClick }: SalaMapProps) {
-  const [reportsSent, setReportsSent] = useState<Record<string, boolean>>({})
-  const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
-  const [sendingReport, setSendingReport] = useState(false)
-
-  // Los grupos se determinan POR el progreso acumulado (promedio de ejes evaluados)
-  // Los botones del HeatMap se pueden limpiar sin que los alumnos vuelvan a "Sin evaluar"
-  // Solo pasan a "Sin evaluar" si NO tienen ningun registro historico en ningun eje
-  const grupos: { label: string; color: string; bgLight: string; borderColor: string; alumnos: Student[] }[] = [
-    { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", borderColor: "#6ee7b7", alumnos: [] },
-    { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", borderColor: "#fcd34d", alumnos: [] },
-    { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },
-    { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", borderColor: "#cbd5e1", alumnos: [] },
-  ]
-
+// Cuenta alumnos por nivel para mostrar el resumen de la tarjeta de eje
+function contarPorNivel(
+  students: Student[],
+  progress: SalaMapProps["progress"],
+  eje: "CF" | "CT" | "O"
+): Record<string, number> {
+  const counts: Record<string, number> = { rojo: 0, amarillo: 0, verde: 0, sin: 0 }
   students.forEach((s) => {
-    const p = progress[s.id]
-    const tieneProgreso = p && [p.CF, p.CT, p.O].some(v => v !== null)
-    
-    if (!tieneProgreso) {
-      grupos[3].alumnos.push(s) // Sin evaluar: ningun registro historico
-      return
-    }
-
-    const promedio = getAverage(p)
-    if      (promedio >= 70) grupos[0].alumnos.push(s) // Logrado
-    else if (promedio >= 40) grupos[1].alumnos.push(s) // En proceso
-    else                     grupos[2].alumnos.push(s) // Necesita refuerzo
+    const nivel = clasificar(progress[s.id]?.[eje])
+    counts[nivel]++
   })
+  return counts
+}
 
-  function handleOpenReport(student: Student, e: React.MouseEvent) {
-    e.stopPropagation()
-    const p = progress[student.id] || { CF: null, CT: null, O: null }
-    const mensaje = generarReporteFamilia(student.nombre, p)
-    setReportModal({ student, mensaje })
-  }
+export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
+  const [ejeExpandido, setEjeExpandido] = useState<"CF" | "CT" | "O" | null>(null)
 
-  async function handleSendReport() {
-    if (!reportModal) return
-    setSendingReport(true)
-    
-    // Simular envio
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setReportsSent((prev) => ({ ...prev, [reportModal.student.id]: true }))
-    setSendingReport(false)
-    setReportModal(null)
-  }
+  // Totales generales para el header
+  const totalConDatos = students.filter((s) => {
+    const p = progress[s.id]
+    return p && [p.CF, p.CT, p.O].some((v) => v !== null)
+  }).length
 
   return (
-    <>
-      <div className="p-4 space-y-6">
-        <div className="text-center">
-          <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Mapa de Progreso</h2>
-          <p className="text-sm text-gray-500">Progreso acumulado por eje a lo largo de las actividades</p>
-        </div>
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div>
+        <h2 className="text-base font-bold" style={{ color: "#1e3a5f" }}>
+          Mapa de Progreso del Grupo
+        </h2>
+        <p className="text-xs text-slate-400 mt-0.5">
+          {totalConDatos} de {students.length} alumnos con historial registrado &middot; Promedio acumulado por eje
+        </p>
+      </div>
 
-        {/* Grupos por color */}
-        <div className="space-y-4">
-          {grupos.map((grupo) => (
-            <div
-              key={grupo.label}
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: grupo.bgLight, border: `2px solid ${grupo.borderColor}` }}
+      {/* Una tarjeta por eje */}
+      {EJES.map(({ key, label }) => {
+        const counts = contarPorNivel(students, progress, key)
+        const expanded = ejeExpandido === key
+
+        // Alumnos ordenados por valor del eje: rojos primero, luego amarillo, luego verde, luego sin datos
+        const alumnosOrdenados = [...students].sort((a, b) => {
+          const orden = { rojo: 0, amarillo: 1, verde: 2, sin: 3 }
+          const nivelA = clasificar(progress[a.id]?.[key])
+          const nivelB = clasificar(progress[b.id]?.[key])
+          if (nivelA !== nivelB) return orden[nivelA] - orden[nivelB]
+          // Dentro del mismo nivel, ordenar por valor ascendente (el mas bajo primero)
+          const valA = progress[a.id]?.[key] ?? -1
+          const valB = progress[b.id]?.[key] ?? -1
+          return valA - valB
+        })
+
+        return (
+          <div
+            key={key}
+            className="rounded-2xl overflow-hidden"
+            style={{ border: "1.5px solid #e2e8f0" }}
+          >
+            {/* Cabecera de la tarjeta de eje */}
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+              style={{ backgroundColor: "#f8fafc" }}
+              onClick={() => setEjeExpandido(expanded ? null : key)}
+              type="button"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: grupo.color }} />
-                <h3 className="text-sm font-bold" style={{ color: grupo.color }}>{grupo.label}</h3>
-                <span className="text-xs text-gray-400">({grupo.alumnos.length})</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                  style={{ backgroundColor: "#1e3a5f" }}
+                >
+                  {key}
+                </span>
+                <span className="text-sm font-semibold text-slate-700">{label}</span>
               </div>
 
-              {grupo.alumnos.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Sin alumnos en este nivel</p>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                  {grupo.alumnos.map((student) => {
-                    const isReportSent = reportsSent[student.id] || false
-                    return (
-                      <div
-                        key={student.id}
-                        className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border-2 transition-all hover:scale-105"
-                        style={{ borderColor: grupo.borderColor }}
-                      >
-                        <button onClick={() => onStudentClick(student.id)} className="flex flex-col items-center gap-1">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: grupo.color }}
-                          >
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="text-xs font-medium text-gray-700 truncate w-full text-center">
-                            {student.nombre}
-                          </span>
-                        </button>
-                        <button
-                          onClick={(e) => handleOpenReport(student, e)}
-                          title={isReportSent ? "Reporte enviado" : "Enviar reporte a familia"}
-                          className="mt-1 w-full py-1 rounded-lg flex items-center justify-center gap-1 text-white text-[10px] font-medium transition-all hover:scale-105"
-                          style={{ backgroundColor: "#1e3a5f" }}
-                        >
-                          {isReportSent ? (
-                            <><CheckCircle2 className="w-3 h-3" /> Enviado</>
-                          ) : (
-                            <><Send className="w-3 h-3" /> Reporte</>
-                          )}
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+              {/* Pills de conteo: rojo | amarillo | verde */}
+              <div className="flex items-center gap-1.5">
+                {NIVELES.filter((n) => n.key !== "sin").map((n) => (
+                  <span
+                    key={n.key}
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: n.bg, color: n.textColor, border: `1px solid ${n.border}` }}
+                  >
+                    {counts[n.key]}
+                  </span>
+                ))}
+                {counts.sin > 0 && (
+                  <span className="text-xs text-slate-400 ml-1">{counts.sin} sin datos</span>
+                )}
+                <span className="text-slate-400 text-xs ml-1">{expanded ? "▲" : "▼"}</span>
+              </div>
+            </button>
 
-      {/* Modal de reporte */}
-      {reportModal && (
-        <ReportModal
-          nombre={reportModal.student.nombre}
-          mensaje={reportModal.mensaje}
-          onClose={() => setReportModal(null)}
-          onSend={handleSendReport}
-          sending={sendingReport}
-        />
-      )}
-    </>
+            {/* Cuerpo expandible: 3 columnas semaforo */}
+            {expanded && (
+              <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white">
+                {NIVELES.filter((n) => n.key !== "sin").map((nivel) => {
+                  const alumnosDeNivel = alumnosOrdenados.filter(
+                    (s) => clasificar(progress[s.id]?.[key]) === nivel.key
+                  )
+                  return (
+                    <div key={nivel.key} className="p-3">
+                      {/* Header columna */}
+                      <div
+                        className="text-center text-xs font-bold py-1 px-2 rounded-lg mb-2"
+                        style={{ backgroundColor: nivel.bg, color: nivel.textColor }}
+                      >
+                        {nivel.label}
+                        <span className="ml-1 opacity-60">({alumnosDeNivel.length})</span>
+                      </div>
+
+                      {/* Etiquetas de alumnos */}
+                      <div className="flex flex-col gap-1.5">
+                        {alumnosDeNivel.length === 0 ? (
+                          <p className="text-xs text-slate-300 text-center py-2">—</p>
+                        ) : (
+                          alumnosDeNivel.map((s) => {
+                            const val = progress[s.id]?.[key]
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => onStudentClick(s.id)}
+                                className="text-left w-full rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:scale-[1.02] hover:shadow-sm flex items-center justify-between"
+                                style={{
+                                  backgroundColor: nivel.bg,
+                                  color: nivel.textColor,
+                                  border: `1px solid ${nivel.border}`,
+                                }}
+                              >
+                                <span className="truncate">{s.nombre}</span>
+                                {val !== null && val !== undefined && (
+                                  <span className="ml-1 opacity-60 shrink-0 font-normal">{val}%</span>
+                                )}
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Vista colapsada: barra de densidad visual */}
+            {!expanded && (
+              <div className="px-4 pb-3 bg-white">
+                <div className="flex rounded-full overflow-hidden h-2 mt-1">
+                  {NIVELES.filter((n) => n.key !== "sin").map((n) => {
+                    const pct = students.length > 0 ? (counts[n.key] / students.length) * 100 : 0
+                    return pct > 0 ? (
+                      <div
+                        key={n.key}
+                        style={{ width: `${pct}%`, backgroundColor: n.color }}
+                        title={`${n.label}: ${counts[n.key]}`}
+                      />
+                    ) : null
+                  })}
+                  {counts.sin > 0 && (
+                    <div
+                      style={{ width: `${(counts.sin / students.length) * 100}%`, backgroundColor: "#e2e8f0" }}
+                      title={`Sin evaluar: ${counts.sin}`}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Leyenda */}
+      <div className="flex items-center justify-center gap-4 pt-1">
+        {NIVELES.filter((n) => n.key !== "sin").map((n) => (
+          <div key={n.key} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: n.color }} />
+            <span className="text-xs text-slate-500">{n.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
