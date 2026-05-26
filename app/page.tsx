@@ -1116,7 +1116,7 @@ useEffect(() => {
                     onEvaluacion={handleEvaluacion}
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
-                    onRegistroCierre={handleRegistroCierre}
+
                     actividadSugeridaALBA={actividadSugeridaALBA}
                     ejeDeALBA={ejeActual}
                     sala={salaActual}
