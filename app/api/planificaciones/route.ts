@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // Usar registro_cierre que SI existe
     const { data, error } = await supabase
       .from("registro_cierre")
-      .select("id, fecha, actividad_docente, actividad_alba, observaciones, sugerencia_ia, evaluacion_general")
+      .select("id, fecha, actividad_docente, actividad_alba, observaciones, sugerencia_ia, evaluacion_general, eje")
       .eq("sala", sala)
       .order("fecha", { ascending: false })
       .limit(30)
@@ -26,14 +26,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ planificaciones: [] })
     }
 
-    // Mapear a formato esperado
-    const planificaciones = (data || []).map(r => ({
-      id: r.id,
-      fecha: r.fecha,
-      contenido_maestra: r.actividad_docente || r.observaciones || "",
-      sugerencia_alba: r.actividad_alba || "",
-      estado: r.evaluacion_general ? "completada" : "pendiente"
-    }))
+    // Solo mostrar entradas donde la docente haya escrito algo (actividad_docente no vacia)
+    const planificaciones = (data || [])
+      .filter(r => r.actividad_docente && r.actividad_docente.trim() !== "")
+      .map(r => ({
+        id: r.id,
+        fecha: r.fecha,
+        contenido_maestra: r.actividad_docente || "",
+        eje: r.eje || "CF",
+        estado: r.evaluacion_general ? "completada" : "pendiente"
+      }))
 
     return NextResponse.json({ planificaciones })
   } catch (e) {

@@ -381,9 +381,14 @@ export default function ALBADashboard() {
   
   
   // Callback cuando el docente cambia la actividad del dia
+  // Al cambiar de actividad los botones se limpian para que el docente evalue la nueva clase
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
     setEjeActual(eje)
+    // Limpiar evaluaciones del dia para la nueva actividad - el mapa NO vuelve a azul,
+    // solo los botones se desmarcan para que el docente pueda evaluar esta clase
+    setEvaluaciones({})
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
   
   // Callback para el registro de cierre del dia
@@ -503,7 +508,7 @@ export default function ALBADashboard() {
     setIsLoading(true)
     
     try {
-      // Cargar alumnos via API (usa service_role en el servidor)
+      // Cargar alumnos via API
       const res = await fetch(`/api/students?sala=${encodeURIComponent(salaActual)}`)
       const data = await res.json()
       
@@ -511,7 +516,6 @@ export default function ALBADashboard() {
         console.error("Error cargando alumnos:", data.error)
       }
       
-      // Mapear alumnos
       const mappedStudents = (data.students || []).map((al: any) => ({
         id: al.id,
         name: al.nombre,
@@ -520,10 +524,40 @@ export default function ALBADashboard() {
       }))
       setStudents(mappedStudents)
 
-        // Cargar progreso desde localStorage si existe
-      const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-      if (savedProgress) {
-        setProgress(JSON.parse(savedProgress))
+      // Cargar progreso acumulado por eje desde Supabase
+      if (isSupabaseConfigured() && supabase && mappedStudents.length > 0) {
+        const ids = mappedStudents.map((s: { id: string }) => s.id)
+        const STATUS_TO_VAL: Record<string, number> = { green: 100, yellow: 50, red: 10, blue: 0 }
+        
+        const { data: seguimientos } = await supabase
+          .from('seguimiento')
+          .select('alumno_id, eje, resultado')
+          .in('alumno_id', ids)
+        
+        if (seguimientos && seguimientos.length > 0) {
+          // Agrupar por alumno+eje y calcular promedio
+          const agrupado: Record<string, Record<string, number[]>> = {}
+          for (const row of seguimientos) {
+            if (!agrupado[row.alumno_id]) agrupado[row.alumno_id] = {}
+            if (!agrupado[row.alumno_id][row.eje]) agrupado[row.alumno_id][row.eje] = []
+            agrupado[row.alumno_id][row.eje].push(STATUS_TO_VAL[row.resultado] ?? 0)
+          }
+          const progresoCalculado: Record<string, { CF: number | null; CT: number | null; O: number | null }> = {}
+          for (const [alumnoId, ejes] of Object.entries(agrupado)) {
+            progresoCalculado[alumnoId] = {
+              CF: ejes.CF ? Math.round(ejes.CF.reduce((a, b) => a + b, 0) / ejes.CF.length) : null,
+              CT: ejes.CT ? Math.round(ejes.CT.reduce((a, b) => a + b, 0) / ejes.CT.length) : null,
+              O:  ejes.O  ? Math.round(ejes.O.reduce((a, b) => a + b, 0)  / ejes.O.length)  : null,
+            }
+          }
+          setProgress(progresoCalculado)
+        }
+      } else {
+        // Fallback a localStorage si no hay Supabase
+        const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+        if (savedProgress) {
+          setProgress(JSON.parse(savedProgress))
+        }
       }
     } catch (err) {
       console.error("Error cargando datos:", err)
@@ -686,34 +720,19 @@ useEffect(() => {
   }
 
   // Callback cuando se evalua un alumno en HeatMap
-  // Actualiza el progreso en tiempo real y guarda en Supabase
-  // Ahora recibe el eje directamente desde HeatMap junto con la actividad
+  // Actualiza el progreso como promedio acumulado por eje (NO sobreescribe el mapa)
   const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string, eje: string = "CF") => {
-    // El eje ahora viene directamente del HeatMap (ya no necesitamos el map)
-    
     // Actualizar estado local inmediatamente (optimistic update)
     setEvaluaciones(prev => ({ ...prev, [studentId]: status }))
     
-    // Actualizar progreso en tiempo real
-    // Los no marcados empiezan en 100 (verde), solo se actualiza si hay evaluacion explicita
-    setProgress(prev => {
-      const current = prev[studentId] || initProgress(studentId)
-      const newProgress = statusToProgress(status)
-      return {
-        ...prev,
-        [studentId]: {
-          ...current,
-          [eje]: newProgress,
-        }
-      }
-    })
+    const valorNuevo = statusToProgress(status)
 
-    // Guardar en Supabase si esta configurado (upsert para evitar duplicados del mismo dia)
+    // Guardar en Supabase si esta configurado
     if (isSupabaseConfigured() && supabase) {
       try {
-        const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0]
         
-        // Primero verificar si ya existe un registro para hoy
+        // Verificar si ya existe registro de hoy para este alumno y eje
         const { data: existing } = await supabase
           .from('seguimiento')
           .select('id')
@@ -724,59 +743,59 @@ useEffect(() => {
           .single()
 
         if (existing) {
-          // Actualizar registro existente
-          const { error } = await supabase
+          await supabase
             .from('seguimiento')
-            .update({
-              resultado: status,
-              actividad: actividadDelDia,
-              sala: salaActual,
-              fecha: new Date().toISOString()
-            })
+            .update({ resultado: status, actividad: actividadDelDia, sala: salaActual, fecha: new Date().toISOString() })
             .eq('id', existing.id)
-
-          if (error) {
-            console.error("Error actualizando en Supabase:", error)
-          }
         } else {
-          // Insertar nuevo registro
-          const { error } = await supabase
+          await supabase
             .from('seguimiento')
-            .insert([{
-              alumno_id: studentId,
-              eje: eje,
-              resultado: status,
-              actividad: actividadDelDia,
-              fecha: new Date().toISOString(),
-              sala: salaActual,
-            }])
-
-          if (error) {
-            // Tabla 'seguimiento' puede no existir aun - continua con estado local
-          }
+            .insert([{ alumno_id: studentId, eje, resultado: status, actividad: actividadDelDia, fecha: new Date().toISOString(), sala: salaActual }])
         }
-        return // Salir si guardamos en Supabase
+
+        // Calcular promedio acumulado por eje desde todos los registros historicos
+        const { data: todos } = await supabase
+          .from('seguimiento')
+          .select('resultado')
+          .eq('alumno_id', studentId)
+          .eq('eje', eje)
+          .order('fecha', { ascending: false })
+
+        if (todos && todos.length > 0) {
+          const STATUS_TO_VAL: Record<string, number> = { green: 100, yellow: 50, red: 10, blue: 0 }
+          const sum = todos.reduce((acc: number, r: { resultado: string }) => acc + (STATUS_TO_VAL[r.resultado] ?? 0), 0)
+          const promedio = Math.round(sum / todos.length)
+          setProgress(prev => ({
+            ...prev,
+            [studentId]: { ...(prev[studentId] || initProgress(studentId)), [eje]: promedio }
+          }))
+        }
+        return
       } catch {
         // Supabase no disponible - continua con estado local
       }
     }
+
+    // Fallback sin Supabase: promedio simple acumulando con valor anterior
+    setProgress(prev => {
+      const current = prev[studentId] || initProgress(studentId)
+      const anterior = (current[eje as "CF" | "CT" | "O"] as number | null) ?? null
+      // Si hay valor previo, promediar; si no, usar el valor nuevo directamente
+      const promedio = anterior !== null ? Math.round((anterior + valorNuevo) / 2) : valorNuevo
+      return { ...prev, [studentId]: { ...current, [eje]: promedio } }
+    })
 
     // Fallback a API local
     try {
       await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          studentId, 
-          field: eje,
-          status,
-          actividad: actividadDelDia 
-        }),
+        body: JSON.stringify({ studentId, field: eje, status, actividad: actividadDelDia }),
       })
     } catch (err) {
       console.error("Error guardando evaluacion:", err)
     }
-  }, [])
+  }, [salaActual])
 
   // Limpiar evaluacion de un alumno
   const handleClearEvaluacion = useCallback((studentId: string) => {

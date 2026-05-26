@@ -217,11 +217,6 @@ export function HeatMap({
                 <RotateCcw className="w-3 h-3" />
               </button>
             )}
-            {stats.sinEvaluar > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">
-                {stats.sinEvaluar} sin evaluar
-              </span>
-            )}
             {stats.green > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
                 {stats.green} logrado

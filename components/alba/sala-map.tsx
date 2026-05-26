@@ -147,22 +147,29 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
   const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
   const [sendingReport, setSendingReport] = useState(false)
 
-  // 5 grupos - el orden importa: primero los extremos, al final "sin evaluar" (gris)
+  // Los grupos se determinan POR el progreso acumulado (promedio de ejes evaluados)
+  // Los botones del HeatMap se pueden limpiar sin que los alumnos vuelvan a "Sin evaluar"
+  // Solo pasan a "Sin evaluar" si NO tienen ningun registro historico en ningun eje
   const grupos: { label: string; color: string; bgLight: string; borderColor: string; alumnos: Student[] }[] = [
-    { label: "Ausente",           color: "#6366f1", bgLight: "#f5f3ff", borderColor: "#c4b5fd", alumnos: [] },
-    { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },
-    { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", borderColor: "#fcd34d", alumnos: [] },
     { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", borderColor: "#6ee7b7", alumnos: [] },
+    { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", borderColor: "#fcd34d", alumnos: [] },
+    { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },
     { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", borderColor: "#cbd5e1", alumnos: [] },
   ]
 
   students.forEach((s) => {
-    const eval_ = evaluaciones[s.id]
-    if      (eval_ === "blue")   grupos[0].alumnos.push(s)  // Ausente
-    else if (eval_ === "red")    grupos[1].alumnos.push(s)  // Refuerzo
-    else if (eval_ === "yellow") grupos[2].alumnos.push(s)  // En proceso
-    else if (eval_ === "green")  grupos[3].alumnos.push(s)  // Logrado (marcado)
-    else                         grupos[4].alumnos.push(s)  // Sin evaluar (gris)
+    const p = progress[s.id]
+    const tieneProgreso = p && [p.CF, p.CT, p.O].some(v => v !== null)
+    
+    if (!tieneProgreso) {
+      grupos[3].alumnos.push(s) // Sin evaluar: ningun registro historico
+      return
+    }
+
+    const promedio = getAverage(p)
+    if      (promedio >= 70) grupos[0].alumnos.push(s) // Logrado
+    else if (promedio >= 40) grupos[1].alumnos.push(s) // En proceso
+    else                     grupos[2].alumnos.push(s) // Necesita refuerzo
   })
 
   function handleOpenReport(student: Student, e: React.MouseEvent) {
@@ -189,7 +196,7 @@ export default function SalaMap({ students, progress, evaluaciones = {}, onStude
       <div className="p-4 space-y-6">
         <div className="text-center">
           <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Mapa de Progreso</h2>
-          <p className="text-sm text-gray-500">Los alumnos se ubican al marcarlos durante la clase</p>
+          <p className="text-sm text-gray-500">Progreso acumulado por eje a lo largo de las actividades</p>
         </div>
 
         {/* Grupos por color */}
