@@ -6,29 +6,30 @@ export const dynamic = "force-dynamic"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { alumno_id, eje, estado, sala } = body
+    const { alumno_id, eje, estado, sala, actividad } = body
 
     if (!alumno_id || !eje || !estado || !sala) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const today = new Date().toISOString().split("T")[0]
+    const now   = new Date().toISOString()
+    const today = now.split("T")[0]
 
-    // Verificar si ya existe un registro para hoy
+    // Un registro por alumno+eje por dia — upsert segun rango de fecha
     const { data: existing } = await supabase
       .from("seguimiento")
       .select("id")
       .eq("alumno_id", alumno_id)
       .eq("eje", eje)
-      .eq("fecha", today)
+      .gte("fecha", `${today}T00:00:00`)
+      .lte("fecha", `${today}T23:59:59`)
       .maybeSingle()
 
     if (existing) {
       const { error } = await supabase
         .from("seguimiento")
-        .update({ estado })
+        .update({ estado, actividad: actividad ?? null, fecha: now })
         .eq("id", existing.id)
-
       if (error) {
         console.error("[v0] Error actualizando seguimiento:", error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -39,9 +40,9 @@ export async function POST(request: Request) {
         eje,
         estado,
         sala,
-        fecha: today,
+        actividad: actividad ?? null,
+        fecha: now,
       }])
-
       if (error) {
         console.error("[v0] Error insertando seguimiento:", error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })

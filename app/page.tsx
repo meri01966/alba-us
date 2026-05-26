@@ -475,7 +475,9 @@ export default function ALBADashboard() {
     }
 
     setEvaluaciones(evaluacionesFinales)
-    setProgress(nuevoProgress)
+    // NO pisar el progress con valores RAM — fetchProgreso recargara el historial real de Supabase
+    // setProgress(nuevoProgress) -- ELIMINADO: causaba que los promedios correctos calculados
+    //   por handleStatusChange fueran pisados por un calculo local simplificado
 
     // --- Paso 2: calcular stats para el registro de cierre ---
     const statsVerdes  = Object.values(evaluacionesFinales).filter(e => e === "green").length
@@ -502,10 +504,13 @@ export default function ALBADashboard() {
       const data = await response.json()
 
       if (data.success) {
-        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
+        // --- Paso 4: ALBA recalcula la proxima sugerencia + mapa se actualiza desde Supabase ---
         fetchHistorialMes()
-        // Esperar 800ms para que Supabase finalice el write antes de que ALBA re-calcule
-        setTimeout(() => { dayPlanningRef.current?.fetchBrain() }, 800)
+        // 1500ms: suficiente para que Supabase persista tanto el cierre como los seguimientos
+        setTimeout(() => {
+          fetchProgreso()                          // actualiza el mapa de progreso con datos reales
+          dayPlanningRef.current?.fetchBrain()     // ALBA recalcula la actividad siguiente
+        }, 1500)
         
         // --- Paso 5: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
@@ -524,7 +529,7 @@ export default function ALBADashboard() {
       setJornadaToast({ tipo: "error", mensaje: "Error de conexion. Intenta de nuevo." })
       setTimeout(() => setJornadaToast(null), 4000)
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
+  }, [fetchHistorialMes, fetchProgreso, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
 
   // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
