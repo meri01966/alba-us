@@ -737,7 +737,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`)
+      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       const sugerencia = data.sugerencia ?? null
       if (sugerencia) {

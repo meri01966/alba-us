@@ -263,6 +263,10 @@ function calcularActividadDelDia(
   return { actividad: seq[indice], indice, esRepeticion, esAvanzado }
 }
 
+// Nunca cachear — cada llamada debe leer los datos mas recientes de Supabase
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sala = searchParams.get("sala") || "Manzanos"
@@ -390,9 +394,9 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      // Clases completadas para ESTE eje = fechas distintas en que se evaluaron alumnos en este eje
-      const fechasDeEje = new Set(regsEje.map((r) => r.fecha?.split("T")[0]).filter(Boolean))
-      const clasesCompletadas = fechasDeEje.size
+      // Clases completadas para ESTE eje = numero de cierres de la sala
+      // Los cierres son la unidad de "clase completada" — cada Finalizar Jornada = +1
+      const clasesCompletadas = cierres.length
 
       // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
       const ultimos2Cierres = cierres.slice(-2)
