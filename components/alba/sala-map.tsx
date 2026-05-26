@@ -21,7 +21,7 @@ const EJES = [
 
 const ZONAS = [
   { key: "verde",    label: "Logrado",    bg: "#16a34a", min: 70  },
-  { key: "amarillo", label: "En proceso", bg: "#d97706", min: 40  },
+  { key: "amarillo", label: "En proceso", bg: "#ca8a04", min: 40  },
   { key: "rojo",     label: "Refuerzo",   bg: "#dc2626", min: 0   },
   { key: "azul",     label: "Sin datos",  bg: "#2563eb", min: null },
 ] as const

@@ -737,7 +737,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
+      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`)
       const data = await res.json()
       const sugerencia = data.sugerencia ?? null
       if (sugerencia) {
@@ -762,8 +762,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
         setBrain(null)
       }
     } catch {
-      // Si falla la API, limpiar la sugerencia anterior sin mostrar dato incorrecto
-      setBrain(null)
+      // Si falla la API no pisar la actividad anterior
     } finally {
       setIsBrainLoading(false)
     }

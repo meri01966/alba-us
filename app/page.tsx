@@ -506,11 +506,14 @@ export default function ALBADashboard() {
       if (data.success) {
         // --- Paso 4: ALBA recalcula la proxima sugerencia + mapa se actualiza desde Supabase ---
         fetchHistorialMes()
-        // 1500ms: suficiente para que Supabase persista tanto el cierre como los seguimientos
+        // Primer intento a 2s, reintento a 4s por si el cold-start de Vercel tarda
         setTimeout(() => {
-          fetchProgreso()                          // actualiza el mapa de progreso con datos reales
-          dayPlanningRef.current?.fetchBrain()     // ALBA recalcula la actividad siguiente
-        }, 1500)
+          fetchProgreso()
+          dayPlanningRef.current?.fetchBrain()
+        }, 2000)
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain()
+        }, 4000)
         
         // --- Paso 5: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
