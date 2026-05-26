@@ -47,36 +47,15 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase()
-    
-    // Verificar si ya existe un registro de cierre para hoy/sala/eje (evitar duplicados)
-    const today = new Date().toISOString().split('T')[0]
-    const { data: existingCierre } = await supabase
+
+    // Siempre insertar — cada Finalizar Jornada es un nuevo registro independiente.
+    // El brain usa cierres.length para avanzar la secuencia: 1 cierre = actividad siguiente.
+    const { error } = await supabase
       .from("registro_cierre")
-      .select("id")
-      .eq("sala", sala)
-      .eq("eje", eje)
-      .eq("fecha", today)
-      .maybeSingle()
+      .insert([registro])
 
-    if (existingCierre) {
-      // Actualizar registro existente en lugar de insertar duplicado
-      const { error } = await supabase
-        .from("registro_cierre")
-        .update(registro)
-        .eq("id", existingCierre.id)
-
-      if (error) {
-        console.error("[v0] Error actualizando registro:", error.message)
-      }
-    } else {
-      // Insertar nuevo registro
-      const { error } = await supabase
-        .from("registro_cierre")
-        .insert([registro])
-
-      if (error) {
-        console.error("[v0] Error guardando registro:", error.message)
-      }
+    if (error) {
+      console.error("[v0] Error guardando registro:", error.message)
     }
 
     // Generar feedback para el docente
