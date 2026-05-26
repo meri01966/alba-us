@@ -83,13 +83,10 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
                             key={id}
                             type="button"
                             onClick={() => onStudentClick(id)}
-                            className="text-white font-semibold text-[11px] bg-white/20 hover:bg-white/30 rounded px-1.5 py-0.5 transition-colors leading-tight"
+                            className="text-white font-semibold text-[13px] bg-white/20 hover:bg-white/30 rounded px-1.5 py-0.5 transition-colors leading-tight"
                             title={val !== null ? `${nombre} — ${val}%` : nombre}
                           >
                             {nombre.split(" ")[0]}
-                            {val !== null && (
-                              <span className="ml-1 text-[9px] opacity-60">{val}%</span>
-                            )}
                           </button>
                         ))}
                       </div>
