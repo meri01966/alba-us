@@ -396,9 +396,9 @@ export async function GET(req: Request) {
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
-      // Clases completadas para ESTE eje = numero de cierres de la sala
-      // Los cierres son la unidad de "clase completada" — cada Finalizar Jornada = +1
-      const clasesCompletadas = cierres.length
+      // Clases completadas para ESTE eje = cierres con ese eje especifico
+      const cierresDeEje = cierres.filter((c: { eje: string }) => c.eje === eje)
+      const clasesCompletadas = cierresDeEje.length
 
       // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
       const ultimos2Cierres = cierres.slice(-2)
@@ -493,6 +493,7 @@ export async function GET(req: Request) {
       sala
     )
     console.log("[ALBA] clasesParaCalculo:", clasesParaCalculo, "| indice final:", indice, "| actividad:", actividad.titulo, "| eje:", ejeSugerido)
+    console.log("[ALBA] cierres CF:", cierres.filter((c: {eje:string}) => c.eje==="CF").length, "CT:", cierres.filter((c: {eje:string}) => c.eje==="CT").length, "O:", cierres.filter((c: {eje:string}) => c.eje==="O").length)
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
     // Si es asi, y hay una actividad de la red con >= 70%, usar esa
