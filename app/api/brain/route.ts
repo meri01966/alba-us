@@ -370,7 +370,9 @@ export async function GET(req: Request) {
     
     const cierres = cierresData || []
     const totalClasesCompletadasGlobal = cierres.length
-    console.log("[ALBA v8] SALA:", JSON.stringify(sala), "Cierres:", totalClasesCompletadasGlobal)
+    console.log("[ALBA] SALA recibida:", JSON.stringify(sala))
+    console.log("[ALBA] Cierres encontrados:", totalClasesCompletadasGlobal, "| Error:", cierresError?.message || "ninguno")
+    console.log("[ALBA] Alumnos encontrados:", alumnos.length)
     
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
@@ -490,7 +492,7 @@ export async function GET(req: Request) {
       ejeDatos.promedio,
       sala
     )
-    console.log("[ALBA] clasesParaCalculo:", clasesParaCalculo, "indice:", indice, "actividad:", actividad.titulo)
+    console.log("[ALBA] clasesParaCalculo:", clasesParaCalculo, "| indice final:", indice, "| actividad:", actividad.titulo, "| eje:", ejeSugerido)
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
     // Si es asi, y hay una actividad de la red con >= 70%, usar esa
