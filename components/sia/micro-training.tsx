@@ -313,8 +313,11 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroT
   const [isTalking, setIsTalking] = useState(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
-  // Resetear indice cuando cambia la actividad
+  // Resetear indice Y cancelar audio cuando cambia la actividad
   useEffect(() => {
+    window.speechSynthesis.cancel()
+    setIsPlaying(false)
+    setIsTalking(false)
     setConsejoIndex(0)
   }, [actividadDelDia])
 
