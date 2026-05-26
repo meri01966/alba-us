@@ -3,6 +3,10 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
+// Forzar renderizado dinamico en toda la app — evita el prerender estatico
+// que falla con la inicializacion de Supabase en el bundle de SSR
+export const dynamic = "force-dynamic"
+
 const inter = Inter({ 
   subsets: ["latin"],
   variable: "--font-inter"
