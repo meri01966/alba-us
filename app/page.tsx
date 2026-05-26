@@ -393,19 +393,13 @@ export default function ALBADashboard() {
   }>>([])
 
   // Cargar evaluaciones de hoy desde Supabase para la sala actual
-  const cargarEvaluacionesDeSala = useCallback(async (sala: string) => {
-    try {
-      const today = new Date().toISOString().split("T")[0]
-      const res = await fetch(`/api/evaluaciones-hoy?sala=${encodeURIComponent(sala)}&fecha=${today}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.evaluaciones) {
-          setEvaluaciones(data.evaluaciones)
-        }
-      }
-    } catch (e) {
-      console.error("[v0] Error cargando evaluaciones:", e)
-    }
+  // Los botones del Registro de Clase arrancan siempre vacios al cargar la pagina.
+  // Son el "pizarron del dia" — se usan solo durante la clase en curso.
+  // Solo se persisten en el historial (Mapa de Progreso) al presionar Finalizar Jornada.
+  const cargarEvaluacionesDeSala = useCallback(async (_sala: string) => {
+    // Intencional: no restaurar evaluaciones del dia anterior.
+    // El pizarron empieza limpio siempre.
+    setEvaluaciones({})
   }, [])
   
   // Cargar historial del mes al cambiar de sala
@@ -535,17 +529,8 @@ export default function ALBADashboard() {
     cargarEvaluacionesDeSala(salaActual)
   }, [salaActual, cargarEvaluacionesDeSala])
     
-  // Cargar progreso guardado de localStorage
-  useEffect(() => {
-    const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-    if (savedProgress) {
-      try {
-        setProgress(JSON.parse(savedProgress))
-      } catch {
-        localStorage.removeItem(STORAGE_PROGRESS_KEY)
-      }
-    }
-  }, [])
+  // El progreso se carga desde Supabase en fetchProgreso().
+  // localStorage es solo un cache secundario cuando no hay Supabase configurado.
 
 // Guardar evaluaciones en localStorage cuando cambien
   useEffect(() => {
@@ -594,16 +579,16 @@ export default function ALBADashboard() {
         
         const { data: seguimientos } = await supabase
           .from('seguimiento')
-          .select('alumno_id, eje, resultado')
+          .select('alumno_id, eje, estado')
           .in('alumno_id', ids)
         
         if (seguimientos && seguimientos.length > 0) {
-          // Agrupar por alumno+eje y calcular promedio
+          // Agrupar por alumno+eje y calcular promedio acumulado
           const agrupado: Record<string, Record<string, number[]>> = {}
           for (const row of seguimientos) {
             if (!agrupado[row.alumno_id]) agrupado[row.alumno_id] = {}
             if (!agrupado[row.alumno_id][row.eje]) agrupado[row.alumno_id][row.eje] = []
-            agrupado[row.alumno_id][row.eje].push(STATUS_TO_VAL[row.resultado] ?? 0)
+            agrupado[row.alumno_id][row.eje].push(STATUS_TO_VAL[row.estado] ?? 0)
           }
           const progresoCalculado: Record<string, { CF: number | null; CT: number | null; O: number | null }> = {}
           for (const [alumnoId, ejes] of Object.entries(agrupado)) {
