@@ -793,25 +793,25 @@ useEffect(() => {
         if (existing) {
           await supabase
             .from('seguimiento')
-            .update({ resultado: status, actividad: actividadDelDia, sala: salaActual, fecha: new Date().toISOString() })
+            .update({ estado: status, actividad: actividadDelDia, sala: salaActual, fecha: new Date().toISOString() })
             .eq('id', existing.id)
         } else {
           await supabase
             .from('seguimiento')
-            .insert([{ alumno_id: studentId, eje, resultado: status, actividad: actividadDelDia, fecha: new Date().toISOString(), sala: salaActual }])
+            .insert([{ alumno_id: studentId, eje, estado: status, actividad: actividadDelDia, fecha: new Date().toISOString(), sala: salaActual }])
         }
 
         // Calcular promedio acumulado por eje desde todos los registros historicos
         const { data: todos } = await supabase
           .from('seguimiento')
-          .select('resultado')
+          .select('estado')
           .eq('alumno_id', studentId)
           .eq('eje', eje)
           .order('fecha', { ascending: false })
 
         if (todos && todos.length > 0) {
           const STATUS_TO_VAL: Record<string, number> = { green: 100, yellow: 50, red: 10, blue: 0 }
-          const sum = todos.reduce((acc: number, r: { resultado: string }) => acc + (STATUS_TO_VAL[r.resultado] ?? 0), 0)
+          const sum = todos.reduce((acc: number, r: { estado: string }) => acc + (STATUS_TO_VAL[r.estado] ?? 0), 0)
           const promedio = Math.round(sum / todos.length)
           setProgress(prev => ({
             ...prev,
