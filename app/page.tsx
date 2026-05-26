@@ -5,7 +5,7 @@ import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Ch
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
-import { DayPlanning } from "@/components/sia/day-planning"
+import { DayPlanning, type DayPlanningHandle } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
@@ -343,7 +343,7 @@ export default function ALBADashboard() {
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
   // Ref al componente DayPlanning para llamar fetchBrain directamente con timing correcto
-  const dayPlanningRef = useRef<import("@/components/sia/day-planning").DayPlanningHandle>(null)
+  const dayPlanningRef = useRef<DayPlanningHandle>(null)
 
   // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita
   function initProgress(_studentId: string): EjeProgress {
