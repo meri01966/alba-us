@@ -244,7 +244,8 @@ function calcularActividadDelDia(
   const limites4 = { CF: 12, CT: 8, O: 10 }
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
 
-  let indice = Math.min(clasesCompletadasEnEje, seq.length - 1)
+  // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
+  let indice = clasesCompletadasEnEje % seq.length
   let esRepeticion = false
   let esAvanzado = false
 
@@ -281,25 +282,37 @@ export async function GET(req: Request) {
       .eq("sala", sala)
 
     if (!alumnos || alumnos.length === 0) {
-      // Aunque no hay alumnos, contamos los cierres para avanzar en la secuencia
+      // Sin alumnos: avanzar la secuencia CF basada en cierres de CF de esta sala
       const { data: cierresData } = await supabase
         .from("registro_cierre")
-        .select("id")
+        .select("id,eje")
         .eq("sala", sala)
-      const totalCierres = cierresData?.length || 0
-      
-      const secuenciaCF = esde4Anios(sala) ? SECUENCIA.CF.slice(0, 12) : SECUENCIA.CF
-      const indiceActividad = totalCierres % secuenciaCF.length
-      const actividadInicial = secuenciaCF[indiceActividad]
-      
+      const cierresCF = (cierresData || []).filter((c: { eje: string }) => c.eje === "CF").length
+      const cierresCT = (cierresData || []).filter((c: { eje: string }) => c.eje === "CT").length
+      const cierresO  = (cierresData || []).filter((c: { eje: string }) => c.eje === "O").length
+      const totalCierres = (cierresData || []).length
+
+      // Elegir el eje con menos cierres para que todos avancen equilibradamente
+      const minCierres = Math.min(cierresCF, cierresCT, cierresO)
+      let ejeElegido: "CF" | "CT" | "O" = "CF"
+      if (cierresCT === minCierres && cierresCT <= cierresCF) ejeElegido = "CT"
+      else if (cierresO === minCierres && cierresO <= cierresCF && cierresO <= cierresCT) ejeElegido = "O"
+
+      const secuenciaEje = esde4Anios(sala)
+        ? SECUENCIA[ejeElegido].slice(0, ({ CF: 12, CT: 8, O: 10 })[ejeElegido])
+        : SECUENCIA[ejeElegido]
+      const cierresDeEje = ejeElegido === "CF" ? cierresCF : ejeElegido === "CT" ? cierresCT : cierresO
+      const indiceActividad = cierresDeEje % secuenciaEje.length
+      const actividadInicial = secuenciaEje[indiceActividad]
+
       return NextResponse.json({
         sugerencia: {
-          eje: "CF",
+          eje: ejeElegido,
           actividad: actividadInicial.titulo,
           descripcion: actividadInicial.descripcion,
           objetivo: actividadInicial.objetivo,
           materiales: actividadInicial.materiales,
-          razon: `Clase ${totalCierres + 1}. Conciencia Fonologica ` + (esde4Anios(sala) ? "(4 anos)" : "(5 anos)") + ".",
+          razon: `Clase ${cierresDeEje + 1} en ${ejeElegido}. ` + (esde4Anios(sala) ? "(4 anos)" : "(5 anos)"),
           alumnosEnRiesgo: 0,
           totalAlumnos: 0,
           tendencia: "estancado",
@@ -311,7 +324,7 @@ export async function GET(req: Request) {
         microCapacitacion: getMicroCapacitacion(actividadInicial.titulo),
         alertas: [],
         historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
-        progreso: { totalClasesCompletadas: totalCierres, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+        progreso: { totalClasesCompletadas: totalCierres, semanaActual: 1, clasesCompletadasPorEje: { CF: cierresCF, CT: cierresCT, O: cierresO } },
       })
     }
 
@@ -512,7 +525,7 @@ export async function GET(req: Request) {
     const aprendidoDeLaRed = usarRed
     const salaRedNombre = usarRed && candidataRed ? `${candidataRed.salas} sala${candidataRed.salas > 1 ? "s" : ""} de la red` : null
 
-    // ── 7. Construir respuesta ─────────────────────────────────────────────
+    // ── 7. Construir respuesta ─���───────────────────────────────────────────
     const limites4 = { CF: 12, CT: 8, O: 10 }
     const totalEnSecuencia = esde4Anios(sala)
       ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
