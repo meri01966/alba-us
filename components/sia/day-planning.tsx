@@ -722,9 +722,6 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   useEffect(() => { onActividadRef.current = onActividadALBA }, [onActividadALBA])
   useEffect(() => { onEjeRef.current       = onEjeALBA },       [onEjeALBA])
 
-  // Exponer fetchBrain al padre via ref
-  useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])
-
   // Calcular stats de las evaluaciones del dia
   const stats = useMemo(() => {
     const values = Object.values(evaluaciones)
@@ -771,6 +768,9 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
       setIsBrainLoading(false)
     }
   }, [sala]) // solo sala como dependencia - los callbacks van por ref
+
+  // Exponer fetchBrain al padre para llamarlo con timing correcto tras guardar cierre
+  useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {

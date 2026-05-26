@@ -972,7 +972,7 @@ useEffect(() => {
                         onClick={() => {
                           setSalaActual(sala)
                           cargarEvaluacionesDeSala(sala) // Cargar evaluaciones de la nueva sala desde Supabase
-                          setBrainKey(k => k + 1) // Forzar re-fetch de ALBA al cambiar sala
+                          dayPlanningRef.current?.fetchBrain()
                           setShowSalaDropdown(false)
                         }}
                         className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 ${sala === salaActual ? "font-semibold bg-slate-50" : ""}`}
