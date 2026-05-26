@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
@@ -342,7 +342,8 @@ export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
-  const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
+  // Ref al componente DayPlanning para llamar fetchBrain directamente con timing correcto
+  const dayPlanningRef = useRef<import("@/components/sia/day-planning").DayPlanningHandle>(null)
 
   // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita
   function initProgress(_studentId: string): EjeProgress {
@@ -503,7 +504,8 @@ export default function ALBADashboard() {
       if (data.success) {
         // --- Paso 4: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
-        setBrainKey(k => k + 1)
+        // Esperar 800ms para que Supabase finalice el write antes de que ALBA re-calcule
+        setTimeout(() => { dayPlanningRef.current?.fetchBrain() }, 800)
         
         // --- Paso 5: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
@@ -1112,7 +1114,7 @@ useEffect(() => {
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 
-                    key={brainKey}
+                    ref={dayPlanningRef}
                     evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
                     ejeActual={ejeActual as "CF" | "CT" | "O"}
                     actividadActual={actividadActual}

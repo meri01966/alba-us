@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -700,7 +700,15 @@ function MyPlanningColumn({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA }: DayPlanningProps) {
+// Handle expuesto via ref para que el padre pueda llamar fetchBrain directamente
+export interface DayPlanningHandle {
+  fetchBrain: () => Promise<void>
+}
+
+export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(function DayPlanning(
+  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA },
+  ref
+) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
   const [microCapacitacion, setMicroCapacitacion] = useState<{ titulo: string; contenido: string; tips: string[] } | null>(null)
@@ -713,6 +721,9 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
   const onEjeRef       = useRef(onEjeALBA)
   useEffect(() => { onActividadRef.current = onActividadALBA }, [onActividadALBA])
   useEffect(() => { onEjeRef.current       = onEjeALBA },       [onEjeALBA])
+
+  // Exponer fetchBrain al padre via ref
+  useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])
 
   // Calcular stats de las evaluaciones del dia
   const stats = useMemo(() => {
@@ -754,20 +765,8 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
         setBrain(null)
       }
     } catch {
-      // Si falla la API, mostrar la primera actividad de CF como fallback local
-      setBrain({
-        id: "fallback-CF-1",
-        dia: 1,
-        titulo: "Sonidos del entorno",
-        descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.",
-        objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",
-        materiales: ["Campana o triangulo", "Grabadora con sonidos", "Tarjetas con imagenes de fuentes sonoras"],
-        razon: "Inicio de secuencia - Conciencia Fonologica",
-        source: "secuencia",
-        ejeRecomendado: "CF",
-      })
-      if (onActividadRef.current) onActividadRef.current("Sonidos del entorno")
-      if (onEjeRef.current)       onEjeRef.current("CF")
+      // Si falla la API, limpiar la sugerencia anterior sin mostrar dato incorrecto
+      setBrain(null)
     } finally {
       setIsBrainLoading(false)
     }
@@ -818,4 +817,4 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
       </CardContent>
     </Card>
   )
-}
+})
