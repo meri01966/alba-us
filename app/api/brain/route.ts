@@ -163,18 +163,28 @@ function calcularActividadDelDia(
   clasesCompletadasEnEje: number,
   promedioEje: number,
   sala = "Manzanos"
-): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean } {
+): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
   const limites4 = { CF: 12, CT: 8, O: 10 }
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
 
   let indice = Math.min(clasesCompletadasEnEje, seq.length - 1)
   let esRepeticion = false
+  let esAvanzado = false
+
+  // CHECKPOINT CADA ~10 CLASES: evaluar si reforzar o avanzar
+  // Si el promedio es bajo (< 40%) retroceder para consolidar
   if (promedioEje < 40 && indice > 0) {
     indice = Math.max(0, indice - 1)
     esRepeticion = true
   }
-  return { actividad: seq[indice], indice, esRepeticion }
+  // Si el promedio es muy bueno (>= 75%) y hay mas actividades, saltar adelante
+  else if (promedioEje >= 75 && indice < seq.length - 2) {
+    indice = Math.min(indice + 1, seq.length - 1)
+    esAvanzado = true
+  }
+
+  return { actividad: seq[indice], indice, esRepeticion, esAvanzado }
 }
 
 export async function GET(req: Request) {
@@ -352,19 +362,36 @@ export async function GET(req: Request) {
       analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
-    // ── 5. Elegir eje: el mas debil con mas urgencia ───────────────────────
+    // ── 5. Elegir eje: el mas debil con mas urgencia (evalua cada ~10 clases) ─
+    // Logica de checkpoint:
+    // - Cada clase: ALBA avanza normalmente en la secuencia del eje activo
+    // - Cada ~10 clases: ALBA revisa promedios y puede cambiar de eje si hay uno muy debil
+    // - Si un eje esta >= 75%: activa modo avanzado y sube el nivel
     let ejeSugerido: "CF" | "CT" | "O" = "CF"
     let peorScore = 999
-    for (const eje of ejes) {
-      const a = analisis[eje]
-      const score = a.promedio
-        - (a.alumnosEnRojo.length * 10)
-        - (a.tendencia === "empeorando" ? 20 : 0)
-        - (a.ultimasClasesEnRojo >= 2 ? 15 : 0)
-      if (score < peorScore) {
-        peorScore = score
-        ejeSugerido = eje
+    const CHECKPOINT_CADA = 10
+    const esCheckpoint = totalClasesCompletadasGlobal > 0 && totalClasesCompletadasGlobal % CHECKPOINT_CADA === 0
+
+    // Determinar eje activo segun ultimo cierre
+    const ultimoCierre = cierres[cierres.length - 1]
+    const ejeActivo = (ultimoCierre?.eje as "CF" | "CT" | "O") || "CF"
+
+    if (esCheckpoint || totalClasesCompletadasGlobal < CHECKPOINT_CADA) {
+      // En checkpoints o al inicio: elegir el eje mas debil
+      for (const eje of ejes) {
+        const a = analisis[eje]
+        const score = a.promedio
+          - (a.alumnosEnRojo.length * 10)
+          - (a.tendencia === "empeorando" ? 20 : 0)
+          - (a.ultimasClasesEnRojo >= 2 ? 15 : 0)
+        if (score < peorScore) {
+          peorScore = score
+          ejeSugerido = eje
+        }
       }
+    } else {
+      // Entre checkpoints: continuar con el eje activo
+      ejeSugerido = ejeActivo
     }
 
     // ── 6. Elegir actividad: combinar secuencia + evidencia inter-salas ────
@@ -376,7 +403,7 @@ export async function GET(req: Request) {
       clasesParaCalculo = Math.max(0, clasesParaCalculo - 1)
     }
 
-    const { actividad, indice, esRepeticion } = calcularActividadDelDia(
+    const { actividad, indice, esRepeticion, esAvanzado } = calcularActividadDelDia(
       ejeSugerido,
       clasesParaCalculo,
       ejeDatos.promedio,
@@ -413,75 +440,72 @@ export async function GET(req: Request) {
     const edadLabel = esde4Anios(sala) ? " (4 anos)" : " (5 anos)"
     const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO)"
 
-    let razon = ejeDatos.alumnosEnRojo.length > 0
-      ? `${ejeDatos.alumnosEnRojo.length} alumno${ejeDatos.alumnosEnRojo.length > 1 ? "s" : ""} necesita${ejeDatos.alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}${edadLabel}.`
-      : `Continuamos avanzando en ${ejeNombre}${edadLabel}.`
+    let razon = ""
+    if (esAvanzado) {
+      razon = `El grupo demostro excelente dominio en ${ejeNombre}${edadLabel} con ${ejeDatos.promedio}% de logro. ALBA subio el nivel de la actividad. Sigan asi!`
+    } else if (ejeDatos.alumnosEnRojo.length > 0) {
+      razon = `${ejeDatos.alumnosEnRojo.length} alumno${ejeDatos.alumnosEnRojo.length > 1 ? "s" : ""} necesita${ejeDatos.alumnosEnRojo.length > 1 ? "n" : ""} refuerzo en ${ejeNombre}${edadLabel}.`
+    } else {
+      razon = `Continuamos avanzando en ${ejeNombre}${edadLabel}.`
+    }
 
     if (aprendidoDeLaRed && salaRedNombre) {
-      razon += ` Actividad sugerida por la red ALBA (exitosa en ${salaRedNombre} con ${candidataRed?.tasa}% de logro).`
+      razon += ` Actividad exitosa en ${salaRedNombre} de la red ALBA (${candidataRed?.tasa}% de logro).`
     } else if (ejeDatos.ultimasClasesEnRojo >= 2) {
-      razon += ` El grupo tuvo 2 clases seguidas con dificultad. Se retrocedio en la secuencia para consolidar.`
+      razon += ` Dos clases seguidas con dificultad: retrocedemos para consolidar antes de avanzar.`
     } else if (esRepeticion) {
-      razon += ` Repetimos para consolidar (promedio: ${ejeDatos.promedio}%).`
+      razon += ` Repetimos para consolidar (promedio actual: ${ejeDatos.promedio}%).`
+    } else if (esCheckpoint) {
+      razon += ` Checkpoint de ${CHECKPOINT_CADA} clases: ALBA analizo todos los ejes y este es el que mas necesita atencion.`
     } else {
       razon += ` Clase ${indice + 1} de ${totalEnSecuencia} en la secuencia anual.`
     }
 
-    // ── 8. Alertas ───────────────────────────────────────────���─────────────
+    // -- 8. Alertas: destacados, refuerzo, red, checkpoint ----------------
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []
+
+    // Alerta especial cuando es checkpoint de 10 clases
+    if (esCheckpoint) {
+      alertas.push({ tipo: "checkpoint", mensaje: `Checkpoint de ${CHECKPOINT_CADA} clases: ALBA analizo el avance de la sala y actualizo la estrategia para los proximos dias.`, urgencia: "info" })
+    }
+
     for (const eje of ejes) {
       const a = analisis[eje]
       const nombre = eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"
 
+      // Alerta positiva: eje destacado (>= 75% de logro grupal con al menos 5 registros)
+      if (a.promedio >= 75 && a.total >= 5) {
+        alertas.push({
+          tipo: "eje_destacado",
+          mensaje: `Excelente! El grupo logro ${a.promedio}% en ${nombre}. ALBA subio el nivel de las actividades para mantener el desafio.`,
+          urgencia: "info",
+        })
+      }
       if (a.alumnosEnRojo.length >= alumnos.length * 0.3) {
         alertas.push({ tipo: "patron_grupal", mensaje: `${a.alumnosEnRojo.length} de ${alumnos.length} alumnos en rojo en ${nombre}. Revisar estrategia grupal.`, urgencia: "alta" })
       }
       for (const al of alumnos) {
         const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-3)
         if (regsAl.length >= 3 && regsAl.every((r) => r.estado === "red")) {
-          alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ registros en rojo en ${nombre}.`, urgencia: "alta" })
+          alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ clases seguidas en rojo en ${nombre}.`, urgencia: "alta" })
         }
       }
       if (a.tendencia === "empeorando") {
         alertas.push({ tipo: "tendencia", mensaje: `${nombre} muestra tendencia negativa esta semana.`, urgencia: "media" })
       }
-      // Alerta positiva: actividad de la red disponible
       if (exitosasRed[eje].length > 0) {
         alertas.push({ tipo: "red_exitosa", mensaje: `La red ALBA tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >70% de logro en ${nombre}. ALBA las priorizara automaticamente.`, urgencia: "info" })
       }
     }
 
-    // Usar totalClasesCompletadasGlobal que cuenta los cierres (Finalizar Jornada)
     const totalClases = totalClasesCompletadasGlobal
     const primerRegistro = cierres.length > 0 ? new Date(cierres[0].fecha) : new Date()
     const semanaActual = Math.max(1, Math.ceil((Date.now() - primerRegistro.getTime()) / (7 * 86400000)))
 
-    // ── 9. Micro-capacitacion just-in-time vinculada a la actividad ──────────
-    const microCapacitaciones: Record<string, { titulo: string; contenido: string; tips: string[] }> = {
-      // CF - Conciencia Fonologica
-      "Sonidos del entorno": { titulo: "Escucha activa", contenido: "Desarrolle la capacidad de escucha discriminando sonidos ambientales.", tips: ["Pida silencio total", "Use grabaciones variadas", "Relacione con imagenes"] },
-      "Rimas con nombres": { titulo: "Ensenar rimas", contenido: "Las rimas desarrollan conciencia fonologica. Use nombres de los ninos.", tips: ["Empiece simple", "Use gestos", "Repita varias veces"] },
-      "Separacion en silabas": { titulo: "Segmentacion silabica", contenido: "Dividir palabras con palmas desarrolla conciencia fonologica.", tips: ["Palabras cortas primero", "Use nombres", "Agregue movimiento"] },
-      "Sonido inicial /a/": { titulo: "Vocal A", contenido: "Enfoque en /a/ al inicio de palabras.", tips: ["Exagere el sonido", "Use espejo", "Busque objetos con A"] },
-      "Sonido inicial /e/": { titulo: "Vocal E", contenido: "Identificar palabras que empiezan con /e/.", tips: ["Recorra el aula", "Liste en pizarron", "Ejemplos cotidianos"] },
-      "Sonido inicial /i/": { titulo: "Vocal I", contenido: "Use el cuerpo para formar la I.", tips: ["Brazos estirados = I", "Alterne palabras", "Dictado grafico"] },
-      "Sonido inicial /o/": { titulo: "Vocal O", contenido: "Aplaudir con palabras que empiezan con /o/.", tips: ["Una palmada = O", "Dibujen cosas con O", "Lista colectiva"] },
-      "Sonido inicial /u/": { titulo: "Vocal U", contenido: "Juego de memoria con sonido inicial.", tips: ["Trabajen en parejas", "Emparejen imagen-sonido", "Celebre aciertos"] },
-      "Vocales - Repaso": { titulo: "Consolidar vocales", contenido: "Ruleta de vocales para repasar.", tips: ["3 palabras por vocal", "Cuente cual tuvo mas", "Registre"] },
-      "Sonido inicial /m/": { titulo: "Consonante M", contenido: "Imitar /m/ cerrando labios.", tips: ["Use espejo", "Senale laminas", "Creen oraciones"] },
-      "Sonido inicial /p/": { titulo: "Consonante P", contenido: "Juego de pesca con palabras.", tips: ["Pescar tarjetas", "Clasificar", "Canastos de colores"] },
-      "Sonido inicial /s/": { titulo: "Consonante S", contenido: "Trabajo en parejas con /s/.", tips: ["Pulgar arriba/abajo", "Intercambien roles", "Compartan"] },
-      // CT - Conocimiento Textual
-      "Exploracion del libro": { titulo: "Conocer el libro", contenido: "Manipular y explorar portada e ilustraciones.", tips: ["Observen tapa", "Predigan contenido", "Registre hipotesis"] },
-      "Antes de leer: Predicciones": { titulo: "Predicciones", contenido: "Formular hipotesis mirando la tapa.", tips: ["Use post-its", "Verifiquen al final", "Celebre aciertos"] },
-      "Lectura dialogica: Pausas": { titulo: "Lectura interactiva", contenido: "Pausas estrategicas para preguntas.", tips: ["Que pasara?", "Por que hizo eso?", "Como se siente?"] },
-      // O - Oralidad
-      "ECO-E: Sonidos del entorno": { titulo: "Escucha y respuesta", contenido: "Nombrar sonidos en oracion completa.", tips: ["Ojos cerrados", "Oracion completa", "Modele si necesario"] },
-      "ECO-E: Escucha de voces": { titulo: "Reconocer voces", contenido: "Responder con oracion completa.", tips: ["Use grabaciones", "Esa es la voz de...", "Espere oracion"] },
-      "ECO-E: Instrucciones simples": { titulo: "Seguir instrucciones", contenido: "Ejecutar y verbalizar acciones.", tips: ["Un paso a la vez", "Yo levante el...", "No avance sin verbalizacion"] },
-    }
-    const microDefault = { titulo: "Tip del dia", contenido: "Observe a cada nino y adapte la actividad a sus necesidades.", tips: ["Sea paciente", "Celebre logros", "Repita si necesario"] }
-    const microCapacitacion = microCapacitaciones[actividadFinal.titulo] || microDefault
+    // -- 9. Micro-capacitacion just-in-time: banco pedagogico completo -------
+    // getMicroCapacitacion devuelve contenido especifico de la actividad:
+    // que hace el docente, que aprenden los ninos, fundamento pedagogico y cancion/poesia
+    const microCapacitacion = getMicroCapacitacion(actividadFinal.titulo)
 
     return NextResponse.json({
       sugerencia: {
@@ -498,12 +522,16 @@ export async function GET(req: Request) {
         salaRed: salaRedNombre,
         numeroClase: indice + 1,
         esRepeticion,
+        esAvanzado,
+        esCheckpoint,
       },
       microCapacitacion,
       alertas: alertas.slice(0, 8),
       historial: {
         promediosPorEje: { CF: analisis.CF.promedio, CT: analisis.CT.promedio, O: analisis.O.promedio },
         tendencias: { CF: analisis.CF.tendencia, CT: analisis.CT.tendencia, O: analisis.O.tendencia },
+        ejesDestacados: ejes.filter(e => analisis[e].promedio >= 75 && analisis[e].total >= 5),
+        ejesEnRefuerzo: ejes.filter(e => analisis[e].promedio < 40 && analisis[e].total >= 3),
         actividadesExitosasLocales: { CF: analisis.CF.actividadesExitosasLocales, CT: analisis.CT.actividadesExitosasLocales, O: analisis.O.actividadesExitosasLocales },
         exitosasRed,
       },
