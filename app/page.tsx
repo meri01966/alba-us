@@ -57,8 +57,13 @@ const BG_EJE: Record<string, string> = {
   CT: "#f0fdf4",
   O: "#fffbeb",
 }
+const NOMBRE_EJE_SHORT: Record<string, string> = {
+  CF: "Conciencia Fonologica",
+  CT: "Comprension de Textos",
+  O:  "Oralidad",
+}
 
-// ── Reporte para Padres - generado desde datos reales de Supabase
+// ── Sintesis Pedagogica Grupal - informe para reunion de padres
 function SintesisPedagogicaModal({ 
   totalStudents,
   salaName,
@@ -72,46 +77,50 @@ function SintesisPedagogicaModal({
   const [reporte, setReporte] = useState<{
     sinDatos: boolean
     mensaje?: string
-    totalRegistros?: number
-    ejesConDatos?: number
+    sala?: string
+    totalAlumnos?: number
+    totalClases?: number
+    periodoDesde?: string | null
+    periodoHasta?: string | null
     ejes: Array<{
       eje: string
       nombre: string
-      promedio: number
-      nivel: string | null
-      totalActividades: number
-      actividadesUnicas: number
-      verdes: number
-      amarillos: number
-      rojos: number
-      fechaInicio: string | null
-      fechaUltima: string | null
-      mensaje: string
-      sugerenciaCasa: string
+      totalClases: number
+      actividadesUnicas: string[]
+      periodoDesde: string | null
+      periodoHasta: string | null
+      pctLogrado: number
+      pctProceso: number
+      pctRefuerzo: number
+      promedioGrupal: number
+      tendencia: "mejorando" | "estable" | "necesita_apoyo"
+      txt_queTrabajaamos: string
+      txt_comoLoTrabajaamos: string
+      txt_queAprendioElGrupo: string
+      sugerenciasContinuacion: string[]
     }>
   } | null>(null)
 
   useEffect(() => {
     async function fetchReporte() {
       try {
-        const res = await fetch(`/api/reporte-padres?sala=${encodeURIComponent(salaName)}`)
+        const res = await fetch(`/api/reporte-grupal?sala=${encodeURIComponent(salaName)}`)
         const data = await res.json()
         setReporte(data)
       } catch (err) {
-        console.error("[v0] Error fetching reporte padres:", err)
+        console.error("[v0] Error fetching reporte grupal:", err)
         setReporte({ sinDatos: true, ejes: [], mensaje: "Error al cargar el reporte. Intenta nuevamente." })
       } finally {
         setLoading(false)
       }
     }
     fetchReporte()
-  }, [])
+  }, [salaName])
 
-  const nivelColor = (nivel: string | null) => {
-    if (nivel === "Muy bien") return "bg-green-100 text-green-700"
-    if (nivel === "En proceso") return "bg-yellow-100 text-yellow-700"
-    if (nivel === "Necesita refuerzo") return "bg-red-100 text-red-700"
-    return "bg-slate-100 text-slate-500"
+  const tendenciaLabel = (t: string) => {
+    if (t === "mejorando") return { label: "Mejorando", color: "#10b981", bg: "#ecfdf5" }
+    if (t === "necesita_apoyo") return { label: "Necesita apoyo", color: "#ef4444", bg: "#fef2f2" }
+    return { label: "Estable", color: "#f59e0b", bg: "#fffbeb" }
   }
 
   return (
@@ -124,148 +133,187 @@ function SintesisPedagogicaModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-100">
+        <div className="p-5 border-b border-slate-100" style={{ background: "#1e3a5f" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-                Reporte para Familias
+              <h2 className="text-lg font-bold text-white">
+                Sintesis Pedagogica Grupal
               </h2>
-              <p className="text-sm text-slate-500">
-                Sala {salaName} · {totalStudents} alumnos · Generado desde datos reales de ALBA
+              <p className="text-sm text-white/70">
+                Sala {salaName} &middot; {totalStudents} alumnos &middot; Informe para reunion de padres
               </p>
             </div>
             <button 
               onClick={onClose}
               type="button"
-              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
             >
-              <X className="w-4 h-4 text-slate-600" />
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
 
         {/* Contenido */}
-        <div className="p-5 space-y-5 text-slate-700 leading-relaxed max-h-[70vh] overflow-y-auto">
+        <div className="p-5 space-y-5 text-slate-700 leading-relaxed max-h-[75vh] overflow-y-auto">
           
           {loading && (
-            <div className="flex items-center justify-center py-10">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              <span className="ml-3 text-sm text-slate-500">Leyendo datos del aula desde ALBA...</span>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full" />
+              <span className="ml-3 text-sm text-slate-500">ALBA esta analizando los datos de la sala...</span>
             </div>
           )}
 
           {!loading && reporte?.sinDatos && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
               <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <h3 className="font-semibold text-slate-600 mb-2">Aun no hay actividades registradas</h3>
+              <h3 className="font-semibold text-slate-600 mb-2">Aun no hay actividades evaluadas</h3>
               <p className="text-sm text-slate-500 leading-relaxed">
-                {reporte.mensaje || "El reporte se generara automaticamente cuando la docente registre evaluaciones en el aula."}
-              </p>
-              <p className="text-xs text-slate-400 mt-3">
-                Solo se generan reportes de los ejes que ya fueron trabajados en el aula.
+                {reporte.mensaje || "El informe grupal se generara automaticamente cuando la docente registre evaluaciones en el aula."}
               </p>
             </div>
           )}
 
           {!loading && reporte && !reporte.sinDatos && reporte.ejes.length > 0 && (
             <>
-              {/* Resumen */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-800">
-                    Este reporte refleja lo que realmente sucedio en el aula
-                  </span>
-                </div>
+              {/* Resumen cabecera */}
+              <div className="rounded-xl p-4 border border-slate-200 bg-slate-50">
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{reporte.totalRegistros}</p>
-                    <p className="text-xs text-slate-500">Evaluaciones registradas</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.totalAlumnos ?? totalStudents}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Alumnos del grupo</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{reporte.ejesConDatos}</p>
-                    <p className="text-xs text-slate-500">{reporte.ejesConDatos === 1 ? "Eje trabajado" : "Ejes trabajados"}</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.totalClases ?? "—"}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Clases con evaluacion</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{totalStudents}</p>
-                    <p className="text-xs text-slate-500">Alumnos</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.ejes.length}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{reporte.ejes.length === 1 ? "Eje trabajado" : "Ejes trabajados"}</p>
                   </div>
                 </div>
+                {reporte.periodoDesde && (
+                  <p className="text-xs text-center text-slate-400 mt-3">
+                    Periodo: {reporte.periodoDesde}{reporte.periodoHasta && reporte.periodoHasta !== reporte.periodoDesde ? " al " + reporte.periodoHasta : ""}
+                  </p>
+                )}
               </div>
 
-              {/* Un bloque por eje trabajado */}
-              {reporte.ejes.map((eje, idx) => (
-                <section key={eje.eje} className="rounded-xl border overflow-hidden" style={{ borderColor: COLOR_EJE[eje.eje] + "40" }}>
-                  {/* Cabecera del eje */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: BG_EJE[eje.eje] }}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{ backgroundColor: COLOR_EJE[eje.eje] }}>
-                        {idx + 1}
-                      </span>
-                      <span className="font-semibold text-sm" style={{ color: COLOR_EJE[eje.eje] }}>{eje.nombre}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {eje.nivel && (
-                        <span className={"text-xs font-bold px-2 py-0.5 rounded-full " + nivelColor(eje.nivel)}>
-                          {eje.nivel}
+              {/* Un bloque por eje */}
+              {reporte.ejes.map((eje) => {
+                const tend = tendenciaLabel(eje.tendencia)
+                return (
+                  <section key={eje.eje} className="rounded-xl border overflow-hidden" style={{ borderColor: COLOR_EJE[eje.eje] + "50" }}>
+                    {/* Cabecera eje */}
+                    <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: BG_EJE[eje.eje] }}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: COLOR_EJE[eje.eje] }}>
+                          {eje.eje}
                         </span>
-                      )}
-                      <span className="text-xs text-slate-500">{eje.totalActividades} clases</span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3 bg-white">
-                    {/* Barra de progreso */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-slate-500">Nivel de logro grupal</span>
-                        <span className="text-xs font-bold text-slate-700">{eje.promedio}%</span>
+                        <span className="font-bold text-sm" style={{ color: COLOR_EJE[eje.eje] }}>{eje.nombre}</span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{
-                            width: eje.promedio + "%",
-                            backgroundColor: eje.promedio >= 70 ? "#10b981" : eje.promedio >= 40 ? "#fbbf24" : "#ef4444"
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-green-600">{eje.verdes} logrado</span>
-                        <span className="text-xs text-yellow-600">{eje.amarillos} en proceso</span>
-                        <span className="text-xs text-red-500">{eje.rojos} refuerzo</span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: tend.bg, color: tend.color }}
+                        >
+                          {tend.label}
+                        </span>
+                        <span className="text-xs text-slate-500">{eje.totalClases} {eje.totalClases === 1 ? "clase" : "clases"}</span>
                       </div>
                     </div>
 
-                    {/* Fechas */}
-                    {eje.fechaInicio && (
-                      <p className="text-xs text-slate-400">
-                        Trabajado desde el {eje.fechaInicio}
-                        {eje.fechaUltima && eje.fechaUltima !== eje.fechaInicio ? " hasta el " + eje.fechaUltima : ""}
-                      </p>
-                    )}
+                    <div className="bg-white divide-y divide-slate-100">
+                      {/* Barra de progreso grupal */}
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nivel grupal acumulado</span>
+                          <span className="text-sm font-bold" style={{ color: eje.promedioGrupal >= 70 ? "#10b981" : eje.promedioGrupal >= 40 ? "#f59e0b" : "#ef4444" }}>
+                            {eje.promedioGrupal}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5">
+                          <div
+                            className="h-2.5 rounded-full transition-all"
+                            style={{
+                              width: eje.promedioGrupal + "%",
+                              backgroundColor: eje.promedioGrupal >= 70 ? "#10b981" : eje.promedioGrupal >= 40 ? "#f59e0b" : "#ef4444",
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-1.5 text-xs">
+                          <span style={{ color: "#10b981" }}>{eje.pctLogrado}% logrado</span>
+                          <span style={{ color: "#f59e0b" }}>{eje.pctProceso}% en proceso</span>
+                          <span style={{ color: "#ef4444" }}>{eje.pctRefuerzo}% refuerzo</span>
+                        </div>
+                      </div>
 
-                    {/* Mensaje para la familia */}
-                    <p className="text-sm text-slate-700 leading-relaxed">{eje.mensaje}</p>
+                      {/* Seccion 1: Que trabajamos */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Que trabajamos
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queTrabajaamos}</p>
+                        {eje.actividadesUnicas.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {eje.actividadesUnicas.map((act, i) => (
+                              <span
+                                key={i}
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ backgroundColor: BG_EJE[eje.eje], color: COLOR_EJE[eje.eje], border: `1px solid ${COLOR_EJE[eje.eje]}30` }}
+                              >
+                                {act}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Sugerencia para casa */}
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Para hacer en casa</p>
-                      <p className="text-sm text-slate-600 leading-relaxed">{eje.sugerenciaCasa}</p>
+                      {/* Seccion 2: Como lo trabajamos */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Como lo trabajamos
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_comoLoTrabajaamos}</p>
+                      </div>
+
+                      {/* Seccion 3: Que aprendio el grupo */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Que aprendio el grupo
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queAprendioElGrupo}</p>
+                      </div>
+
+                      {/* Seccion 4: Para seguir trabajando */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Para seguir trabajando
+                        </p>
+                        <ul className="space-y-1.5">
+                          {eje.sugerenciasContinuacion.map((sug, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                              <span className="mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLOR_EJE[eje.eje] }} />
+                              {sug}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                </section>
-              ))}
+                  </section>
+                )
+              })}
 
-              {/* Nota sobre ejes no reportados */}
-              {reporte.ejesConDatos && reporte.ejesConDatos < 3 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              {/* Nota al pie */}
+              {reporte.ejes.length < 3 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm text-amber-700">
-                    <strong>Nota:</strong> Este reporte incluye solo los ejes trabajados hasta la fecha.
-                    Los ejes de {["Conciencia Fonologica", "Comprension de Textos", "Oralidad"]
-                      .filter(n => !reporte.ejes.find(e => e.nombre === n))
-                      .join(" y ")} aun no tienen actividades registradas y se incluiran cuando la docente los trabaje en el aula.
+                    Este informe incluye solo los ejes evaluados hasta la fecha.{" "}
+                    {["CF", "CT", "O"]
+                      .filter(e => !reporte.ejes.find(r => r.eje === e))
+                      .map(e => NOMBRE_EJE_SHORT[e])
+                      .join(" y ")}{" "}
+                    se incluira cuando la docente registre evaluaciones en esos ejes.
                   </p>
                 </div>
               )}
@@ -276,8 +324,7 @@ function SintesisPedagogicaModal({
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
           <p className="text-xs text-slate-400 text-center">
-            Reporte generado automaticamente por ALBA a partir de los datos registrados en el aula.
-            Solo se reportan los ejes efectivamente trabajados.
+            Informe grupal generado por ALBA a partir de los datos evaluados en el aula. Solo se reportan los ejes efectivamente trabajados.
           </p>
         </div>
       </div>
