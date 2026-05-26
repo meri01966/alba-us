@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
     // 1. Traer todos los registros de seguimiento de la sala
     const { data: seguimientosRaw, error: errSeg } = await supabase
       .from("seguimiento")
-      .select("alumno_id, eje, resultado, actividad, fecha")
+      .select("alumno_id, eje, estado, actividad, fecha")
       .eq("sala", sala)
       .order("fecha", { ascending: true })
 
@@ -184,7 +184,7 @@ export async function GET(req: NextRequest) {
     for (const s of seguimientos) {
       const eje = (s.eje as string) || "CF"
       if (!porEje[eje]) porEje[eje] = { resultados: [], actividades: [], metodologias: [], fechas: [] }
-      porEje[eje].resultados.push(s.resultado || "red")
+      porEje[eje].resultados.push(s.estado || "red")
       if (s.actividad && !porEje[eje].actividades.includes(s.actividad)) {
         porEje[eje].actividades.push(s.actividad)
       }
