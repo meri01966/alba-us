@@ -108,7 +108,7 @@ const MICRO_CAPS: Record<string, MicroCap> = {
   "Adicion de fonemas": { titulo: "Agregar sonidos para crear palabras nuevas", contenido: "Los ninos agregan un fonema al inicio o al final de palabras cortas para crear palabras nuevas.", tips: ["Use letras moviles para visualizar el agregado", "Priorice la adicion al final por ser mas sencilla", "No importa si la palabra creada no existe: el proceso es el objetivo"] },
   "Manipulacion avanzada": { titulo: "Desafio fonologico en equipos", contenido: "La docente da operaciones con fonemas en serie. Los ninos en equipos descifran la palabra resultante.", tips: ["Esta actividad es para ninos con solido dominio de las anteriores", "Trabaje en equipos para que los ninos se apoyen", "Si hay ninos sin dominio basico, asigneles operaciones mas simples"] },
   "Evaluacion CF": { titulo: "Estaciones de evaluacion de CF", contenido: "Cuatro estaciones: rimas, segmentacion silabica, sonido inicial, manipulacion. La docente rota registrando individualmente con rubrica.", tips: ["Prepare la rubrica antes: que espera ver en cada nino segun el nivel", "Asigne actividad autonoma en cada estacion", "Use esta informacion para planificar las proximas actividades con ALBA"] },
-  // ── COMPRENSION TEXTUAL ──────────────────────────────────────────────────
+  // ── COMPRENSION TEXTUAL ───────────────────────���──────────────────────────
   "Exploracion del libro": { titulo: "Antes de abrir el libro", contenido: "Presente el libro CERRADO 2 minutos. Los ninos observan la tapa y responden en ronda. Registre TODAS las hipotesis en el pizarron sin juzgar ninguna.", tips: ["No abra el libro hasta que todos hayan hablado: la anticipacion construye comprension", "Pida que justifiquen: como lo sabes? que te hizo pensar eso?", "Vuelva a estas hipotesis al terminar la lectura"], cancion: "Cancion sugerida: El libro me habla desde la portada, con colores e imagenes y una historia guardada. Antes de abrirlo yo ya imagino que pasara adentro en este camino.", poesia: "Poesia sugerida: La tapa del cuento me guina el ojo, me dice que adentro hay un mundo de antojo. Miro el titulo, miro el autor, y ya mi cabeza empieza a sonar." },
   "Antes de leer: Predicciones": { titulo: "Predicciones con post-its antes de leer", contenido: "Cada nino dice su prediccion. Escriba o dibuje en post-it y peguelo en el pizarron. Al finalizar vuelvan: acertada, parcialmente acertada, o no acertada.", tips: ["Modele la estructura: Yo creo que... porque en la tapa veo...", "Acepte TODAS las predicciones sin evaluarlas antes de leer", "El momento de verificar es tan importante como el momento de predecir"] },
   "Lectura dialogica: Pausas": { titulo: "Pausas estrategicas con el titere preguntador", contenido: "Lea en voz alta con pausas planificadas. El titere hace una pregunta en cada pausa. Los ninos responden y luego continuan para verificar.", tips: ["Planifique las pausas antes de la clase: marque donde se detendra", "Las mejores pausas son antes de un momento clave o despues de una sorpresa", "Si los ninos responden con una sola palabra, amplie la respuesta"] },
@@ -282,21 +282,20 @@ export async function GET(req: Request) {
       .eq("sala", sala)
 
     if (!alumnos || alumnos.length === 0) {
-      // Sin alumnos: avanzar la secuencia CF basada en cierres de CF de esta sala
+      // Sin alumnos: rotar CF → O → CT igual que con alumnos
       const { data: cierresData } = await supabase
         .from("registro_cierre")
         .select("id,eje")
         .eq("sala", sala)
-      const cierresCF = (cierresData || []).filter((c: { eje: string }) => c.eje === "CF").length
-      const cierresCT = (cierresData || []).filter((c: { eje: string }) => c.eje === "CT").length
-      const cierresO  = (cierresData || []).filter((c: { eje: string }) => c.eje === "O").length
-      const totalCierres = (cierresData || []).length
+      const cierresTodos = cierresData || []
+      const cierresCF = cierresTodos.filter((c: { eje: string }) => c.eje === "CF").length
+      const cierresCT = cierresTodos.filter((c: { eje: string }) => c.eje === "CT").length
+      const cierresO  = cierresTodos.filter((c: { eje: string }) => c.eje === "O").length
+      const totalCierres = cierresTodos.length
 
-      // Elegir el eje con menos cierres para que todos avancen equilibradamente
-      const minCierres = Math.min(cierresCF, cierresCT, cierresO)
-      let ejeElegido: "CF" | "CT" | "O" = "CF"
-      if (cierresCT === minCierres && cierresCT <= cierresCF) ejeElegido = "CT"
-      else if (cierresO === minCierres && cierresO <= cierresCF && cierresO <= cierresCT) ejeElegido = "O"
+      // Rotacion ciclica CF → O → CT
+      const ORDEN: ("CF" | "CT" | "O")[] = ["CF", "O", "CT"]
+      const ejeElegido: "CF" | "CT" | "O" = ORDEN[totalCierres % ORDEN.length]
 
       const secuenciaEje = esde4Anios(sala)
         ? SECUENCIA[ejeElegido].slice(0, ({ CF: 12, CT: 8, O: 10 })[ejeElegido])
@@ -455,37 +454,24 @@ export async function GET(req: Request) {
       analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
-    // ── 5. Elegir eje: el mas debil con mas urgencia (evalua cada ~10 clases) ─
-    // Logica de checkpoint:
-    // - Cada clase: ALBA avanza normalmente en la secuencia del eje activo
-    // - Cada ~10 clases: ALBA revisa promedios y puede cambiar de eje si hay uno muy debil
-    // - Si un eje esta >= 75%: activa modo avanzado y sube el nivel
-    let ejeSugerido: "CF" | "CT" | "O" = "CF"
-    let peorScore = 999
+    // ── 5. Elegir eje: ROTACION CICLICA CF → O → CT → CF → O → CT
+    // Cada Finalizar Jornada inserta un cierre nuevo → totalClasesCompletadasGlobal aumenta
+    // La rotacion garantiza que los 3 ejes avanzan en paralelo, cada uno a su propio ritmo
+    // Excepcion: si un eje tiene 2 clases seguidas en rojo, ALBA lo repite antes de rotar
+    const ORDEN_EJES: ("CF" | "CT" | "O")[] = ["CF", "O", "CT"]
+    let ejeSugerido: "CF" | "CT" | "O" = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length]
+
+    // Si el eje elegido por rotacion tiene 2+ clases seguidas en rojo, ALBA lo mantiene
+    // para consolidar antes de continuar la rotacion (maximo 2 repeticiones)
+    const ejeRotado = ejeSugerido
+    const datosEjeRotado = analisis[ejeRotado]
+    if (datosEjeRotado.ultimasClasesEnRojo >= 2) {
+      // Mantener el mismo eje para consolidar — no rotar todavia
+      ejeSugerido = ejeRotado
+    }
+
     const CHECKPOINT_CADA = 10
     const esCheckpoint = totalClasesCompletadasGlobal > 0 && totalClasesCompletadasGlobal % CHECKPOINT_CADA === 0
-
-    // Determinar eje activo segun ultimo cierre
-    const ultimoCierre = cierres[cierres.length - 1]
-    const ejeActivo = (ultimoCierre?.eje as "CF" | "CT" | "O") || "CF"
-
-    if (esCheckpoint || totalClasesCompletadasGlobal < CHECKPOINT_CADA) {
-      // En checkpoints o al inicio: elegir el eje mas debil
-      for (const eje of ejes) {
-        const a = analisis[eje]
-        const score = a.promedio
-          - (a.alumnosEnRojo.length * 10)
-          - (a.tendencia === "empeorando" ? 20 : 0)
-          - (a.ultimasClasesEnRojo >= 2 ? 15 : 0)
-        if (score < peorScore) {
-          peorScore = score
-          ejeSugerido = eje
-        }
-      }
-    } else {
-      // Entre checkpoints: continuar con el eje activo
-      ejeSugerido = ejeActivo
-    }
 
     // ── 6. Elegir actividad: combinar secuencia + evidencia inter-salas ────
     const ejeDatos = analisis[ejeSugerido]
