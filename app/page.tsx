@@ -17,6 +17,9 @@ import { PlanificacionModal } from "@/components/alba/planificacion-modal"
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 type StatusLevel = "green" | "yellow" | "red" | "blue"
 
+// Progreso por eje: null = sin datos, number = promedio acumulado 0-100
+type EjeProgress = { CF: number | null; CT: number | null; O: number | null }
+
 // Mapeo de actividad a eje pedagogico
 // "Reconocimiento de Letras" -> CF (Conciencia Fonologica)
 const ACTIVIDAD_EJE_MAP: Record<string, "CF" | "CT" | "O"> = {
@@ -338,16 +341,21 @@ const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nog
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
-  const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
+  const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
   const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
 
-  // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita de Supabase
-  function initProgress(_studentId: string) {
-    return { CF: null as number | null, CT: null as number | null, O: null as number | null }
-  }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita
+  function initProgress(_studentId: string): EjeProgress {
+    return { CF: null, CT: null, O: null }
+  }
+
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
-  const [sugerenciaAlba, setSugerenciaAlba] = useState("")
+  // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
+  const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
+  // Toast de confirmacion al finalizar jornada (reemplaza alert)
+  const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
   // Gestion de sala
   const [salaActual, setSalaActual] = useState("Manzanos")
@@ -427,92 +435,98 @@ export default function ALBADashboard() {
   
   
   
-  // Callback cuando el docente cambia la actividad del dia
-  // Al cambiar de actividad los botones se limpian para que el docente evalue la nueva clase
+  // Callback cuando ALBA cambia la sugerencia de actividad/eje
+  // NO borra evaluaciones: la docente puede evaluar la clase con cualquier actividad activa
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
     setEjeActual(eje)
-    // Limpiar evaluaciones del dia para la nueva actividad - el mapa NO vuelve a azul,
-    // solo los botones se desmarcan para que el docente pueda evaluar esta clase
-    setEvaluaciones({})
-    localStorage.removeItem(STORAGE_KEY)
   }, [])
   
-  // Callback para el registro de cierre del dia
-  // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
+  // Finalizar jornada: 
+  // 1. Alumnos sin marcar → se guardan como verde (logrado) en Supabase
+  // 2. Se actualiza el progreso acumulado por eje en el mapa
+  // 3. Se guarda el registro de cierre que alimenta a ALBA para la proxima sugerencia
+  // 4. ALBA re-calcula la actividad sugerida para la proxima clase
+  // 5. Las evaluaciones del dia se limpian para la nueva clase
   const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
-    // Construir registro con los campos que espera la API
-    const registro = {
-      actividadALBA: actividadActual,
-      actividadDocente: actividadActual,
-      eje: ejeActual,
-      sala: salaActual,
-      evaluacionGeneral: datos.evaluacion,
-      observaciones: datos.observaciones,
-      sugerenciaParaIA: datos.sugerencia,
-      stats: {
-        green: Object.values(evaluaciones).filter(e => e === "green").length,
-        yellow: Object.values(evaluaciones).filter(e => e === "yellow").length,
-        red: Object.values(evaluaciones).filter(e => e === "red").length,
-        ausentes: Object.values(evaluaciones).filter(e => e === "blue").length,
-      }
-    }
+    const ejeDelDia = ejeActual
+    const actividadDelDia = actividadSugeridaALBA || actividadActual
 
-    // 1. Marcar como verde todos los alumnos sin evaluacion explicita y GUARDAR en Supabase
+    // --- Paso 1: marcar como verde a todos los alumnos sin evaluacion explicita ---
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
-    if (sinEvaluar.length > 0) {
-      const nuevasEvals = { ...evaluaciones }
-      const nuevosProgress = { ...progress }
-      
-      // Guardar cada alumno sin evaluar como verde en Supabase
-      for (const s of sinEvaluar) {
-        nuevasEvals[s.id] = "green"
-        nuevosProgress[s.id] = {
-          ...(nuevosProgress[s.id] || initProgress(s.id)),
-          [ejeActual]: 100,
-        }
-        // Guardar en Supabase via handleStatusChange interno
-        try {
-          await fetch("/api/seguimiento", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              alumno_id: s.id,
-              eje: ejeActual,
-              estado: "green",
-              sala: salaActual,
-            }),
-          })
-        } catch (e) {
-          console.error("[v0] Error guardando alumno sin evaluar:", e)
-        }
+    const evaluacionesFinales = { ...evaluaciones }
+    const nuevoProgress = { ...progress }
+
+    for (const s of sinEvaluar) {
+      evaluacionesFinales[s.id] = "green"
+      // Actualizar progreso local
+      const anterior = nuevoProgress[s.id]?.[ejeDelDia as "CF" | "CT" | "O"] ?? null
+      nuevoProgress[s.id] = {
+        ...(nuevoProgress[s.id] || initProgress(s.id)),
+        [ejeDelDia]: anterior !== null ? Math.round((anterior + 100) / 2) : 100,
       }
-      setEvaluaciones(nuevasEvals)
-      setProgress(nuevosProgress)
+      // Guardar en Supabase
+      try {
+        await fetch("/api/seguimiento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alumno_id: s.id, eje: ejeDelDia, estado: "green", sala: salaActual, actividad: actividadDelDia }),
+        })
+      } catch (e) {
+        console.error("[v0] Error guardando verde:", e)
+      }
     }
 
+    setEvaluaciones(evaluacionesFinales)
+    setProgress(nuevoProgress)
+
+    // --- Paso 2: calcular stats para el registro de cierre ---
+    const statsVerdes  = Object.values(evaluacionesFinales).filter(e => e === "green").length
+    const statsAmarillos = Object.values(evaluacionesFinales).filter(e => e === "yellow").length
+    const statsRojos   = Object.values(evaluacionesFinales).filter(e => e === "red").length
+    const statsAusentes = Object.values(evaluacionesFinales).filter(e => e === "blue").length
+
+    // --- Paso 3: guardar registro de cierre ---
     try {
       const response = await fetch("/api/registro-cierre", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registro),
+        body: JSON.stringify({
+          actividadALBA: actividadDelDia,
+          actividadDocente: actividadDelDia,
+          eje: ejeDelDia,
+          sala: salaActual,
+          evaluacionGeneral: datos.evaluacion,
+          observaciones: datos.observaciones,
+          sugerenciaParaIA: datos.sugerencia,
+          stats: { green: statsVerdes, yellow: statsAmarillos, red: statsRojos, ausentes: statsAusentes },
+        }),
       })
       const data = await response.json()
+
       if (data.success) {
+        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
         setBrainKey(k => k + 1)
-        // Las evaluaciones YA estan guardadas en Supabase, no las borramos
-        // Solo limpiamos localStorage ya que Supabase es la fuente de verdad
+        
+        // --- Paso 5: limpiar evaluaciones para la nueva clase ---
+        setEvaluaciones({})
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(STORAGE_PROGRESS_KEY)
-        // Mostrar confirmacion
-        alert("Jornada finalizada! ALBA analizo el progreso y actualizo la sugerencia.")
+
+        // Mostrar toast de confirmacion
+        setJornadaToast({ tipo: "ok", mensaje: "Jornada guardada. ALBA actualizara la sugerencia para la proxima clase." })
+        setTimeout(() => setJornadaToast(null), 5000)
+      } else {
+        setJornadaToast({ tipo: "error", mensaje: "Error al guardar. Intenta de nuevo." })
+        setTimeout(() => setJornadaToast(null), 4000)
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
-      alert("Error al guardar. Intenta de nuevo.")
+      setJornadaToast({ tipo: "error", mensaje: "Error de conexion. Intenta de nuevo." })
+      setTimeout(() => setJornadaToast(null), 4000)
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
 
   // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
@@ -1132,10 +1146,11 @@ useEffect(() => {
                   evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
-                  actividadDelDia={actividadSugeridaALBA || ACTIVIDAD_DEL_DIA}
-                  evaluados={Object.keys(evaluaciones).filter(id => evaluaciones[id]).length}
+                  actividadDelDia={actividadSugeridaALBA || actividadActual}
+                  evaluados={Object.keys(evaluaciones).length}
                   totalAlumnos={students.length}
-                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green").length}
+                  // Los sin marcar se asumen logrado al finalizar, por eso se suman a verdes
+                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
                   statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
                   statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
                   statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
@@ -1149,6 +1164,22 @@ useEffect(() => {
       <footer className="py-2 px-4 text-center text-xs text-muted-foreground border-t border-border">
         ALBA · Alfabetizacion con Acompanamiento · Nivel Inicial
       </footer>
+
+      {/* Toast de confirmacion - Finalizar Jornada */}
+      {jornadaToast && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white flex items-center gap-2 transition-all ${
+            jornadaToast.tipo === "ok" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {jornadaToast.tipo === "ok" ? (
+            <Check className="w-4 h-4 shrink-0" />
+          ) : (
+            <X className="w-4 h-4 shrink-0" />
+          )}
+          {jornadaToast.mensaje}
+        </div>
+      )}
 
       {/* Modal de Configuracion de Sala - Carga masiva */}
       {showConfigSala && (
