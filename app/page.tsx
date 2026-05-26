@@ -529,7 +529,7 @@ export default function ALBADashboard() {
       setJornadaToast({ tipo: "error", mensaje: "Error de conexion. Intenta de nuevo." })
       setTimeout(() => setJornadaToast(null), 4000)
     }
-  }, [fetchHistorialMes, fetchProgreso, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
 
   // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
