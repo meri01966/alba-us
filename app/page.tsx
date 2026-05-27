@@ -358,8 +358,13 @@ export default function ALBADashboard() {
   // Toast de confirmacion al finalizar jornada (reemplaza alert)
   const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
-  // Gestion de sala
-  const [salaActual, setSalaActual] = useState("Manzanos")
+  // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
+  const [salaActual, setSalaActual] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sia-sala-activa") || "Manzanos"
+    }
+    return "Manzanos"
+  })
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showConfigSala, setShowConfigSala] = useState(false)
@@ -979,6 +984,7 @@ useEffect(() => {
                         type="button"
                         onClick={() => {
                           setSalaActual(sala)
+                          localStorage.setItem("sia-sala-activa", sala)
                           cargarEvaluacionesDeSala(sala) // Cargar evaluaciones de la nueva sala desde Supabase
                           dayPlanningRef.current?.fetchBrain()
                           setShowSalaDropdown(false)
