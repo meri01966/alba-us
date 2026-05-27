@@ -81,9 +81,9 @@ function generarAlertas(
 export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelProps) {
   const [sugerenciaAbierta, setSugerenciaAbierta] = useState<string | null>(null)
 
-  // Alertas resueltas persisten en localStorage por dia — no se pierden al limpiar evaluaciones
-  const today = new Date().toISOString().split("T")[0]
-  const STORAGE_KEY_ALERTAS = `alertas-resueltas-${today}`
+  // Alertas resueltas persisten en localStorage INDEFINIDAMENTE — no se borran hasta ser atendidas
+  // La clave NO incluye fecha para que persistan entre dias y cambios de clase
+  const STORAGE_KEY_ALERTAS = "sia-alertas-resueltas"
 
   const [alertasResueltas, setAlertasResueltas] = useState<string[]>(() => {
     if (typeof window === "undefined") return []
@@ -94,7 +94,7 @@ export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelPro
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY_ALERTAS, JSON.stringify(alertasResueltas))
     }
-  }, [alertasResueltas, STORAGE_KEY_ALERTAS])
+  }, [alertasResueltas])
   
   // Generar alertas basadas SOLO en evaluaciones reales del dia
   // Las alertas se actualizan automaticamente cuando evaluaciones cambia (incluyendo cancelaciones)

@@ -937,7 +937,7 @@ useEffect(() => {
         <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
-          alumnoNombre={student?.nombre}
+          alumnoNombre={student?.nombre || "Alumno"}
           progressData={studentProgress}
           onBack={() => {
             setSelectedStudent(null)
