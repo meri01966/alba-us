@@ -499,21 +499,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     </div>
                     <div className="text-left">
                       <span className="font-semibold text-gray-700">{eje.label}</span>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>Semana {p.semanaActual || 1}/25</span>
-                        {p.tendencia === "mejorando" && <TrendingUp className="w-3 h-3 text-green-500" />}
-                        {p.tendencia === "bajando" && <TrendingDown className="w-3 h-3 text-red-500" />}
-                        {p.tendencia === "estable" && <Minus className="w-3 h-3 text-gray-400" />}
-                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span 
-                      className="px-3 py-1 rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: nivel.color }}
-                    >
-                      {p.porcentaje}%
-                    </span>
                     {isExpanded ? (
                       <ChevronDown className="w-5 h-5 text-gray-400" />
                     ) : (
@@ -525,48 +513,37 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 {/* Contenido expandido */}
                 {isExpanded && (
                   <div className="bg-white border-t" style={{ borderColor: `${eje.color}20` }}>
-                    {/* Barra de progreso visual */}
-                    <div className="px-4 pt-4">
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>Progreso en la secuencia</span>
-                        <span>{p.semanaActual || 1} de 25 semanas</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${((p.semanaActual || 1) / 25) * 100}%`,
-                            backgroundColor: eje.color 
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Mapeo de actividades en la secuencia - TODAS las clases */}
+                    {/* Secuencia de actividades - colores segun evaluacion real de la maestra */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Secuencia completa de actividades ({secuencia.length} clases):</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase:</p>
                       <div className="flex flex-wrap gap-1">
                         {secuencia.map((act, idx) => {
                           const actividadEvaluada = (p.actividades || []).find(a => a.semana === act.semana)
-                          let bgColor = "#e2e8f0" // gris - no evaluada
+                          let bgColor = "#e2e8f0" // gris - no evaluada todavia
                           let textColor = "#64748b"
                           let isAlert = false
+                          let statusText = "Pendiente"
                           
                           if (actividadEvaluada) {
+                            // Color EXACTO segun lo que marco la maestra
                             if (actividadEvaluada.resultado === "green") {
-                              bgColor = "#10b981"
+                              bgColor = "#10b981" // verde
                               textColor = "#fff"
+                              statusText = "Logrado"
                             } else if (actividadEvaluada.resultado === "yellow") {
-                              bgColor = "#f59e0b"
+                              bgColor = "#f59e0b" // amarillo
                               textColor = "#fff"
+                              statusText = "En proceso"
+                            } else if (actividadEvaluada.resultado === "blue" || actividadEvaluada.resultado === "absent") {
+                              bgColor = "#3b82f6" // azul - ausente
+                              textColor = "#fff"
+                              statusText = "Ausente"
                             } else {
-                              bgColor = "#ef4444"
+                              bgColor = "#ef4444" // rojo
                               textColor = "#fff"
                               isAlert = true
+                              statusText = "Necesita refuerzo"
                             }
-                          } else if (idx < (p.semanaActual || 1)) {
-                            // Actividad pasada sin evaluar
-                            bgColor = "#cbd5e1"
                           }
                           
                           return (
@@ -574,7 +551,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                               key={idx}
                               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
                               style={{ backgroundColor: bgColor, color: textColor }}
-                              title={`${act.titulo}${actividadEvaluada ? ` - ${actividadEvaluada.resultado === 'green' ? 'Logrado' : actividadEvaluada.resultado === 'yellow' ? 'En proceso' : 'ALERTA: Necesita refuerzo'}` : ' - Pendiente'}`}
+                              title={`Clase ${act.semana}: ${act.titulo} - ${statusText}`}
                             >
                               {act.semana}
                               {isAlert && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
@@ -582,7 +559,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                           )
                         })}
                       </div>
-                      <div className="flex gap-3 mt-2 text-xs">
+                      <div className="flex gap-3 mt-2 text-xs flex-wrap">
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado
                         </span>
@@ -591,6 +568,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                         </span>
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente
                         </span>
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full bg-slate-300"></span> Pendiente
