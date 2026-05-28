@@ -319,7 +319,10 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         
         if (data.ok && data.progreso) {
           setProgreso(data.progreso)
-          if (data.alumno) setAlumno(data.alumno)
+          // Solo actualizar alumno si el API devuelve nombre real, sino mantener alumnoNombre del prop
+          if (data.alumno && data.alumno.nombre && data.alumno.nombre !== "Alumno") {
+            setAlumno(data.alumno)
+          }
         } else if (progressData) {
           // Usar datos del padre directamente con actividades reales
           const progresoFromParent: Record<string, ProgresoEje> = {}
