@@ -6,9 +6,14 @@ interface Student {
   apellido?: string
 }
 
+interface Actividad {
+  semana: number
+  resultado: string
+}
+
 interface SalaMapProps {
   students: Student[]
-  progress: Record<string, { CF: number | null; CT: number | null; O: number | null }>
+  progress: Record<string, Record<string, { porcentaje: number; actividades: Actividad[] }>>
   evaluaciones?: Record<string, string>
   onStudentClick: (id: string) => void
 }
@@ -20,17 +25,22 @@ const EJES = [
 ]
 
 const ZONAS = [
-  { key: "verde",    label: "Logrado",    bg: "#16a34a", min: 70  },
-  { key: "amarillo", label: "En proceso", bg: "#ca8a04", min: 40  },
-  { key: "rojo",     label: "Refuerzo",   bg: "#dc2626", min: 0   },
-  { key: "azul",     label: "Sin datos",  bg: "#2563eb", min: null },
+  { key: "verde",    label: "Logrado",    bg: "#16a34a" },
+  { key: "amarillo", label: "En proceso", bg: "#ca8a04" },
+  { key: "rojo",     label: "Refuerzo",   bg: "#dc2626" },
+  { key: "azul",     label: "Ausente/Sin datos",  bg: "#2563eb" },
 ] as const
 
-function zona(val: number | null): string {
-  if (val === null) return "azul"
-  if (val >= 70) return "verde"
-  if (val >= 40) return "amarillo"
-  return "rojo"
+// Obtener la ultima evaluacion de un alumno en un eje
+function getUltimaEvaluacion(actividades: Actividad[] | undefined): string {
+  if (!actividades || actividades.length === 0) return "verde" // Default = verde (asimilado)
+  const ultima = actividades[actividades.length - 1]
+  // Mapear el resultado a la zona
+  if (ultima.resultado === "green") return "verde"
+  if (ultima.resultado === "yellow") return "amarillo"
+  if (ultima.resultado === "red") return "rojo"
+  if (ultima.resultado === "blue") return "azul"
+  return "verde" // Default
 }
 
 export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
@@ -38,24 +48,25 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
     <div className="p-3 h-full flex flex-col gap-3">
       <div>
         <h2 className="text-sm font-bold text-slate-800">Mapa de Progreso</h2>
-        <p className="text-xs text-slate-400">Promedio acumulado por eje — clase a clase</p>
+        <p className="text-xs text-slate-400">Estado de cada alumno segun ultima evaluacion por eje</p>
       </div>
 
       {/* 3 torres */}
       <div className="flex gap-2 flex-1 min-h-0">
         {EJES.map(({ key, label }) => {
-          const grupos: Record<string, { id: string; nombre: string; val: number | null }[]> = {
+          const grupos: Record<string, { id: string; nombre: string }[]> = {
             verde: [], amarillo: [], rojo: [], azul: [],
           }
           for (const s of students) {
-            const val = progress[s.id]?.[key] ?? null
-            grupos[zona(val)].push({ id: s.id, nombre: s.nombre, val })
+            const ejeData = progress[s.id]?.[key]
+            const zona = getUltimaEvaluacion(ejeData?.actividades)
+            grupos[zona].push({ id: s.id, nombre: s.nombre })
           }
 
           return (
             <div key={key} className="flex-1 flex flex-col rounded-xl overflow-hidden border border-slate-200">
 
-              {/* Titulo de la torre — sin color */}
+              {/* Titulo de la torre */}
               <div className="bg-white px-2 py-2 border-b border-slate-200 text-center">
                 <p className="text-xs font-bold text-slate-800">{key}</p>
                 <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{label}</p>
@@ -72,19 +83,16 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
                       className="px-2 py-2 flex-shrink-0"
                       style={{ backgroundColor: bg }}
                     >
-                      {/* Etiqueta de zona muy pequeña */}
                       <p className="text-[9px] font-bold uppercase tracking-widest text-white/60 mb-1">
                         {zlabel}
                       </p>
-                      {/* Nombres de alumnos */}
                       <div className="flex flex-wrap gap-1">
-                        {lista.map(({ id, nombre, val }) => (
+                        {lista.map(({ id, nombre }) => (
                           <button
                             key={id}
                             type="button"
                             onClick={() => onStudentClick(id)}
                             className="text-black font-semibold text-[13px] bg-white/30 hover:bg-white/50 rounded px-1.5 py-0.5 transition-colors leading-tight"
-                            title={val !== null ? `${nombre} — ${val}%` : nombre}
                           >
                             {nombre.split(" ")[0]}
                           </button>
@@ -94,9 +102,9 @@ export default function SalaMap({ students, progress, onStudentClick }: SalaMapP
                   )
                 })}
 
-                {/* Si todos sin datos: mostrar zona azul vacía */}
-                {students.length > 0 && Object.values(grupos).every(g => g.length === 0) && (
-                  <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#2563eb" }}>
+                {/* Si no hay evaluaciones: todos en verde por default */}
+                {students.length > 0 && grupos.verde.length === 0 && grupos.amarillo.length === 0 && grupos.rojo.length === 0 && grupos.azul.length === 0 && (
+                  <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#16a34a" }}>
                     <p className="text-[10px] text-white/50">Sin evaluaciones</p>
                   </div>
                 )}
