@@ -285,10 +285,11 @@ export async function GET(req: Request) {
 
     if (!alumnos || alumnos.length === 0) {
       // Sin alumnos: rotar CF → O → CT igual que con alumnos
-      const { data: cierresData } = await supabase
+      const { data: cierresData, error: cierresErr } = await supabase
         .from("registro_cierre")
         .select("id,eje")
         .eq("sala", sala)
+      console.log("[v0] FALLBACK cierres query - sala:", sala, "found:", cierresData?.length || 0, "error:", cierresErr?.message || "none")
       const cierresTodos = cierresData || []
       const cierresCF = cierresTodos.filter((c: { eje: string }) => c.eje === "CF").length
       const cierresCT = cierresTodos.filter((c: { eje: string }) => c.eje === "CT").length
@@ -304,6 +305,7 @@ export async function GET(req: Request) {
         : SECUENCIA[ejeElegido]
       const cierresDeEje = ejeElegido === "CF" ? cierresCF : ejeElegido === "CT" ? cierresCT : cierresO
       const indiceActividad = cierresDeEje % secuenciaEje.length
+      console.log("[v0] FALLBACK rotacion - totalCierres:", totalCierres, "ejeElegido:", ejeElegido, "cierresDeEje:", cierresDeEje, "indice:", indiceActividad)
       const actividadInicial = secuenciaEje[indiceActividad]
 
       return NextResponse.json({
