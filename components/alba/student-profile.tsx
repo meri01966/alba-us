@@ -516,9 +516,11 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     {/* Secuencia de actividades - colores segun evaluacion real de la maestra */}
                     <div className="px-4 py-3">
                       <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase:</p>
+                      {console.log("[v0] progreso eje", eje.key, "actividades:", p.actividades)}
                       <div className="flex flex-wrap gap-1">
                         {secuencia.map((act, idx) => {
                           const actividadEvaluada = (p.actividades || []).find(a => a.semana === act.semana)
+                          console.log("[v0] clase", act.semana, "evaluada:", actividadEvaluada)
                           let bgColor = "#e2e8f0" // gris - no evaluada todavia
                           let textColor = "#64748b"
                           let isAlert = false
