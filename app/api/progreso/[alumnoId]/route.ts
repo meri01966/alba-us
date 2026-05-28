@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -96,12 +96,12 @@ export async function GET(
       console.error("[v0] Error fetching alumno:", alumnoError)
     }
 
-    // Buscar todas las evaluaciones del alumno
+    // Buscar todas las evaluaciones del alumno - usa campo "estado" no "resultado"
     const { data: evaluaciones, error: evalError } = await supabase
       .from("seguimiento")
       .select("*")
       .eq("alumno_id", alumnoId)
-      .order("fecha", { ascending: false })
+      .order("created_at", { ascending: true })
 
     if (evalError) {
       console.error("[v0] Error fetching evaluaciones:", evalError)
@@ -124,9 +124,9 @@ export async function GET(
 
       evaluacionesPorEje[eje].push({
         semana: contadorSemana[eje]++,
-        titulo: ev.actividad || `Actividad ${contadorSemana[eje]}`,
-        fecha: new Date(ev.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
-        resultado: ev.resultado as "green" | "yellow" | "red",
+        titulo: ev.actividad || `Clase ${contadorSemana[eje]}`,
+        fecha: ev.created_at ? new Date(ev.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }) : "",
+        resultado: ev.estado as "green" | "yellow" | "red",  // USAR estado, NO resultado
         actividad: ev.actividad || "",
       })
     })
