@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 interface StudentProfileProps {
   alumnoId: string
   alumnoNombre?: string
-  progressData?: { CF: number | null; CT: number | null; O: number | null }
+  progressData?: Record<string, { porcentaje: number; actividades: Array<{ semana: number; resultado: string }> }>
   onBack: () => void
 }
 
@@ -321,22 +321,48 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
           setProgreso(data.progreso)
           if (data.alumno) setAlumno(data.alumno)
         } else if (progressData) {
-          // Fallback a datos del padre si API falla — solo ejes con datos reales (no null)
-          setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-          })
+          // Usar datos del padre directamente con actividades reales
+          const progresoFromParent: Record<string, ProgresoEje> = {}
+          for (const eje of ["CF", "CT", "O"]) {
+            const ejeData = progressData[eje]
+            progresoFromParent[eje] = {
+              logradas: [],
+              porcentaje: ejeData?.porcentaje ?? 0,
+              actividades: (ejeData?.actividades || []).map((a, idx) => ({
+                semana: a.semana || idx + 1,
+                titulo: "",
+                fecha: "",
+                resultado: a.resultado as "green" | "yellow" | "red",
+                promedio: 0
+              })),
+              tendencia: "estable",
+              semanaActual: (ejeData?.actividades?.length || 0) + 1
+            }
+          }
+          setProgreso(progresoFromParent)
         }
       } catch (err) {
         console.error("Error fetching student profile:", err)
         // Fallback
         if (progressData) {
-          setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O ?? 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-          })
+          const progresoFromParent: Record<string, ProgresoEje> = {}
+          for (const eje of ["CF", "CT", "O"]) {
+            const ejeData = progressData[eje]
+            progresoFromParent[eje] = {
+              logradas: [],
+              porcentaje: ejeData?.porcentaje ?? 0,
+              actividades: (ejeData?.actividades || []).map((a, idx) => ({
+                semana: a.semana || idx + 1,
+                titulo: "",
+                fecha: "",
+                resultado: a.resultado as "green" | "yellow" | "red",
+                promedio: 0
+              })),
+              tendencia: "estable",
+              semanaActual: (ejeData?.actividades?.length || 0) + 1
+            }
+          }
+          setProgreso(progresoFromParent)
         }
       } finally {
         setLoading(false)
@@ -513,53 +539,51 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 {/* Contenido expandido */}
                 {isExpanded && (
                   <div className="bg-white border-t" style={{ borderColor: `${eje.color}20` }}>
-                    {/* Secuencia de actividades - colores segun evaluacion real de la maestra */}
+                    {/* Evaluaciones REALES de la maestra */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase:</p>
-                      {console.log("[v0] progreso eje", eje.key, "actividades:", p.actividades)}
+                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({(p.actividades || []).length} clases evaluadas):</p>
                       <div className="flex flex-wrap gap-1">
-                        {secuencia.map((act, idx) => {
-                          const actividadEvaluada = (p.actividades || []).find(a => a.semana === act.semana)
-                          console.log("[v0] clase", act.semana, "evaluada:", actividadEvaluada)
-                          let bgColor = "#e2e8f0" // gris - no evaluada todavia
-                          let textColor = "#64748b"
-                          let isAlert = false
-                          let statusText = "Pendiente"
-                          
-                          if (actividadEvaluada) {
-                            // Color EXACTO segun lo que marco la maestra
-                            if (actividadEvaluada.resultado === "green") {
-                              bgColor = "#10b981" // verde
+                        {(p.actividades || []).length > 0 ? (
+                          (p.actividades || []).map((act, idx) => {
+                            let bgColor = "#e2e8f0"
+                            let textColor = "#64748b"
+                            let isAlert = false
+                            let statusText = "Pendiente"
+                            
+                            if (act.resultado === "green") {
+                              bgColor = "#10b981"
                               textColor = "#fff"
                               statusText = "Logrado"
-                            } else if (actividadEvaluada.resultado === "yellow") {
-                              bgColor = "#f59e0b" // amarillo
+                            } else if (act.resultado === "yellow") {
+                              bgColor = "#f59e0b"
                               textColor = "#fff"
                               statusText = "En proceso"
-                            } else if (actividadEvaluada.resultado === "blue" || actividadEvaluada.resultado === "absent") {
-                              bgColor = "#3b82f6" // azul - ausente
+                            } else if (act.resultado === "blue") {
+                              bgColor = "#3b82f6"
                               textColor = "#fff"
                               statusText = "Ausente"
-                            } else {
-                              bgColor = "#ef4444" // rojo
+                            } else if (act.resultado === "red") {
+                              bgColor = "#ef4444"
                               textColor = "#fff"
                               isAlert = true
                               statusText = "Necesita refuerzo"
                             }
-                          }
-                          
-                          return (
-                            <div
-                              key={idx}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
-                              style={{ backgroundColor: bgColor, color: textColor }}
-                              title={`Clase ${act.semana}: ${act.titulo} - ${statusText}`}
-                            >
-                              {act.semana}
-                              {isAlert && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
-                            </div>
-                          )
-                        })}
+                            
+                            return (
+                              <div
+                                key={idx}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
+                                style={{ backgroundColor: bgColor, color: textColor }}
+                                title={`Clase ${idx + 1} - ${statusText}`}
+                              >
+                                {idx + 1}
+                                {isAlert && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Sin evaluaciones todavia en este eje</span>
+                        )}
                       </div>
                       <div className="flex gap-3 mt-2 text-xs flex-wrap">
                         <span className="flex items-center gap-1">
@@ -573,9 +597,6 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                         </span>
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-slate-300"></span> Pendiente
                         </span>
                       </div>
                     </div>
