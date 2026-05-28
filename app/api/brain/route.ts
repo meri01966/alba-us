@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -309,8 +309,6 @@ export async function GET(req: Request) {
       const actividadInicial = secuenciaEje[indiceActividad]
 
       return NextResponse.json({
-        _v: "2026-05-28-002",
-        _debug: { alumnosFound: alumnos?.length || 0, alumnosError: alumnosError?.message || null, cierresFound: cierresTodos.length, cierresErr: cierresErr?.message || null, sala },
         sugerencia: {
           eje: ejeElegido,
           actividad: actividadInicial.titulo,
