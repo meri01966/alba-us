@@ -492,14 +492,15 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       </div>
                     </div>
 
-                    {/* Mapeo de actividades en la secuencia */}
+                    {/* Mapeo de actividades en la secuencia - TODAS las clases */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Secuencia de actividades:</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Secuencia completa de actividades ({secuencia.length} clases):</p>
                       <div className="flex flex-wrap gap-1">
-                        {secuencia.slice(0, 12).map((act, idx) => {
+                        {secuencia.map((act, idx) => {
                           const actividadEvaluada = (p.actividades || []).find(a => a.semana === act.semana)
                           let bgColor = "#e2e8f0" // gris - no evaluada
                           let textColor = "#64748b"
+                          let isAlert = false
                           
                           if (actividadEvaluada) {
                             if (actividadEvaluada.resultado === "green") {
@@ -511,6 +512,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                             } else {
                               bgColor = "#ef4444"
                               textColor = "#fff"
+                              isAlert = true
                             }
                           } else if (idx < (p.semanaActual || 1)) {
                             // Actividad pasada sin evaluar
@@ -520,17 +522,15 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                           return (
                             <div
                               key={idx}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
                               style={{ backgroundColor: bgColor, color: textColor }}
-                              title={act.titulo}
+                              title={`${act.titulo}${actividadEvaluada ? ` - ${actividadEvaluada.resultado === 'green' ? 'Logrado' : actividadEvaluada.resultado === 'yellow' ? 'En proceso' : 'ALERTA: Necesita refuerzo'}` : ' - Pendiente'}`}
                             >
                               {act.semana}
+                              {isAlert && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
                             </div>
                           )
                         })}
-                        {secuencia.length > 12 && (
-                          <span className="text-xs text-gray-400 self-center ml-1">+{secuencia.length - 12} mas</span>
-                        )}
                       </div>
                       <div className="flex gap-3 mt-2 text-xs">
                         <span className="flex items-center gap-1">
@@ -548,12 +548,27 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       </div>
                     </div>
 
-                    {/* Sugerencia */}
+                    {/* Sugerencia segun nivel */}
                     <div className="px-4 pb-4">
+                      {/* Alerta si esta en rojo */}
+                      {nivel.texto === "Necesita Apoyo" && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 mb-3">
+                          <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-red-700">ALERTA PEDAGOGICA</p>
+                            <p className="text-sm text-red-600 mt-0.5">Este alumno requiere atencion prioritaria en {eje.label}. Se recomienda refuerzo individual.</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Sugerencia normal */}
                       <div className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: eje.bgColor }}>
                         <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" style={{ color: eje.color }} />
                         <div>
-                          <p className="text-xs font-medium" style={{ color: eje.color }}>Recomendacion:</p>
+                          <p className="text-xs font-medium" style={{ color: eje.color }}>
+                            {nivel.texto === "Necesita Apoyo" ? "Estrategia de refuerzo:" : nivel.texto === "Avanzado" ? "Para seguir avanzando:" : "Recomendacion:"}
+                          </p>
                           <p className="text-sm text-gray-600 mt-0.5">{sugerencia}</p>
                         </div>
                       </div>
