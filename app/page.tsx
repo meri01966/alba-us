@@ -351,6 +351,7 @@ export default function ALBADashboard() {
   }
 
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  const [selectedStudentName, setSelectedStudentName] = useState<string>("")
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
@@ -927,7 +928,9 @@ useEffect(() => {
           progress={progress}
           evaluaciones={evaluaciones}
           onStudentClick={(id) => {
+            const student = students.find(s => s.id === id)
             setSelectedStudent(id)
+            setSelectedStudentName(student?.nombre || "")
             setActiveView("perfil")
           }}
         />
@@ -952,7 +955,7 @@ useEffect(() => {
         <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
-          alumnoNombre={student?.nombre || "Alumno"}
+          alumnoNombre={selectedStudentName || student?.nombre || "Alumno"}
           progressData={studentProgress}
           onBack={() => {
             setSelectedStudent(null)
