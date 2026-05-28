@@ -594,23 +594,38 @@ export default function ALBADashboard() {
         
         const { data: seguimientos } = await supabase
           .from('seguimiento')
-          .select('alumno_id, eje, estado')
+          .select('alumno_id, eje, estado, created_at')
           .in('alumno_id', ids)
+          .order('created_at', { ascending: true })
         
         if (seguimientos && seguimientos.length > 0) {
-          // Agrupar por alumno+eje y calcular promedio acumulado
-          const agrupado: Record<string, Record<string, number[]>> = {}
+          // Agrupar por alumno+eje con actividades individuales
+          const agrupado: Record<string, Record<string, Array<{ semana: number; resultado: string }>>> = {}
+          const contadores: Record<string, Record<string, number>> = {}
+          
           for (const row of seguimientos) {
             if (!agrupado[row.alumno_id]) agrupado[row.alumno_id] = {}
             if (!agrupado[row.alumno_id][row.eje]) agrupado[row.alumno_id][row.eje] = []
-            agrupado[row.alumno_id][row.eje].push(STATUS_TO_VAL[row.estado] ?? 0)
+            if (!contadores[row.alumno_id]) contadores[row.alumno_id] = {}
+            if (!contadores[row.alumno_id][row.eje]) contadores[row.alumno_id][row.eje] = 0
+            
+            contadores[row.alumno_id][row.eje]++
+            agrupado[row.alumno_id][row.eje].push({
+              semana: contadores[row.alumno_id][row.eje],
+              resultado: row.estado // green, yellow, red, blue
+            })
           }
-          const progresoCalculado: Record<string, { CF: number | null; CT: number | null; O: number | null }> = {}
+          
+          const progresoCalculado: Record<string, Record<string, { porcentaje: number; actividades: Array<{ semana: number; resultado: string }> }>> = {}
           for (const [alumnoId, ejes] of Object.entries(agrupado)) {
-            progresoCalculado[alumnoId] = {
-              CF: ejes.CF ? Math.round(ejes.CF.reduce((a, b) => a + b, 0) / ejes.CF.length) : null,
-              CT: ejes.CT ? Math.round(ejes.CT.reduce((a, b) => a + b, 0) / ejes.CT.length) : null,
-              O:  ejes.O  ? Math.round(ejes.O.reduce((a, b) => a + b, 0)  / ejes.O.length)  : null,
+            progresoCalculado[alumnoId] = {}
+            for (const [eje, actividades] of Object.entries(ejes)) {
+              const valores = actividades.map(a => STATUS_TO_VAL[a.resultado] ?? 0)
+              const promedio = valores.length > 0 ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length) : 0
+              progresoCalculado[alumnoId][eje] = {
+                porcentaje: promedio,
+                actividades: actividades
+              }
             }
           }
           setProgress(progresoCalculado)
@@ -930,7 +945,7 @@ useEffect(() => {
 
   if (activeView === "perfil" && selectedStudent) {
     const student = students.find(s => s.id === selectedStudent)
-    const studentProgress = progress[selectedStudent] || { CF: null, CT: null, O: null }
+    const studentProgress = progress[selectedStudent] || {}
     
     return (
       <div className="min-h-screen bg-background">
