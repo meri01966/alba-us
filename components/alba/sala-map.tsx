@@ -33,14 +33,14 @@ const ZONAS = [
 
 // Obtener la ultima evaluacion de un alumno en un eje
 function getUltimaEvaluacion(actividades: Actividad[] | undefined): string {
-  if (!actividades || actividades.length === 0) return "verde" // Default = verde (asimilado)
+  if (!actividades || actividades.length === 0) return "azul" // Sin evaluaciones = azul
   const ultima = actividades[actividades.length - 1]
   // Mapear el resultado a la zona
   if (ultima.resultado === "green") return "verde"
   if (ultima.resultado === "yellow") return "amarillo"
   if (ultima.resultado === "red") return "rojo"
   if (ultima.resultado === "blue") return "azul"
-  return "verde" // Default
+  return "verde" // Default para resultados desconocidos
 }
 
 export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
