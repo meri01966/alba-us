@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  return createClient(SUPABASE_URL, SUPABASE_KEY)
 }
 
 // Tipo de micro-capacitacion
@@ -108,7 +108,7 @@ const MICRO_CAPS: Record<string, MicroCap> = {
   "Adicion de fonemas": { titulo: "Agregar sonidos para crear palabras nuevas", contenido: "Los ninos agregan un fonema al inicio o al final de palabras cortas para crear palabras nuevas.", tips: ["Use letras moviles para visualizar el agregado", "Priorice la adicion al final por ser mas sencilla", "No importa si la palabra creada no existe: el proceso es el objetivo"] },
   "Manipulacion avanzada": { titulo: "Desafio fonologico en equipos", contenido: "La docente da operaciones con fonemas en serie. Los ninos en equipos descifran la palabra resultante.", tips: ["Esta actividad es para ninos con solido dominio de las anteriores", "Trabaje en equipos para que los ninos se apoyen", "Si hay ninos sin dominio basico, asigneles operaciones mas simples"] },
   "Evaluacion CF": { titulo: "Estaciones de evaluacion de CF", contenido: "Cuatro estaciones: rimas, segmentacion silabica, sonido inicial, manipulacion. La docente rota registrando individualmente con rubrica.", tips: ["Prepare la rubrica antes: que espera ver en cada nino segun el nivel", "Asigne actividad autonoma en cada estacion", "Use esta informacion para planificar las proximas actividades con ALBA"] },
-  // ── COMPRENSION TEXTUAL ───────────────────────���������──────────────────────────
+  // ── COMPRENSION TEXTUAL ───────────────────────�����������──────────────────────────
   "Exploracion del libro": { titulo: "Antes de abrir el libro", contenido: "Presente el libro CERRADO 2 minutos. Los ninos observan la tapa y responden en ronda. Registre TODAS las hipotesis en el pizarron sin juzgar ninguna.", tips: ["No abra el libro hasta que todos hayan hablado: la anticipacion construye comprension", "Pida que justifiquen: como lo sabes? que te hizo pensar eso?", "Vuelva a estas hipotesis al terminar la lectura"], cancion: "Cancion sugerida: El libro me habla desde la portada, con colores e imagenes y una historia guardada. Antes de abrirlo yo ya imagino que pasara adentro en este camino.", poesia: "Poesia sugerida: La tapa del cuento me guina el ojo, me dice que adentro hay un mundo de antojo. Miro el titulo, miro el autor, y ya mi cabeza empieza a sonar." },
   "Antes de leer: Predicciones": { titulo: "Predicciones con post-its antes de leer", contenido: "Cada nino dice su prediccion. Escriba o dibuje en post-it y peguelo en el pizarron. Al finalizar vuelvan: acertada, parcialmente acertada, o no acertada.", tips: ["Modele la estructura: Yo creo que... porque en la tapa veo...", "Acepte TODAS las predicciones sin evaluarlas antes de leer", "El momento de verificar es tan importante como el momento de predecir"] },
   "Lectura dialogica: Pausas": { titulo: "Pausas estrategicas con el titere preguntador", contenido: "Lea en voz alta con pausas planificadas. El titere hace una pregunta en cada pausa. Los ninos responden y luego continuan para verificar.", tips: ["Planifique las pausas antes de la clase: marque donde se detendra", "Las mejores pausas son antes de un momento clave o despues de una sorpresa", "Si los ninos responden con una sola palabra, amplie la respuesta"] },
