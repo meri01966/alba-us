@@ -309,7 +309,8 @@ export async function GET(req: Request) {
       const actividadInicial = secuenciaEje[indiceActividad]
 
       return NextResponse.json({
-        _v: "2026-05-28-001",
+        _v: "2026-05-28-002",
+        _debug: { alumnosFound: alumnos?.length || 0, alumnosError: alumnosError?.message || null, cierresFound: cierresTodos.length, cierresErr: cierresErr?.message || null, sala },
         sugerencia: {
           eje: ejeElegido,
           actividad: actividadInicial.titulo,
