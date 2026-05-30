@@ -639,12 +639,33 @@ export default function ALBADashboard() {
           }
           setProgress(progresoCalculado)
           
-          // Generar alertas pedagogicas para alumnos con evaluaciones en rojo
+          // ALBA INTELIGENTE: Generar alertas pedagogicas con analisis de patrones
           const nuevasAlertas: AlertaPedagogica[] = []
-          const SUGERENCIAS_ALERTA: Record<string, string> = {
-            CF: "Reforzar con juegos de rimas y segmentacion silabica. Practicar reconocimiento de sonidos iniciales con material concreto.",
-            CT: "Retomar lectura dialogica con cuentos cortos. Usar preguntas literales antes de avanzar a inferenciales.",
-            O: "Practicar escucha activa con instrucciones simples. Ampliar vocabulario con objetos concretos del entorno."
+          
+          // Sugerencias especificas por eje y tipo de problema
+          const SUGERENCIAS_ALBA: Record<string, Record<string, string>> = {
+            CF: {
+              persistente: "Este alumno necesita intervencion individual en conciencia fonologica. Sugerencia: 5 minutos diarios de juegos de rimas con su nombre y palabras familiares. Usar material concreto (fichas, cubos) para representar sonidos.",
+              descendente: "Se detecta una tendencia a la baja. Antes de que empeore, reforzar con actividades de discriminacion auditiva: sonidos del entorno, juegos de escucha activa. Volver a silabas antes de fonemas.",
+              preventiva: "Atencion: 2 amarillos seguidos. Para evitar que pase a rojo, dedicar tiempo extra en la proxima clase con actividades de palmeo silabico y reconocimiento de vocales."
+            },
+            CT: {
+              persistente: "Dificultad sostenida en comprension. Sugerencia: lectura dialogica 1 a 1 con cuentos muy cortos (3-4 paginas). Hacer pausas frecuentes con preguntas literales simples (quien, donde). No avanzar a inferencias hasta consolidar lo literal.",
+              descendente: "La comprension esta bajando. Revisar si el nivel de los textos es adecuado. Volver a cuentos con mas imagenes y menos texto. Reforzar vocabulario en contexto antes de cada lectura.",
+              preventiva: "Posible dificultad emergente. Antes de la proxima lectura, activar conocimientos previos con la portada. Hacer predicciones. Verificar comprension con recontar la historia usando imagenes."
+            },
+            O: {
+              persistente: "Dificultad persistente en oralidad. Sugerencia: crear oportunidades de habla en contextos seguros. Empezar con respuestas de una palabra, luego frases, luego oraciones. No corregir pronunciacion frente al grupo.",
+              descendente: "La participacion oral esta disminuyendo. Verificar si hay factores emocionales. Ofrecer opciones de respuesta (esto o esto?) antes de preguntas abiertas. Celebrar cada intento de participacion.",
+              preventiva: "Se nota menor participacion. Incluir al alumno en actividades de coro y respuestas grupales para que gane confianza antes de participar individualmente."
+            }
+          }
+          
+          // Analisis grupal para detectar patrones de sala
+          const analisisGrupal: Record<string, { rojos: number; amarillos: number; verdes: number; total: number }> = {
+            CF: { rojos: 0, amarillos: 0, verdes: 0, total: 0 },
+            CT: { rojos: 0, amarillos: 0, verdes: 0, total: 0 },
+            O: { rojos: 0, amarillos: 0, verdes: 0, total: 0 }
           }
           
           for (const [alumnoId, ejes] of Object.entries(progresoCalculado)) {
@@ -652,28 +673,96 @@ export default function ALBADashboard() {
             if (!alumno) continue
             
             for (const [eje, data] of Object.entries(ejes)) {
-              // Contar rojos recientes (ultimas 3 evaluaciones)
-              const ultimasEvals = data.actividades.slice(-3)
-              const rojosRecientes = ultimasEvals.filter(a => a.resultado === "red").length
+              const actividades = data.actividades || []
+              if (actividades.length === 0) continue
               
-              if (rojosRecientes >= 2) {
-                // Verificar si ya existe alerta para este alumno/eje
-                const alertaExistente = alertasPedagogicas.find(
-                  a => a.alumnoId === alumnoId && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
-                )
-                
-                if (!alertaExistente) {
+              // Contar para analisis grupal (ultima evaluacion de cada alumno)
+              const ultimaEval = actividades[actividades.length - 1]?.resultado
+              if (ultimaEval === "red") analisisGrupal[eje].rojos++
+              else if (ultimaEval === "yellow") analisisGrupal[eje].amarillos++
+              else if (ultimaEval === "green") analisisGrupal[eje].verdes++
+              analisisGrupal[eje].total++
+              
+              // Analisis individual inteligente
+              const ultimasEvals = actividades.slice(-4)
+              const rojosRecientes = ultimasEvals.filter(a => a.resultado === "red").length
+              const amarillosRecientes = ultimasEvals.filter(a => a.resultado === "yellow").length
+              
+              // Verificar si ya existe alerta para este alumno/eje
+              const alertaExistente = alertasPedagogicas.find(
+                a => a.alumnoId === alumnoId && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
+              )
+              if (alertaExistente) continue
+              
+              const ejeNombre = eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"
+              
+              // ALERTA TIPO 1: Persistencia en rojo (3+ rojos)
+              if (rojosRecientes >= 3) {
+                nuevasAlertas.push({
+                  id: `${alumnoId}-${eje}-persistente-${Date.now()}`,
+                  alumnoId,
+                  alumnoNombre: alumno.nombre,
+                  eje: eje as "CF" | "CT" | "O",
+                  mensaje: `URGENTE: ${alumno.nombre} lleva ${rojosRecientes} clases en rojo en ${ejeNombre}. Requiere intervencion inmediata.`,
+                  sugerencia: SUGERENCIAS_ALBA[eje]?.persistente || "Revisar estrategia pedagogica individual.",
+                  fecha: new Date().toLocaleDateString("es-AR"),
+                  atendida: false
+                })
+              }
+              // ALERTA TIPO 2: Tendencia descendente (paso de verde/amarillo a rojo)
+              else if (actividades.length >= 3) {
+                const penultima = actividades[actividades.length - 2]?.resultado
+                const ultima = actividades[actividades.length - 1]?.resultado
+                if ((penultima === "green" || penultima === "yellow") && ultima === "red") {
                   nuevasAlertas.push({
-                    id: `${alumnoId}-${eje}-${Date.now()}`,
+                    id: `${alumnoId}-${eje}-descendente-${Date.now()}`,
                     alumnoId,
                     alumnoNombre: alumno.nombre,
                     eje: eje as "CF" | "CT" | "O",
-                    mensaje: `${alumno.nombre} tiene ${rojosRecientes} evaluaciones en rojo en las ultimas 3 clases de ${eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"}.`,
-                    sugerencia: SUGERENCIAS_ALERTA[eje] || "Revisar el progreso del alumno y ajustar la estrategia pedagogica.",
+                    mensaje: `${alumno.nombre} bajo de ${penultima === "green" ? "logrado" : "en proceso"} a necesita refuerzo en ${ejeNombre}.`,
+                    sugerencia: SUGERENCIAS_ALBA[eje]?.descendente || "Ajustar nivel de actividades.",
                     fecha: new Date().toLocaleDateString("es-AR"),
                     atendida: false
                   })
                 }
+              }
+              // ALERTA TIPO 3: Preventiva (2 amarillos seguidos)
+              else if (amarillosRecientes >= 2 && rojosRecientes === 0) {
+                const ultimas2 = actividades.slice(-2)
+                if (ultimas2.every(a => a.resultado === "yellow")) {
+                  nuevasAlertas.push({
+                    id: `${alumnoId}-${eje}-preventiva-${Date.now()}`,
+                    alumnoId,
+                    alumnoNombre: alumno.nombre,
+                    eje: eje as "CF" | "CT" | "O",
+                    mensaje: `PREVENTIVA: ${alumno.nombre} tiene 2 clases seguidas en proceso en ${ejeNombre}. Actuar antes de que baje.`,
+                    sugerencia: SUGERENCIAS_ALBA[eje]?.preventiva || "Reforzar antes de que baje a rojo.",
+                    fecha: new Date().toLocaleDateString("es-AR"),
+                    atendida: false
+                  })
+                }
+              }
+            }
+          }
+          
+          // ALERTA GRUPAL: Si mas del 40% de la sala esta en rojo en un eje
+          for (const [eje, stats] of Object.entries(analisisGrupal)) {
+            if (stats.total >= 3 && stats.rojos / stats.total >= 0.4) {
+              const ejeNombre = eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"
+              const alertaGrupalExiste = alertasPedagogicas.find(
+                a => a.alumnoId === "GRUPAL" && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
+              )
+              if (!alertaGrupalExiste) {
+                nuevasAlertas.push({
+                  id: `GRUPAL-${eje}-${Date.now()}`,
+                  alumnoId: "GRUPAL",
+                  alumnoNombre: "ALERTA GRUPAL",
+                  eje: eje as "CF" | "CT" | "O",
+                  mensaje: `${Math.round(stats.rojos / stats.total * 100)}% de la sala (${stats.rojos} de ${stats.total} alumnos) necesita refuerzo en ${ejeNombre}. Revisar estrategia grupal.`,
+                  sugerencia: `Considerar: 1) Bajar el nivel de dificultad de las actividades de ${ejeNombre}. 2) Dividir el grupo para atencion diferenciada. 3) Repetir actividades anteriores que funcionaron bien.`,
+                  fecha: new Date().toLocaleDateString("es-AR"),
+                  atendida: false
+                })
               }
             }
           }
