@@ -1137,7 +1137,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
@@ -1577,6 +1577,15 @@ useEffect(() => {
 
       {/* Planificacion Modal */}
       <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+      
+      {/* Alertas Pedagogicas Modal */}
+      {showAlertas && (
+        <AlertasPedagogicas 
+          alertas={alertasPedagogicas} 
+          onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+          onClose={() => setShowAlertas(false)} 
+        />
+      )}
     </div>
   )
 }
