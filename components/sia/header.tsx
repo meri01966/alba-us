@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight, NotebookPen } from "lucide-react"
+import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight, NotebookPen, AlertTriangle } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
@@ -19,6 +19,8 @@ interface HeaderProps {
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
   onPlanificacion?: () => void
+  onAlertas?: () => void
+  alertasPendientes?: number
   salaActual?: string
   historialMes?: DiaActividad[]
 }
@@ -33,7 +35,7 @@ const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> =
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, onAlertas, alertasPendientes = 0, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [mesActual, setMesActual] = useState(new Date().getMonth())
   const [anioActual, setAnioActual] = useState(new Date().getFullYear())
@@ -197,6 +199,23 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanifi
 
           {/* Meta info */}
           <div className="flex items-center gap-3 sm:gap-4 text-sm">
+            {/* Boton Alertas Pedagogicas */}
+            {onAlertas && (
+              <button
+                onClick={onAlertas}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105 relative"
+                style={{ backgroundColor: alertasPendientes > 0 ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.15)", border: alertasPendientes > 0 ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.3)", color: alertasPendientes > 0 ? "#ef4444" : "rgba(255,255,255,0.9)" }}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Alertas</span>
+                {alertasPendientes > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {alertasPendientes}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Boton Sintesis Pedagogica */}
             {onSintesis && (
               <button

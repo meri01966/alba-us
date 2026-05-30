@@ -13,6 +13,7 @@ import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
 import { PlanificacionModal } from "@/components/alba/planificacion-modal"
+import { AlertasPedagogicas, type AlertaPedagogica } from "@/components/alba/alertas-pedagogicas"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 type StatusLevel = "green" | "yellow" | "red" | "blue"
@@ -354,6 +355,8 @@ export default function ALBADashboard() {
   const [selectedStudentName, setSelectedStudentName] = useState<string>("")
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
+  const [showAlertas, setShowAlertas] = useState(false)
+  const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
   const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
   // Toast de confirmacion al finalizar jornada (reemplaza alert)
@@ -630,6 +633,49 @@ export default function ALBADashboard() {
             }
           }
           setProgress(progresoCalculado)
+          
+          // Generar alertas pedagogicas para alumnos con evaluaciones en rojo
+          const nuevasAlertas: AlertaPedagogica[] = []
+          const SUGERENCIAS_ALERTA: Record<string, string> = {
+            CF: "Reforzar con juegos de rimas y segmentacion silabica. Practicar reconocimiento de sonidos iniciales con material concreto.",
+            CT: "Retomar lectura dialogica con cuentos cortos. Usar preguntas literales antes de avanzar a inferenciales.",
+            O: "Practicar escucha activa con instrucciones simples. Ampliar vocabulario con objetos concretos del entorno."
+          }
+          
+          for (const [alumnoId, ejes] of Object.entries(progresoCalculado)) {
+            const alumno = mappedStudents.find((s: {id: string; nombre: string}) => s.id === alumnoId)
+            if (!alumno) continue
+            
+            for (const [eje, data] of Object.entries(ejes)) {
+              // Contar rojos recientes (ultimas 3 evaluaciones)
+              const ultimasEvals = data.actividades.slice(-3)
+              const rojosRecientes = ultimasEvals.filter(a => a.resultado === "red").length
+              
+              if (rojosRecientes >= 2) {
+                // Verificar si ya existe alerta para este alumno/eje
+                const alertaExistente = alertasPedagogicas.find(
+                  a => a.alumnoId === alumnoId && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
+                )
+                
+                if (!alertaExistente) {
+                  nuevasAlertas.push({
+                    id: `${alumnoId}-${eje}-${Date.now()}`,
+                    alumnoId,
+                    alumnoNombre: alumno.nombre,
+                    eje: eje as "CF" | "CT" | "O",
+                    mensaje: `${alumno.nombre} tiene ${rojosRecientes} evaluaciones en rojo en las ultimas 3 clases de ${eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"}.`,
+                    sugerencia: SUGERENCIAS_ALERTA[eje] || "Revisar el progreso del alumno y ajustar la estrategia pedagogica.",
+                    fecha: new Date().toLocaleDateString("es-AR"),
+                    atendida: false
+                  })
+                }
+              }
+            }
+          }
+          
+          if (nuevasAlertas.length > 0) {
+            setAlertasPedagogicas(prev => [...prev, ...nuevasAlertas])
+          }
         }
       } else {
         // Fallback a localStorage si no hay Supabase
@@ -894,7 +940,7 @@ useEffect(() => {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -915,6 +961,13 @@ useEffect(() => {
           />
         )}
         <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
@@ -922,7 +975,7 @@ useEffect(() => {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <SalaMap
           students={students}
           progress={progress}
@@ -942,6 +995,13 @@ useEffect(() => {
           />
         )}
         <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
@@ -952,7 +1012,7 @@ useEffect(() => {
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
           alumnoNombre={selectedStudentName || student?.nombre || "Alumno"}
@@ -970,6 +1030,13 @@ useEffect(() => {
           />
         )}
         <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
