@@ -363,12 +363,17 @@ export default function ALBADashboard() {
   const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
-  const [salaActual, setSalaActual] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sia-sala-activa") || "Manzanos"
+  const [salaActual, setSalaActual] = useState("Manzanos")
+  const [salaHydrated, setSalaHydrated] = useState(false)
+  
+  // Cargar sala desde localStorage despues de hydration
+  useEffect(() => {
+    const savedSala = localStorage.getItem("sia-sala-activa")
+    if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
+      setSalaActual(savedSala)
     }
-    return "Manzanos"
-  })
+    setSalaHydrated(true)
+  }, [])
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showConfigSala, setShowConfigSala] = useState(false)
