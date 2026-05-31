@@ -1137,7 +1137,7 @@ export async function GET(req: Request) {
       if (promSemActual > promSemAnterior + 0.1) tendencia = "mejorando"
       if (promSemActual < promSemAnterior - 0.1) tendencia = "empeorando"
 
-      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosas, tendencia }
+      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales: actividadesExitosas, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
     // ── 5. Elegir eje: ROTACION CICLICA CF → O → CT → CF → O → CT
