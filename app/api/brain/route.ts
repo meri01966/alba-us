@@ -323,79 +323,502 @@ function getMicroCapacitacion(titulo: string): MicroCap {
   }
 }
 
-const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; descripcion: string; materiales: string[] }[]> = {
+// ── SECUENCIA ANUAL ───────────────────────────────────────────────────────────
+// Alineada al DC Inicial GCBA 2025 - Practicas del Lenguaje
+// La secuencia respeta la progresion curricular oficial:
+// SALA 4: Discriminacion auditiva → Rimas y juego con el lenguaje → Silabas → Vocales → Exploracion de textos → Oralidad situacional
+// SALA 5: Avanza sobre sala 4 agregando fonemas consonanticos → Blending/Segmentacion → CT inferencial/critica → Oralidad autonoma y argumentativa
+// El cerebro de ALBA usa esta secuencia como NORTE y la ajusta segun el desempenio real del grupo
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas" }[]> = {
+  // ── CONCIENCIA FONOLOGICA ────────────────────────────────────────────────
+  // DC CABA 2025: sala 4 trabaja escucha, rimas, silabas y vocales.
+  // Sala 5 profundiza fonemas consonanticos, blending y segmentacion fonemica.
   CF: [
-    { titulo: "Sonidos del entorno", objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente", descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.", materiales: ["Campana o triangulo", "Grabadora con sonidos del entorno", "Tarjetas con imagenes de fuentes sonoras", "Antifaz"] },
-    { titulo: "Rimas con nombres", objetivo: "Identificar y producir palabras que riman", descripcion: "La docente canta canciones rimadas y se detiene para que los ninos completen el par rimado. Luego se juega a rimar los nombres de los ninos de la sala: cada uno dice su nombre y busca una palabra que rime con el.", materiales: ["Cancionero ilustrado", "Titere", "Tarjetas con palabras que riman"] },
-    { titulo: "Separacion en silabas", objetivo: "Separar palabras en silabas usando palmadas", descripcion: "La docente muestra una imagen, dice la palabra y da palmadas por silabas. Los ninos repiten. Se cuenta cuantas palmadas tiene cada palabra y se comparan longitudes. Se usan circulos de cartulina para representar cada silaba.", materiales: ["Tarjetas con imagenes", "Circulos de cartulina para contar silabas", "Tambor"] },
-    { titulo: "Sonido inicial /a/", objetivo: "Identificar palabras que comienzan con /a/", descripcion: "La docente dice el sonido /a/ de forma prolongada y muestra imagenes. Los ninos levantan la mano solo cuando la imagen empieza con /a/. Luego se arma un mural colectivo pegando recortes de palabras que comienzan con ese sonido.", materiales: ["Tarjetas con imagenes que empiezan con A", "Letra A en distintos formatos", "Caja misteriosa"] },
-    { titulo: "Sonido inicial /e/", objetivo: "Identificar palabras que comienzan con /e/", descripcion: "Juego de busca y encuentra: los ninos recorren el aula buscando objetos cuyo nombre empieza con /e/. Al encontrarlos los muestran al grupo y lo dicen en voz alta. Se arma una lista en el pizarron.", materiales: ["Tarjetas con imagenes que empiezan con E", "Espejo", "Letra E"] },
-    { titulo: "Sonido inicial /i/", objetivo: "Identificar palabras que comienzan con /i/", descripcion: "Se usa el cuerpo: los ninos forman la letra I con brazos estirados cuando escuchan una palabra que empieza con /i/. Se alterna: la docente dice palabras y los ninos responden con el gesto si empieza con /i/ o se sientan si no.", materiales: ["Tarjetas con imagenes que empiezan con I", "Letra I"] },
-    { titulo: "Sonido inicial /o/", objetivo: "Identificar palabras que comienzan con /o/", descripcion: "La docente lee una lista de palabras en voz alta. Los ninos aplauden una vez si empieza con /o/ y se quedan quietos si no. Luego se crea un dictado grafico colectivo: cada nino dibuja una cosa que empiece con /o/.", materiales: ["Tarjetas con imagenes que empiezan con O", "Letra O"] },
-    { titulo: "Sonido inicial /u/", objetivo: "Identificar palabras que comienzan con /u/", descripcion: "Juego de memoria con tarjetas: cara imagen y cara sonido inicial. Los ninos las emparejan identificando cuales empiezan con /u/. Se pueden jugar en parejas turnandose.", materiales: ["Tarjetas con imagenes que empiezan con U", "Letra U"] },
-    { titulo: "Vocales - Repaso", objetivo: "Consolidar identificacion de sonidos vocalicos iniciales", descripcion: "Ruleta de vocales: la docente gira la ruleta y cae en una vocal. Los ninos deben decir tres palabras que empiecen con esa vocal. Se registran en el pizarron. Al final se cuenta cual vocal tuvo mas palabras.", materiales: ["Set completo de vocales", "Dado con vocales", "Cajas para clasificar"] },
-    { titulo: "Sonido inicial /m/", objetivo: "Identificar palabras que comienzan con /m/", descripcion: "Los ninos imitan el sonido /m/ cerrando los labios. Luego se muestran laminas y los ninos senalan las que empiezan con /m/. Construyen una oracion oral con una de esas palabras.", materiales: ["Tarjetas con imagenes que empiezan con M", "Espejo", "Letra M"] },
-    { titulo: "Sonido inicial /p/", objetivo: "Identificar palabras que comienzan con /p/", descripcion: "Juego de pesca: se esparce en el piso tarjetas con imagenes. Los ninos pescan con una cana de carton y clasifican en un canasto verde las que empiezan con /p/ y en un canasto rojo las que no.", materiales: ["Tarjetas con imagenes que empiezan con P", "Plumas para soplar", "Letra P"] },
-    { titulo: "Sonido inicial /s/", objetivo: "Identificar palabras que comienzan con /s/", descripcion: "Trabajo en parejas: un nino dice una palabra y el otro decide si empieza con /s/ levantando o bajando el pulgar. Luego se intercambian roles. Al final comparten con el grupo las palabras con /s/ que encontraron.", materiales: ["Tarjetas con imagenes que empiezan con S", "Serpiente de peluche", "Letra S"] },
-    { titulo: "Sonido inicial /l/", objetivo: "Identificar palabras que comienzan con /l/", descripcion: "La docente presenta un cuento breve con muchas palabras que empiezan con /l/. Antes de leer, da a cada nino una tarjeta con la letra L. Los ninos la levantan cada vez que escuchan una palabra que empieza con /l/.", materiales: ["Tarjetas con imagenes que empiezan con L", "Letra L"] },
-    { titulo: "Sonido inicial /t/", objetivo: "Identificar palabras que comienzan con /t/", descripcion: "Se usa un dado con imagenes en sus caras. Al girar, si la imagen empieza con /t/ el nino suma un punto en su tablero. Se juega en equipos de 3. El equipo con mas puntos al cabo de 5 rondas gana.", materiales: ["Tarjetas con imagenes que empiezan con T", "Letra T"] },
-    { titulo: "Sonido inicial /n/", objetivo: "Identificar palabras que comienzan con /n/", descripcion: "Los ninos recorren el aula buscando objetos de su pertenencia cuyo nombre empiece con /n/. Los muestran al grupo y los nombran. Se registra en un grafico de barras colectivo cuantas cosas encontro cada uno.", materiales: ["Tarjetas con imagenes que empiezan con N", "Letra N"] },
-    { titulo: "Consonantes - Repaso", objetivo: "Consolidar identificacion de sonidos consonanticos", descripcion: "Bingo de sonidos iniciales: cada nino recibe un cartero con consonantes trabajadas. La docente dice palabras y el nino marca la consonante si su tarjeta la tiene. Gana el primero en completar su cartero.", materiales: ["Set de consonantes trabajadas", "Tablero de clasificacion"] },
-    { titulo: "Sonido final", objetivo: "Identificar el sonido final de palabras cortas", descripcion: "La docente dice palabras de dos silabas estirando el ultimo sonido. Los ninos atrapan el sonido final cerrando la mano. Luego dicen que sonido atraparon. Se registra con fichas de colores.", materiales: ["Tarjetas con imagenes", "Fichas de colores", "Tablero de sonidos finales"] },
-    { titulo: "Sonidos medios", objetivo: "Identificar sonidos en posicion media de palabras", descripcion: "Se trabaja con palabras de tres silabas. Los ninos abren la palabra separando inicio-medio-final con las manos (mano izquierda, centro del pecho, mano derecha) y dicen el sonido de cada posicion.", materiales: ["Tarjetas CVC", "Esquema de tres cajas"] },
-    { titulo: "Sintesis de fonemas", objetivo: "Unir fonemas para formar palabras simples", descripcion: "La docente actua como un robot que habla lento pronunciando fonemas separados. Los ninos deben juntar los sonidos y adivinar la palabra. Se usan palabras del entorno cotidiano. Luego los ninos turnan de ser el robot.", materiales: ["Robot que habla lento", "Tarjetas con imagenes de palabras cortas"] },
-    { titulo: "Analisis de fonemas", objetivo: "Descomponer palabras en sus fonemas individuales", descripcion: "Los ninos reciben una palabra y con cubos o fichas representan cada fonema colocandolos en una fila. Cuentan cuantos fonemas tiene la palabra. Se comparan palabras largas y cortas.", materiales: ["Cubos para contar fonemas", "Tarjetas con imagenes"] },
-    { titulo: "Sustitucion de fonemas", objetivo: "Cambiar un fonema para crear palabras nuevas", descripcion: "La docente dice una palabra y propone cambiar el primer sonido. Los ninos descubren la nueva palabra. Ejemplo: pato cambiamos /p/ por /g/ y queda gato. Se usan letras moviles para mostrar el cambio visualmente.", materiales: ["Letras moviles", "Pizarra o franelografo"] },
-    { titulo: "Omision de fonemas", objetivo: "Identificar que palabra queda al quitar un fonema", descripcion: "Se practica quitando el sonido inicial o final de una palabra. Ejemplo: sol sin /s/ queda ol. Se usa apoyo visual: una ficha que se cubre para representar el fonema quitado. Los ninos dicen lo que queda.", materiales: ["Tarjetas de letras", "Fichas para tapar sonidos"] },
-    { titulo: "Adicion de fonemas", objetivo: "Agregar fonemas para crear palabras nuevas", descripcion: "Los ninos reciben palabras cortas y agregan un fonema al inicio o al final para crear palabras nuevas. Se comparan los resultados y se verifica si son palabras reales.", materiales: ["Letras moviles", "Pizarra"] },
-    { titulo: "Manipulacion avanzada", objetivo: "Realizar operaciones complejas con fonemas", descripcion: "Desafio grupal: la docente da una serie de operaciones con fonemas (quitar el segundo, cambiar el ultimo, agregar uno al medio) y los ninos descifran la palabra resultante. Se trabaja en equipos comparando resultados.", materiales: ["Set completo de letras", "Tablero de manipulacion"] },
-    { titulo: "Evaluacion CF", objetivo: "Evaluar el dominio de la conciencia fonologica", descripcion: "Actividad en estaciones: estacion 1 rimas, estacion 2 segmentacion silabica, estacion 3 sonido inicial, estacion 4 manipulacion de fonemas. La docente rota por las estaciones registrando individualmente los logros de cada nino.", materiales: ["Rubrica de evaluacion", "Registro individual"] },
+    // BLOQUE 1 - SALA 4 Y 5: Discriminacion auditiva y juego con el lenguaje
+    {
+      titulo: "Escucha activa: sonidos del entorno",
+      objetivo: "Discriminar y nombrar sonidos ambientales en oracion completa",
+      descripcion: "Los ninos cierran los ojos 30 segundos en silencio. Al abrirlos nombran lo que oyeron en oracion completa: Yo escuche el sonido de... La docente muestra tarjetas con fuentes sonoras y los ninos las asocian. Se reproducen sonidos grabados (lluvia, palmas, instrumentos) para ampliar el repertorio.",
+      materiales: ["Grabadora con sonidos del entorno", "Tarjetas con fuentes sonoras", "Triangulo y campana", "Antifaz opcional"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Escucha y discriminacion de sonidos del entorno. Base del desarrollo fonologico segun Goswami (1990).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Juego con el lenguaje: canciones y rimas",
+      objetivo: "Explorar el lenguaje oral a traves del ritmo, la rima y la musica",
+      descripcion: "Cantar canciones rimadas del repertorio de la sala. La docente se detiene en el ultimo verso y los ninos completan el par rimado. Luego se juega a rimar los nombres del grupo: cada nino busca una palabra que rime con su nombre. Se arma un cartel de rimas de nombres para dejar a la vista.",
+      materiales: ["Cancionero ilustrado de la sala", "Titere rimador", "Tarjetas con nombres", "Cartel colectivo"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Juego con el lenguaje - rimas, canciones, trabalenguas. Las rimas son el predictor mas fuerte de exito lector en pre-escolar (Goswami & Bryant, 1990).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Trabalenguas y poesias: sensibilidad fonemica",
+      objetivo: "Desarrollar sensibilidad hacia los sonidos del lenguaje a traves de la literatura oral",
+      descripcion: "La docente presenta un trabalenguas o poesia breve. Lo dicen en coro primero lento, luego rapido. Luego identifican que sonido se repite mucho. Se anota en el pizarron y se decora con dibujos alusivos. Los ninos aprenden de memoria al menos dos trabalenguas en el ano.",
+      materiales: ["Cartel con trabalenguas ilustrado", "Microfono de juguete", "Libros de poesia"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Juego con el lenguaje. La repeticion de sonidos en el texto literario desarrolla conciencia fonemica sin instruccion directa.",
+      sala: "ambas"
+    },
+    // BLOQUE 2 - AMBAS SALAS: Segmentacion silabica
+    {
+      titulo: "Segmentacion silabica con palmadas",
+      objetivo: "Separar palabras en silabas usando palmadas y representacion con fichas",
+      descripcion: "La docente muestra una imagen, dice la palabra exagerando las silabas y da palmadas. Los ninos repiten. Se usan circulos de cartulina para representar cada silaba: uno por silaba, alineados en el pizarron. Se comparan palabras cortas (sol, pan) con largas (mariposa, helicoptero).",
+      materiales: ["Tarjetas con imagenes variadas", "Circulos de cartulina", "Tamborcito"],
+      dccaba: "DC CABA 2025 - CF Sala 4 y 5: Segmentacion de palabras en silabas con apoyo de palmadas y movimiento. Cuba y Francia: punto de entrada obligatorio al sistema de escritura.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Silabas con movimiento corporal",
+      objetivo: "Consolidar la segmentacion silabica con el cuerpo en movimiento",
+      descripcion: "Un paso por silaba al caminar por el salon. La docente dice una palabra, los ninos caminan dando un paso por cada silaba y se detienen. Luego vuelven al piso y se cuentan las fichas. Se trabaja con nombres de animales, frutas y nombres de los ninos del grupo.",
+      materiales: ["Cinta adhesiva en el piso para marcar espacios", "Imagenes de animales y frutas"],
+      dccaba: "DC CABA 2025 - CF: El movimiento corporal asociado a cada silaba aumenta la retencion y es recomendado por el enfoque didactico oficial.",
+      sala: "ambas"
+    },
+    // BLOQUE 3 - AMBAS SALAS: Vocales (sonido inicial)
+    {
+      titulo: "Vocal /a/: sonido inicial con imagen y gesto",
+      objetivo: "Identificar palabras que comienzan con /a/ a traves de imagen, sonido y gesto",
+      descripcion: "La docente prolonga el sonido /a/ con la boca bien abierta. Gesto corporal: brazos en triangulo hacia arriba. Se muestran imagenes variadas (incluyendo distractores) y los ninos hacen el gesto de /a/ SOLO cuando la imagen empieza con ese sonido. Luego buscan en la sala objetos que empiecen con /a/.",
+      materiales: ["Tarjetas con imagenes (A y no-A)", "Espejo pequeno", "Mural colectivo letra A"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Identificacion del sonido inicial de las vocales en palabras conocidas. Las vocales primero porque son los sonidos mas perceptibles en espanol.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Vocal /e/: buscar y encontrar en el aula",
+      objetivo: "Identificar palabras que comienzan con /e/ en el entorno real",
+      descripcion: "Los ninos recorren el aula buscando objetos cuyo nombre empiece con /e/. Cuando encuentran uno lo muestran al grupo y lo dicen en voz alta: Este es el espejo, empieza con /e/. Se lista en el pizarron. Si un nino trae un objeto que no empieza con E se trabaja juntos: a ver, escuchamos...",
+      materiales: ["Sala preparada con objetos E visibles", "Tarjetas con imagenes E"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Sonido inicial vocal /e/. El aprendizaje situado en el aula real favorece la retencion a largo plazo.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Vocal /i/: el cuerpo hace la letra",
+      objetivo: "Identificar palabras que comienzan con /i/ con apoyo kinestesico",
+      descripcion: "Los ninos forman la I con el cuerpo: de pie, brazos estirados hacia arriba. Cuando escuchan una palabra con /i/ hacen la postura, cuando no emppieza con /i/ se sientan. Luego el dictado grafico: la docente dice una palabra con /i/ y cada nino la dibuja.",
+      materiales: ["Espejo largo", "Tarjetas de imagen I", "Hojas para dibujo"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /i/. La kinestesia fonetica (Uruguay, Plan CEIBAL) aumenta la retencion en ninos con distintos estilos de aprendizaje.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Vocal /o/: labios redondos y clasificacion",
+      objetivo: "Identificar palabras que comienzan con /o/ y discriminar de otras vocales",
+      descripcion: "La O se dice con los labios redondos: ooooo. Gesto: hacer el circulo con indice y pulgar. Los ninos aplauden una sola vez si la imagen empieza con /o/ y se quedan quietos si no. Incluir distractores con otras vocales. Cada nino dibuja una cosa que empiece con /o/.",
+      materiales: ["Tarjetas con imagenes O", "Espejo"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /o/. Discriminar de otras vocales refuerza la conciencia de contraste fonetico.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Vocal /u/: juego de memoria en parejas",
+      objetivo: "Identificar palabras que comienzan con /u/ a traves del juego colaborativo",
+      descripcion: "Tarjetas de memoria: imagen con /u/ + tarjeta con la letra. En parejas dan vuelta de a dos. Si emparejan imagen con letra U ganan el par. Mientras juegan la docente pregunta: esa imagen como se llama? Con que sonido empieza? Al final arman un mural con todos los pares encontrados.",
+      materiales: ["Juego de memoria con imagenes y letras U", "Mural colectivo"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /u/. El juego colaborativo en parejas desarrolla autonomia y lenguaje oral simultaneamente.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Repaso de vocales: ruleta y clasificacion",
+      objetivo: "Consolidar el reconocimiento de las 5 vocales por sonido inicial",
+      descripcion: "Ruleta de vocales: al girar cae en una vocal y los ninos dicen 3 palabras que empiecen con ella. Luego se clasifican tarjetas de imagen en 5 columnas (una por vocal). Al final se cuenta cual vocal tuvo mas palabras y se debate por que.",
+      materiales: ["Ruleta de vocales", "Dado con vocales", "Cajas de clasificacion rotuladas", "Set completo de tarjetas"],
+      dccaba: "DC CABA 2025 - CF Sala 4: Consolidacion de vocales antes de pasar a consonantes (secuencia cubana: 98% de alfabetizacion).",
+      sala: "ambas"
+    },
+    // BLOQUE 4 - SALA 5: Consonantes de alta frecuencia
+    {
+      titulo: "Consonante /m/: la primera consonante",
+      objetivo: "Identificar palabras que comienzan con /m/ con estrategia visual y kinestesica",
+      descripcion: "Los ninos imitan el sonido /m/ cerrando los labios: mmmmm. Frente al espejo se observa como se hacen los labios. Se muestran laminas y los ninos senalan las que empiezan con /m/ mientras hacen el gesto. Finalmente construyen una oracion oral con una de esas palabras.",
+      materiales: ["Tarjetas con imagenes M", "Espejo", "Letra M en grande"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Sonido inicial de consonantes frecuentes. /m/ es bilabial, visible y de alta frecuencia en espanol (First Steps Australia).",
+      sala: "5"
+    },
+    {
+      titulo: "Consonante /p/: juego de pesca",
+      objetivo: "Identificar y clasificar palabras que comienzan con /p/",
+      descripcion: "Juego de pesca: tarjetas en el piso, cana de carton con iman. Los ninos pescan y clasifican en canasto verde las que empiezan con /p/ y rojo las que no. Cada vez que pescan lo dicen en voz alta: pesca, empieza con /p/. Al final cuentan cuantas palabras con /p/ encontraron.",
+      materiales: ["Tarjetas plastificadas con iman", "Cana de carton", "Canastos de colores"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Discriminacion fonema-no fonema objetivo, habilidad base para decodificacion (First Steps + LEE Chile).",
+      sala: "5"
+    },
+    {
+      titulo: "Consonante /s/: trabajo en parejas",
+      objetivo: "Identificar palabras con /s/ inicial en intercambio oral con un par",
+      descripcion: "En parejas con turno alternado: un nino dice una palabra, el otro decide si empieza con /s/ levantando o bajando el pulgar. Luego intercambian. Al final presentan al grupo las palabras con /s/ que encontraron. Se anota en el pizarron.",
+      materiales: ["Tarjetas con imagenes S", "Serpiente de peluche como objeto de turno"],
+      dccaba: "DC CABA 2025 - CF Sala 5: /s/. El trabajo en parejas desarrolla argumentacion oral y metacognicion fonetica (Letters and Sounds, UK DfE 2007).",
+      sala: "5"
+    },
+    {
+      titulo: "Consonante /l/: cuento y tarjeta de alerta",
+      objetivo: "Identificar el fonema /l/ en contexto de texto oral",
+      descripcion: "La docente presenta un cuento breve con muchas palabras con /l/. Antes de leer, cada nino recibe una tarjeta L. La levantan cada vez que escuchan una palabra con /l/. Al terminar se listan todas las palabras encontradas y se cuentan.",
+      materiales: ["Cuento con palabras L", "Tarjetas letra L", "Lista colectiva"],
+      dccaba: "DC CABA 2025 - CF Sala 5: /l/. La identificacion en contexto de texto oral refuerza la comprension de que el fonema aparece dentro de palabras reales.",
+      sala: "5"
+    },
+    {
+      titulo: "Consonante /t/: dado de fonemas",
+      objetivo: "Identificar y producir palabras con /t/ en juego grupal",
+      descripcion: "Dado con imagenes en sus caras. Al girar, si la imagen empieza con /t/ el nino suma un punto. Se juega en equipos de 3. El equipo con mas puntos al cabo de 5 rondas gana. Luego cada nino dice una oracion con la imagen que le toco.",
+      materiales: ["Dado con imagenes T y no-T", "Tablero de puntos"],
+      dccaba: "DC CABA 2025 - CF Sala 5: /t/. DIBELS: los juegos de dado con fonemas objetivo tienen alta correlacion con desempeno lector a fin del primer grado.",
+      sala: "5"
+    },
+    {
+      titulo: "Consonante /n/: recorrido por el aula",
+      objetivo: "Identificar palabras con /n/ en el entorno real de la sala",
+      descripcion: "Los ninos recorren el aula buscando objetos cuyo nombre empiece con /n/. Los muestran al grupo. Se registra en un grafico de barras colectivo cuantas cosas encontro cada uno. Al final la docente agrega palabras no encontradas para completar el repertorio.",
+      materiales: ["Grafico de barras en pizarron", "Tarjetas N para refuerzo"],
+      dccaba: "DC CABA 2025 - CF Sala 5: /n/. El recorrido genera aprendizaje situado y amplia vocabulario en contexto real (Plan CEIBAL + PNEA Argentina).",
+      sala: "5"
+    },
+    {
+      titulo: "Repaso de consonantes: bingo de sonidos",
+      objetivo: "Consolidar las consonantes trabajadas en formato de juego",
+      descripcion: "Bingo de sonidos iniciales: cada nino recibe un carton con consonantes trabajadas. La docente dice palabras y el nino marca la consonante si su carton la tiene. Gana el primero en completar. Al verificar el bingo, el ganador dice una palabra por cada consonante marcada.",
+      materiales: ["Cartones de bingo personalizados", "Bolsa con tarjetas de palabras"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Consolidacion de consonantes frecuentes. El bingo tiene alta motivacion intrinseca (Cuba/Australia).",
+      sala: "5"
+    },
+    // BLOQUE 5 - SALA 5: Nivel fonetico avanzado (DC CABA: analisis y sintesis)
+    {
+      titulo: "Sonido final: atrapar el ultimo sonido",
+      objetivo: "Identificar el sonido final de palabras de dos silabas",
+      descripcion: "La docente dice palabras de dos silabas estirando el ultimo sonido. Los ninos cierran la mano para atrapar el sonido final y dicen que atraparon. Se registra con fichas de colores. Luego se agrupan las palabras por sonido final identico.",
+      materiales: ["Tarjetas con imagenes bisillabas", "Fichas de colores", "Tablero de sonidos finales"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Identificacion de sonidos medios y finales. BPAL Canada: predictor de comprension ortografica.",
+      sala: "5"
+    },
+    {
+      titulo: "Analisis posicional: inicio-medio-final",
+      objetivo: "Identificar la posicion de sonidos dentro de palabras trisllabas",
+      descripcion: "Con palabras de tres silabas, los ninos abren la palabra con el cuerpo: mano izquierda=inicio, pecho=medio, mano derecha=final. Dicen el sonido de cada posicion. Se usan cajas de tres compartimentos con fichas de colores para representar cada posicion.",
+      materiales: ["Cajas de tres compartimentos", "Fichas de tres colores distintos", "Tarjetas CVC"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Analisis posicional validado en programas canadienses de intervencion temprana (BPAL).",
+      sala: "5"
+    },
+    {
+      titulo: "Sintesis de fonemas: el robot habla lento",
+      objetivo: "Unir fonemas separados para formar palabras (blending)",
+      descripcion: "La docente actua como un robot que habla lento pronunciando fonemas separados: /m/-/a/-/r/. Los ninos juntan los sonidos y adivinan la palabra. Luego los ninos turnan de ser el robot mientras el grupo adivina. Se usan palabras del entorno cotidiano.",
+      materiales: ["Tarjetas con imagenes de palabras cortas", "Fichas para representar fonemas"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Sintesis de fonemas (blending). Jolly Phonics UK: LA habilidad central para decodificar. Estrategia mas replicada internacionalmente.",
+      sala: "5"
+    },
+    {
+      titulo: "Analisis de fonemas: cubos de Elkonin",
+      objetivo: "Descomponer palabras en sus fonemas individuales (segmentacion fonemica)",
+      descripcion: "Los ninos reciben una palabra y con cubos de Elkonin (uno por fonema) los colocan en una fila empujando cada cubo a medida que dicen cada sonido. Cuentan cuantos fonemas tiene la palabra. Se comparan palabras largas y cortas. La docente registra individualmente.",
+      materiales: ["Set de cubos de Elkonin", "Tarjetas con imagenes de palabras 2-4 fonemas"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Analisis de fonemas. NRP (2000): estrategia con mas evidencia de impacto en conciencia fonemica. Efecto tamaño d=0.86.",
+      sala: "5"
+    },
+    {
+      titulo: "Sustitucion de fonemas: letras moviles",
+      objetivo: "Cambiar un fonema para crear palabras nuevas",
+      descripcion: "La docente propone cambiar el primer sonido: pato cambiamos /p/ por /g/ y queda gato. Los ninos descubren la nueva palabra. Se usan letras moviles para mostrar el cambio visualmente en el franelografo. Luego los ninos proponen sus propios cambios.",
+      materiales: ["Letras moviles magneticas", "Franelografo o pizarra magnetica"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Manipulacion de fonemas (sustitucion). Wilson Reading System + Reading Recovery: estrategia de intervencion temprana de alta evidencia.",
+      sala: "5"
+    },
+    {
+      titulo: "Omision y adicion de fonemas",
+      objetivo: "Quitar y agregar fonemas para crear nuevas palabras",
+      descripcion: "OMISION: sol sin /s/ queda ol. Se usa una ficha que se cubre para representar el fonema quitado. ADICION: a la palabra mar agregamos /c/ al inicio y queda cama. Los ninos dicen lo que queda o resulta en cada caso. Trabajo con letras moviles.",
+      materiales: ["Tarjetas de letras", "Fichas para tapar sonidos", "Letras moviles"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Manipulacion de fonemas (omision y adicion). BPAL Canada: nivel avanzado de conciencia fonemica.",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion CF: estaciones de fonologia",
+      objetivo: "Evaluar el dominio de la conciencia fonologica por nivel",
+      descripcion: "Cuatro estaciones rotativas (5 min cada una): 1) Rimas: el nino dice si dos palabras riman. 2) Silabas: segmentar con palmadas. 3) Sonido inicial: identificar en imagen. 4) Sintesis/Analisis: robot lento y cubos. La docente rota y registra individualmente con rubrica.",
+      materiales: ["Rubrica de evaluacion CF", "Material por estacion", "Registro individual"],
+      dccaba: "DC CABA 2025 - CF: Evaluacion continua y formativa al servicio del aprendizaje. DIBELS + PALS: formato de estaciones para obtener datos sin interrumpir el ritmo grupal.",
+      sala: "ambas"
+    },
   ],
+
+  // ── COMPRENSION DE TEXTOS ────────────────────────────────────────────────
+  // DC CABA 2025: sala 4 trabaja comprension literal con textos narrativos breves y explorados en voz alta.
+  // Sala 5 profundiza inferencias, secuencia narrativa, vocabulario y comprension critica.
+  // El eje literario tiene valor en si mismo: no es pretexto para la ensenanza (DC CABA, enfoque didactico).
   CT: [
-    { titulo: "Exploracion del libro", objetivo: "Manipular el libro y explorar portada e ilustraciones", descripcion: "Se presenta el libro cerrado. Los ninos observan tapa, contratapa, titulo y autor. En ronda responden: de que creen que trata? quienes apareceran? La docente registra las predicciones en el pizarron.", materiales: ["Cuento con portada atractiva", "Atril para libro"] },
-    { titulo: "Antes de leer: Predicciones", objetivo: "Formular hipotesis sobre el contenido mirando la tapa", descripcion: "Antes de abrir el libro, cada nino dice en voz alta su prediccion sobre la historia. Se registran en post-its en el pizarron. Al finalizar la lectura se verifican cuales fueron acertadas y cuales no.", materiales: ["Libro seleccionado", "Post-its para anotar predicciones"] },
-    { titulo: "Lectura dialogica: Pausas", objetivo: "Participar con preguntas durante la lectura", descripcion: "La docente lee en voz alta con pausas estrategicas para preguntar: que creen que pasara? por que hizo eso el personaje? como se siente? El titere preguntador formula las preguntas para motivar la participacion.", materiales: ["Libro con marcadores de pausas", "Titere preguntador", "Campana"] },
-    { titulo: "Vocabulario en contexto", objetivo: "Inferir significado de palabras nuevas", descripcion: "Al encontrar una palabra dificil en la lectura, la docente se detiene y dice: Esta palabra es nueva, vamos a adivinar que significa por lo que leimos. Entre todos infieren el significado. Se anota en el muro de palabras de la sala.", materiales: ["Libro seleccionado", "Tarjetas de vocabulario", "Diccionario ilustrado"] },
-    { titulo: "Recontar la historia", objetivo: "Recontar con propias palabras usando secuencia", descripcion: "Con imagenes de secuencia del cuento en el pizarron, los ninos recontan la historia en cadena: cada uno agrega un fragmento. La docente guia con: que paso primero? y despues? como termino?", materiales: ["Libro leido", "Imagenes de secuencia del cuento", "Titeres"] },
-    { titulo: "Conexiones texto-vida", objetivo: "Conectar el texto con experiencias personales", descripcion: "La docente propone preguntas de conexion personal: esto te paso a vos alguna vez? conoces a alguien como este personaje? Los ninos comparten en parejas y luego algunos comparten con el grupo.", materiales: ["Libro leido", "Hojas para dibujar conexiones"] },
-    { titulo: "Cruz de comprension: QUIEN", objetivo: "Responder QUIEN usando evidencia del texto", descripcion: "Se coloca la cruz en el pizarron con QUIEN destacado. La docente lee el cuento y al terminar pregunta: quienes son los personajes principales? Los ninos responden citando el texto y se colocan las siluetas en el brazo QUIEN de la cruz.", materiales: ["Cuento con personajes claros", "Tarjetas QUIEN", "Siluetas de personajes"] },
-    { titulo: "Cruz de comprension: QUE", objetivo: "Responder QUE sucede con informacion explicita", descripcion: "Se trabaja el brazo QUE de la cruz. Los ninos identifican las 3 acciones mas importantes del texto y las ordenan por relevancia. Se anota en el brazo QUE de la cruz en el pizarron.", materiales: ["Cuento seleccionado", "Tarjetas QUE"] },
-    { titulo: "Cruz de comprension: DONDE", objetivo: "Responder DONDE ocurre con evidencia textual", descripcion: "Se trabaja el brazo DONDE. Los ninos buscan en el texto frases que indican el lugar. Se anota en la cruz y se dibuja el escenario principal.", materiales: ["Cuento con lugares definidos", "Mapa del cuento"] },
-    { titulo: "Cruz de comprension: CUANDO", objetivo: "Responder CUANDO suceden los eventos", descripcion: "Se trabaja el brazo CUANDO. Los ninos identifican indicadores de tiempo en el texto (de manana, en verano, hace mucho tiempo) y los ubican en una linea temporal dibujada en el pizarron.", materiales: ["Cuento con secuencia temporal", "Linea de tiempo"] },
-    { titulo: "Cruz: Integracion literal", objetivo: "Usar las 4 preguntas literales juntas", descripcion: "Con un cuento nuevo, se divide la clase en 4 grupos. Cada grupo se encarga de un brazo de la cruz (QUIEN, QUE, DONDE, CUANDO). Luego presentan al resto y se completa la cruz colectiva.", materiales: ["Cruz de comprension en carton", "Cuento nuevo"] },
-    { titulo: "Cruz: POR QUE - causa y efecto", objetivo: "Inferir POR QUE suceden las cosas", descripcion: "Se agrega el brazo POR QUE a la cruz. Los ninos infieren causas que el texto no dice explicitamente. La docente pregunta: como lo sabemos si no esta escrito? Se debate en grupo hasta llegar a una respuesta consensuada.", materiales: ["Cuento con causas claras", "Flechas causa-efecto"] },
-    { titulo: "Cruz: COMO sucede", objetivo: "Inferir COMO suceden las acciones", descripcion: "Se trabaja el brazo COMO inferencial. Los ninos explican los procesos que llevan a los eventos del texto usando vocabulario de secuencia: primero... luego... al final... Se contrastan diferentes versiones.", materiales: ["Cuento seleccionado", "Tarjetas COMO"] },
-    { titulo: "Cruz: QUE OPINAS", objetivo: "Expresar opinion fundamentada sobre el texto", descripcion: "Los ninos expresan su opinion usando la estructura: Yo opino que... porque en el texto dice... Se registran en globos de opinion en el pizarron. Se debate si hay distintas opiniones validas sobre el mismo texto.", materiales: ["Cuento con dilema", "Caritas de opinion", "Microfono de juguete"] },
-    { titulo: "Integracion LD + Cruz", objetivo: "Aplicar lectura dialogica y cruz de comprension juntas", descripcion: "Se realiza el ciclo completo: Antes (predicciones), Durante (pausas dialogicas), Despues (cruz de comprension). Los ninos lideran cada fase con ayuda de la docente que facilita.", materiales: ["Cuento nuevo", "Guia LD", "Cruz completa"] },
-    { titulo: "Texto informativo", objetivo: "Aplicar lectura dialogica con texto no narrativo", descripcion: "Se usa un libro informativo o afiche. Los ninos adaptan sus estrategias: antes preguntan que saben del tema, durante buscan datos nuevos, despues comparan lo que sabian con lo que aprendieron.", materiales: ["Libro informativo con imagenes", "Tarjetas KWL"] },
-    { titulo: "Secuencia narrativa completa", objetivo: "Identificar inicio, conflicto, resolucion y cierre", descripcion: "La docente presenta las 4 partes de la estructura narrativa con tarjetas de color. Durante la lectura los ninos levantan la tarjeta del color que corresponde a la parte que se esta leyendo.", materiales: ["Cuento con estructura clara", "Tarjetas de estructura"] },
-    { titulo: "Personajes: caracteristicas", objetivo: "Describir caracteristicas fisicas y de personalidad", descripcion: "Cada nino elige un personaje y completa un organizador grafico: como es fisicamente? como es su personalidad? que hace en la historia? Se presentan al grupo y se comparan personajes.", materiales: ["Cuento con personajes variados", "Organizador grafico de personaje"] },
-    { titulo: "Vocabulario literario", objetivo: "Reconocer y usar vocabulario propio de los textos", descripcion: "Durante la lectura se identifican palabras especiales propias de los textos literarios. Se agregan al diccionario ilustrado de la sala. Los ninos crean una oracion con cada palabra nueva.", materiales: ["Libro seleccionado", "Diccionario ilustrado", "Tarjetas de palabras"] },
-    { titulo: "Comprension critica", objetivo: "Evaluar las acciones de los personajes con argumentos", descripcion: "Se presenta un dilema etico del cuento. Los ninos debaten si la accion del personaje estuvo bien o mal y por que, usando la estructura Yo creo que... porque... Se vota y se elabora un juicio colectivo.", materiales: ["Cuento con dilemas eticos", "Balanza de justicia"] },
-    { titulo: "Evaluacion CT", objetivo: "Evaluar comprension con Lectura Dialogica y Cruz", descripcion: "La docente presenta un texto nuevo y observa como cada nino aplica de forma autonoma las estrategias de lectura dialogica y la cruz de comprension. Registra en rubrica el nivel de dominio de cada nino.", materiales: ["Rubrica de evaluacion", "Cuento de evaluacion"] },
+    // BLOQUE 1 - AMBAS SALAS: Aproximacion al libro y al texto
+    {
+      titulo: "El libro como objeto: exploracion libre",
+      objetivo: "Explorar el libro como portador de texto y desarrollar actitud lectora",
+      descripcion: "Se presenta el libro cerrado en el atril. Los ninos observan tapa, contratapa, titulo, autor, ilustrador. En ronda responden: de que creen que trata? quienes apareceran? La docente registra las predicciones visibles en el pizarron. Se enfatiza que el libro fue escrito por alguien para ser leido.",
+      materiales: ["Libro con portada atractiva", "Atril", "Post-its o tarjetas para predicciones"],
+      dccaba: "DC CABA 2025 - CT Sala 4: Exploracion de portadores de texto. El libro como objeto cultural con valor propio (enfoque didactico DC).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Antes de leer: predicciones e hipotesis",
+      objetivo: "Formular hipotesis sobre el contenido a partir de la portada",
+      descripcion: "Antes de abrir el libro, cada nino dice en voz alta su prediccion. Se registran en el pizarron. Al terminar la lectura se vuelve a las predicciones: cuales fueron acertadas? Cuales no? Por que nos confundimos? El error es parte del aprendizaje lector.",
+      materiales: ["Libro seleccionado", "Pizarron para predicciones", "Tapa ampliada si es posible"],
+      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Anticipacion del contenido a partir de imagenes. Las predicciones generan 'cognitive engagement' (CEIBAL/MINEDUC Chile).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Lectura en voz alta con pausas dialogicas",
+      objetivo: "Participar activamente durante la lectura respondiendo preguntas",
+      descripcion: "La docente lee en voz alta con pausas estrategicas para preguntar: que creen que pasara? por que hizo eso el personaje? como se siente? Un titere preguntador formula las preguntas para motivar. Se acepta toda respuesta y se vuelve al texto para verificar.",
+      materiales: ["Libro con marcadores de pausa", "Titere preguntador", "Campana para pausas"],
+      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Lectura dialogica en voz alta diaria por el docente. Mayor impacto en grupos vulnerables (Vygotsky/Flecha, Lectura Dialogica).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Vocabulario en contexto: muro de palabras",
+      objetivo: "Inferir el significado de palabras nuevas en el contexto de la lectura",
+      descripcion: "Al encontrar una palabra dificil la docente se detiene: esta palabra es nueva, vamos a adivinar que significa por lo que leimos. El grupo infiere y luego se escribe en el muro de palabras de la sala con una imagen. Se revisa al inicio de la clase siguiente.",
+      materiales: ["Libro con vocabulario nuevo", "Muro de palabras en la sala", "Tarjetas de vocabulario con imagen"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Vocabulario en contexto. Beck & McKeown: la inferencia en contexto es mas efectiva que la definicion directa para la retencion.",
+      sala: "ambas"
+    },
+    // BLOQUE 2 - AMBAS SALAS: Comprension literal (QUIEN, QUE, DONDE, CUANDO)
+    {
+      titulo: "QUIEN: personajes principales",
+      objetivo: "Identificar y describir a los personajes principales con evidencia del texto",
+      descripcion: "La docente pregunta: quienes son los personajes? Los ninos responden citando el texto. Se colocan siluetas en la cruz de comprension (brazo QUIEN). Para sala 4: solo nombrar los personajes. Para sala 5: agregar como son fisicamente y como son en su personalidad.",
+      materiales: ["Cruz de comprension en pizarron", "Siluetas de personajes", "Cuento con personajes claros"],
+      dccaba: "DC CABA 2025 - CT Sala 4: Reconocimiento de personajes principales. Sala 5: descripcion con atributos. Cruz de Comprension MINEDUC Chile: validada en todos los niveles educativos.",
+      sala: "ambas"
+    },
+    {
+      titulo: "QUE: acciones del texto con apoyo visual",
+      objetivo: "Identificar las acciones mas importantes del texto en orden",
+      descripcion: "Los ninos identifican las 3 acciones mas importantes del texto y las ordenan por relevancia. Se anotan en el brazo QUE de la cruz. Para sala 4 se apoya con imagenes de la historia. Para sala 5 se hace sin apoyo visual y se agrega el orden temporal.",
+      materiales: ["Cruz de comprension", "Tarjetas de acciones", "Imagenes de la historia para sala 4"],
+      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Comprension literal (QUE sucede). Cruz MINEDUC Chile.",
+      sala: "ambas"
+    },
+    {
+      titulo: "DONDE y CUANDO: espacio y tiempo en el texto",
+      objetivo: "Identificar indicadores de lugar y tiempo con evidencia textual",
+      descripcion: "DONDE: los ninos buscan frases del texto que indican el lugar y lo dibujan. CUANDO: identifican indicadores de tiempo (de manana, en verano, hace mucho tiempo) y los ubican en una linea temporal. Se trabaja en grupos de 4: 2 a cargo de DONDE y 2 a cargo de CUANDO.",
+      materiales: ["Cruz de comprension", "Linea de tiempo en papel", "Hojas para dibujar el escenario"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de secuencia narrativa. Predictor de desempeno en PISA Lectura.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Recontar la historia: cadena de imagenes",
+      objetivo: "Recontar con propias palabras usando conectores de secuencia",
+      descripcion: "Con imagenes de secuencia del cuento en el pizarron los ninos recontan en cadena: cada uno agrega un fragmento. La docente guia con: que paso primero? y despues? como termino? Para sala 5 se hace sin imagenes de apoyo usando solo conectores: primero, luego, al final.",
+      materiales: ["Imagenes de secuencia del cuento", "Titeres opcionales"],
+      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Recontado de la historia. Reading Recovery (Clay): activa memoria episodica y estructura narrativa.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Conexiones texto-vida: texto-texto-mundo",
+      objetivo: "Conectar el texto con experiencias personales y otros textos conocidos",
+      descripcion: "La docente propone los tres tipos de conexion: TEXTO-VIDA (esto te paso a vos?), TEXTO-TEXTO (conoces otro cuento con un personaje asi?), TEXTO-MUNDO (esto pasa en la vida real?). Los ninos comparten en parejas y luego algunos con el grupo.",
+      materiales: ["Libro leido", "Hojas para dibujar conexiones", "Otros libros de la biblioteca de la sala"],
+      dccaba: "DC CABA 2025 - CT: Diversidad de textos. Calkins (2001): las conexiones generan motivacion lectora y comprension profunda.",
+      sala: "ambas"
+    },
+    // BLOQUE 3 - SALA 5: Comprension inferencial
+    {
+      titulo: "POR QUE: causas e inferencias",
+      objetivo: "Inferir causas no explicitas en el texto",
+      descripcion: "Se agrega el brazo POR QUE a la cruz. Los ninos infieren causas que el texto no dice explicitamente. La docente pregunta: como lo sabemos si no esta escrito? Se debate en grupo. Solo en sala 5. Para sala 4 esta pregunta se responde solo si la causa esta explicita.",
+      materiales: ["Cruz de comprension con brazo POR QUE", "Flechas causa-efecto"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension inferencial. Cruz MINEDUC Chile + Reader's Workshop Canada: nivel superior al literal.",
+      sala: "5"
+    },
+    {
+      titulo: "COMO sucede: secuencia de procesos",
+      objetivo: "Explicar como ocurren los eventos usando vocabulario de secuencia",
+      descripcion: "Los ninos explican los procesos que llevan a los eventos del texto usando: primero... luego... al final... Se contrastan diferentes versiones. La docente registra quien usa conectores de forma autonoma y quien necesita andamio.",
+      materiales: ["Cruz con brazo COMO", "Tarjetas de conectores visuales"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de procesos. Base para textos informativos y explicativos.",
+      sala: "5"
+    },
+    {
+      titulo: "QUE OPINAS: opinion fundamentada",
+      objetivo: "Expresar opinion sobre el texto con argumentos del texto",
+      descripcion: "Los ninos usan la estructura: Yo opino que... porque en el texto dice... Se registran en globos de opinion en el pizarron. Se debate si hay distintas opiniones validas sobre el mismo texto. La docente celebra las opiniones distintas como enriquecimiento.",
+      materiales: ["Cuento con dilema etico", "Microfono de juguete", "Globos de opinion para el pizarron"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension critica. Finlandia introduce el debate argumentativo desde sala 5.",
+      sala: "5"
+    },
+    {
+      titulo: "Texto informativo: KWL + datos nuevos",
+      objetivo: "Aplicar estrategias de comprension a textos no narrativos",
+      descripcion: "Se usa un libro informativo o afiche. ANTES: que sabemos del tema (K), que queremos saber (W). DURANTE: buscamos datos nuevos y los marcamos. DESPUES: que aprendimos (L) y comparamos con lo que ya sabiamos. Se arma una cartelera informativa con los datos encontrados.",
+      materiales: ["Libro informativo con imagenes", "Tarjetas KWL", "Cartelera colectiva"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Diversidad de textos - textos informativos. CAFE Strategy + Reader's Workshop Canada.",
+      sala: "5"
+    },
+    {
+      titulo: "Personajes: fisico, personalidad y acciones",
+      objetivo: "Describir un personaje con atributos fisicos, de personalidad y acciones",
+      descripcion: "Cada nino elige un personaje y completa un organizador grafico: como es fisicamente? como es su personalidad? que hace en la historia? que le pasa al final? Se presentan al grupo y se comparan. La docente desafia: como lo sabes? Muestra donde dice eso.",
+      materiales: ["Cuento con personajes variados", "Organizador grafico impreso"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de personajes con atributos. Predictor de comprension lectora en educacion primaria.",
+      sala: "5"
+    },
+    {
+      titulo: "Comprension critica: dilemas del cuento",
+      objetivo: "Evaluar las acciones de los personajes con argumentos propios",
+      descripcion: "Se presenta un dilema etico del cuento. Los ninos debaten: estuvo bien lo que hizo el personaje? Por que? Se vota y se elabora un juicio colectivo usando la estructura: Yo creo que... porque... La docente registra la complejidad argumentativa de cada nino.",
+      materiales: ["Cuento con dilemas eticos", "Balanza de justicia de juguete"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension critica. Los ninos valoran las acciones de los personajes y dan opinion fundamentada.",
+      sala: "5"
+    },
+    {
+      titulo: "Ciclo completo: Antes - Durante - Despues",
+      objetivo: "Aplicar el ciclo completo de lectura dialogica de forma autonoma",
+      descripcion: "Los ninos lideran cada fase: Antes (un nino coordina las predicciones), Durante (otro nino con el titere hace las pausas y preguntas), Despues (completan la cruz entre todos). La docente facilita sin dirigir. Al final reflexionan: que estrategia les resulto mas util?",
+      materiales: ["Cuento nuevo", "Titere preguntador", "Cruz completa"],
+      dccaba: "DC CABA 2025 - CT: Ciclo completo Antes-Durante-Despues liderado por los ninos. Modelo de maxima evidencia (Lectura Dialogica + Cruz MINEDUC).",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion CT: texto nuevo y rubrica",
+      objetivo: "Evaluar comprension con texto no trabajado previamente",
+      descripcion: "La docente lee un texto nuevo y observa como cada nino aplica de forma autonoma las estrategias de lectura dialogica y la cruz. Registra en rubrica: nivel literal (sala 4) e inferencial/critico (sala 5). Los datos informan la planificacion del trimestre siguiente.",
+      materiales: ["Texto de evaluacion nuevo", "Rubrica CT por nivel", "Registro individual"],
+      dccaba: "DC CABA 2025 - CT: Evaluacion continua y formativa. La evaluacion esta al servicio del aprendizaje y la planificacion.",
+      sala: "ambas"
+    },
   ],
+
+  // ── ORALIDAD ──────────────────────────────────────────────────────────────
+  // DC CABA 2025: el eje de Oralidad es transversal a toda la ensenanza.
+  // Sala 4: participacion en situaciones comunicativas, escucha activa, narracion con apoyo.
+  // Sala 5: narracion autonoma, argumentacion, exposicion oral, debate, dramatizacion.
+  // La asamblea diaria es el espacio de oralidad sistematico recomendado por el DC CABA.
   O: [
-    { titulo: "ECO-E: Sonidos del entorno", objetivo: "Identificar y discriminar sonidos ambientales", descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Al abrir los ojos nombran los sonidos en oracion completa. Si dicen palabra suelta, la docente modela y espera que el nino repita la oracion completa.", materiales: ["Grabadora con sonidos", "Instrumentos variados", "Campana", "Antifaz"] },
-    { titulo: "ECO-E: Escucha de voces", objetivo: "Reconocer voces y responder con oracion completa", descripcion: "Se reproducen grabaciones de voz. El nino debe responder en oracion completa: Esa es la voz de mi mama. Si responde con una sola palabra, la docente modela la oracion completa y espera la repeticion antes de continuar.", materiales: ["Grabaciones de voces", "Antifaz", "Microfono de juguete"] },
-    { titulo: "ECO-E: Instrucciones simples", objetivo: "Seguir instrucciones y verbalizarlas", descripcion: "La docente da una instruccion de un paso. El nino la ejecuta y la verbaliza en oracion completa: Yo levante el brazo. REGLA ECO: no avanzar a la siguiente instruccion hasta obtener la verbalizacion completa.", materiales: ["Objetos para manipular", "Tarjetas con acciones", "Campana"] },
-    { titulo: "ECO-E: Instrucciones complejas", objetivo: "Seguir y verbalizar secuencia de dos pasos", descripcion: "Instrucciones de dos pasos. El nino las ejecuta y las verbaliza usando: Primero yo... y despues yo... La docente no acepta solo la accion sin la verbalizacion. Se aumenta la dificultad gradualmente.", materiales: ["Objetos para circuito", "Tarjetas de secuencia"] },
-    { titulo: "ECO-E: Atencion en cuentos", objetivo: "Mantener atencion y responder con estructura", descripcion: "La docente lee un cuento corto con pausas. En cada pausa pregunta sobre lo leido. El nino responde usando: En el cuento el personaje... Si responde con palabra suelta, se modela y se espera la oracion completa.", materiales: ["Cuentos cortos ilustrados", "Titere narrador"] },
-    { titulo: "ECO-E: Escucha selectiva", objetivo: "Identificar informacion especifica", descripcion: "La docente da una consigna antes de escuchar: Presta atencion al color de la casa. Luego el nino responde en oracion completa sobre ese detalle especifico. Se verifica que la respuesta incluya el dato pedido.", materiales: ["Grabaciones con datos", "Tarjetas de busqueda"] },
-    { titulo: "ECO-C: Vocabulario nuevo I", objetivo: "Comprender y usar palabras nuevas en oracion completa", descripcion: "Se presenta un objeto desconocido en la bolsa misteriosa. El nino lo saca, lo explora y lo describe en oracion completa. La docente no acepta la descripcion si no es oracion completa.", materiales: ["Objetos o imagenes nuevas", "Bolsa misteriosa"] },
-    { titulo: "ECO-C: Categorias semanticas", objetivo: "Clasificar y verbalizar categorias", descripcion: "Se presentan objetos de distintas categorias. El nino los clasifica y verbaliza: El perro es un animal. La manzana es una fruta. La docente no acepta clasificacion sin verbalizacion. Se complica agregando subcategorias.", materiales: ["Cajas de categorias", "Objetos variados"] },
-    { titulo: "ECO-C: Comprension literal", objetivo: "Responder preguntas literales con evidencia del texto", descripcion: "Despues de un cuento, la docente hace preguntas literales. El nino responde citando el texto. Si la respuesta es incompleta, se modela y se espera la repeticion.", materiales: ["Cuento conocido", "Tarjetas de preguntas"] },
-    { titulo: "ECO-C: Inferencias simples", objetivo: "Inferir causa-efecto con oracion completa", descripcion: "Se muestran imagenes con situaciones y el nino infiere usando: El nino esta llorando porque se lastimo. La docente desafia: como lo sabemos? Si la respuesta es incompleta, modela y espera.", materiales: ["Historias con causa clara", "Tarjetas de inferencia"] },
-    { titulo: "ECO-C: Secuencia temporal", objetivo: "Ordenar y verbalizar eventos con conectores", descripcion: "Los ninos reciben tarjetas de secuencia desordenadas y las ordenan. Luego narran la secuencia usando: Primero... luego... despues... al final... REGLA: no se acepta la narracion sin los 4 conectores.", materiales: ["Tarjetas de secuencia", "Linea de tiempo"] },
-    { titulo: "ECO-C: Causa y efecto", objetivo: "Identificar y explicar relaciones causales", descripcion: "La docente muestra pares de tarjetas causa-efecto. El nino conecta ambas usando: La planta se seco porque nadie la rego. Se usan flechas visuales. REGLA: no avanzar sin el conector PORQUE en la respuesta.", materiales: ["Tarjetas causa-efecto", "Flechas de conexion"] },
-    { titulo: "ECO-O: Nombrar con estructura", objetivo: "Producir vocabulario preciso en oracion completa", descripcion: "Se presentan objetos uno a uno. El nino los nombra con estructura completa. REGLA ESTRICTA: si el nino dice solo el nombre del objeto, la docente modela y espera la oracion completa antes de continuar.", materiales: ["Objetos variados", "Tira de frase visual"] },
-    { titulo: "ECO-O: Describir con marco", objetivo: "Usar marco ES / TIENE / SIRVE PARA", descripcion: "El nino describe un objeto usando el marco visible: Es un... Tiene... Sirve para... La docente no avanza con respuesta de palabra suelta. Si el nino se traba, senala el marco como apoyo visual y espera.", materiales: ["Objetos para describir", "Marco de descripcion impreso", "Microfono"] },
-    { titulo: "ECO-O: Narrar con secuenciadores", objetivo: "Usar PRIMERO / LUEGO / DESPUES / AL FINAL", descripcion: "El nino narra una experiencia personal usando los 4 conectores de secuencia. La docente muestra los conectores en tarjetas visuales. Si el nino salta un conector, se senala la tarjeta faltante y se espera que lo incluya.", materiales: ["Tarjetas de secuencia", "Conectores visuales: PRIMERO-LUEGO-DESPUES-AL FINAL"] },
-    { titulo: "ECO-O: Explicar procesos", objetivo: "Explicar paso a paso con conectores", descripcion: "El nino elige algo que sabe hacer y lo explica usando el marco: Para hacer X, primero... luego... al final... El resto del grupo sigue las instrucciones literalmente para verificar si son claras.", materiales: ["Material para proceso simple", "Marco de explicacion"] },
-    { titulo: "ECO-O: Argumentar con PORQUE", objetivo: "Dar razones usando la estructura con PORQUE", descripcion: "La docente presenta dilemas o preferencias. El nino argumenta: A mi me gusta X porque Y. REGLA: no se acepta la opinion sin el PORQUE. Si falta, la docente senala el conector visual y espera la oracion completa.", materiales: ["Tarjetas de opinion", "Conector PORQUE visual", "Microfono"] },
-    { titulo: "ECO-O: Turnos de dialogo", objetivo: "Dialogar con turnos y oraciones completas", descripcion: "En parejas con un objeto de turno (quien lo tiene habla). El turno solo se transfiere si la respuesta fue en oracion completa. Se usa reloj de arena para dar tiempo. La docente observa y registra.", materiales: ["Objeto de turno", "Reloj de arena", "Tarjetas de temas"] },
-    { titulo: "ECO-O: Exposicion oral", objetivo: "Presentar con estructura INICIO/DESARROLLO/CIERRE", descripcion: "Cada nino presenta un tema de 1 minuto usando: Hoy voy a hablar de... Para terminar... Si empieza sin la estructura, la docente para amablemente y recuerda el inicio correcto antes de continuar.", materiales: ["Guia de exposicion", "Publico de peluches"] },
-    { titulo: "ECO-O: Recontar con emocion", objetivo: "Recontar agregando emociones de los personajes", descripcion: "El nino recuenta un cuento conocido agregando emociones. La docente sugiere: Y como se sentia cuando...? para enriquecer el relato.", materiales: ["Cuento conocido", "Titeres", "Tarjetas de emociones"] },
-    { titulo: "Evaluacion ECO", objetivo: "Evaluar oracion completa de forma autonoma", descripcion: "La docente genera situaciones naturales de conversacion, descripcion y narracion sin modelado previo. Registra en la rubrica si el nino usa oraciones completas de forma autonoma, con andamio o solo con palabras sueltas.", materiales: ["Rubrica ECO", "Checklist: Usa oracion completa SI/NO", "Registro individual"] },
+    // BLOQUE 1 - AMBAS SALAS: Escucha activa y oralidad situacional
+    {
+      titulo: "Asamblea: el espacio de la palabra",
+      objetivo: "Participar en intercambios orales respetando turnos y expresandose en oracion completa",
+      descripcion: "La asamblea es el espacio diario de oralidad. La docente modela el turno: quien tiene el objeto de la palabra (pelota, baston) habla, el resto escucha. Se empieza con temas cotidianos: que hicieron el fin de semana? que notaron hoy? Se exige oracion completa y se celebra cada participacion.",
+      materiales: ["Objeto de la palabra (pelota, baston)", "Reloj de arena", "Lista de nombres"],
+      dccaba: "DC CABA 2025 - O Sala 4 y 5: Participacion en conversaciones grupales respetando el turno. La asamblea diaria es el espacio de intercambio oral sistematico recomendado por el DC.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Escucha activa: sonidos y voces",
+      objetivo: "Discriminar sonidos y voces con respuesta verbal en oracion completa",
+      descripcion: "Se reproducen grabaciones de sonidos ambientales y voces conocidas. El nino responde en oracion completa: Eso es el sonido de... / Esa es la voz de... Si responde con una sola palabra, la docente modela la oracion completa y espera la repeticion. Se registra quien necesita andamio.",
+      materiales: ["Grabaciones de sonidos y voces", "Microfono de juguete", "Antifaz"],
+      dccaba: "DC CABA 2025 - O Sala 4: Escucha activa en situaciones comunicativas variadas. La oracion completa como estandar de produccion oral desde sala 4.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Instrucciones: ejecutar y verbalizar",
+      objetivo: "Seguir instrucciones orales y verbalizarlas con estructura completa",
+      descripcion: "Instrucciones de un paso (sala 4) o dos pasos (sala 5). El nino las ejecuta y las verbaliza: Yo levante el brazo / Primero yo... y despues yo... REGLA: no avanzar a la siguiente instruccion sin la verbalizacion completa. Aumentar dificultad gradualmente.",
+      materiales: ["Objetos para manipular", "Tarjetas con acciones pictogramas"],
+      dccaba: "DC CABA 2025 - O Sala 4: Instrucciones simples. Sala 5: secuencia de dos pasos. ECO-E (Argentina/Chile): la verbalizacion posterior ancla el vocabulario de accion.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Descripcion de objetos: ES / TIENE / SIRVE PARA",
+      objetivo: "Describir objetos usando un marco estructurado",
+      descripcion: "El nino saca un objeto de la bolsa misteriosa y lo describe usando el marco visible: Es un... / Tiene... / Sirve para... La docente no avanza con respuesta de palabra suelta. Si el nino se traba, senala el marco como apoyo visual y espera. Para sala 5 se agrega: Es igual/parecido a...",
+      materiales: ["Bolsa misteriosa con objetos variados", "Marco de descripcion impreso en grande", "Microfono"],
+      dccaba: "DC CABA 2025 - O Sala 4: Descripcion de objetos y situaciones. Sala 5: descripcion con precision (color, forma, tamaño, funcion). Marco estructurado como andamio.",
+      sala: "ambas"
+    },
+    // BLOQUE 2 - AMBAS SALAS: Vocabulario y comprension oral
+    {
+      titulo: "Vocabulario nuevo: bolsa misteriosa y clasificacion",
+      objetivo: "Ampliar vocabulario y usar palabras nuevas en oracion completa",
+      descripcion: "Se presenta un objeto desconocido. El nino lo saca, lo explora y lo describe. La docente valida el nombre correcto y lo integra a la clase: quien mas conoce esta palabra? Se clasifica por categoria: es un animal, una herramienta, una fruta. Al final se revisa el muro de palabras.",
+      materiales: ["Objetos o imagenes nuevas", "Bolsa misteriosa", "Muro de palabras"],
+      dccaba: "DC CABA 2025 - O Sala 4 y 5: Amplitud de vocabulario en contextos significativos. El contexto real facilita la retencion a largo plazo.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Categorias semanticas: clasificar y argumentar",
+      objetivo: "Clasificar objetos por categoria y verbalizar el criterio usado",
+      descripcion: "Se presentan objetos de distintas categorias. El nino los clasifica y verbaliza: El perro es un animal porque... La docente no acepta clasificacion sin verbalizacion. Se complica agregando subcategorias (animal domestico vs salvaje) y pidiendo que justifiquen.",
+      materiales: ["Cajas de categorias rotuladas", "Objetos o imagenes variadas"],
+      dccaba: "DC CABA 2025 - O: Amplitud de vocabulario. La categorizacion semantica es base del desarrollo del lenguaje academico.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Inferencias orales: causa y efecto",
+      objetivo: "Inferir causas a partir de imagenes y expresarlas con PORQUE",
+      descripcion: "Se muestran imagenes con situaciones. El nino infiere usando: El nino esta llorando porque... / La planta se seco porque... La docente desafia: como lo sabes si la imagen no lo dice? Se trabaja la diferencia entre lo que SE VE y lo que SE DEDUCE.",
+      materiales: ["Imagenes con situaciones cotidianas", "Tarjetas de causa-efecto", "Flechas visuales"],
+      dccaba: "DC CABA 2025 - O Sala 5: Inferencias simples. ECO-C: la inferencia oral precede y anticipa la inferencia en la lectura.",
+      sala: "ambas"
+    },
+    // BLOQUE 3 - AMBAS SALAS: Narracion oral
+    {
+      titulo: "Narracion de experiencias personales",
+      objetivo: "Narrar experiencias propias usando conectores de secuencia temporal",
+      descripcion: "El nino narra una experiencia personal usando los 4 conectores: Primero... luego... despues... al final... La docente muestra los conectores en tarjetas visuales. Si el nino salta uno, se senala la tarjeta faltante y se espera que lo incluya. Para sala 4 se admite apoyo visual durante toda la narracion.",
+      materiales: ["Tarjetas visuales de conectores", "Fotos de experiencias (opcionales)", "Microfono"],
+      dccaba: "DC CABA 2025 - O Sala 4: Narracion de experiencias personales con apoyo. Sala 5: narracion autonoma con conectores temporales y causales.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Dramatizacion: juego simbolico y lenguaje",
+      objetivo: "Desarrollar el lenguaje oral a traves de la dramatizacion y el juego simbolico",
+      descripcion: "Los ninos dramatizan un cuento conocido asumiendo roles. La docente es el narrador. Se detiene en momentos de dialogo y los ninos improvisan lo que dirian los personajes. Luego se comenta: que dijo el personaje? como lo dijo? Por que lo dijo asi?",
+      materiales: ["Vestuario simple", "Titeres", "Escenografia minima"],
+      dccaba: "DC CABA 2025 - O Sala 4 y 5: Dramatizaciones y juego simbolico. El juego es el organizador principal de la ensenanza en el nivel inicial (DC CABA, principio didactico).",
+      sala: "ambas"
+    },
+    // BLOQUE 4 - SALA 5: Oralidad autonoma y argumentativa
+    {
+      titulo: "Exposicion oral: estructura INICIO-DESARROLLO-CIERRE",
+      objetivo: "Presentar un tema breve con estructura completa",
+      descripcion: "Cada nino presenta un tema de 1 minuto usando la estructura: Hoy voy a hablar de... (inicio) / Lo que mas me importa es... (desarrollo) / Para terminar... (cierre). La docente muestra la estructura en cartel. Si empieza sin ella, para amablemente y recuerda el inicio correcto.",
+      materiales: ["Cartel de estructura de exposicion", "Microfono", "Publico de peluches para los mas timidos"],
+      dccaba: "DC CABA 2025 - O Sala 5: Exposicion oral de temas conocidos con apoyo de imagenes. Base del lenguaje academico en primaria.",
+      sala: "5"
+    },
+    {
+      titulo: "Argumentacion: Yo opino que... porque...",
+      objetivo: "Dar razones de preferencias y opiniones con estructura argumentativa",
+      descripcion: "La docente presenta dilemas o preferencias. El nino argumenta: A mi me gusta X porque Y / Yo creo que Z porque W. REGLA: no se acepta la opinion sin el PORQUE. Si falta, la docente senala el conector visual y espera la oracion completa. Se debate si hay distintas opiniones validas.",
+      materiales: ["Tarjetas de dilemas o preferencias", "Conector PORQUE en cartel visible", "Microfono"],
+      dccaba: "DC CABA 2025 - O Sala 5: Argumentacion simple - dar razones de preferencias y opiniones. Base del pensamiento critico.",
+      sala: "5"
+    },
+    {
+      titulo: "Debate: escuchar y responder con argumentos",
+      objetivo: "Participar en un debate respetando el turno y respondiendo al argumento del otro",
+      descripcion: "Se propone un tema de debate accesible: es mejor el dia o la noche? Se divide la clase en dos grupos. Cada grupo prepara 3 argumentos. El debate tiene reglas: escuchar al otro antes de responder, responder al argumento (no al nino), usar PORQUE. La docente modera.",
+      materiales: ["Objeto de turno", "Tarjetas de argumentos para preparar", "Reloj visible"],
+      dccaba: "DC CABA 2025 - O Sala 5: Participacion en debates. El sistema finlandes de debate temprano + Cruz QUE OPINAS (MINEDUC Chile).",
+      sala: "5"
+    },
+    {
+      titulo: "Narracion autonoma: cuento con inicio, conflicto y resolucion",
+      objetivo: "Narrar un cuento inventado con estructura narrativa completa",
+      descripcion: "El nino inventa y narra un cuento breve con estructura: habia una vez... (inicio), un dia... (conflicto), y entonces... (resolucion), al final... (cierre). La docente usa la estructura de tarjetas como andamio. Se graba la narracion para que el nino se escuche. Al escucharse el nino identifica que le falta o mejorar.",
+      materiales: ["Tarjetas de estructura narrativa", "Grabador o celular", "Titeres para apoyo"],
+      dccaba: "DC CABA 2025 - O Sala 5: Narracion autonoma de experiencias, cuentos y situaciones imaginadas. La grabacion desarrolla metacognicion oral.",
+      sala: "5"
+    },
+    {
+      titulo: "Exposicion con imagenes: tema de interes propio",
+      objetivo: "Presentar al grupo un tema de interes personal con apoyo visual",
+      descripcion: "Cada nino elige un tema de su interes (un animal, un deporte, su familia) y prepara una exposicion de 2 minutos con imagenes. El grupo escucha y luego hace al menos una pregunta. La docente registra la estructura usada y el vocabulario especifico del tema.",
+      materiales: ["Imagenes o dibujos preparados por el nino", "Microfono", "Rubrica de exposicion"],
+      dccaba: "DC CABA 2025 - O Sala 5: Exposicion oral de temas conocidos. Entrevistas a adultos de la comunidad (variante recomendada por el DC).",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion ECO: situaciones naturales de comunicacion",
+      objetivo: "Evaluar la oralidad en contextos comunicativos reales y variados",
+      descripcion: "La docente genera situaciones naturales de conversacion (describir, narrar, argumentar, exponer) sin modelado previo. Registra en rubrica por nivel: autonoma, con andamio, con palabra suelta. Incluye: escucha activa, turno de dialogo, vocabulario, conectores, argumentacion.",
+      materiales: ["Rubrica ECO completa", "Registro individual", "Situaciones comunicativas variadas preparadas"],
+      dccaba: "DC CABA 2025 - O: Evaluacion continua y formativa. La evaluacion de oralidad debe realizarse en situaciones comunicativas reales, no en pruebas aisladas.",
+      sala: "ambas"
+    },
   ],
 }
 
@@ -412,7 +835,9 @@ function calcularActividadDelDia(
   sala = "Manzanos"
 ): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
-  const limites4 = { CF: 12, CT: 8, O: 10 }
+  // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
+  // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
+  const limites4 = { CF: 11, CT: 9, O: 10 }
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
 
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
@@ -688,7 +1113,9 @@ export async function GET(req: Request) {
     const salaRedNombre = usarRed && candidataRed ? `${candidataRed.salas} sala${candidataRed.salas > 1 ? "s" : ""} de la red` : null
 
     // ── 7. Construir respuesta ─���───────────────────────────────────────────
-    const limites4 = { CF: 12, CT: 8, O: 10 }
+    // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
+  // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
+  const limites4 = { CF: 11, CT: 9, O: 10 }
     const totalEnSecuencia = esde4Anios(sala)
       ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
       : SECUENCIA[ejeSugerido].length
