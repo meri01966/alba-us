@@ -1074,7 +1074,9 @@ export async function GET(req: Request) {
       const amarillos = regsEje.filter((r) => getVal(r) === "yellow").length
       const rojos = regsEje.filter((r) => getVal(r) === "red").length
       const total = regsEje.length
-      const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
+      // Si no hay registros de seguimiento individual, usar promedio neutro (50)
+      // para que el brain no retroceda al indice 0 por falta de datos
+      const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 50
 
       // Clases completadas para ESTE eje = cierres con ese eje especifico
       const cierresDeEje = cierres.filter((c: { eje: string }) => c.eje === eje)
