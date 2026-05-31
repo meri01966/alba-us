@@ -1,4 +1,4 @@
-// ALBA Brain API v10.1 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
+// ALBA Brain API v10.2 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
