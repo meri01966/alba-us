@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       if (!porEje[eje]) {
         porEje[eje] = { resultados: [], actividades: [], fechas: [] }
       }
-      porEje[eje].resultados.push(r.resultado || "red")
+      porEje[eje].resultados.push(r.estado || r.resultado || "red")
       if (r.actividad && !porEje[eje].actividades.includes(r.actividad)) {
         porEje[eje].actividades.push(r.actividad)
       }

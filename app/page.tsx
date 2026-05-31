@@ -1,20 +1,25 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
-import { HeatMap, type RegistroCierre } from "@/components/sia/heat-map"
-import { DayPlanning } from "@/components/sia/day-planning"
+import { HeatMap } from "@/components/sia/heat-map"
+import { DayPlanning, type DayPlanningHandle } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
 import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
+import { PlanificacionModal } from "@/components/alba/planificacion-modal"
+import { AlertasPedagogicas, type AlertaPedagogica } from "@/components/alba/alertas-pedagogicas"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 type StatusLevel = "green" | "yellow" | "red" | "blue"
+
+// Progreso por eje: null = sin datos, number = promedio acumulado 0-100
+type EjeProgress = { CF: number | null; CT: number | null; O: number | null }
 
 // Mapeo de actividad a eje pedagogico
 // "Reconocimiento de Letras" -> CF (Conciencia Fonologica)
@@ -56,8 +61,13 @@ const BG_EJE: Record<string, string> = {
   CT: "#f0fdf4",
   O: "#fffbeb",
 }
+const NOMBRE_EJE_SHORT: Record<string, string> = {
+  CF: "Conciencia Fonologica",
+  CT: "Comprension de Textos",
+  O:  "Oralidad",
+}
 
-// ── Reporte para Padres - generado desde datos reales de Supabase
+// ── Sintesis Pedagogica Grupal - informe para reunion de padres
 function SintesisPedagogicaModal({ 
   totalStudents,
   salaName,
@@ -71,46 +81,50 @@ function SintesisPedagogicaModal({
   const [reporte, setReporte] = useState<{
     sinDatos: boolean
     mensaje?: string
-    totalRegistros?: number
-    ejesConDatos?: number
+    sala?: string
+    totalAlumnos?: number
+    totalClases?: number
+    periodoDesde?: string | null
+    periodoHasta?: string | null
     ejes: Array<{
       eje: string
       nombre: string
-      promedio: number
-      nivel: string | null
-      totalActividades: number
-      actividadesUnicas: number
-      verdes: number
-      amarillos: number
-      rojos: number
-      fechaInicio: string | null
-      fechaUltima: string | null
-      mensaje: string
-      sugerenciaCasa: string
+      totalClases: number
+      actividadesUnicas: string[]
+      periodoDesde: string | null
+      periodoHasta: string | null
+      pctLogrado: number
+      pctProceso: number
+      pctRefuerzo: number
+      promedioGrupal: number
+      tendencia: "mejorando" | "estable" | "necesita_apoyo"
+      txt_queTrabajaamos: string
+      txt_comoLoTrabajaamos: string
+      txt_queAprendioElGrupo: string
+      sugerenciasContinuacion: string[]
     }>
   } | null>(null)
 
   useEffect(() => {
     async function fetchReporte() {
       try {
-        const res = await fetch(`/api/reporte-padres?sala=${encodeURIComponent(salaName)}`)
+        const res = await fetch(`/api/reporte-grupal?sala=${encodeURIComponent(salaName)}`)
         const data = await res.json()
         setReporte(data)
       } catch (err) {
-        console.error("[v0] Error fetching reporte padres:", err)
+        console.error("[v0] Error fetching reporte grupal:", err)
         setReporte({ sinDatos: true, ejes: [], mensaje: "Error al cargar el reporte. Intenta nuevamente." })
       } finally {
         setLoading(false)
       }
     }
     fetchReporte()
-  }, [])
+  }, [salaName])
 
-  const nivelColor = (nivel: string | null) => {
-    if (nivel === "Muy bien") return "bg-green-100 text-green-700"
-    if (nivel === "En proceso") return "bg-yellow-100 text-yellow-700"
-    if (nivel === "Necesita refuerzo") return "bg-red-100 text-red-700"
-    return "bg-slate-100 text-slate-500"
+  const tendenciaLabel = (t: string) => {
+    if (t === "mejorando") return { label: "Mejorando", color: "#10b981", bg: "#ecfdf5" }
+    if (t === "necesita_apoyo") return { label: "Necesita apoyo", color: "#ef4444", bg: "#fef2f2" }
+    return { label: "Estable", color: "#f59e0b", bg: "#fffbeb" }
   }
 
   return (
@@ -123,148 +137,187 @@ function SintesisPedagogicaModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-100">
+        <div className="p-5 border-b border-slate-100" style={{ background: "#1e3a5f" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-                Reporte para Familias
+              <h2 className="text-lg font-bold text-white">
+                Sintesis Pedagogica Grupal
               </h2>
-              <p className="text-sm text-slate-500">
-                Sala {salaName} · {totalStudents} alumnos · Generado desde datos reales de ALBA
+              <p className="text-sm text-white/70">
+                Sala {salaName} &middot; {totalStudents} alumnos &middot; Informe para reunion de padres
               </p>
             </div>
             <button 
               onClick={onClose}
               type="button"
-              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
             >
-              <X className="w-4 h-4 text-slate-600" />
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
 
         {/* Contenido */}
-        <div className="p-5 space-y-5 text-slate-700 leading-relaxed max-h-[70vh] overflow-y-auto">
+        <div className="p-5 space-y-5 text-slate-700 leading-relaxed max-h-[75vh] overflow-y-auto">
           
           {loading && (
-            <div className="flex items-center justify-center py-10">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              <span className="ml-3 text-sm text-slate-500">Leyendo datos del aula desde ALBA...</span>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full" />
+              <span className="ml-3 text-sm text-slate-500">ALBA esta analizando los datos de la sala...</span>
             </div>
           )}
 
           {!loading && reporte?.sinDatos && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center">
               <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <h3 className="font-semibold text-slate-600 mb-2">Aun no hay actividades registradas</h3>
+              <h3 className="font-semibold text-slate-600 mb-2">Aun no hay actividades evaluadas</h3>
               <p className="text-sm text-slate-500 leading-relaxed">
-                {reporte.mensaje || "El reporte se generara automaticamente cuando la docente registre evaluaciones en el aula."}
-              </p>
-              <p className="text-xs text-slate-400 mt-3">
-                Solo se generan reportes de los ejes que ya fueron trabajados en el aula.
+                {reporte.mensaje || "El informe grupal se generara automaticamente cuando la docente registre evaluaciones en el aula."}
               </p>
             </div>
           )}
 
           {!loading && reporte && !reporte.sinDatos && reporte.ejes.length > 0 && (
             <>
-              {/* Resumen */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-800">
-                    Este reporte refleja lo que realmente sucedio en el aula
-                  </span>
-                </div>
+              {/* Resumen cabecera */}
+              <div className="rounded-xl p-4 border border-slate-200 bg-slate-50">
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{reporte.totalRegistros}</p>
-                    <p className="text-xs text-slate-500">Evaluaciones registradas</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.totalAlumnos ?? totalStudents}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Alumnos del grupo</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{reporte.ejesConDatos}</p>
-                    <p className="text-xs text-slate-500">{reporte.ejesConDatos === 1 ? "Eje trabajado" : "Ejes trabajados"}</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.totalClases ?? "—"}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Clases con evaluacion</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xl font-bold text-blue-600">{totalStudents}</p>
-                    <p className="text-xs text-slate-500">Alumnos</p>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporte.ejes.length}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{reporte.ejes.length === 1 ? "Eje trabajado" : "Ejes trabajados"}</p>
                   </div>
                 </div>
+                {reporte.periodoDesde && (
+                  <p className="text-xs text-center text-slate-400 mt-3">
+                    Periodo: {reporte.periodoDesde}{reporte.periodoHasta && reporte.periodoHasta !== reporte.periodoDesde ? " al " + reporte.periodoHasta : ""}
+                  </p>
+                )}
               </div>
 
-              {/* Un bloque por eje trabajado */}
-              {reporte.ejes.map((eje, idx) => (
-                <section key={eje.eje} className="rounded-xl border overflow-hidden" style={{ borderColor: COLOR_EJE[eje.eje] + "40" }}>
-                  {/* Cabecera del eje */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: BG_EJE[eje.eje] }}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{ backgroundColor: COLOR_EJE[eje.eje] }}>
-                        {idx + 1}
-                      </span>
-                      <span className="font-semibold text-sm" style={{ color: COLOR_EJE[eje.eje] }}>{eje.nombre}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {eje.nivel && (
-                        <span className={"text-xs font-bold px-2 py-0.5 rounded-full " + nivelColor(eje.nivel)}>
-                          {eje.nivel}
+              {/* Un bloque por eje */}
+              {reporte.ejes.map((eje) => {
+                const tend = tendenciaLabel(eje.tendencia)
+                return (
+                  <section key={eje.eje} className="rounded-xl border overflow-hidden" style={{ borderColor: COLOR_EJE[eje.eje] + "50" }}>
+                    {/* Cabecera eje */}
+                    <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: BG_EJE[eje.eje] }}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: COLOR_EJE[eje.eje] }}>
+                          {eje.eje}
                         </span>
-                      )}
-                      <span className="text-xs text-slate-500">{eje.totalActividades} clases</span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3 bg-white">
-                    {/* Barra de progreso */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-slate-500">Nivel de logro grupal</span>
-                        <span className="text-xs font-bold text-slate-700">{eje.promedio}%</span>
+                        <span className="font-bold text-sm" style={{ color: COLOR_EJE[eje.eje] }}>{eje.nombre}</span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{
-                            width: eje.promedio + "%",
-                            backgroundColor: eje.promedio >= 70 ? "#10b981" : eje.promedio >= 40 ? "#fbbf24" : "#ef4444"
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-green-600">{eje.verdes} logrado</span>
-                        <span className="text-xs text-yellow-600">{eje.amarillos} en proceso</span>
-                        <span className="text-xs text-red-500">{eje.rojos} refuerzo</span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: tend.bg, color: tend.color }}
+                        >
+                          {tend.label}
+                        </span>
+                        <span className="text-xs text-slate-500">{eje.totalClases} {eje.totalClases === 1 ? "clase" : "clases"}</span>
                       </div>
                     </div>
 
-                    {/* Fechas */}
-                    {eje.fechaInicio && (
-                      <p className="text-xs text-slate-400">
-                        Trabajado desde el {eje.fechaInicio}
-                        {eje.fechaUltima && eje.fechaUltima !== eje.fechaInicio ? " hasta el " + eje.fechaUltima : ""}
-                      </p>
-                    )}
+                    <div className="bg-white divide-y divide-slate-100">
+                      {/* Barra de progreso grupal */}
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nivel grupal acumulado</span>
+                          <span className="text-sm font-bold" style={{ color: eje.promedioGrupal >= 70 ? "#10b981" : eje.promedioGrupal >= 40 ? "#f59e0b" : "#ef4444" }}>
+                            {eje.promedioGrupal}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5">
+                          <div
+                            className="h-2.5 rounded-full transition-all"
+                            style={{
+                              width: eje.promedioGrupal + "%",
+                              backgroundColor: eje.promedioGrupal >= 70 ? "#10b981" : eje.promedioGrupal >= 40 ? "#f59e0b" : "#ef4444",
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-1.5 text-xs">
+                          <span style={{ color: "#10b981" }}>{eje.pctLogrado}% logrado</span>
+                          <span style={{ color: "#f59e0b" }}>{eje.pctProceso}% en proceso</span>
+                          <span style={{ color: "#ef4444" }}>{eje.pctRefuerzo}% refuerzo</span>
+                        </div>
+                      </div>
 
-                    {/* Mensaje para la familia */}
-                    <p className="text-sm text-slate-700 leading-relaxed">{eje.mensaje}</p>
+                      {/* Seccion 1: Que trabajamos */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Que trabajamos
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queTrabajaamos}</p>
+                        {eje.actividadesUnicas.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {eje.actividadesUnicas.map((act, i) => (
+                              <span
+                                key={i}
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ backgroundColor: BG_EJE[eje.eje], color: COLOR_EJE[eje.eje], border: `1px solid ${COLOR_EJE[eje.eje]}30` }}
+                              >
+                                {act}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Sugerencia para casa */}
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Para hacer en casa</p>
-                      <p className="text-sm text-slate-600 leading-relaxed">{eje.sugerenciaCasa}</p>
+                      {/* Seccion 2: Como lo trabajamos */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Como lo trabajamos
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_comoLoTrabajaamos}</p>
+                      </div>
+
+                      {/* Seccion 3: Que aprendio el grupo */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Que aprendio el grupo
+                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queAprendioElGrupo}</p>
+                      </div>
+
+                      {/* Seccion 4: Para seguir trabajando */}
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: COLOR_EJE[eje.eje] }}>
+                          Para seguir trabajando
+                        </p>
+                        <ul className="space-y-1.5">
+                          {eje.sugerenciasContinuacion.map((sug, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                              <span className="mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLOR_EJE[eje.eje] }} />
+                              {sug}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                </section>
-              ))}
+                  </section>
+                )
+              })}
 
-              {/* Nota sobre ejes no reportados */}
-              {reporte.ejesConDatos && reporte.ejesConDatos < 3 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              {/* Nota al pie */}
+              {reporte.ejes.length < 3 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm text-amber-700">
-                    <strong>Nota:</strong> Este reporte incluye solo los ejes trabajados hasta la fecha.
-                    Los ejes de {["Conciencia Fonologica", "Comprension de Textos", "Oralidad"]
-                      .filter(n => !reporte.ejes.find(e => e.nombre === n))
-                      .join(" y ")} aun no tienen actividades registradas y se incluiran cuando la docente los trabaje en el aula.
+                    Este informe incluye solo los ejes evaluados hasta la fecha.{" "}
+                    {["CF", "CT", "O"]
+                      .filter(e => !reporte.ejes.find(r => r.eje === e))
+                      .map(e => NOMBRE_EJE_SHORT[e])
+                      .join(" y ")}{" "}
+                    se incluira cuando la docente registre evaluaciones en esos ejes.
                   </p>
                 </div>
               )}
@@ -275,8 +328,7 @@ function SintesisPedagogicaModal({
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
           <p className="text-xs text-slate-400 text-center">
-            Reporte generado automaticamente por ALBA a partir de los datos registrados en el aula.
-            Solo se reportan los ejes efectivamente trabajados.
+            Informe grupal generado por ALBA a partir de los datos evaluados en el aula. Solo se reportan los ejes efectivamente trabajados.
           </p>
         </div>
       </div>
@@ -285,22 +337,43 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT"]
+const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
 
 export default function ALBADashboard() {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
-  const [progress, setProgress] = useState<Record<string, { CF: number; CT: number; O: number }>>({})
-  const [brainKey, setBrainKey] = useState(0)  // incrementar fuerza re-fetch de ALBA
+  const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
+  // Ref al componente DayPlanning para llamar fetchBrain directamente con timing correcto
+  const dayPlanningRef = useRef<DayPlanningHandle>(null)
 
-  // Inicializar progreso de alumno en 0 (gris) - solo se actualiza con evaluacion explicita
-  function initProgress(studentId: string) {
-    return { CF: 0, CT: 0, O: 0 }
-  }  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  // Inicializar progreso de alumno con null (sin datos) - solo se actualiza con evaluacion explicita
+  function initProgress(_studentId: string): EjeProgress {
+    return { CF: null, CT: null, O: null }
+  }
+
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  const [selectedStudentName, setSelectedStudentName] = useState<string>("")
   const [showSintesis, setShowSintesis] = useState(false)
+  const [showPlanificacion, setShowPlanificacion] = useState(false)
+  const [showAlertas, setShowAlertas] = useState(false)
+  const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
+  // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
+  const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
+  // Toast de confirmacion al finalizar jornada (reemplaza alert)
+  const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
-  // Gestion de sala
+  // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
   const [salaActual, setSalaActual] = useState("Manzanos")
+  const [salaHydrated, setSalaHydrated] = useState(false)
+  
+  // Cargar sala desde localStorage despues de hydration
+  useEffect(() => {
+    const savedSala = localStorage.getItem("sia-sala-activa")
+    if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
+      setSalaActual(savedSala)
+    }
+    setSalaHydrated(true)
+  }, [])
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [showConfigSala, setShowConfigSala] = useState(false)
@@ -333,6 +406,16 @@ export default function ALBADashboard() {
     actividadALBA: string | null
     completado: boolean
   }>>([])
+
+  // Cargar evaluaciones de hoy desde Supabase para la sala actual
+  // Los botones del Registro de Clase arrancan siempre vacios al cargar la pagina.
+  // Son el "pizarron del dia" — se usan solo durante la clase en curso.
+  // Solo se persisten en el historial (Mapa de Progreso) al presionar Finalizar Jornada.
+  const cargarEvaluacionesDeSala = useCallback(async (_sala: string) => {
+    // Intencional: no restaurar evaluaciones del dia anterior.
+    // El pizarron empieza limpio siempre.
+    setEvaluaciones({})
+  }, [])
   
   // Cargar historial del mes al cambiar de sala
   const fetchHistorialMes = useCallback(async () => {
@@ -361,77 +444,122 @@ export default function ALBADashboard() {
   
   
   
-  // Callback cuando el docente cambia la actividad del dia
+  // Callback cuando ALBA cambia la actividad sugerida
+  // Limpia los botones del dia (pizarron nuevo) pero NO toca el Mapa de Progreso
   const handleActividadChange = useCallback((actividad: string, eje: string) => {
     setActividadActual(actividad)
     setEjeActual(eje)
+    setEvaluaciones({})
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
   
-  // Callback para el registro de cierre del dia
-  // Al guardar cierre: los alumnos SIN evaluacion se marcan automaticamente como verde (logrado)
-  const handleRegistroCierre = useCallback(async (registro: RegistroCierre) => {
-    // 1. Marcar como verde todos los alumnos sin evaluacion explicita
+  // Finalizar jornada: 
+  // 1. Alumnos sin marcar → se guardan como verde (logrado) en Supabase
+  // 2. Se actualiza el progreso acumulado por eje en el mapa
+  // 3. Se guarda el registro de cierre que alimenta a ALBA para la proxima sugerencia
+  // 4. ALBA re-calcula la actividad sugerida para la proxima clase
+  // 5. Las evaluaciones del dia se limpian para la nueva clase
+  const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
+    const ejeDelDia = ejeActual
+    const actividadDelDia = actividadSugeridaALBA || actividadActual
+
+    // --- Paso 1: marcar como verde a todos los alumnos sin evaluacion explicita ---
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
-    if (sinEvaluar.length > 0) {
-      const nuevasEvals = { ...evaluaciones }
-      const nuevosProgress = { ...progress }
-      sinEvaluar.forEach(s => {
-        nuevasEvals[s.id] = "green"
-        nuevosProgress[s.id] = {
-          ...(nuevosProgress[s.id] || initProgress(s.id)),
-          [ejeActual]: 100,
-        }
-      })
-      setEvaluaciones(nuevasEvals)
-      setProgress(nuevosProgress)
+    const evaluacionesFinales = { ...evaluaciones }
+    const nuevoProgress = { ...progress }
+
+    for (const s of sinEvaluar) {
+      evaluacionesFinales[s.id] = "green"
+      // Actualizar progreso local
+      const anterior = nuevoProgress[s.id]?.[ejeDelDia as "CF" | "CT" | "O"] ?? null
+      nuevoProgress[s.id] = {
+        ...(nuevoProgress[s.id] || initProgress(s.id)),
+        [ejeDelDia]: anterior !== null ? Math.round((anterior + 100) / 2) : 100,
+      }
+      // Guardar en Supabase
+      try {
+        await fetch("/api/seguimiento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alumno_id: s.id, eje: ejeDelDia, estado: "green", sala: salaActual, actividad: actividadDelDia }),
+        })
+      } catch (e) {
+        console.error("[v0] Error guardando verde:", e)
+      }
     }
 
+    setEvaluaciones(evaluacionesFinales)
+    // NO pisar el progress con valores RAM — fetchProgreso recargara el historial real de Supabase
+    // setProgress(nuevoProgress) -- ELIMINADO: causaba que los promedios correctos calculados
+    //   por handleStatusChange fueran pisados por un calculo local simplificado
+
+    // --- Paso 2: calcular stats para el registro de cierre ---
+    const statsVerdes  = Object.values(evaluacionesFinales).filter(e => e === "green").length
+    const statsAmarillos = Object.values(evaluacionesFinales).filter(e => e === "yellow").length
+    const statsRojos   = Object.values(evaluacionesFinales).filter(e => e === "red").length
+    const statsAusentes = Object.values(evaluacionesFinales).filter(e => e === "blue").length
+
+    // --- Paso 3: guardar registro de cierre ---
     try {
       const response = await fetch("/api/registro-cierre", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registro),
+        body: JSON.stringify({
+          actividadALBA: actividadDelDia,
+          actividadDocente: actividadDelDia,
+          eje: ejeDelDia,
+          sala: salaActual,
+          evaluacionGeneral: datos.evaluacion,
+          observaciones: datos.observaciones,
+          sugerenciaParaIA: datos.sugerencia,
+          stats: { green: statsVerdes, yellow: statsAmarillos, red: statsRojos, ausentes: statsAusentes },
+        }),
       })
       const data = await response.json()
+
       if (data.success) {
+        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
-        // ALBA re-analiza y sugiere la siguiente actividad
-        setBrainKey(k => k + 1)
+        // Tres intentos para asegurar que Supabase ya confirmo el insert antes de releer
+        setTimeout(() => {
+          fetchProgreso()
+          dayPlanningRef.current?.fetchBrain()
+        }, 1500)
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain()
+        }, 3500)
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain()
+        }, 7000)
+        
+        // --- Paso 5: limpiar evaluaciones para la nueva clase ---
+        setEvaluaciones({})
+        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(STORAGE_PROGRESS_KEY)
+
+        // Mostrar toast de confirmacion
+        setJornadaToast({ tipo: "ok", mensaje: "Jornada guardada. ALBA actualizara la sugerencia para la proxima clase." })
+        setTimeout(() => setJornadaToast(null), 5000)
+      } else {
+        setJornadaToast({ tipo: "error", mensaje: "Error al guardar. Intenta de nuevo." })
+        setTimeout(() => setJornadaToast(null), 4000)
       }
     } catch (err) {
       console.error("[v0] Error guardando registro de cierre:", err)
+      setJornadaToast({ tipo: "error", mensaje: "Error de conexion. Intenta de nuevo." })
+      setTimeout(() => setJornadaToast(null), 4000)
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual])
+  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
 
-  // Cargar evaluaciones guardadas de localStorage al iniciar
+  // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        // Verificar que sea del mismo dia
-        const today = new Date().toDateString()
-        if (parsed.fecha === today) {
-          setEvaluaciones(parsed.evaluaciones || {})
-        } else {
-          // Limpiar si es de otro dia
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
+    // Al cambiar de sala, limpiar alertas de la sala anterior para no mezclar
+    setAlertasPedagogicas([])
+    cargarEvaluacionesDeSala(salaActual)
+  }, [salaActual, cargarEvaluacionesDeSala])
     
-    // Cargar progreso guardado
-    const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-    if (savedProgress) {
-      try {
-        setProgress(JSON.parse(savedProgress))
-      } catch {
-        localStorage.removeItem(STORAGE_PROGRESS_KEY)
-      }
-    }
-  }, [])
+  // El progreso se carga desde Supabase en fetchProgreso().
+  // localStorage es solo un cache secundario cuando no hay Supabase configurado.
 
 // Guardar evaluaciones en localStorage cuando cambien
   useEffect(() => {
@@ -455,9 +583,11 @@ export default function ALBADashboard() {
 
   const fetchProgreso = useCallback(async () => {
     setIsLoading(true)
+    // Limpiar alertas antes de recalcular para no duplicar ni mezclar entre salas
+    setAlertasPedagogicas([])
     
     try {
-      // Cargar alumnos via API (usa service_role en el servidor)
+      // Cargar alumnos via API
       const res = await fetch(`/api/students?sala=${encodeURIComponent(salaActual)}`)
       const data = await res.json()
       
@@ -465,7 +595,6 @@ export default function ALBADashboard() {
         console.error("Error cargando alumnos:", data.error)
       }
       
-      // Mapear alumnos
       const mappedStudents = (data.students || []).map((al: any) => ({
         id: al.id,
         name: al.nombre,
@@ -474,10 +603,187 @@ export default function ALBADashboard() {
       }))
       setStudents(mappedStudents)
 
-        // Cargar progreso desde localStorage si existe
-      const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
-      if (savedProgress) {
-        setProgress(JSON.parse(savedProgress))
+      // Cargar progreso acumulado por eje desde Supabase
+      if (isSupabaseConfigured() && supabase && mappedStudents.length > 0) {
+        const ids = mappedStudents.map((s: { id: string }) => s.id)
+        const STATUS_TO_VAL: Record<string, number> = { green: 100, yellow: 50, red: 10, blue: 0 }
+        
+        const { data: seguimientos } = await supabase
+          .from('seguimiento')
+          .select('alumno_id, eje, estado, created_at')
+          .in('alumno_id', ids)
+          .order('created_at', { ascending: true })
+        
+        if (seguimientos && seguimientos.length > 0) {
+          // Agrupar por alumno+eje con actividades individuales
+          const agrupado: Record<string, Record<string, Array<{ semana: number; resultado: string }>>> = {}
+          const contadores: Record<string, Record<string, number>> = {}
+          
+          for (const row of seguimientos) {
+            if (!agrupado[row.alumno_id]) agrupado[row.alumno_id] = {}
+            if (!agrupado[row.alumno_id][row.eje]) agrupado[row.alumno_id][row.eje] = []
+            if (!contadores[row.alumno_id]) contadores[row.alumno_id] = {}
+            if (!contadores[row.alumno_id][row.eje]) contadores[row.alumno_id][row.eje] = 0
+            
+            contadores[row.alumno_id][row.eje]++
+            agrupado[row.alumno_id][row.eje].push({
+              semana: contadores[row.alumno_id][row.eje],
+              resultado: row.estado // green, yellow, red, blue
+            })
+          }
+          
+          const progresoCalculado: Record<string, Record<string, { porcentaje: number; actividades: Array<{ semana: number; resultado: string }> }>> = {}
+          for (const [alumnoId, ejes] of Object.entries(agrupado)) {
+            progresoCalculado[alumnoId] = {}
+            for (const [eje, actividades] of Object.entries(ejes)) {
+              const valores = actividades.map(a => STATUS_TO_VAL[a.resultado] ?? 0)
+              const promedio = valores.length > 0 ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length) : 0
+              progresoCalculado[alumnoId][eje] = {
+                porcentaje: promedio,
+                actividades: actividades
+              }
+            }
+          }
+          setProgress(progresoCalculado)
+          
+          // ALBA INTELIGENTE: Generar alertas pedagogicas con analisis de patrones
+          const nuevasAlertas: AlertaPedagogica[] = []
+          
+          // Sugerencias especificas por eje y tipo de problema
+          const SUGERENCIAS_ALBA: Record<string, Record<string, string>> = {
+            CF: {
+              persistente: "Este alumno necesita intervencion individual en conciencia fonologica. Sugerencia: 5 minutos diarios de juegos de rimas con su nombre y palabras familiares. Usar material concreto (fichas, cubos) para representar sonidos.",
+              descendente: "Se detecta una tendencia a la baja. Antes de que empeore, reforzar con actividades de discriminacion auditiva: sonidos del entorno, juegos de escucha activa. Volver a silabas antes de fonemas.",
+              preventiva: "Atencion: 2 amarillos seguidos. Para evitar que pase a rojo, dedicar tiempo extra en la proxima clase con actividades de palmeo silabico y reconocimiento de vocales."
+            },
+            CT: {
+              persistente: "Dificultad sostenida en comprension. Sugerencia: lectura dialogica 1 a 1 con cuentos muy cortos (3-4 paginas). Hacer pausas frecuentes con preguntas literales simples (quien, donde). No avanzar a inferencias hasta consolidar lo literal.",
+              descendente: "La comprension esta bajando. Revisar si el nivel de los textos es adecuado. Volver a cuentos con mas imagenes y menos texto. Reforzar vocabulario en contexto antes de cada lectura.",
+              preventiva: "Posible dificultad emergente. Antes de la proxima lectura, activar conocimientos previos con la portada. Hacer predicciones. Verificar comprension con recontar la historia usando imagenes."
+            },
+            O: {
+              persistente: "Dificultad persistente en oralidad. Sugerencia: crear oportunidades de habla en contextos seguros. Empezar con respuestas de una palabra, luego frases, luego oraciones. No corregir pronunciacion frente al grupo.",
+              descendente: "La participacion oral esta disminuyendo. Verificar si hay factores emocionales. Ofrecer opciones de respuesta (esto o esto?) antes de preguntas abiertas. Celebrar cada intento de participacion.",
+              preventiva: "Se nota menor participacion. Incluir al alumno en actividades de coro y respuestas grupales para que gane confianza antes de participar individualmente."
+            }
+          }
+          
+          // Analisis grupal para detectar patrones de sala
+          const analisisGrupal: Record<string, { rojos: number; amarillos: number; verdes: number; total: number }> = {
+            CF: { rojos: 0, amarillos: 0, verdes: 0, total: 0 },
+            CT: { rojos: 0, amarillos: 0, verdes: 0, total: 0 },
+            O: { rojos: 0, amarillos: 0, verdes: 0, total: 0 }
+          }
+          
+          for (const [alumnoId, ejes] of Object.entries(progresoCalculado)) {
+            const alumno = mappedStudents.find((s: {id: string; nombre: string}) => s.id === alumnoId)
+            if (!alumno) continue
+            
+            for (const [eje, data] of Object.entries(ejes)) {
+              const actividades = data.actividades || []
+              if (actividades.length === 0) continue
+              
+              // Contar para analisis grupal (ultima evaluacion de cada alumno)
+              const ultimaEval = actividades[actividades.length - 1]?.resultado
+              if (ultimaEval === "red") analisisGrupal[eje].rojos++
+              else if (ultimaEval === "yellow") analisisGrupal[eje].amarillos++
+              else if (ultimaEval === "green") analisisGrupal[eje].verdes++
+              analisisGrupal[eje].total++
+              
+              // Analisis individual inteligente
+              const ultimasEvals = actividades.slice(-4)
+              const rojosRecientes = ultimasEvals.filter(a => a.resultado === "red").length
+              const amarillosRecientes = ultimasEvals.filter(a => a.resultado === "yellow").length
+              
+              // Verificar si ya existe alerta para este alumno/eje
+              const alertaExistente = alertasPedagogicas.find(
+                a => a.alumnoId === alumnoId && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
+              )
+              if (alertaExistente) continue
+              
+              const ejeNombre = eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"
+              
+              // ALERTA TIPO 1: Persistencia en rojo (3+ rojos)
+              if (rojosRecientes >= 3) {
+                nuevasAlertas.push({
+                  id: `${alumnoId}-${eje}-persistente-${Date.now()}`,
+                  alumnoId,
+                  alumnoNombre: alumno.nombre,
+                  eje: eje as "CF" | "CT" | "O",
+                  mensaje: `URGENTE: ${alumno.nombre} lleva ${rojosRecientes} clases en rojo en ${ejeNombre}. Requiere intervencion inmediata.`,
+                  sugerencia: SUGERENCIAS_ALBA[eje]?.persistente || "Revisar estrategia pedagogica individual.",
+                  fecha: new Date().toLocaleDateString("es-AR"),
+                  atendida: false
+                })
+              }
+              // ALERTA TIPO 2: Tendencia descendente (paso de verde/amarillo a rojo)
+              else if (actividades.length >= 3) {
+                const penultima = actividades[actividades.length - 2]?.resultado
+                const ultima = actividades[actividades.length - 1]?.resultado
+                if ((penultima === "green" || penultima === "yellow") && ultima === "red") {
+                  nuevasAlertas.push({
+                    id: `${alumnoId}-${eje}-descendente-${Date.now()}`,
+                    alumnoId,
+                    alumnoNombre: alumno.nombre,
+                    eje: eje as "CF" | "CT" | "O",
+                    mensaje: `${alumno.nombre} bajo de ${penultima === "green" ? "logrado" : "en proceso"} a necesita refuerzo en ${ejeNombre}.`,
+                    sugerencia: SUGERENCIAS_ALBA[eje]?.descendente || "Ajustar nivel de actividades.",
+                    fecha: new Date().toLocaleDateString("es-AR"),
+                    atendida: false
+                  })
+                }
+              }
+              // ALERTA TIPO 3: Preventiva (2 amarillos seguidos)
+              else if (amarillosRecientes >= 2 && rojosRecientes === 0) {
+                const ultimas2 = actividades.slice(-2)
+                if (ultimas2.every(a => a.resultado === "yellow")) {
+                  nuevasAlertas.push({
+                    id: `${alumnoId}-${eje}-preventiva-${Date.now()}`,
+                    alumnoId,
+                    alumnoNombre: alumno.nombre,
+                    eje: eje as "CF" | "CT" | "O",
+                    mensaje: `PREVENTIVA: ${alumno.nombre} tiene 2 clases seguidas en proceso en ${ejeNombre}. Actuar antes de que baje.`,
+                    sugerencia: SUGERENCIAS_ALBA[eje]?.preventiva || "Reforzar antes de que baje a rojo.",
+                    fecha: new Date().toLocaleDateString("es-AR"),
+                    atendida: false
+                  })
+                }
+              }
+            }
+          }
+          
+          // ALERTA GRUPAL: Si mas del 40% de la sala esta en rojo en un eje
+          for (const [eje, stats] of Object.entries(analisisGrupal)) {
+            if (stats.total >= 3 && stats.rojos / stats.total >= 0.4) {
+              const ejeNombre = eje === "CF" ? "Conciencia Fonologica" : eje === "CT" ? "Comprension de Textos" : "Oralidad"
+              const alertaGrupalExiste = alertasPedagogicas.find(
+                a => a.alumnoId === "GRUPAL" && a.eje === eje as "CF" | "CT" | "O" && !a.atendida
+              )
+              if (!alertaGrupalExiste) {
+                nuevasAlertas.push({
+                  id: `GRUPAL-${eje}-${Date.now()}`,
+                  alumnoId: "GRUPAL",
+                  alumnoNombre: "ALERTA GRUPAL",
+                  eje: eje as "CF" | "CT" | "O",
+                  mensaje: `${Math.round(stats.rojos / stats.total * 100)}% de la sala (${stats.rojos} de ${stats.total} alumnos) necesita refuerzo en ${ejeNombre}. Revisar estrategia grupal.`,
+                  sugerencia: `Considerar: 1) Bajar el nivel de dificultad de las actividades de ${ejeNombre}. 2) Dividir el grupo para atencion diferenciada. 3) Repetir actividades anteriores que funcionaron bien.`,
+                  fecha: new Date().toLocaleDateString("es-AR"),
+                  atendida: false
+                })
+              }
+            }
+          }
+          
+          if (nuevasAlertas.length > 0) {
+            setAlertasPedagogicas(prev => [...prev, ...nuevasAlertas])
+          }
+        }
+      } else {
+        // Fallback a localStorage si no hay Supabase
+        const savedProgress = localStorage.getItem(STORAGE_PROGRESS_KEY)
+        if (savedProgress) {
+          setProgress(JSON.parse(savedProgress))
+        }
       }
     } catch (err) {
       console.error("Error cargando datos:", err)
@@ -640,34 +946,19 @@ useEffect(() => {
   }
 
   // Callback cuando se evalua un alumno en HeatMap
-  // Actualiza el progreso en tiempo real y guarda en Supabase
-  // Ahora recibe el eje directamente desde HeatMap junto con la actividad
+  // Actualiza el progreso como promedio acumulado por eje (NO sobreescribe el mapa)
   const handleEvaluacion = useCallback(async (studentId: string, status: StatusLevel, actividadDelDia: string, eje: string = "CF") => {
-    // El eje ahora viene directamente del HeatMap (ya no necesitamos el map)
-    
     // Actualizar estado local inmediatamente (optimistic update)
     setEvaluaciones(prev => ({ ...prev, [studentId]: status }))
     
-    // Actualizar progreso en tiempo real
-    // Los no marcados empiezan en 100 (verde), solo se actualiza si hay evaluacion explicita
-    setProgress(prev => {
-      const current = prev[studentId] || initProgress(studentId)
-      const newProgress = statusToProgress(status)
-      return {
-        ...prev,
-        [studentId]: {
-          ...current,
-          [eje]: newProgress,
-        }
-      }
-    })
+    const valorNuevo = statusToProgress(status)
 
-    // Guardar en Supabase si esta configurado (upsert para evitar duplicados del mismo dia)
+    // Guardar en Supabase si esta configurado
     if (isSupabaseConfigured() && supabase) {
       try {
-        const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0]
         
-        // Primero verificar si ya existe un registro para hoy
+        // Verificar si ya existe registro de hoy para este alumno y eje
         const { data: existing } = await supabase
           .from('seguimiento')
           .select('id')
@@ -678,59 +969,59 @@ useEffect(() => {
           .single()
 
         if (existing) {
-          // Actualizar registro existente
-          const { error } = await supabase
+          await supabase
             .from('seguimiento')
-            .update({
-              resultado: status,
-              actividad: actividadDelDia,
-              sala: salaActual,
-              fecha: new Date().toISOString()
-            })
+            .update({ estado: status, actividad: actividadDelDia, sala: salaActual, fecha: new Date().toISOString() })
             .eq('id', existing.id)
-
-          if (error) {
-            console.error("Error actualizando en Supabase:", error)
-          }
         } else {
-          // Insertar nuevo registro
-          const { error } = await supabase
+          await supabase
             .from('seguimiento')
-            .insert([{
-              alumno_id: studentId,
-              eje: eje,
-              resultado: status,
-              actividad: actividadDelDia,
-              fecha: new Date().toISOString(),
-              sala: salaActual,
-            }])
-
-          if (error) {
-            // Tabla 'seguimiento' puede no existir aun - continua con estado local
-          }
+            .insert([{ alumno_id: studentId, eje, estado: status, actividad: actividadDelDia, fecha: new Date().toISOString(), sala: salaActual }])
         }
-        return // Salir si guardamos en Supabase
+
+        // Calcular promedio acumulado por eje desde todos los registros historicos
+        const { data: todos } = await supabase
+          .from('seguimiento')
+          .select('estado')
+          .eq('alumno_id', studentId)
+          .eq('eje', eje)
+          .order('fecha', { ascending: false })
+
+        if (todos && todos.length > 0) {
+          const STATUS_TO_VAL: Record<string, number> = { green: 100, yellow: 50, red: 10, blue: 0 }
+          const sum = todos.reduce((acc: number, r: { estado: string }) => acc + (STATUS_TO_VAL[r.estado] ?? 0), 0)
+          const promedio = Math.round(sum / todos.length)
+          setProgress(prev => ({
+            ...prev,
+            [studentId]: { ...(prev[studentId] || initProgress(studentId)), [eje]: promedio }
+          }))
+        }
+        return
       } catch {
         // Supabase no disponible - continua con estado local
       }
     }
+
+    // Fallback sin Supabase: promedio simple acumulando con valor anterior
+    setProgress(prev => {
+      const current = prev[studentId] || initProgress(studentId)
+      const anterior = (current[eje as "CF" | "CT" | "O"] as number | null) ?? null
+      // Si hay valor previo, promediar; si no, usar el valor nuevo directamente
+      const promedio = anterior !== null ? Math.round((anterior + valorNuevo) / 2) : valorNuevo
+      return { ...prev, [studentId]: { ...current, [eje]: promedio } }
+    })
 
     // Fallback a API local
     try {
       await fetch("/api/registrar-actividad", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          studentId, 
-          field: eje,
-          status,
-          actividad: actividadDelDia 
-        }),
+        body: JSON.stringify({ studentId, field: eje, status, actividad: actividadDelDia }),
       })
     } catch (err) {
       console.error("Error guardando evaluacion:", err)
     }
-  }, [])
+  }, [salaActual])
 
   // Limpiar evaluacion de un alumno
   const handleClearEvaluacion = useCallback((studentId: string) => {
@@ -750,7 +1041,7 @@ useEffect(() => {
   if (activeView === "evaluar") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <ClassEvaluation
           students={students}
           onSave={async (evalData) => {
@@ -770,6 +1061,14 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
@@ -777,13 +1076,15 @@ useEffect(() => {
   if (activeView === "mapa") {
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <SalaMap
           students={students}
           progress={progress}
           evaluaciones={evaluaciones}
           onStudentClick={(id) => {
+            const student = students.find(s => s.id === id)
             setSelectedStudent(id)
+            setSelectedStudentName(student?.nombre || "")
             setActiveView("perfil")
           }}
         />
@@ -794,20 +1095,28 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
 
   if (activeView === "perfil" && selectedStudent) {
     const student = students.find(s => s.id === selectedStudent)
-    const studentProgress = progress[selectedStudent] || { CF: 0, CT: 0, O: 0 }
+    const studentProgress = progress[selectedStudent] || {}
     
     return (
       <div className="min-h-screen bg-background">
-        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+        <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
         <StudentProfile
           alumnoId={selectedStudent}
-          alumnoNombre={student?.nombre}
+          alumnoNombre={selectedStudentName || student?.nombre || "Alumno"}
           progressData={studentProgress}
           onBack={() => {
             setSelectedStudent(null)
@@ -821,13 +1130,21 @@ useEffect(() => {
             onClose={() => setShowSintesis(false)}
           />
         )}
+        <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+        {showAlertas && (
+          <AlertasPedagogicas 
+            alertas={alertasPedagogicas} 
+            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onClose={() => setShowAlertas(false)} 
+          />
+        )}
       </div>
     )
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} salaActual={salaActual} historialMes={historialMes} />
+      <Header activeView={activeView} onNavigate={handleNavigate} onSintesis={() => setShowSintesis(true)} onPlanificacion={() => setShowPlanificacion(true)} onAlertas={() => setShowAlertas(true)} alertasPendientes={alertasPedagogicas.filter(a => !a.atendida).length} salaActual={salaActual} historialMes={historialMes} />
       <main className="flex-1 p-3 sm:p-4 lg:p-5">
         <div className="max-w-7xl mx-auto space-y-4">
           
@@ -853,6 +1170,9 @@ useEffect(() => {
                         type="button"
                         onClick={() => {
                           setSalaActual(sala)
+                          localStorage.setItem("sia-sala-activa", sala)
+                          cargarEvaluacionesDeSala(sala) // Cargar evaluaciones de la nueva sala desde Supabase
+                          dayPlanningRef.current?.fetchBrain()
                           setShowSalaDropdown(false)
                         }}
                         className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 ${sala === salaActual ? "font-semibold bg-slate-50" : ""}`}
@@ -985,7 +1305,7 @@ useEffect(() => {
                     onEvaluacion={handleEvaluacion}
                     onClearEvaluacion={handleClearEvaluacion}
                     onClearAllEvaluaciones={handleClearAllEvaluaciones}
-                    onRegistroCierre={handleRegistroCierre}
+
                     actividadSugeridaALBA={actividadSugeridaALBA}
                     ejeDeALBA={ejeActual}
                     sala={salaActual}
@@ -994,7 +1314,7 @@ useEffect(() => {
                 </div>
                 <div className="lg:col-span-8">
                   <DayPlanning 
-                    key={brainKey}
+                    ref={dayPlanningRef}
                     evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
                     ejeActual={ejeActual as "CF" | "CT" | "O"}
                     actividadActual={actividadActual}
@@ -1015,14 +1335,15 @@ useEffect(() => {
                   evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
-                  actividadDelDia={actividadSugeridaALBA || ACTIVIDAD_DEL_DIA}
-                  evaluados={Object.keys(evaluaciones).filter(id => evaluaciones[id]).length}
+                  actividadDelDia={actividadSugeridaALBA || actividadActual}
+                  evaluados={Object.keys(evaluaciones).length}
                   totalAlumnos={students.length}
-                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green").length}
+                  // Los sin marcar se asumen logrado al finalizar, por eso se suman a verdes
+                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
                   statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
                   statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
                   statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
-                  onGuardar={handleRegistroCierre as any}
+                  onGuardar={handleRegistroCierre}
                 />
               </div>
             </>
@@ -1032,6 +1353,22 @@ useEffect(() => {
       <footer className="py-2 px-4 text-center text-xs text-muted-foreground border-t border-border">
         ALBA · Alfabetizacion con Acompanamiento · Nivel Inicial
       </footer>
+
+      {/* Toast de confirmacion - Finalizar Jornada */}
+      {jornadaToast && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white flex items-center gap-2 transition-all ${
+            jornadaToast.tipo === "ok" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {jornadaToast.tipo === "ok" ? (
+            <Check className="w-4 h-4 shrink-0" />
+          ) : (
+            <X className="w-4 h-4 shrink-0" />
+          )}
+          {jornadaToast.mensaje}
+        </div>
+      )}
 
       {/* Modal de Configuracion de Sala - Carga masiva */}
       {showConfigSala && (
@@ -1244,6 +1581,19 @@ useEffect(() => {
           onClose={() => setShowSintesis(false)}
         />
       )}
+
+      {/* Planificacion Modal */}
+      <PlanificacionModal isOpen={showPlanificacion} onClose={() => setShowPlanificacion(false)} sala={salaActual} />
+      
+      {/* Alertas Pedagogicas Modal */}
+      {showAlertas && (
+        <AlertasPedagogicas 
+          alertas={alertasPedagogicas} 
+          onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+          onClose={() => setShowAlertas(false)} 
+        />
+      )}
     </div>
   )
 }
+// force rebuild 1780161830

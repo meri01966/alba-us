@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { User, Calendar, BookOpen, Home, FileText, X, ChevronLeft, ChevronRight, NotebookPen, AlertTriangle } from "lucide-react"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 
@@ -18,6 +18,9 @@ interface HeaderProps {
   activeView?: ViewType
   onNavigate?: (view: ViewType) => void
   onSintesis?: () => void
+  onPlanificacion?: () => void
+  onAlertas?: () => void
+  alertasPendientes?: number
   salaActual?: string
   historialMes?: DiaActividad[]
 }
@@ -32,7 +35,7 @@ const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> =
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, onAlertas, alertasPendientes = 0, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [mesActual, setMesActual] = useState(new Date().getMonth())
   const [anioActual, setAnioActual] = useState(new Date().getFullYear())
@@ -196,6 +199,20 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
 
           {/* Meta info */}
           <div className="flex items-center gap-3 sm:gap-4 text-sm">
+            {/* Boton Alertas Pedagogicas - SIEMPRE VISIBLE */}
+            <button
+              onClick={onAlertas}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105 relative bg-red-500/20 border border-red-400/50"
+            >
+              <AlertTriangle className="w-4 h-4 text-red-300" />
+              <span className="text-red-200">Alertas</span>
+              {alertasPendientes > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {alertasPendientes}
+                </span>
+              )}
+            </button>
+
             {/* Boton Sintesis Pedagogica */}
             {onSintesis && (
               <button
@@ -205,6 +222,18 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, salaActua
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Sintesis</span>
+              </button>
+            )}
+
+            {/* Boton Mi Planificacion */}
+            {onPlanificacion && (
+              <button
+                onClick={onPlanificacion}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:scale-105"
+                style={{ backgroundColor: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.5)", color: "#10b981" }}
+              >
+                <NotebookPen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mi Planificacion</span>
               </button>
             )}
             

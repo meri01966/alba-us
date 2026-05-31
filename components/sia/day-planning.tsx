@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,9 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRight, Network } from "lucide-react"
+import { Printer, List, Plus, BookOpen, BrainCircuit, X, ChevronDown, ChevronRight, Network, FolderOpen, Trash2, CheckCircle2, AlertCircle } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +45,8 @@ interface BrainActivity {
   claseDeLaSemana?: number
   aprendidoDeLaRed?: boolean
   salaRed?: string | null
+  temaProyecto?: string | null
+  sugerenciaPedagogica?: string | null
 }
 
 interface Planning {
@@ -55,6 +56,30 @@ interface Planning {
   actividad: string
   recursos:  string
   fecha:     string
+}
+
+// ── Tipos Proyecto / Unidad Didáctica ──────────────────────────────────────
+interface ActividadProyecto {
+  id: string
+  titulo: string
+  objetivo: string
+  desarrollo: string
+  materiales: string
+}
+
+interface Proyecto {
+  id?: string
+  sala: string
+  titulo: string
+  objetivo_general: string
+  actividades: ActividadProyecto[]
+  estado: "activo" | "finalizado"
+  created_at?: string
+  finalizado_at?: string | null
+}
+
+function crearActividadVacia(): ActividadProyecto {
+  return { id: crypto.randomUUID(), titulo: "", objetivo: "", desarrollo: "", materiales: "" }
 }
 
 // ── Secuencia Anual de Actividades por Eje ─────────────────────────────────
@@ -334,10 +359,11 @@ function SecuenciaModal({
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function BrainColumn({ activity, isLoading, stats }: { 
+function BrainColumn({ activity, isLoading, stats, microCapacitacion }: { 
   activity: BrainActivity | null; 
   isLoading: boolean;
   stats?: { green: number; yellow: number; red: number; sinEvaluar: number };
+  microCapacitacion?: { titulo: string; contenido: string; tips: string[] } | null;
 }) {
   const [showSecuencia, setShowSecuencia] = useState(false)
   
@@ -459,6 +485,33 @@ function BrainColumn({ activity, isLoading, stats }: {
               </ul>
             </div>
           )}
+          {/* Tema del proyecto activo */}
+          {activity.temaProyecto && (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <FolderOpen className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-xs text-emerald-800">
+                <span className="font-semibold">Proyecto activo:</span> {activity.temaProyecto}. La actividad esta contextualizada a este tema.
+              </span>
+            </div>
+          )}
+
+          {/* Micro-capacitacion just-in-time */}
+          {microCapacitacion && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2">Micro-capacitacion: {microCapacitacion.titulo}</p>
+              <p className="text-sm text-purple-800 mb-2">{microCapacitacion.contenido}</p>
+              {microCapacitacion.tips && microCapacitacion.tips.length > 0 && (
+                <ul className="text-xs text-purple-700 space-y-1">
+                  {microCapacitacion.tips.map((tip, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <span className="text-purple-500">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -483,51 +536,105 @@ function BrainColumn({ activity, isLoading, stats }: {
   )
 }
 
-function MyPlanningColumn({
-  planning,
+function ProyectoColumn({
+  proyecto,
   isLoading,
-  onSaved,
+  onGuardado,
+  onFinalizado,
+  sala,
 }: {
-  planning: Planning | null
+  proyecto: Proyecto | null
   isLoading: boolean
-  onSaved: (p: Planning) => void
+  onGuardado: (p: Proyecto) => void
+  onFinalizado: () => void
+  sala: string
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSaving, setIsSaving]       = useState(false)
+  const [isFinalizing, setIsFinalizing] = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    titulo:    "",
-    objetivo:  "",
-    actividad: "",
-    recursos:  "",
+  const [form, setForm] = useState<Proyecto>({
+    sala,
+    titulo: "",
+    objetivo_general: "",
+    actividades: [crearActividadVacia()],
+    estado: "activo",
   })
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  // Al abrir el modal pre-cargar el proyecto activo si existe
+  const handleOpenModal = () => {
+    if (proyecto) {
+      setForm({
+        ...proyecto,
+        actividades: proyecto.actividades.length > 0 ? proyecto.actividades : [crearActividadVacia()],
+      })
+    } else {
+      setForm({ sala, titulo: "", objetivo_general: "", actividades: [crearActividadVacia()], estado: "activo" })
+    }
+    setSaveError(null)
+    setIsModalOpen(true)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const updateActividad = (idx: number, field: keyof ActividadProyecto, value: string) => {
+    setForm(prev => {
+      const acts = [...prev.actividades]
+      acts[idx] = { ...acts[idx], [field]: value }
+      return { ...prev, actividades: acts }
+    })
+  }
+
+  const addActividad = () => {
+    setForm(prev => ({ ...prev, actividades: [...prev.actividades, crearActividadVacia()] }))
+  }
+
+  const removeActividad = (idx: number) => {
+    setForm(prev => ({
+      ...prev,
+      actividades: prev.actividades.length > 1
+        ? prev.actividades.filter((_, i) => i !== idx)
+        : prev.actividades,
+    }))
+  }
+
+  const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
     setSaveError(null)
     try {
-      const response = await fetch("/api/planning", {
-        method:  "POST",
+      const res = await fetch("/api/proyectos", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(formData),
+        body: JSON.stringify({ ...form, sala }),
       })
-      const data = await response.json()
-      if (data.success && data.planning) {
-        onSaved(data.planning)
+      const data = await res.json()
+      if (data.ok && data.activo) {
+        onGuardado(data.activo)
         setIsModalOpen(false)
-        setFormData({ titulo: "", objetivo: "", actividad: "", recursos: "" })
       } else {
         setSaveError(data.error || "Error al guardar")
       }
     } catch {
-      setSaveError("Error al guardar la planificación")
+      setSaveError("Error de conexion")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleFinalizar = async () => {
+    if (!proyecto?.id) return
+    setIsFinalizing(true)
+    try {
+      const res = await fetch("/api/proyectos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala, id: proyecto.id }),
+      })
+      const data = await res.json()
+      if (data.ok) onFinalizado()
+    } catch {
+      // silencioso
+    } finally {
+      setIsFinalizing(false)
     }
   }
 
@@ -536,156 +643,232 @@ function MyPlanningColumn({
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-          <BookOpen className="w-4 h-4 text-accent" />
+          <FolderOpen className="w-4 h-4 text-accent" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-accent leading-tight">Mi Planificación</p>
-          <p className="text-xs text-muted-foreground">Carga del docente</p>
+          <p className="text-sm font-semibold text-accent leading-tight">Proyecto / Unidad Didactica</p>
+          <p className="text-xs text-muted-foreground">
+            {proyecto ? "Proyecto activo" : "Sin proyecto activo"}
+          </p>
         </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="ml-auto h-7 text-xs px-2.5">
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Nueva
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Nueva Planificación
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <FieldGroup className="py-4">
-                <Field>
-                  <FieldLabel htmlFor="titulo">Título de la actividad</FieldLabel>
-                  <Input
-                    id="titulo"
-                    placeholder="Ej: Sonido /p/"
-                    value={formData.titulo}
-                    onChange={e => handleInputChange("titulo", e.target.value)}
-                    required
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="objetivo">Objetivo del día</FieldLabel>
-                  <Textarea
-                    id="objetivo"
-                    placeholder="Ej: Identificar y producir el sonido /p/ en posición inicial de palabra."
-                    value={formData.objetivo}
-                    onChange={e => handleInputChange("objetivo", e.target.value)}
-                    rows={2}
-                    required
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="actividad">Actividad sugerida</FieldLabel>
-                  <Textarea
-                    id="actividad"
-                    placeholder="Escribí los pasos de la actividad (uno por línea o numerados)"
-                    value={formData.actividad}
-                    onChange={e => handleInputChange("actividad", e.target.value)}
-                    rows={4}
-                    required
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="recursos">Recursos</FieldLabel>
-                  <Textarea
-                    id="recursos"
-                    placeholder="Ej: Imágenes de objetos, espejo, fichas imprimibles"
-                    value={formData.recursos}
-                    onChange={e => handleInputChange("recursos", e.target.value)}
-                    rows={2}
-                  />
-                </Field>
-              </FieldGroup>
-              {saveError && (
-                <p className="text-sm text-destructive mb-3">{saveError}</p>
-              )}
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isSaving}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Spinner className="w-4 h-4 mr-2" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button size="sm" className="ml-auto h-7 text-xs px-2.5" onClick={handleOpenModal}>
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          {proyecto ? "Editar" : "Nueva"}
+        </Button>
       </div>
 
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center flex-1 min-h-[120px]">
-          <Spinner className="text-accent" />
+          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : !planning ? (
+      ) : !proyecto ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
-          <BookOpen className="w-10 h-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No hay planificación cargada para hoy.</p>
+          <FolderOpen className="w-10 h-10 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">No hay proyecto activo.</p>
           <p className="text-xs text-muted-foreground/70">
-            Usá el botón <strong>Nueva</strong> para agregar una.
+            Usa el boton <strong>Nueva</strong> para cargar un proyecto o unidad didactica.
           </p>
         </div>
       ) : (
-        <div className="space-y-3 flex-1">
-          <p className="text-base font-semibold text-foreground leading-snug">{planning.titulo}</p>
-          {planning.objetivo && (
+        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+          {/* Titulo */}
+          <p className="text-base font-semibold text-foreground leading-snug">{proyecto.titulo}</p>
+
+          {/* Objetivo general */}
+          {proyecto.objetivo_general && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
-              <p className="text-sm text-foreground leading-relaxed">{planning.objetivo}</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo general</p>
+              <p className="text-sm text-foreground leading-relaxed">{proyecto.objetivo_general}</p>
             </div>
           )}
-          {parseSteps(planning.actividad).length > 0 && (
-            <div className="bg-accent/5 rounded-lg p-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Actividad</p>
-              <ol className="space-y-1.5 text-sm text-foreground">
-                {parseSteps(planning.actividad).map((step, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/20 text-accent text-xs flex items-center justify-center font-medium">
-                      {i + 1}
-                    </span>
-                    <span className="leading-relaxed">{step}</span>
-                  </li>
+
+          {/* Actividades */}
+          {proyecto.actividades.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Actividades ({proyecto.actividades.length})
+              </p>
+              <div className="space-y-2">
+                {proyecto.actividades.map((act, i) => (
+                  <div key={act.id} className="bg-accent/5 rounded-lg p-2.5">
+                    <p className="text-xs font-semibold text-accent mb-1">Actividad {i + 1}{act.titulo ? ` — ${act.titulo}` : ""}</p>
+                    {act.objetivo && <p className="text-xs text-muted-foreground leading-relaxed mb-1"><span className="font-medium">Obj:</span> {act.objetivo}</p>}
+                    {act.desarrollo && <p className="text-xs text-foreground leading-relaxed mb-1">{act.desarrollo}</p>}
+                    {act.materiales && <p className="text-xs text-muted-foreground"><span className="font-medium">Mat:</span> {act.materiales}</p>}
+                  </div>
                 ))}
-              </ol>
+              </div>
             </div>
           )}
-          {planning.recursos && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Recursos</p>
-              <p className="text-sm text-foreground leading-relaxed">{planning.recursos}</p>
-            </div>
-          )}
+
+          {/* Boton Finalizar Proyecto */}
+          <div className="pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={handleFinalizar}
+              disabled={isFinalizing}
+            >
+              {isFinalizing ? (
+                <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-1.5" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Guardar y finalizar proyecto
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Modal carga/edicion proyecto */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-primary" />
+              {proyecto ? "Editar Proyecto" : "Nuevo Proyecto / Unidad Didactica"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleGuardar}>
+            <FieldGroup className="py-4 space-y-4">
+              {/* Titulo */}
+              <Field>
+                <FieldLabel htmlFor="proj-titulo">Titulo del proyecto</FieldLabel>
+                <Input
+                  id="proj-titulo"
+                  placeholder="Ej: Los Insectos, El Sistema Solar, El Agua..."
+                  value={form.titulo}
+                  onChange={e => setForm(prev => ({ ...prev, titulo: e.target.value }))}
+                  required
+                />
+              </Field>
+
+              {/* Objetivo general */}
+              <Field>
+                <FieldLabel htmlFor="proj-objetivo">Objetivos de aprendizaje</FieldLabel>
+                <Textarea
+                  id="proj-objetivo"
+                  placeholder="Ej: Explorar las caracteristicas de los insectos, desarrollar vocabulario especifico y estimular la curiosidad cientifica."
+                  value={form.objetivo_general}
+                  onChange={e => setForm(prev => ({ ...prev, objetivo_general: e.target.value }))}
+                  rows={3}
+                />
+              </Field>
+
+              {/* Actividades */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-foreground">Actividades</p>
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addActividad}>
+                    <Plus className="w-3 h-3 mr-1" /> Agregar actividad
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {form.actividades.map((act, idx) => (
+                    <div key={act.id} className="border border-border rounded-lg p-3 space-y-3 relative">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-accent">Actividad {idx + 1}</p>
+                        {form.actividades.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeActividad(idx)}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <Field>
+                        <FieldLabel htmlFor={`act-titulo-${idx}`}>Titulo</FieldLabel>
+                        <Input
+                          id={`act-titulo-${idx}`}
+                          placeholder="Ej: Observacion de hormigas en el jardin"
+                          value={act.titulo}
+                          onChange={e => updateActividad(idx, "titulo", e.target.value)}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`act-objetivo-${idx}`}>Objetivo de aprendizaje</FieldLabel>
+                        <Textarea
+                          id={`act-objetivo-${idx}`}
+                          placeholder="Ej: Identificar partes del cuerpo de una hormiga y describirlas oralmente."
+                          value={act.objetivo}
+                          onChange={e => updateActividad(idx, "objetivo", e.target.value)}
+                          rows={2}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`act-desarrollo-${idx}`}>Desarrollo de la actividad</FieldLabel>
+                        <Textarea
+                          id={`act-desarrollo-${idx}`}
+                          placeholder="Describe paso a paso como se desarrolla la actividad..."
+                          value={act.desarrollo}
+                          onChange={e => updateActividad(idx, "desarrollo", e.target.value)}
+                          rows={3}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`act-materiales-${idx}`}>Materiales</FieldLabel>
+                        <Input
+                          id={`act-materiales-${idx}`}
+                          placeholder="Ej: Lupas, laminas de insectos, plasticina"
+                          value={act.materiales}
+                          onChange={e => updateActividad(idx, "materiales", e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </FieldGroup>
+
+            {saveError && (
+              <div className="flex items-center gap-2 text-sm text-destructive mb-3">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {saveError}
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                ) : null}
+                Guardar proyecto
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA }: DayPlanningProps) {
+// Handle expuesto via ref para que el padre pueda llamar fetchBrain directamente
+export interface DayPlanningHandle {
+  fetchBrain: () => Promise<void>
+}
+
+export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(function DayPlanning(
+  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA },
+  ref
+) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
+  const [microCapacitacion, setMicroCapacitacion] = useState<{ titulo: string; contenido: string; tips: string[] } | null>(null)
 
   const [planning,         setPlanning]         = useState<Planning | null>(null)
   const [isPlanningLoading, setIsPlanningLoading] = useState(true)
+
+  const [proyecto,          setProyecto]          = useState<Proyecto | null>(null)
+  const [isProyectoLoading, setIsProyectoLoading] = useState(true)
 
   // Refs para los callbacks - evitan que fetchBrain se recree en cada render del padre
   const onActividadRef = useRef(onActividadALBA)
@@ -708,7 +891,7 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
   const fetchBrain = useCallback(async () => {
     setIsBrainLoading(true)
     try {
-      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}`)
+      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       const sugerencia = data.sugerencia ?? null
       if (sugerencia) {
@@ -724,32 +907,25 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
           ejeRecomendado: sugerencia.eje,
           aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
           salaRed: sugerencia.salaRed || null,
+          temaProyecto: sugerencia.temaProyecto || null,
+          sugerenciaPedagogica: sugerencia.sugerenciaPedagogica || null,
         }
         setBrain(activity)
+        setMicroCapacitacion(data.microCapacitacion || null)
         if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
         if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
       } else {
         setBrain(null)
       }
     } catch {
-      // Si falla la API, mostrar la primera actividad de CF como fallback local
-      setBrain({
-        id: "fallback-CF-1",
-        dia: 1,
-        titulo: "Sonidos del entorno",
-        descripcion: "Los ninos cierran los ojos y escuchan 30 segundos. Luego nombran todos los sonidos que percibieron. La docente muestra tarjetas con imagenes de fuentes sonoras y los ninos las asocian. Finalmente reproducen cada sonido con su voz o cuerpo.",
-        objetivo: "Discriminar sonidos ambientales y asociarlos a su fuente",
-        materiales: ["Campana o triangulo", "Grabadora con sonidos", "Tarjetas con imagenes de fuentes sonoras"],
-        razon: "Inicio de secuencia - Conciencia Fonologica",
-        source: "secuencia",
-        ejeRecomendado: "CF",
-      })
-      if (onActividadRef.current) onActividadRef.current("Sonidos del entorno")
-      if (onEjeRef.current)       onEjeRef.current("CF")
+      // Si falla la API no pisar la actividad anterior
     } finally {
       setIsBrainLoading(false)
     }
   }, [sala]) // solo sala como dependencia - los callbacks van por ref
+
+  // Exponer fetchBrain al padre para llamarlo con timing correcto tras guardar cierre
+  useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])
 
   // Fetch Mi Planificacion
   const fetchPlanning = useCallback(async () => {
@@ -765,10 +941,25 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
     }
   }, [])
 
+  // Fetch Proyecto activo
+  const fetchProyecto = useCallback(async () => {
+    setIsProyectoLoading(true)
+    try {
+      const res  = await fetch(`/api/proyectos?sala=${encodeURIComponent(sala)}`)
+      const data = await res.json()
+      setProyecto(data.activo ?? null)
+    } catch {
+      setProyecto(null)
+    } finally {
+      setIsProyectoLoading(false)
+    }
+  }, [sala])
+
   useEffect(() => {
     fetchBrain()
     fetchPlanning()
-  }, [fetchBrain, fetchPlanning])
+    fetchProyecto()
+  }, [fetchBrain, fetchPlanning, fetchProyecto])
 
   return (
     <Card className="h-full shadow-md">
@@ -781,18 +972,20 @@ export function DayPlanning({ evaluaciones = {}, ejeActual = "CF", actividadActu
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
           {/* Left: Sugerencia SIA */}
           <div className="pb-4 sm:pb-0 sm:pr-4">
-            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} />
+            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
           </div>
-          {/* Right: Mi Planificacion */}
+          {/* Right: Proyecto / Unidad Didactica */}
           <div className="pt-4 sm:pt-0 sm:pl-4">
-            <MyPlanningColumn
-              planning={planning}
-              isLoading={isPlanningLoading}
-              onSaved={setPlanning}
+            <ProyectoColumn
+              proyecto={proyecto}
+              isLoading={isProyectoLoading}
+              onGuardado={p => setProyecto(p)}
+              onFinalizado={() => { setProyecto(null); fetchBrain() }}
+              sala={sala}
             />
           </div>
         </div>
       </CardContent>
     </Card>
   )
-}
+})

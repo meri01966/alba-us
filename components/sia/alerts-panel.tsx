@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, ChevronRight, X, Lightbulb, CheckCircle2 } from "lucide-react"
@@ -80,7 +80,21 @@ function generarAlertas(
 
 export function AlertsPanel({ students = [], evaluaciones = {} }: AlertsPanelProps) {
   const [sugerenciaAbierta, setSugerenciaAbierta] = useState<string | null>(null)
-  const [alertasResueltas, setAlertasResueltas] = useState<string[]>([])
+
+  // Alertas resueltas persisten en localStorage INDEFINIDAMENTE — no se borran hasta ser atendidas
+  // La clave NO incluye fecha para que persistan entre dias y cambios de clase
+  const STORAGE_KEY_ALERTAS = "sia-alertas-resueltas"
+
+  const [alertasResueltas, setAlertasResueltas] = useState<string[]>(() => {
+    if (typeof window === "undefined") return []
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_ALERTAS) || "[]") } catch { return [] }
+  })
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY_ALERTAS, JSON.stringify(alertasResueltas))
+    }
+  }, [alertasResueltas])
   
   // Generar alertas basadas SOLO en evaluaciones reales del dia
   // Las alertas se actualizan automaticamente cuando evaluaciones cambia (incluyendo cancelaciones)

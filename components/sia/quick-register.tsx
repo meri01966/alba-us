@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Send, ThumbsUp, Minus, AlertCircle, CheckCircle2, Pencil, MessageSquare } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -34,6 +34,18 @@ export function QuickRegister({
   const [observaciones, setObservaciones]     = useState("")
   const [sugerencia, setSugerencia]           = useState("")
   const [guardado, setGuardado]               = useState(false)
+  const prevActividad = useRef(actividadDelDia)
+
+  // Cuando ALBA sugiere una nueva actividad, resetear el boton para la proxima jornada
+  useEffect(() => {
+    if (prevActividad.current !== actividadDelDia) {
+      prevActividad.current = actividadDelDia
+      setGuardado(false)
+      setEvaluacion("")
+      setObservaciones("")
+      setSugerencia("")
+    }
+  }, [actividadDelDia])
 
   const totalEvaluados = statsVerdes + statsAmarillos + statsRojos
   const promedio = totalEvaluados > 0

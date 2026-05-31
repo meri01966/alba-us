@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 interface StudentProfileProps {
   alumnoId: string
   alumnoNombre?: string
-  progressData?: { CF: number; CT: number; O: number }
+  progressData?: Record<string, { porcentaje: number; actividades: Array<{ semana: number; resultado: string }> }>
   onBack: () => void
 }
 
@@ -131,7 +131,57 @@ function getNivel(porcentaje: number): { texto: string; color: string; bg: strin
   return { texto: "Necesita Apoyo", color: "#ef4444", bg: "#fef2f2" }
 }
 
-// Sugerencias por eje y nivel
+// Sugerencias inteligentes basadas en el patron de evaluaciones
+function getSugerenciaInteligente(
+  eje: string, 
+  actividades: Array<{ semana: number; resultado: string }>, 
+  porcentaje: number
+): { sugerencia: string; urgencia: "alta" | "media" | "baja" } {
+  const verdes = actividades.filter(a => a.resultado === "green").length
+  const amarillos = actividades.filter(a => a.resultado === "yellow").length
+  const rojos = actividades.filter(a => a.resultado === "red").length
+  const total = actividades.length
+  
+  // Patron: mayoria rojos = urgencia alta
+  if (rojos >= 2 || (total > 0 && rojos / total > 0.5)) {
+    const sugerencias: Record<string, string> = {
+      CF: `ATENCION: ${rojos} actividades en rojo. Reforzar con juegos de rimas y palmadas. Reducir complejidad y aumentar repeticion. Trabajo individual 10 min diarios.`,
+      CT: `ATENCION: ${rojos} actividades en rojo. Volver a lectura dialogica basica con pausas frecuentes. Usar cuentos mas cortos y preguntas literales (Quien, Que, Donde).`,
+      O: `ATENCION: ${rojos} actividades en rojo. Practicar escucha activa con instrucciones de un paso. Ampliar vocabulario con objetos concretos. Evitar presion verbal.`
+    }
+    return { sugerencia: sugerencias[eje] || "Requiere refuerzo individual urgente.", urgencia: "alta" }
+  }
+  
+  // Patron: mayoria amarillos = en proceso, necesita consolidar
+  if (amarillos >= 2 || (total > 0 && amarillos / total > 0.4)) {
+    const sugerencias: Record<string, string> = {
+      CF: `En proceso: ${amarillos} actividades en amarillo. Consolidar con mas practica de sonidos iniciales. Usar material concreto (letras moviles) y juegos de memoria fonologica.`,
+      CT: `En proceso: ${amarillos} actividades en amarillo. Reforzar preguntas inferenciales (Por que, Como). Conectar historias con experiencias personales del nino.`,
+      O: `En proceso: ${amarillos} actividades en amarillo. Practicar narracion usando secuenciadores (primero, despues, al final). Modelar descripciones estructuradas.`
+    }
+    return { sugerencia: sugerencias[eje] || "Continuar practicando para consolidar.", urgencia: "media" }
+  }
+  
+  // Patron: mayoria verdes = avanzado
+  if (verdes >= 2 || porcentaje >= 70) {
+    const sugerencias: Record<string, string> = {
+      CF: `Excelente: ${verdes} actividades logradas. Avanzar a manipulacion de fonemas (sustitucion, omision). Introducir sintesis de palabras mas largas.`,
+      CT: `Excelente: ${verdes} actividades logradas. Desarrollar pensamiento critico con preguntas de opinion. Integrar Cruz de Comprension completa.`,
+      O: `Excelente: ${verdes} actividades logradas. Fomentar exposicion oral y argumentacion simple. Participar en dialogos con turnos extendidos.`
+    }
+    return { sugerencia: sugerencias[eje] || "Continuar desafiando con actividades mas complejas.", urgencia: "baja" }
+  }
+  
+  // Sin evaluaciones o pocas
+  const sugerencias: Record<string, string> = {
+    CF: "Comenzar con identificacion de rimas y segmentacion silabica. Observar respuesta inicial.",
+    CT: "Iniciar con lectura dialogica y preguntas literales basicas. Evaluar nivel de comprension.",
+    O: "Evaluar escucha activa con instrucciones simples. Observar vocabulario receptivo."
+  }
+  return { sugerencia: sugerencias[eje] || "Realizar evaluacion inicial.", urgencia: "media" }
+}
+
+// Sugerencias por eje y nivel (fallback)
 const SUGERENCIAS: Record<string, Record<string, string>> = {
   CF: {
     "Necesita Apoyo": "Reforzar con juegos de rimas y canciones. Practicar segmentacion silabica con palmadas.",
@@ -269,24 +319,53 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         
         if (data.ok && data.progreso) {
           setProgreso(data.progreso)
-          if (data.alumno) setAlumno(data.alumno)
+          // Solo actualizar alumno si el API devuelve nombre real, sino mantener alumnoNombre del prop
+          if (data.alumno && data.alumno.nombre && data.alumno.nombre !== "Alumno") {
+            setAlumno(data.alumno)
+          }
         } else if (progressData) {
-          // Fallback a datos del padre si API falla
-          setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O, actividades: [], tendencia: "estable", semanaActual: 1 },
-          })
+          // Usar datos del padre directamente con actividades reales
+          const progresoFromParent: Record<string, ProgresoEje> = {}
+          for (const eje of ["CF", "CT", "O"]) {
+            const ejeData = progressData[eje]
+            progresoFromParent[eje] = {
+              logradas: [],
+              porcentaje: ejeData?.porcentaje ?? 0,
+              actividades: (ejeData?.actividades || []).map((a, idx) => ({
+                semana: a.semana || idx + 1,
+                titulo: "",
+                fecha: "",
+                resultado: a.resultado as "green" | "yellow" | "red",
+                promedio: 0
+              })),
+              tendencia: "estable",
+              semanaActual: (ejeData?.actividades?.length || 0) + 1
+            }
+          }
+          setProgreso(progresoFromParent)
         }
       } catch (err) {
         console.error("Error fetching student profile:", err)
         // Fallback
         if (progressData) {
-          setProgreso({
-            CF: { logradas: [], porcentaje: progressData.CF, actividades: [], tendencia: "estable", semanaActual: 1 },
-            CT: { logradas: [], porcentaje: progressData.CT, actividades: [], tendencia: "estable", semanaActual: 1 },
-            O: { logradas: [], porcentaje: progressData.O, actividades: [], tendencia: "estable", semanaActual: 1 },
-          })
+          const progresoFromParent: Record<string, ProgresoEje> = {}
+          for (const eje of ["CF", "CT", "O"]) {
+            const ejeData = progressData[eje]
+            progresoFromParent[eje] = {
+              logradas: [],
+              porcentaje: ejeData?.porcentaje ?? 0,
+              actividades: (ejeData?.actividades || []).map((a, idx) => ({
+                semana: a.semana || idx + 1,
+                titulo: "",
+                fecha: "",
+                resultado: a.resultado as "green" | "yellow" | "red",
+                promedio: 0
+              })),
+              tendencia: "estable",
+              semanaActual: (ejeData?.actividades?.length || 0) + 1
+            }
+          }
+          setProgreso(progresoFromParent)
         }
       } finally {
         setLoading(false)
@@ -423,7 +502,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
           ) : EJES.map((eje) => {
             const p = progreso[eje.key] || { porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 }
             const nivel = getNivel(p.porcentaje)
-            const sugerencia = SUGERENCIAS[eje.key][nivel.texto]
+            const { sugerencia, urgencia } = getSugerenciaInteligente(eje.key, p.actividades || [], p.porcentaje)
             const secuencia = SECUENCIA_ALBA[eje.key] || []
             const EjeIcon = eje.icon
             const isExpanded = ejeExpandido === eje.key
@@ -449,21 +528,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     </div>
                     <div className="text-left">
                       <span className="font-semibold text-gray-700">{eje.label}</span>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>Semana {p.semanaActual || 1}/25</span>
-                        {p.tendencia === "mejorando" && <TrendingUp className="w-3 h-3 text-green-500" />}
-                        {p.tendencia === "bajando" && <TrendingDown className="w-3 h-3 text-red-500" />}
-                        {p.tendencia === "estable" && <Minus className="w-3 h-3 text-gray-400" />}
-                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span 
-                      className="px-3 py-1 rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: nivel.color }}
-                    >
-                      {p.porcentaje}%
-                    </span>
                     {isExpanded ? (
                       <ChevronDown className="w-5 h-5 text-gray-400" />
                     ) : (
@@ -475,64 +542,53 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 {/* Contenido expandido */}
                 {isExpanded && (
                   <div className="bg-white border-t" style={{ borderColor: `${eje.color}20` }}>
-                    {/* Barra de progreso visual */}
-                    <div className="px-4 pt-4">
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>Progreso en la secuencia</span>
-                        <span>{p.semanaActual || 1} de 25 semanas</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${((p.semanaActual || 1) / 25) * 100}%`,
-                            backgroundColor: eje.color 
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Mapeo de actividades en la secuencia */}
+                    {/* Evaluaciones REALES de la maestra */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Secuencia de actividades:</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({(p.actividades || []).length} clases evaluadas):</p>
                       <div className="flex flex-wrap gap-1">
-                        {secuencia.slice(0, 12).map((act, idx) => {
-                          const actividadEvaluada = (p.actividades || []).find(a => a.semana === act.semana)
-                          let bgColor = "#e2e8f0" // gris - no evaluada
-                          let textColor = "#64748b"
-                          
-                          if (actividadEvaluada) {
-                            if (actividadEvaluada.resultado === "green") {
+                        {(p.actividades || []).length > 0 ? (
+                          (p.actividades || []).map((act, idx) => {
+                            let bgColor = "#e2e8f0"
+                            let textColor = "#64748b"
+                            let isAlert = false
+                            let statusText = "Pendiente"
+                            
+                            if (act.resultado === "green") {
                               bgColor = "#10b981"
                               textColor = "#fff"
-                            } else if (actividadEvaluada.resultado === "yellow") {
+                              statusText = "Logrado"
+                            } else if (act.resultado === "yellow") {
                               bgColor = "#f59e0b"
                               textColor = "#fff"
-                            } else {
+                              statusText = "En proceso"
+                            } else if (act.resultado === "blue") {
+                              bgColor = "#3b82f6"
+                              textColor = "#fff"
+                              statusText = "Ausente"
+                            } else if (act.resultado === "red") {
                               bgColor = "#ef4444"
                               textColor = "#fff"
+                              isAlert = true
+                              statusText = "Necesita refuerzo"
                             }
-                          } else if (idx < (p.semanaActual || 1)) {
-                            // Actividad pasada sin evaluar
-                            bgColor = "#cbd5e1"
-                          }
-                          
-                          return (
-                            <div
-                              key={idx}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                              style={{ backgroundColor: bgColor, color: textColor }}
-                              title={act.titulo}
-                            >
-                              {act.semana}
-                            </div>
-                          )
-                        })}
-                        {secuencia.length > 12 && (
-                          <span className="text-xs text-gray-400 self-center ml-1">+{secuencia.length - 12} mas</span>
+                            
+                            return (
+                              <div
+                                key={idx}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
+                                style={{ backgroundColor: bgColor, color: textColor }}
+                                title={`Clase ${idx + 1} - ${statusText}`}
+                              >
+                                {idx + 1}
+                                {isAlert && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Sin evaluaciones todavia en este eje</span>
                         )}
                       </div>
-                      <div className="flex gap-3 mt-2 text-xs">
+                      <div className="flex gap-3 mt-2 text-xs flex-wrap">
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado
                         </span>
@@ -543,20 +599,45 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                           <span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-slate-300"></span> Pendiente
+                          <span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente
                         </span>
                       </div>
                     </div>
 
-                    {/* Sugerencia */}
+                    {/* Sugerencia inteligente de ALBA */}
                     <div className="px-4 pb-4">
-                      <div className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: eje.bgColor }}>
-                        <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" style={{ color: eje.color }} />
-                        <div>
-                          <p className="text-xs font-medium" style={{ color: eje.color }}>Recomendacion:</p>
-                          <p className="text-sm text-gray-600 mt-0.5">{sugerencia}</p>
+                      {/* Alerta si urgencia alta */}
+                      {urgencia === "alta" && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 mb-3">
+                          <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-red-700">ALERTA PEDAGOGICA - REQUIERE ATENCION</p>
+                            <p className="text-sm text-red-600 mt-0.5">{sugerencia}</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {/* Sugerencia media (amarillo) */}
+                      {urgencia === "media" && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                          <div>
+                            <p className="text-xs font-medium text-amber-700">Recomendacion de ALBA:</p>
+                            <p className="text-sm text-amber-800 mt-0.5">{sugerencia}</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Sugerencia baja (verde - avanzado) */}
+                      {urgencia === "baja" && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
+                          <div>
+                            <p className="text-xs font-medium text-emerald-700">Para seguir avanzando:</p>
+                            <p className="text-sm text-emerald-800 mt-0.5">{sugerencia}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Historial reciente */}

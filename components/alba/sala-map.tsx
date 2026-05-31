@@ -1,261 +1,128 @@
 "use client"
 
-import { useState } from "react"
-import { User, Send, CheckCircle2, X } from "lucide-react"
-import { Spinner } from "@/components/ui/spinner"
-
 interface Student {
   id: string
   nombre: string
-  apellido: string
-  mesa?: string
+  apellido?: string
 }
 
-// blue = ausente (marcado explicitamente)
-// undefined = sin evaluar aun (gris - dia 0 o clase sin marcar)
-// green/yellow/red = marcado explicitamente por la docente
-type StatusLevel = "green" | "yellow" | "red" | "blue"
+interface Actividad {
+  semana: number
+  resultado: string
+}
 
 interface SalaMapProps {
   students: Student[]
-  progress: Record<string, { CF: number; CT: number; O: number }>
-  evaluaciones?: Record<string, StatusLevel>
+  progress: Record<string, Record<string, { porcentaje: number; actividades: Actividad[] }>>
+  evaluaciones?: Record<string, string>
   onStudentClick: (id: string) => void
 }
 
-// Genera el mensaje de reporte para la familia basado en el progreso - SIN porcentajes
-function generarReporteFamilia(nombre: string, progress: { CF: number; CT: number; O: number }): string {
-  const getNivel = (percent: number) => {
-    if (percent >= 70) return "avanza muy bien"
-    if (percent >= 40) return "esta progresando"
-    return "necesita un poco mas de practica"
-  }
+const EJES = [
+  { key: "CF" as const, label: "Conciencia Fonologica" },
+  { key: "CT" as const, label: "Comprension de Textos" },
+  { key: "O"  as const, label: "Oralidad" },
+]
 
-  const cf = getNivel(progress.CF)
-  const ct = getNivel(progress.CT)
-  const o = getNivel(progress.O)
+const ZONAS = [
+  { key: "verde",    label: "Logrado",    bg: "#16a34a" },
+  { key: "amarillo", label: "En proceso", bg: "#ca8a04" },
+  { key: "rojo",     label: "Refuerzo",   bg: "#dc2626" },
+  { key: "azul",     label: "Ausente/Sin datos",  bg: "#2563eb" },
+] as const
 
-  let mensaje = `Hola! Les comparto como viene ${nombre} en el aula:\n\n`
-  mensaje += `En Conciencia Fonologica (reconocer sonidos): ${cf}.\n`
-  mensaje += `En Conocimiento de Textos (entender cuentos): ${ct}.\n`
-  mensaje += `En Oralidad (expresarse): ${o}.\n`
-
-  const apoyo = []
-  if (progress.CF < 40) apoyo.push("jugar con rimas y sonidos")
-  if (progress.CT < 40) apoyo.push("leer cuentos juntos")
-  if (progress.O < 40) apoyo.push("conversar sobre el dia")
-
-  if (apoyo.length > 0) {
-    mensaje += `\nEn casa pueden ayudar con: ${apoyo.join(", ")}.`
-  }
-
-  mensaje += "\n\nSaludos!"
-
-  return mensaje
+// Obtener la ultima evaluacion de un alumno en un eje
+function getUltimaEvaluacion(actividades: Actividad[] | undefined): string {
+  if (!actividades || actividades.length === 0) return "azul" // Sin evaluaciones = azul
+  const ultima = actividades[actividades.length - 1]
+  // Mapear el resultado a la zona
+  if (ultima.resultado === "green") return "verde"
+  if (ultima.resultado === "yellow") return "amarillo"
+  if (ultima.resultado === "red") return "rojo"
+  if (ultima.resultado === "blue") return "azul"
+  return "verde" // Default para resultados desconocidos
 }
 
-// Modal de reporte
-function ReportModal({
-  nombre,
-  mensaje,
-  onClose,
-  onSend,
-  sending,
-}: {
-  nombre: string
-  mensaje: string
-  onClose: () => void
-  onSend: () => void
-  sending: boolean
-}) {
+export default function SalaMap({ students, progress, onStudentClick }: SalaMapProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-            Reporte para familia de {nombre}
-          </h3>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {mensaje ? (
-          <>
-            <div
-              className="rounded-xl p-4 mb-4 text-sm leading-relaxed whitespace-pre-line"
-              style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
-            >
-              {mensaje}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50">
-                Cancelar
-              </button>
-              <button
-                onClick={onSend}
-                disabled={sending}
-                className="flex-1 py-2.5 rounded-xl font-medium text-white flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ backgroundColor: "#1e3a5f" }}
-              >
-                {sending ? <><Spinner className="w-4 h-4" /> Enviando...</> : <><Send className="w-4 h-4" /> Enviar</>}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="rounded-xl p-5 mb-4 text-center bg-slate-50 border border-slate-200">
-              <p className="text-sm font-semibold text-slate-600 mb-1">Sin datos todavia</p>
-              <p className="text-xs text-slate-400">El reporte se generara cuando la docente marque al alumno durante la clase.</p>
-            </div>
-            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50">
-              Cerrar
-            </button>
-          </>
-        )}
+    <div className="p-3 h-full flex flex-col gap-3">
+      <div>
+        <h2 className="text-sm font-bold text-slate-800">Mapa de Progreso</h2>
+        <p className="text-xs text-slate-400">Estado de cada alumno segun ultima evaluacion por eje</p>
       </div>
-    </div>
-  )
-}
 
-function getColor(percent: number): string {
-  if (percent >= 70) return "#10b981" // verde
-  if (percent >= 40) return "#f59e0b" // amarillo
-  return "#ef4444" // rojo
-}
+      {/* 3 torres */}
+      <div className="flex gap-2 flex-1 min-h-0">
+        {EJES.map(({ key, label }) => {
+          const grupos: Record<string, { id: string; nombre: string }[]> = {
+            verde: [], amarillo: [], rojo: [], azul: [],
+          }
+          for (const s of students) {
+            const ejeData = progress[s.id]?.[key]
+            const zona = getUltimaEvaluacion(ejeData?.actividades)
+            grupos[zona].push({ id: s.id, nombre: s.nombre })
+          }
 
-function getAverage(p: { CF: number; CT: number; O: number }): number {
-  return Math.round((p.CF + p.CT + p.O) / 3)
-}
+          return (
+            <div key={key} className="flex-1 flex flex-col rounded-xl overflow-hidden border border-slate-200">
 
-export default function SalaMap({ students, progress, evaluaciones = {}, onStudentClick }: SalaMapProps) {
-  const [reportsSent, setReportsSent] = useState<Record<string, boolean>>({})
-  const [reportModal, setReportModal] = useState<{ student: Student; mensaje: string } | null>(null)
-  const [sendingReport, setSendingReport] = useState(false)
-
-  // 5 grupos - el orden importa: primero los extremos, al final "sin evaluar" (gris)
-  const grupos: { label: string; color: string; bgLight: string; borderColor: string; alumnos: Student[] }[] = [
-    { label: "Ausente",           color: "#6366f1", bgLight: "#f5f3ff", borderColor: "#c4b5fd", alumnos: [] },
-    { label: "Necesita refuerzo", color: "#ef4444", bgLight: "#fef2f2", borderColor: "#fca5a5", alumnos: [] },
-    { label: "En proceso",        color: "#f59e0b", bgLight: "#fffbeb", borderColor: "#fcd34d", alumnos: [] },
-    { label: "Logrado",           color: "#10b981", bgLight: "#ecfdf5", borderColor: "#6ee7b7", alumnos: [] },
-    { label: "Sin evaluar",       color: "#94a3b8", bgLight: "#f8fafc", borderColor: "#cbd5e1", alumnos: [] },
-  ]
-
-  students.forEach((s) => {
-    const eval_ = evaluaciones[s.id]
-    if      (eval_ === "blue")   grupos[0].alumnos.push(s)  // Ausente
-    else if (eval_ === "red")    grupos[1].alumnos.push(s)  // Refuerzo
-    else if (eval_ === "yellow") grupos[2].alumnos.push(s)  // En proceso
-    else if (eval_ === "green")  grupos[3].alumnos.push(s)  // Logrado (marcado)
-    else                         grupos[4].alumnos.push(s)  // Sin evaluar (gris)
-  })
-
-  function handleOpenReport(student: Student, e: React.MouseEvent) {
-    e.stopPropagation()
-    const eval_ = evaluaciones[student.id]
-    // Sin evaluacion = reporte en blanco (no hay datos todavia)
-    if (!eval_) {
-      setReportModal({ student, mensaje: "" })
-      return
-    }
-    const p = progress[student.id] || { CF: 0, CT: 0, O: 0 }
-    const mensaje = generarReporteFamilia(student.nombre, p)
-    setReportModal({ student, mensaje })
-  }
-
-  async function handleSendReport() {
-    if (!reportModal) return
-    setSendingReport(true)
-    
-    // Simular envio
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setReportsSent((prev) => ({ ...prev, [reportModal.student.id]: true }))
-    setSendingReport(false)
-    setReportModal(null)
-  }
-
-  return (
-    <>
-      <div className="p-4 space-y-6">
-        <div className="text-center">
-          <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Mapa de Progreso</h2>
-          <p className="text-sm text-gray-500">Los alumnos se ubican al marcarlos durante la clase</p>
-        </div>
-
-        {/* Grupos por color */}
-        <div className="space-y-4">
-          {grupos.map((grupo) => (
-            <div
-              key={grupo.label}
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: grupo.bgLight, border: `2px solid ${grupo.borderColor}` }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: grupo.color }} />
-                <h3 className="text-sm font-bold" style={{ color: grupo.color }}>{grupo.label}</h3>
-                <span className="text-xs text-gray-400">({grupo.alumnos.length})</span>
+              {/* Titulo de la torre */}
+              <div className="bg-white px-2 py-2 border-b border-slate-200 text-center">
+                <p className="text-xs font-bold text-slate-800">{key}</p>
+                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{label}</p>
               </div>
 
-              {grupo.alumnos.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Sin alumnos en este nivel</p>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                  {grupo.alumnos.map((student) => {
-                    const isReportSent = reportsSent[student.id] || false
-                    return (
-                      <div
-                        key={student.id}
-                        className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white border-2 transition-all hover:scale-105"
-                        style={{ borderColor: grupo.borderColor }}
-                      >
-                        <button onClick={() => onStudentClick(student.id)} className="flex flex-col items-center gap-1">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: grupo.color }}
+              {/* Zonas apiladas: verde → amarillo → rojo → azul */}
+              <div className="flex flex-col flex-1 overflow-y-auto">
+                {ZONAS.map(({ key: z, label: zlabel, bg }) => {
+                  const lista = grupos[z]
+                  if (lista.length === 0) return null
+                  return (
+                    <div
+                      key={z}
+                      className="px-2 py-2 flex-shrink-0"
+                      style={{ backgroundColor: bg }}
+                    >
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/60 mb-1">
+                        {zlabel}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {lista.map(({ id, nombre }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => onStudentClick(id)}
+                            className="text-black font-semibold text-[13px] bg-white/30 hover:bg-white/50 rounded px-1.5 py-0.5 transition-colors leading-tight"
                           >
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="text-xs font-medium text-gray-700 truncate w-full text-center">
-                            {student.nombre}
-                          </span>
-                        </button>
-                        <button
-                          onClick={(e) => handleOpenReport(student, e)}
-                          title={isReportSent ? "Reporte enviado" : "Enviar reporte a familia"}
-                          className="mt-1 w-full py-1 rounded-lg flex items-center justify-center gap-1 text-white text-[10px] font-medium transition-all hover:scale-105"
-                          style={{ backgroundColor: "#1e3a5f" }}
-                        >
-                          {isReportSent ? (
-                            <><CheckCircle2 className="w-3 h-3" /> Enviado</>
-                          ) : (
-                            <><Send className="w-3 h-3" /> Reporte</>
-                          )}
-                        </button>
+                            {nombre.split(" ")[0]}
+                          </button>
+                        ))}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    </div>
+                  )
+                })}
+
+                {/* Si no hay evaluaciones: todos en verde por default */}
+                {students.length > 0 && grupos.verde.length === 0 && grupos.amarillo.length === 0 && grupos.rojo.length === 0 && grupos.azul.length === 0 && (
+                  <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#16a34a" }}>
+                    <p className="text-[10px] text-white/50">Sin evaluaciones</p>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
-      {/* Modal de reporte */}
-      {reportModal && (
-        <ReportModal
-          nombre={reportModal.student.nombre}
-          mensaje={reportModal.mensaje}
-          onClose={() => setReportModal(null)}
-          onSend={handleSendReport}
-          sending={sendingReport}
-        />
-      )}
-    </>
+      {/* Leyenda */}
+      <div className="flex items-center justify-center gap-3 flex-wrap border-t border-slate-100 pt-1">
+        {ZONAS.map(({ key: z, label, bg }) => (
+          <div key={z} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: bg }} />
+            <span className="text-[10px] text-slate-500">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
