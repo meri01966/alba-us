@@ -318,15 +318,8 @@ function SecuenciaModal({
                     }}
                   >
                     {act.metodologia}
-          {/* Sugerencia pedagogica global */}
-          {activity.sugerenciaPedagogica && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-              <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-1.5">Idea pedagogica internacional</p>
-              <p className="text-sm text-indigo-800 leading-relaxed whitespace-pre-line">{activity.sugerenciaPedagogica.replace(/\\n\\nIDEA PEDAGOGICA \([^)]+\): /, "")}</p>
-            </div>
-          )}
-        </div>
-      )}
+                  </div>
+                )}
                 <div 
                   className="flex items-start gap-3 px-5 py-3 border-b hover:bg-slate-50 transition-colors"
                   style={{ borderColor: "#f1f5f9" }}
