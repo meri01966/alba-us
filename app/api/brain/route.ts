@@ -871,7 +871,19 @@ export async function GET(req: Request) {
   const supabase = getSupabase()
 
   try {
-    // ── 1. Alumnos de esta sala ────────────────────────────────────────────
+    // ── 0. Proyecto activo de la sala (tema para contextualizar) ────────────
+    const { data: proyectoActivo } = await supabase
+      .from("proyectos")
+      .select("id, titulo, objetivo_general, actividades")
+      .eq("sala", sala)
+      .eq("estado", "activo")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const temaProyecto: string | null = proyectoActivo?.titulo ?? null
+
+    // ── 1. Alumnos de esta sala ──────────────────────────────────────────���─
     const { data: alumnos, error: alumnosError } = await supabase
       .from("alumnos")
       .select("id, nombre")
@@ -1203,9 +1215,76 @@ export async function GET(req: Request) {
     if (evidencia) {
       razon += `${evidenciaTexto} ${evidencia.descripcion}`
     }
+
+    // ── Contextualización con el tema del proyecto activo ──────────────────
+    // Si hay proyecto activo, el cerebro adapta la descripcion de la actividad al tema
+    // y sugiere como conectar el eje de alfabetizacion con el proyecto
+    let descripcionContextualizada = actividadFinal.descripcion
+    let temaEnRazon = ""
+    if (temaProyecto) {
+      // Ejemplos de contextualización por eje usando el tema del proyecto
+      const contextosPorEje: Record<string, string[]> = {
+        CF: [
+          `Usa palabras del tema "${temaProyecto}" para esta actividad. Por ejemplo, busca palabras del tema que tengan el sonido trabajado.`,
+          `Conecta con el proyecto "${temaProyecto}": los ninos identifican sonidos en palabras clave del tema (nombres de personajes, objetos, lugares).`,
+          `Aprovecha el vocabulario de "${temaProyecto}" para practicar: rimas con palabras del tema, palmadas con sus nombres especificos, sonidos iniciales de elementos del proyecto.`,
+        ],
+        CT: [
+          `Busca un texto informativo, cuento o libro sobre "${temaProyecto}" para aplicar la estrategia de lectura dialogica de hoy.`,
+          `Conecta la comprension lectora con el proyecto "${temaProyecto}": las preguntas de la cruz pueden girar en torno a personajes o conceptos del tema.`,
+          `Selecciona un texto que amplie el vocabulario de "${temaProyecto}" y aplica la estrategia de hoy para profundizar la comprension del tema.`,
+        ],
+        O: [
+          `Usa el tema "${temaProyecto}" como contexto de oralidad: los ninos describen, narran o argumentan sobre elementos del proyecto con las estructuras ECO.`,
+          `El proyecto "${temaProyecto}" ofrece vocabulario rico para la actividad oral de hoy. Los ninos practican oraciones completas con palabras del tema.`,
+          `Conecta la oralidad con "${temaProyecto}": presenta un elemento del proyecto (imagen, objeto, experimento) y aplica la actividad ECO de hoy para verbalizarlo.`,
+        ],
+      }
+      const opciones = contextosPorEje[ejeSugerido] || []
+      const conexion = opciones[indice % opciones.length]
+      descripcionContextualizada = actividadFinal.descripcion + (conexion ? ` \n\nCONEXION CON EL PROYECTO: ${conexion}` : "")
+      temaEnRazon = ` Adaptada al proyecto activo: "${temaProyecto}".`
+    }
+
+    // ── Pedagogía global (mejores sistemas del mundo alineados al DC CABA) ──
+    // Ideas para enriquecer la actividad según los sistemas educativos mejor rankeados
+    // compatibles con el DC Inicial GCBA 2025
+    const PEDAGOGIA_GLOBAL: Record<string, { pais: string; idea: string; compatibleDC: boolean }[]> = {
+      CF: [
+        { pais: "Finlandia", idea: "Juego libre guiado con palabras: los ninos inventan canciones tontas cambiando el primer sonido de sus nombres. Desarrollo fonologico en contexto ludico.", compatibleDC: true },
+        { pais: "Singapur",  idea: "Cartas de acciones foneticas: cada carta muestra una imagen y los ninos deben decir el sonido, aplaudir las silabas y hacer una oracion. Multisensorial y sistematico.", compatibleDC: true },
+        { pais: "Estonia",   idea: "Caminata de sonidos: el grupo sale al patio y cada vez que escuchan un sonido de la naturaleza lo imitan y buscan palabras que empiecen igual. Aprendizaje situado al aire libre.", compatibleDC: true },
+        { pais: "Canada",    idea: "Juego de construccion con sonidos: con bloques, cada bloque representa un fonema. Los ninos construyen torres-palabras uniendo bloques-fonemas. Visual y manipulativo.", compatibleDC: true },
+        { pais: "NZ",        idea: "Libro de sonidos colaborativo: la sala construye colectivamente un libro con una pagina por sonido, llenada de dibujos, recortes y palabras encontradas en el entorno.", compatibleDC: true },
+      ],
+      CT: [
+        { pais: "Finlandia", idea: "Lectura en pareja libre: ninos mas avanzados leen a ninos que aun no leen. El que escucha hace predicciones y el que lee explica. Aprendizaje entre pares.", compatibleDC: true },
+        { pais: "Singapur",  idea: "Mapa de texto visual: despues de la lectura los ninos dibujan el mapa del cuento (personajes, lugar, problema, solucion) con colores y flechas. Organizador grafico.", compatibleDC: true },
+        { pais: "Canada",    idea: "Lectura de imagenes: antes de leer el texto escrito, los ninos leen solo las ilustraciones y construyen su version de la historia. Desarrolla inferencia visual.", compatibleDC: true },
+        { pais: "NZ",        idea: "Silla del autor: la docente se sienta en la silla del autor y los ninos la entrevistan como si fuera el personaje. Comprension critica y empatica.", compatibleDC: true },
+        { pais: "Estonia",   idea: "Teatro de lectura: los ninos leen en voz alta distintos roles del cuento (narrador, personaje 1, personaje 2). Comprension oral profunda.", compatibleDC: true },
+      ],
+      O: [
+        { pais: "Finlandia", idea: "Ronda de filosofia para ninos: la docente lanza una pregunta abierta sobre el cuento o el proyecto y los ninos dialogan respetando turnos y construyendo sobre la idea del otro.", compatibleDC: true },
+        { pais: "Singapur",  idea: "Show and tell estructurado: cada nino trae un objeto y lo presenta con la estructura INICIO-DESARROLLO-CIERRE. El grupo hace preguntas. Exposicion oral formal.", compatibleDC: true },
+        { pais: "Canada",    idea: "Juego de rol linguistico: los ninos actuan una situacion cotidiana (ir al mercado, visitar al medico) usando vocabulario especifico. Oralidad en contexto real.", compatibleDC: true },
+        { pais: "NZ",        idea: "Mural de palabras vivo: cada vez que un nino usa una palabra nueva en forma oral, se anota en el mural. Al final de la semana se celebra al nino con mas palabras nuevas.", compatibleDC: true },
+        { pais: "Estonia",   idea: "Debate de expertos: se divide la clase en grupos. Cada grupo es experto en un subtema del proyecto y debe explicarselo a los demas usando vocabulario preciso.", compatibleDC: true },
+      ],
+    }
+
+    const ideasGlobales = PEDAGOGIA_GLOBAL[ejeSugerido] || []
+    // Rotar ideas para variar entre clases
+    const ideaGlobal = ideasGlobales[(indice + analisis[ejeSugerido].clasesCompletadas) % ideasGlobales.length]
+    const sugerenciaPedagogica = ideaGlobal
+      ? `\n\nIDEA PEDAGOGICA (${ideaGlobal.pais}): ${ideaGlobal.idea}`
+      : ""
     
     // Agregar marco curricular DC Inicial GCBA 2025
     razon += enriquecerConDC(ejeSugerido, sala, indice, ejeDatos.tendencia)
+
+    // Agregar contextualización del proyecto al final de la razón
+    razon += temaEnRazon
 
     // -- 8. Alertas: destacados, refuerzo, red, checkpoint ----------------
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []
@@ -1261,7 +1340,7 @@ export async function GET(req: Request) {
       sugerencia: {
         eje: ejeSugerido,
         actividad: actividadFinal.titulo,
-        descripcion: actividadFinal.descripcion,
+        descripcion: descripcionContextualizada,
         objetivo: actividadFinal.objetivo,
         materiales: actividadFinal.materiales,
         razon,
@@ -1274,6 +1353,8 @@ export async function GET(req: Request) {
         esRepeticion,
         esAvanzado,
         esCheckpoint,
+        temaProyecto,
+        sugerenciaPedagogica,
         evidenciaInternacional: evidencia ? {
           pais: evidencia.pais,
           programa: evidencia.programa,
