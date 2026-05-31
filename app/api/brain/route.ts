@@ -939,34 +939,79 @@ export async function GET(req: Request) {
     const regs = registros || []
 
     // ── 3. Inteligencia inter-salas: actividades exitosas en la RED ─────────
-    // Consulta seguimiento de todas las salas (filtramos la actual en JS para evitar conflicto de filtros PostgREST)
+    // La RED ALBA esta integrada por: Manzanos, Girasoles, Alamos, Nogales TT, Nogales TM, Sala de Prueba
+    // Cada sala nutre el cerebro con dos fuentes:
+    //   a) seguimiento: resultado por alumno por actividad (green/yellow/red)
+    //   b) registro_cierre: actividades subidas por la docente con evaluacion general
+    // ALBA indexa ambas fuentes y distribuye las mejores actividades a toda la red
+
+    const SALAS_RED = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "Sala de Prueba"]
+
+    // a) Fuente 1: seguimiento de todas las salas de la red (excluyendo la sala actual)
     const { data: registrosRedRaw } = await supabase
       .from("seguimiento")
-      .select("actividad, eje, estado, sala")
-      .neq("sala", sala)
+      .select("actividad, eje, resultado, sala")
+      .in("sala", SALAS_RED.filter(s => s !== sala))
 
     const registrosRed = (registrosRedRaw || []).filter(r => r.sala != null && r.sala !== "")
 
-    // Calcular tasa de exito por actividad/eje en toda la red
-    type MapaRed = Record<string, { total: number; verdes: number; salas: Set<string> }>
+    // b) Fuente 2: actividades propias de la docente en registro_cierre de la red
+    //    Solo cuenta si evaluacion_general = "excelente" o "buena" (actividad efectiva)
+    const { data: cierresRedRaw } = await supabase
+      .from("registro_cierre")
+      .select("actividad_docente, eje, evaluacion_general, sala")
+      .in("sala", SALAS_RED.filter(s => s !== sala))
+      .in("evaluacion_general", ["excelente", "buena"])
+
+    const cierresRed = (cierresRedRaw || []).filter(r => r.actividad_docente && r.sala)
+
+    // Calcular tasa de exito por actividad/eje unificando ambas fuentes
+    type MapaRed = Record<string, { total: number; verdes: number; salas: Set<string>; esDocente: boolean }>
     const mapaRed: MapaRed = {}
-    for (const r of registrosRed || []) {
+
+    // Procesar seguimiento (fuente 1)
+    for (const r of registrosRed) {
       const key = `${r.eje}::${r.actividad}`
-      if (!mapaRed[key]) mapaRed[key] = { total: 0, verdes: 0, salas: new Set() }
+      if (!mapaRed[key]) mapaRed[key] = { total: 0, verdes: 0, salas: new Set(), esDocente: false }
       mapaRed[key].total++
-      if (r.estado === "green") mapaRed[key].verdes++
+      if (r.resultado === "green") mapaRed[key].verdes++
       if (r.sala) mapaRed[key].salas.add(r.sala)
     }
-    // Actividades de la red con tasa >= 70% y al menos 5 registros en 2+ salas
-    const exitosasRed: Record<string, { actividad: string; tasa: number; salas: number }[]> = { CF: [], CT: [], O: [] }
+
+    // Procesar cierres de docentes (fuente 2)
+    // Cada cierre exitoso aporta como 3 registros green para ponderar la experiencia docente
+    for (const c of cierresRed) {
+      const key = `${c.eje}::${c.actividad_docente}`
+      if (!mapaRed[key]) mapaRed[key] = { total: 0, verdes: 0, salas: new Set(), esDocente: true }
+      mapaRed[key].total += 3
+      mapaRed[key].verdes += 3 // actividad docente evaluada como excelente/buena
+      if (c.sala) mapaRed[key].salas.add(c.sala)
+      mapaRed[key].esDocente = true
+    }
+
+    // Umbrales adaptativos: bajan si la red es nueva (pocas salas con datos)
+    const salasConDatos = new Set(registrosRed.map(r => r.sala).concat(cierresRed.map(c => c.sala))).size
+    const umbralRegistros = salasConDatos >= 3 ? 5 : salasConDatos >= 2 ? 3 : 2
+    const umbralSalas    = salasConDatos >= 3 ? 2 : 1
+    const umbralTasa     = 65 // fijo: una actividad debe lograr al menos 65% para distribuirse
+
+    // Indexar actividades exitosas de la red por eje
+    const exitosasRed: Record<string, { actividad: string; tasa: number; salas: number; esDocente: boolean }[]> = { CF: [], CT: [], O: [] }
     for (const [key, d] of Object.entries(mapaRed)) {
       const [eje, actividad] = key.split("::")
       if (!actividad || !["CF", "CT", "O"].includes(eje)) continue
       const tasa = Math.round((d.verdes / d.total) * 100)
-      if (d.total >= 5 && d.salas.size >= 2 && tasa >= 70) {
-        exitosasRed[eje].push({ actividad, tasa, salas: d.salas.size })
+      if (d.total >= umbralRegistros && d.salas.size >= umbralSalas && tasa >= umbralTasa) {
+        exitosasRed[eje].push({ actividad, tasa, salas: d.salas.size, esDocente: d.esDocente })
       }
     }
+
+    // Ordenar por tasa descendente para priorizar las mejores
+    for (const eje of ["CF", "CT", "O"]) {
+      exitosasRed[eje].sort((a, b) => b.tasa - a.tasa)
+    }
+
+    console.log("[v0] RED - salasConDatos:", salasConDatos, "umbralRegistros:", umbralRegistros, "exitosasRed CF:", exitosasRed.CF.length, "CT:", exitosasRed.CT.length, "O:", exitosasRed.O.length)
 
     // ── 4. Analisis por eje de esta sala ───────────────────────────────────
     // Contar TOTAL de clases completadas desde registro_cierre (cada cierre = 1 clase)
@@ -1000,9 +1045,9 @@ export async function GET(req: Request) {
 
     for (const eje of ejes) {
       const regsEje = regs.filter((r) => r.eje === eje)
-      const verdes = regsEje.filter((r) => r.estado === "green").length
-      const amarillos = regsEje.filter((r) => r.estado === "yellow").length
-      const rojos = regsEje.filter((r) => r.estado === "red").length
+      const verdes = regsEje.filter((r) => r.resultado === "green").length
+      const amarillos = regsEje.filter((r) => r.resultado === "yellow").length
+      const rojos = regsEje.filter((r) => r.resultado === "red").length
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
@@ -1017,7 +1062,7 @@ export async function GET(req: Request) {
         const f = c.fecha?.split("T")[0]
         const regsEsaFecha = regsEje.filter((r) => r.fecha?.split("T")[0] === f)
         const promFecha = regsEsaFecha.length > 0
-          ? regsEsaFecha.filter((r) => r.estado === "green").length / regsEsaFecha.length
+          ? regsEsaFecha.filter((r) => r.resultado === "green").length / regsEsaFecha.length
           : 1
         if (promFecha < 0.4) ultimasClasesEnRojo++
       }
@@ -1033,7 +1078,7 @@ export async function GET(req: Request) {
         if (!r.actividad) continue
         if (!actMap[r.actividad]) actMap[r.actividad] = { total: 0, verdes: 0 }
         actMap[r.actividad].total++
-        if (r.estado === "green") actMap[r.actividad].verdes++
+        if (r.resultado === "green") actMap[r.actividad].verdes++
       }
       const actividadesExitosasLocales = Object.entries(actMap)
         .map(([actividad, d]) => ({ actividad, tasa: d.total >= 3 ? Math.round((d.verdes / d.total) * 100) : 0 }))
@@ -1046,8 +1091,8 @@ export async function GET(req: Request) {
       const hace14 = new Date(ahora.getTime() - 14 * 86400000)
       const semActual = regsEje.filter((r) => new Date(r.fecha) >= hace7)
       const semAnterior = regsEje.filter((r) => new Date(r.fecha) >= hace14 && new Date(r.fecha) < hace7)
-      const promSemActual = semActual.length > 0 ? semActual.filter((r) => r.estado === "green").length / semActual.length : 0
-      const promSemAnterior = semAnterior.length > 0 ? semAnterior.filter((r) => r.estado === "green").length / semAnterior.length : 0
+      const promSemActual = semActual.length > 0 ? semActual.filter((r) => r.resultado === "green").length / semActual.length : 0
+      const promSemAnterior = semAnterior.length > 0 ? semAnterior.filter((r) => r.resultado === "green").length / semAnterior.length : 0
       let tendencia: "mejorando" | "estancado" | "empeorando" = "estancado"
       if (promSemActual > promSemAnterior + 0.1) tendencia = "mejorando"
       if (promSemActual < promSemAnterior - 0.1) tendencia = "empeorando"
@@ -1104,8 +1149,12 @@ export async function GET(req: Request) {
       .filter(r => !actividadesHechasEnEste.has(r.actividad))
       .sort((a, b) => b.tasa - a.tasa)[0]
 
-    // Usar actividad de la red solo si la secuencia actual tiene tasa local mala Y hay candidata de la red
-    const usarRed = tasaLocal !== -1 && tasaLocal < 30 && candidataRed != null
+    // Usar actividad de la red si:
+    // - La actividad de la secuencia tiene tasa local mala (< 30%), O
+    // - La candidata de la red es una actividad docente con alta tasa (> 80%) en 2+ salas
+    const candidataEsDocente = candidataRed?.esDocente === true
+    const usarRed = (tasaLocal !== -1 && tasaLocal < 30 && candidataRed != null)
+      || (candidataEsDocente && candidataRed && candidataRed.tasa >= 80 && candidataRed.salas >= 2)
     const actividadFinal = usarRed
       ? (SECUENCIA[ejeSugerido].find(a => a.titulo === candidataRed.actividad) ?? actividad)
       : actividad
@@ -1138,7 +1187,8 @@ export async function GET(req: Request) {
     }
 
     if (aprendidoDeLaRed && salaRedNombre) {
-      razon += ` Actividad exitosa en ${salaRedNombre} de la red ALBA (${candidataRed?.tasa}% de logro).`
+      const origenRed = candidataRed?.esDocente ? "actividad propuesta por docentes de" : "actividad exitosa en"
+      razon += ` ALBA incorpora ${origenRed} ${salaRedNombre} (${candidataRed?.tasa}% de logro en la red).`
     } else if (ejeDatos.ultimasClasesEnRojo >= 2) {
       razon += ` Dos clases seguidas con dificultad: retrocedemos para consolidar antes de avanzar.`
     } else if (esRepeticion) {
@@ -1182,7 +1232,7 @@ export async function GET(req: Request) {
       }
       for (const al of alumnos) {
         const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-3)
-        if (regsAl.length >= 3 && regsAl.every((r) => r.estado === "red")) {
+        if (regsAl.length >= 3 && regsAl.every((r) => r.resultado === "red")) {
           alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ clases seguidas en rojo en ${nombre}.`, urgencia: "alta" })
         }
       }
@@ -1190,7 +1240,11 @@ export async function GET(req: Request) {
         alertas.push({ tipo: "tendencia", mensaje: `${nombre} muestra tendencia negativa esta semana.`, urgencia: "media" })
       }
       if (exitosasRed[eje].length > 0) {
-        alertas.push({ tipo: "red_exitosa", mensaje: `La red ALBA tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >70% de logro en ${nombre}. ALBA las priorizara automaticamente.`, urgencia: "info" })
+        const docentes = exitosasRed[eje].filter(a => a.esDocente).length
+        const msg = docentes > 0
+          ? `La red ALBA (Manzanos, Girasoles, Alamos, Nogales TT, Nogales TM) tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >${umbralTasa}% de logro en ${nombre}, incluyendo ${docentes} propuesta${docentes > 1 ? "s" : ""} por docentes. ALBA las priorizara automaticamente.`
+          : `La red ALBA tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >${umbralTasa}% de logro en ${nombre}. ALBA las priorizara automaticamente.`
+        alertas.push({ tipo: "red_exitosa", mensaje: msg, urgencia: "info" })
       }
     }
 
