@@ -1,4 +1,4 @@
-// ALBA Brain API v9 - Criterio pedagogico internacional + secuencia basada en evidencia
+// ALBA Brain API v10 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
@@ -11,6 +11,177 @@ function getSupabase() {
 
 // Tipo de micro-capacitacion
 type MicroCap = { titulo: string; contenido: string; tips: string[]; cancion?: string; poesia?: string; referencia?: string }
+
+// ── MARCO CURRICULAR DC INICIAL BUENOS AIRES 2025 ──────────────────────────
+// Diseño Curricular para la Educacion Inicial - Salas de 4 y 5 años
+// Ministerio de Educacion GCBA - Aprobado 2025
+// Fuente: https://static.buenosaires.gob.ar/sites/default/files/2025-04/DC_Inicial_Salas_4_y_5.pdf
+// Esta seccion alimenta la razon pedagogica y las sugerencias de ALBA
+// alineando cada actividad con los propositos, contenidos y expectativas de logro oficiales
+
+const DC_BSAS_2025 = {
+  // PROPOSITOS FORMATIVOS - Lenguaje - Prácticas del Lenguaje
+  propositos: {
+    generales: [
+      "Promover situaciones de escucha, habla, lectura y escritura en contextos significativos.",
+      "Favorecer el desarrollo de la conciencia fonologica como base del aprendizaje del sistema de escritura.",
+      "Generar oportunidades para que los ninos exploren los usos sociales de la lectura y la escritura.",
+      "Propiciar la participacion activa en intercambios orales, escucha de textos literarios e informativos.",
+      "Iniciar a los ninos en la comprension de textos leidos por el docente."
+    ],
+    sala4: [
+      "Aproximar a los ninos a la escucha sistematica y discriminacion de sonidos del entorno y del lenguaje.",
+      "Promover el juego con el lenguaje: rimas, canciones, trabalenguas, adivinanzas.",
+      "Favorecer la exploracion de portadores de texto: libros, revistas, envases, carteles."
+    ],
+    sala5: [
+      "Desarrollar la conciencia fonemica como preparacion para la lectura y escritura convencional.",
+      "Profundizar la comprension de textos narrativos e informativos leidos en voz alta.",
+      "Promover la produccion oral de textos: narraciones, descripciones, argumentaciones simples.",
+      "Iniciar la relacion entre sonidos y letras a traves del juego sistematico."
+    ]
+  },
+  // CONTENIDOS CURRICULARES por eje
+  contenidos: {
+    CF: {
+      sala4: [
+        "Escucha y discriminacion de sonidos del entorno.",
+        "Reconocimiento de palabras que riman.",
+        "Segmentacion de palabras en silabas con apoyo de palmadas y movimiento.",
+        "Identificacion del sonido inicial de las vocales en palabras conocidas.",
+        "Juegos con el lenguaje: canciones, rimas, trabalenguas, poesias."
+      ],
+      sala5: [
+        "Identificacion del sonido inicial de consonantes frecuentes: m, p, s, l, t, n.",
+        "Segmentacion silabica y fonemica de palabras.",
+        "Identificacion de sonidos medios y finales.",
+        "Sintesis de fonemas (blending): juntar sonidos para formar palabras.",
+        "Analisis de fonemas (segmentacion fonemica): separar una palabra en sus sonidos.",
+        "Manipulacion de fonemas: sustitucion, omision y adicion.",
+        "Relacion sonido-letra: vocales y consonantes trabajadas.",
+        "Escritura de su nombre y palabras significativas como referencia."
+      ]
+    },
+    CT: {
+      sala4: [
+        "Escucha atenta de textos literarios leidos por el docente.",
+        "Exploracion de libros: portada, titulo, ilustraciones.",
+        "Anticipacion del contenido a partir de imagenes.",
+        "Comprension literal: quien, que, donde en textos muy breves.",
+        "Reconocimiento de personajes principales.",
+        "Disfrute estetico del texto literario."
+      ],
+      sala5: [
+        "Comprension literal: quien, que, cuando, donde, como.",
+        "Comprension inferencial: por que, para que, como se siente el personaje.",
+        "Reconocimiento de secuencia narrativa: inicio-desarrollo-final.",
+        "Vocabulario en contexto: inferir significados por el contexto.",
+        "Lectura dialogica: participacion activa durante la lectura.",
+        "Diversidad de textos: cuentos, poesias, textos informativos, recetas.",
+        "Comprension critica: valorar las acciones de los personajes, dar opinion fundamentada.",
+        "Recontado con apoyo de imagenes y sin apoyo."
+      ]
+    },
+    O: {
+      sala4: [
+        "Escucha activa en situaciones comunicativas variadas.",
+        "Participacion en conversaciones grupales respetando el turno.",
+        "Descripcion de objetos, personas y situaciones cotidianas.",
+        "Narracion de experiencias personales con apoyo del docente.",
+        "Amplitud de vocabulario en contextos significativos."
+      ],
+      sala5: [
+        "Escucha comprensiva de instrucciones, explicaciones y relatos.",
+        "Narracion autonoma de experiencias, cuentos y situaciones imaginadas.",
+        "Descripcion con precision: color, forma, tamaño, funcion.",
+        "Argumentacion simple: dar razones de preferencias y opiniones.",
+        "Uso de conectores temporales y causales en la produccion oral.",
+        "Participacion en debates y dramatizaciones.",
+        "Exposicion oral de temas conocidos con apoyo de imagenes."
+      ]
+    }
+  },
+  // EXPECTATIVAS DE LOGRO al finalizar sala 5
+  expectativasLogro: {
+    CF: [
+      "Identifica el sonido inicial de palabras en contextos ludicos.",
+      "Segmenta palabras conocidas en silabas.",
+      "Reconoce palabras que riman.",
+      "Realiza analisis y sintesis de fonemas con apoyo concreto.",
+      "Muestra sensibilidad hacia los sonidos del lenguaje."
+    ],
+    CT: [
+      "Comprende textos narrativos breves respondiendo preguntas literales.",
+      "Realiza inferencias sencillas sobre textos escuchados.",
+      "Reconoce la secuencia narrativa basica.",
+      "Recuenta una historia con sus propias palabras.",
+      "Usa vocabulario aprendido en nuevos contextos."
+    ],
+    O: [
+      "Participa activamente en intercambios orales.",
+      "Narra experiencias y cuentos con inicio, desarrollo y final.",
+      "Describe objetos y situaciones con vocabulario variado.",
+      "Fundamenta sus opiniones con razones simples.",
+      "Escucha con atencion y responde pertinentemente."
+    ]
+  },
+  // ENFOQUE DIDACTICO del DC 2025
+  enfoqueDid: {
+    principios: [
+      "El aprendizaje del lenguaje se da en situaciones comunicativas reales y significativas.",
+      "El juego es el organizador principal de la ensenanza en el nivel inicial.",
+      "El docente es mediador entre los textos, el lenguaje y los ninos.",
+      "La literatura tiene valor en si misma: no es solo pretexto para ensenanza.",
+      "La evaluacion es continua, formativa y al servicio del aprendizaje.",
+      "La diversidad de los ninos es un recurso pedagogico, no un obstaculo.",
+      "La familia y la comunidad son parte del ecosistema de alfabetizacion."
+    ],
+    estrategiasRecomendadas: {
+      CF: [
+        "Juego libre con el lenguaje como estrategia principal.",
+        "Canciones, rimas y poesias como vehiculo de conciencia fonologica.",
+        "Material concreto: fichas, cubos, tarjetas, espejos.",
+        "Movimiento corporal asociado a cada sonido.",
+        "Rutinas diarias con palabras del dia, nombre propio, fecha."
+      ],
+      CT: [
+        "Lectura en voz alta diaria por el docente.",
+        "Lectura dialogica: antes, durante y despues del texto.",
+        "Biblioteca del aula accesible: libros al alcance de los ninos.",
+        "Conversacion literaria: espacio para interpretar y valorar.",
+        "Diversidad de generos: cuentos, poemas, textos informativos."
+      ],
+      O: [
+        "Asamblea diaria: espacio de intercambio oral sistematico.",
+        "Dramatizaciones y juego simbolico.",
+        "Exposiciones orales sobre temas de interes.",
+        "Entrevistas a adultos de la comunidad.",
+        "Grabaciones para que los ninos escuchen su propia voz."
+      ]
+    }
+  }
+}
+
+// Funcion para enriquecer la razon con el DC oficial
+function enriquecerConDC(eje: "CF" | "CT" | "O", sala: string, indice: number, tendencia: string): string {
+  const esSala4 = esde4Anios(sala)
+  const contenidos = esSala4 ? DC_BSAS_2025.contenidos[eje].sala4 : DC_BSAS_2025.contenidos[eje].sala5
+  const estrategias = DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[eje]
+  const expectativas = DC_BSAS_2025.expectativasLogro[eje]
+  
+  // Seleccionar contenido relevante segun el indice de la actividad
+  const contenidoRelevante = contenidos[Math.min(indice, contenidos.length - 1)]
+  const estrategiaRelevante = estrategias[indice % estrategias.length]
+  const expectativaRelevante = expectativas[Math.min(Math.floor(indice / 3), expectativas.length - 1)]
+  
+  let texto = ` | DC Inicial GCBA 2025: "${contenidoRelevante}".`
+  if (tendencia === "empeorando") {
+    texto += ` Estrategia sugerida: ${estrategiaRelevante}.`
+  }
+  texto += ` Meta: "${expectativaRelevante}".`
+  return texto
+}
+
 
 // ── EVIDENCIA INTERNACIONAL ──────────────────────────────────────────────────
 // Cada entrada mapea un titulo de actividad a su respaldo pedagogico internacional.
@@ -555,6 +726,9 @@ export async function GET(req: Request) {
     if (evidencia) {
       razon += `${evidenciaTexto} ${evidencia.descripcion}`
     }
+    
+    // Agregar marco curricular DC Inicial GCBA 2025
+    razon += enriquecerConDC(ejeSugerido, sala, indice, ejeDatos.tendencia)
 
     // -- 8. Alertas: destacados, refuerzo, red, checkpoint ----------------
     const alertas: { tipo: string; mensaje: string; urgencia: "alta" | "media" | "info" }[] = []
@@ -637,13 +811,25 @@ export async function GET(req: Request) {
         exitosasRed,
       },
       progreso: {
-        totalClasesCompletadas: totalClases, // v7: usa cierres
+        totalClasesCompletadas: totalClases,
         semanaActual,
         clasesCompletadasPorEje: {
           CF: analisis.CF.clasesCompletadas,
           CT: analisis.CT.clasesCompletadas,
           O: analisis.O.clasesCompletadas,
         },
+      },
+      // Marco curricular DC Inicial GCBA 2025 para mostrar en la UI
+      marcoCurricular: {
+        proposito: esde4Anios(sala) 
+          ? DC_BSAS_2025.propositos.sala4[indice % DC_BSAS_2025.propositos.sala4.length]
+          : DC_BSAS_2025.propositos.sala5[indice % DC_BSAS_2025.propositos.sala5.length],
+        contenidos: esde4Anios(sala) 
+          ? DC_BSAS_2025.contenidos[ejeSugerido].sala4
+          : DC_BSAS_2025.contenidos[ejeSugerido].sala5,
+        expectativaLogro: DC_BSAS_2025.expectativasLogro[ejeSugerido][Math.min(Math.floor(indice / 3), DC_BSAS_2025.expectativasLogro[ejeSugerido].length - 1)],
+        estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido],
+        principiosDC: DC_BSAS_2025.enfoqueDid.principios.slice(0, 3),
       },
     })
   } catch (err) {
