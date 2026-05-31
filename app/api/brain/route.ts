@@ -997,7 +997,7 @@ export async function GET(req: Request) {
       const key = `${r.eje}::${r.actividad}`
       if (!mapaRed[key]) mapaRed[key] = { total: 0, verdes: 0, salas: new Set(), esDocente: false }
       mapaRed[key].total++
-      if (r.resultado === "green") mapaRed[key].verdes++
+      if ((r.resultado === "green" || r.estado === "green")) mapaRed[key].verdes++
       if (r.sala) mapaRed[key].salas.add(r.sala)
     }
 
@@ -1068,9 +1068,11 @@ export async function GET(req: Request) {
 
     for (const eje of ejes) {
       const regsEje = regs.filter((r) => r.eje === eje)
-      const verdes = regsEje.filter((r) => r.resultado === "green").length
-      const amarillos = regsEje.filter((r) => r.resultado === "yellow").length
-      const rojos = regsEje.filter((r) => r.resultado === "red").length
+      // La tabla seguimiento guarda el campo como "estado" (no "resultado")
+      const getVal = (r: any) => r.estado ?? r.resultado ?? ""
+      const verdes = regsEje.filter((r) => getVal(r) === "green").length
+      const amarillos = regsEje.filter((r) => getVal(r) === "yellow").length
+      const rojos = regsEje.filter((r) => getVal(r) === "red").length
       const total = regsEje.length
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 0
 
@@ -1085,7 +1087,7 @@ export async function GET(req: Request) {
         const f = c.fecha?.split("T")[0]
         const regsEsaFecha = regsEje.filter((r) => r.fecha?.split("T")[0] === f)
         const promFecha = regsEsaFecha.length > 0
-          ? regsEsaFecha.filter((r) => r.resultado === "green").length / regsEsaFecha.length
+          ? regsEsaFecha.filter((r) => (r.estado ?? r.resultado ?? "") === "green").length / regsEsaFecha.length
           : 1
         if (promFecha < 0.4) ultimasClasesEnRojo++
       }
@@ -1093,7 +1095,7 @@ export async function GET(req: Request) {
       const alumnosEnRojo: string[] = []
       for (const al of alumnos) {
         const ultReg = regsEje.filter((r) => r.alumno_id === al.id).pop()
-        if (ultReg && ultReg.estado === "red") alumnosEnRojo.push(al.nombre)
+        if (ultReg && (ultReg.estado ?? ultReg.resultado) === "red") alumnosEnRojo.push(al.nombre)
       }
 
       const actMap: Record<string, { total: number; verdes: number }> = {}
@@ -1101,7 +1103,7 @@ export async function GET(req: Request) {
         if (!r.actividad) continue
         if (!actMap[r.actividad]) actMap[r.actividad] = { total: 0, verdes: 0 }
         actMap[r.actividad].total++
-        if (r.resultado === "green") actMap[r.actividad].verdes++
+        if (r.resultado === "green" || r.estado === "green") actMap[r.actividad].verdes++
       }
       const actividadesExitosasLocales = Object.entries(actMap)
         .map(([actividad, d]) => ({ actividad, tasa: d.total >= 3 ? Math.round((d.verdes / d.total) * 100) : 0 }))
@@ -1112,10 +1114,10 @@ export async function GET(req: Request) {
       const ahora = new Date()
       const hace7 = new Date(ahora.getTime() - 7 * 86400000)
       const hace14 = new Date(ahora.getTime() - 14 * 86400000)
-      const semActual = regsEje.filter((r) => new Date(r.fecha) >= hace7)
+        const semActual = regsEje.filter((r) => new Date(r.fecha) >= hace7)
       const semAnterior = regsEje.filter((r) => new Date(r.fecha) >= hace14 && new Date(r.fecha) < hace7)
-      const promSemActual = semActual.length > 0 ? semActual.filter((r) => r.resultado === "green").length / semActual.length : 0
-      const promSemAnterior = semAnterior.length > 0 ? semAnterior.filter((r) => r.resultado === "green").length / semAnterior.length : 0
+      const promSemActual = semActual.length > 0 ? semActual.filter((r) => (r.estado ?? r.resultado ?? "") === "green").length / semActual.length : 0
+      const promSemAnterior = semAnterior.length > 0 ? semAnterior.filter((r) => (r.estado ?? r.resultado ?? "") === "green").length / semAnterior.length : 0
       let tendencia: "mejorando" | "estancado" | "empeorando" = "estancado"
       if (promSemActual > promSemAnterior + 0.1) tendencia = "mejorando"
       if (promSemActual < promSemAnterior - 0.1) tendencia = "empeorando"
@@ -1322,7 +1324,7 @@ export async function GET(req: Request) {
       }
       for (const al of alumnos) {
         const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-3)
-        if (regsAl.length >= 3 && regsAl.every((r) => r.resultado === "red")) {
+        if (regsAl.length >= 3 && regsAl.every((r) => (r.estado ?? r.resultado ?? "") === "red")) {
           alertas.push({ tipo: "persistencia", mensaje: `${al.nombre} lleva 3+ clases seguidas en rojo en ${nombre}.`, urgencia: "alta" })
         }
       }

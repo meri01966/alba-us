@@ -553,6 +553,8 @@ export default function ALBADashboard() {
 
   // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
   useEffect(() => {
+    // Al cambiar de sala, limpiar alertas de la sala anterior para no mezclar
+    setAlertasPedagogicas([])
     cargarEvaluacionesDeSala(salaActual)
   }, [salaActual, cargarEvaluacionesDeSala])
     
@@ -581,6 +583,8 @@ export default function ALBADashboard() {
 
   const fetchProgreso = useCallback(async () => {
     setIsLoading(true)
+    // Limpiar alertas antes de recalcular para no duplicar ni mezclar entre salas
+    setAlertasPedagogicas([])
     
     try {
       // Cargar alumnos via API
