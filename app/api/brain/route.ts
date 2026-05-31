@@ -1163,9 +1163,10 @@ export async function GET(req: Request) {
     const ejeDatos = analisis[ejeSugerido]
 
     // Si hay 2+ clases seguidas con promedio bajo, retroceder en la secuencia
+    // Solo retroceder si hay mas de 1 clase completada (no tiene sentido retroceder de la primera)
     let clasesParaCalculo = ejeDatos.clasesCompletadas
-    if (ejeDatos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 0) {
-      clasesParaCalculo = Math.max(0, clasesParaCalculo - 1)
+    if (ejeDatos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 1) {
+      clasesParaCalculo = Math.max(1, clasesParaCalculo - 1)
     }
 
     const { actividad, indice, esRepeticion, esAvanzado } = calcularActividadDelDia(
