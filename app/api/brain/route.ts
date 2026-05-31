@@ -863,12 +863,23 @@ function calcularActividadDelDia(
 // Nunca cachear — cada llamada debe leer los datos mas recientes de Supabase
 export const dynamic = "force-dynamic"
 export const revalidate = 0
+export const fetchCache = "force-no-store"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sala = searchParams.get("sala") || "Manzanos"
 
-  const supabase = getSupabase()
+  // Crear cliente Supabase con cache desactivado para que cada request lea datos frescos
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oairchbitlanpzywncua.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA",
+    {
+      global: {
+        fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+          fetch(url, { ...options, cache: "no-store", next: { revalidate: 0 } }),
+      },
+    }
+  )
 
   try {
     // ── 0. Proyecto activo de la sala (tema para contextualizar) ────────────
@@ -1393,6 +1404,8 @@ export async function GET(req: Request) {
         estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido],
         principiosDC: DC_BSAS_2025.enfoqueDid.principios.slice(0, 3),
       },
+    }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache" },
     })
   } catch (err) {
     console.error("[v0] Error en /api/brain:", err)

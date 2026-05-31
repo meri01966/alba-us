@@ -518,16 +518,19 @@ export default function ALBADashboard() {
       const data = await response.json()
 
       if (data.success) {
-        // --- Paso 4: ALBA recalcula la proxima sugerencia + mapa se actualiza desde Supabase ---
+        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
-        // Primer intento a 2s, reintento a 4s por si el cold-start de Vercel tarda
+        // Tres intentos para asegurar que Supabase ya confirmo el insert antes de releer
         setTimeout(() => {
           fetchProgreso()
           dayPlanningRef.current?.fetchBrain()
-        }, 2000)
+        }, 1500)
         setTimeout(() => {
           dayPlanningRef.current?.fetchBrain()
-        }, 4000)
+        }, 3500)
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain()
+        }, 7000)
         
         // --- Paso 5: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
