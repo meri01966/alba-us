@@ -951,8 +951,6 @@ export async function GET(req: Request) {
     }
 
     const ids = alumnos.map((a) => a.id)
-
-    // ── 2. Registros de ESTA sala ──────────────────────────────────────────
     const { data: registros } = await supabase
       .from("seguimiento")
       .select("*")
@@ -1107,9 +1105,9 @@ export async function GET(req: Request) {
         actMap[r.actividad].total++
         if (r.resultado === "green" || r.estado === "green") actMap[r.actividad].verdes++
       }
-      const actividadesExitosasLocales = Object.entries(actMap)
-        .map(([actividad, d]) => ({ actividad, tasa: d.total >= 3 ? Math.round((d.verdes / d.total) * 100) : 0 }))
-        .filter((a) => a.tasa >= 60)
+      const actividadesExitosas = Object.entries(actMap)
+        .map(([actividad, d]) => ({ actividad, tasa: d.total > 2 ? Math.round((d.verdes / d.total) * 100) : 0 }))
+        .filter((a) => a.tasa > 0)
         .sort((a, b) => b.tasa - a.tasa)
         .slice(0, 5)
 
@@ -1124,7 +1122,7 @@ export async function GET(req: Request) {
       if (promSemActual > promSemAnterior + 0.1) tendencia = "mejorando"
       if (promSemActual < promSemAnterior - 0.1) tendencia = "empeorando"
 
-      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales, tendencia, clasesCompletadas, ultimasClasesEnRojo }
+      analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosas, tendencia }
     }
 
     // ── 5. Elegir eje: ROTACION CICLICA CF → O → CT → CF → O → CT
@@ -1322,7 +1320,7 @@ export async function GET(req: Request) {
         })
       }
       if (a.alumnosEnRojo.length >= alumnos.length * 0.3) {
-        alertas.push({ tipo: "patron_grupal", mensaje: `${a.alumnosEnRojo.length} de ${alumnos.length} alumnos en rojo en ${nombre}. Revisar estrategia grupal.`, urgencia: "alta" })
+        alertas.push({ tipo: "patron_grupal", mensaje: `${a.alumnosEnRojo.length} de ${alumnos.length} en rojo en ${nombre}. Revisar estrategia.`, urgencia: "alta" })
       }
       for (const al of alumnos) {
         const regsAl = regs.filter((r) => r.alumno_id === al.id && r.eje === eje).slice(-3)
@@ -1412,21 +1410,9 @@ export async function GET(req: Request) {
       headers: { "Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache" },
     })
   } catch (err) {
-    console.error("[v0] Error en /api/brain:", err)
-    const actividadInicial = SECUENCIA.CF[0]
+    console.error("Error en /api/brain:", err)
     return NextResponse.json({
-      sugerencia: {
-        eje: "CF",
-        actividad: actividadInicial.titulo,
-        descripcion: actividadInicial.descripcion,
-        objetivo: actividadInicial.objetivo,
-        materiales: actividadInicial.materiales,
-        razon: "Inicio del recorrido. Comenzamos con Conciencia Fonologica.",
-        aprendidoDeLaRed: false,
-        salaRed: null,
-        numeroClase: 1,
-        esRepeticion: false,
-      },
+      sugerencia: { eje: "CF", actividad: "Reconocimiento de Sonido Inicial /M/", razon: "Error cargando datos." },
       alertas: [],
       historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
       progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
