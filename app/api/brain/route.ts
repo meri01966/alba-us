@@ -839,7 +839,7 @@ function calcularActividadDelDia(
   // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
   const limites4 = { CF: 11, CT: 9, O: 10 }
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
-
+  if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
   let indice = clasesCompletadasEnEje % seq.length
   let esRepeticion = false
@@ -969,12 +969,27 @@ export async function GET(req: Request) {
     const SALAS_RED = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "Sala de Prueba"]
 
     // a) Fuente 1: seguimiento de todas las salas de la red (excluyendo la sala actual)
-    const { data: registrosRedRaw } = await supabase
-      .from("seguimiento")
-      .select("actividad, eje, resultado, sala")
+    // seguimiento no tiene columna "sala", filtramos por alumno_ids de las otras salas
+    const { data: alumnosRedRaw } = await supabase
+      .from("alumnos")
+      .select("id, sala")
       .in("sala", SALAS_RED.filter(s => s !== sala))
+    const alumnosRedIds = (alumnosRedRaw || []).map(a => a.id)
+    const alumnoSalaMap: Record<string, string> = {}
+    for (const a of (alumnosRedRaw || [])) alumnoSalaMap[a.id] = a.sala
 
-    const registrosRed = (registrosRedRaw || []).filter(r => r.sala != null && r.sala !== "")
+    const { data: registrosRedRaw } = alumnosRedIds.length > 0
+      ? await supabase
+          .from("seguimiento")
+          .select("alumno_id, actividad, eje, estado, resultado")
+          .in("alumno_id", alumnosRedIds)
+      : { data: [] }
+
+    // Adjuntar sala a cada registro de seguimiento via el mapa de alumnos
+    const registrosRed = (registrosRedRaw || []).map(r => ({
+      ...r,
+      sala: alumnoSalaMap[r.alumno_id] || "",
+    })).filter(r => r.sala !== "")
 
     // b) Fuente 2: actividades propias de la docente en registro_cierre de la red
     //    Solo cuenta si evaluacion_general = "excelente" o "buena" (actividad efectiva)
@@ -1159,7 +1174,14 @@ export async function GET(req: Request) {
       ejeDatos.promedio,
       sala
     )
-    console.log("[v0] BRAIN eje:", ejeSugerido, "clasesParaCalculo:", clasesParaCalculo, "-> actividad:", actividad.titulo)
+
+    // Guard: si la secuencia esta vacia o el indice es invalido, no crashear
+    if (!actividad) {
+      return NextResponse.json(
+        { error: "Secuencia vacia para eje " + ejeSugerido },
+        { status: 500, headers: { "Cache-Control": "no-store" } }
+      )
+    }
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
     // Si es asi, y hay una actividad de la red con >= 70%, usar esa
