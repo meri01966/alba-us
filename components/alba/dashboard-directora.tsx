@@ -22,6 +22,43 @@ interface Alumno {
   sala: string
 }
 
+interface BrainAlerta {
+  tipo: string
+  mensaje: string
+  urgencia: "alta" | "media" | "info"
+  sala: string
+}
+
+interface ReporteEje {
+  eje: string
+  nombre: string
+  totalClases: number
+  actividadesUnicas: string[]
+  periodoDesde: string | null
+  periodoHasta: string | null
+  pctLogrado: number
+  pctProceso: number
+  pctRefuerzo: number
+  promedioGrupal: number
+  tendencia: string
+  txt_queTrabajaamos: string
+  txt_comoLoTrabajaamos: string
+  txt_queAprendioElGrupo: string
+  sugerenciasContinuacion: string[]
+}
+
+interface ReporteGrupal {
+  ok: boolean
+  sinDatos?: boolean
+  mensaje?: string
+  sala: string
+  totalAlumnos: number
+  totalClases: number
+  periodoDesde: string | null
+  periodoHasta: string | null
+  ejes: ReporteEje[]
+}
+
 const EJES: Record<Eje, { label: string; color: string }> = {
   CF: { label: "Conciencia Fonologica", color: "#3b82f6" },
   CT: { label: "Comprension de Textos", color: "#10b981" },
@@ -57,6 +94,10 @@ export default function DashboardDirectora() {
   const [salaSeleccionada, setSalaSeleccionada] = useState<string | null>(null)
   const [alumnoModal, setAlumnoModal] = useState<Alumno | null>(null)
   const [ejeFiltro, setEjeFiltro] = useState<"todos" | Eje>("todos")
+  const [alertasConsolidadas, setAlertasConsolidadas] = useState<BrainAlerta[]>([])
+  const [sintesisModal, setSintesisModal] = useState<string | null>(null)
+  const [reporteGrupal, setReporteGrupal] = useState<ReporteGrupal | null>(null)
+  const [loadingReporte, setLoadingReporte] = useState(false)
 
   async function cargarDatos() {
     try {
@@ -66,26 +107,65 @@ export default function DashboardDirectora() {
         headers: { "Cache-Control": "no-cache" },
       })
       if (!res.ok) {
-        console.log("[v0] directora-data status:", res.status, res.statusText)
         setLoading(false)
         return
       }
       const json = await res.json()
-      console.log("[v0] directora-data ok:", json.ok, "alumnos:", json.alumnos?.length, "regs:", json.registros?.length)
       if (json.ok) {
         setAlumnos(json.alumnos || [])
         setRegistros(json.registros || [])
         setUltimaAct(new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
       }
     } catch (e) {
-      console.log("[v0] Error cargando datos directora:", e)
+      console.error("[v0] Error cargando datos directora:", e)
     }
     setLoading(false)
   }
 
+  async function cargarAlertasConsolidadas() {
+    const base = typeof window !== "undefined" ? window.location.origin : ""
+    const alertas: BrainAlerta[] = []
+    
+    for (const sala of SALAS) {
+      try {
+        const res = await fetch(`${base}/api/brain?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.alertas && Array.isArray(data.alertas)) {
+            for (const a of data.alertas) {
+              if (a.urgencia === "alta" || a.urgencia === "media") {
+                alertas.push({ ...a, sala })
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Silenciar errores individuales
+      }
+    }
+    setAlertasConsolidadas(alertas)
+  }
+
+  async function cargarReporteGrupal(sala: string) {
+    setLoadingReporte(true)
+    setSintesisModal(sala)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      const res = await fetch(`${base}/api/reporte-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setReporteGrupal(data)
+      }
+    } catch (e) {
+      console.error("[v0] Error cargando reporte grupal:", e)
+    }
+    setLoadingReporte(false)
+  }
+
   useEffect(() => {
     cargarDatos()
-    const interval = setInterval(cargarDatos, 5000)
+    cargarAlertasConsolidadas()
+    const interval = setInterval(cargarDatos, 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -137,18 +217,6 @@ export default function DashboardDirectora() {
     ? Math.round((registros.filter(r => r.resultado === "green").length / registros.length) * 100)
     : 0
 
-  // Alertas basadas en datos reales
-  const alertas: { sala: string; eje?: string; msg: string; urgencia: "alta" | "media" }[] = []
-  SALAS.forEach(sala => {
-    const ejes: Eje[] = ["CF", "CT", "O"]
-    ejes.forEach(eje => {
-      const s = statsSala(sala, eje)
-      if (!s || s.total < 3) return
-      if (s.pct < 35) alertas.push({ sala, eje, msg: `Solo ${s.pct}% de logro en ${EJES[eje].label}.`, urgencia: "alta" })
-      if (s.ro >= 3 && s.ro > s.total * 0.4) alertas.push({ sala, eje, msg: `${s.ro} alumnos en rojo en ${EJES[eje].label}.`, urgencia: "alta" })
-    })
-  })
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -160,16 +228,111 @@ export default function DashboardDirectora() {
     )
   }
 
+  // Modal Sintesis Cuatrimestral
+  if (sintesisModal && reporteGrupal) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
+          <button onClick={() => { setSintesisModal(null); setReporteGrupal(null) }} className="text-sm font-medium flex items-center gap-1" style={{ color: "#D4870E" }}>
+            ← Volver
+          </button>
+          <span className="text-sm font-semibold" style={{ color: "#1e3a5f" }}>Sintesis Cuatrimestral — {sintesisModal}</span>
+        </div>
+        
+        <div className="max-w-3xl mx-auto p-4 space-y-6">
+          {reporteGrupal.sinDatos ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+              <p className="text-amber-800 text-sm">{reporteGrupal.mensaje}</p>
+            </div>
+          ) : (
+            <>
+              {/* Header del reporte */}
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+                <h2 className="text-lg font-bold mb-2" style={{ color: "#1e3a5f" }}>Informe Cuatrimestral — Sala {reporteGrupal.sala}</h2>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporteGrupal.totalAlumnos}</p>
+                    <p className="text-xs text-slate-400">Alumnos</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>{reporteGrupal.totalClases}</p>
+                    <p className="text-xs text-slate-400">Clases</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">{reporteGrupal.periodoDesde || "—"}</p>
+                    <p className="text-xs text-slate-500">a {reporteGrupal.periodoHasta || "—"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reportes por eje */}
+              {reporteGrupal.ejes.map(eje => (
+                <div key={eje.eje} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}10` }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
+                      <span className="font-semibold text-slate-700">{eje.nombre}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{eje.pctLogrado}% logrado</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{eje.pctProceso}% proceso</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">{eje.pctRefuerzo}% refuerzo</span>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Que trabajamos</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queTrabajaamos}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Como lo trabajamos</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_comoLoTrabajaamos}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Que aprendio el grupo</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{eje.txt_queAprendioElGrupo}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-blue-700 mb-2">Sugerencias para continuar</p>
+                      <ul className="space-y-1">
+                        {eje.sugerenciasContinuacion.map((s, i) => (
+                          <li key={i} className="text-xs text-blue-600 flex items-start gap-2">
+                            <span className="text-blue-400">•</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // Vista detalle de sala
   if (salaSeleccionada) {
     const alumnosSala = alumnos.filter(a => a.sala === salaSeleccionada)
     return (
       <div className="min-h-screen bg-slate-50">
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setSalaSeleccionada(null)} className="text-sm font-medium flex items-center gap-1" style={{ color: "#D4870E" }}>
-            ← Volver
+        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSalaSeleccionada(null)} className="text-sm font-medium flex items-center gap-1" style={{ color: "#D4870E" }}>
+              ← Volver
+            </button>
+            <span className="text-sm font-semibold" style={{ color: "#1e3a5f" }}>Sala {salaSeleccionada}</span>
+          </div>
+          <button
+            onClick={() => cargarReporteGrupal(salaSeleccionada)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-all hover:opacity-90"
+            style={{ backgroundColor: "#1e3a5f" }}
+          >
+            Ver Sintesis Cuatrimestral
           </button>
-          <span className="text-sm font-semibold" style={{ color: "#1e3a5f" }}>Sala {salaSeleccionada}</span>
         </div>
         <div className="max-w-3xl mx-auto p-4 space-y-4">
           {/* Promedios por eje */}
@@ -220,7 +383,7 @@ export default function DashboardDirectora() {
                   <p className="font-bold text-slate-800">{alumnoModal.nombre}</p>
                   <p className="text-xs text-slate-400">{alumnoModal.sala}</p>
                 </div>
-                <button onClick={() => setAlumnoModal(null)} className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 text-xs">✕</button>
+                <button onClick={() => setAlumnoModal(null)} className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 text-xs">X</button>
               </div>
               <div className="p-4 space-y-4">
                 {(["CF", "CT", "O"] as Eje[]).map(eje => {
@@ -282,15 +445,20 @@ export default function DashboardDirectora() {
 
       <div className="max-w-5xl mx-auto p-4 space-y-5">
 
-        {/* Alertas */}
-        {alertas.length > 0 && (
+        {/* Alertas Consolidadas del Brain */}
+        {alertasConsolidadas.length > 0 && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-            <p className="text-xs font-semibold text-red-700 mb-2">Situaciones que requieren atencion</p>
-            <div className="space-y-1">
-              {alertas.slice(0, 6).map((a, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-red-700 bg-red-100 rounded-lg px-3 py-1.5">
-                  <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span><b>{a.sala}</b>{a.eje && <span className="ml-1 bg-white px-1 rounded text-[10px] font-bold" style={{ color: EJES[a.eje as Eje]?.color }}>{a.eje}</span>} — {a.msg}</span>
+            <p className="text-xs font-semibold text-red-700 mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              Alertas pedagogicas de ALBA ({alertasConsolidadas.length} situaciones)
+            </p>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {alertasConsolidadas.slice(0, 10).map((a, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs bg-red-100 rounded-lg px-3 py-1.5">
+                  <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${a.urgencia === "alta" ? "bg-red-500" : "bg-amber-500"}`} />
+                  <span className="text-red-700">
+                    <b className="text-red-800">{a.sala}</b> — {a.mensaje}
+                  </span>
                 </div>
               ))}
             </div>
@@ -334,6 +502,7 @@ export default function DashboardDirectora() {
                       </th>
                     ))}
                     <th className="text-center px-3 py-2 font-medium">General</th>
+                    <th className="text-center px-3 py-2 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,8 +510,8 @@ export default function DashboardDirectora() {
                     const s = statsSala(sala)
                     if (!s) return null
                     return (
-                      <tr key={sala} onClick={() => setSalaSeleccionada(sala)} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                        <td className="px-4 py-3 font-medium text-slate-700">{sala}</td>
+                      <tr key={sala} className="border-b border-slate-50 hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-700 cursor-pointer" onClick={() => setSalaSeleccionada(sala)}>{sala}</td>
                         {(["CF", "CT", "O"] as Eje[]).map(eje => {
                           const se = statsSala(sala, eje)
                           if (!se) return <td key={eje} className="px-3 py-3 text-center text-slate-200 text-xs">—</td>
@@ -359,6 +528,15 @@ export default function DashboardDirectora() {
                         })}
                         <td className="px-3 py-3 text-center">
                           <span className="text-xs font-bold" style={{ color: s.pct >= 65 ? "#22c55e" : s.pct >= 35 ? "#eab308" : "#ef4444" }}>{s.pct}%</span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            onClick={() => cargarReporteGrupal(sala)}
+                            className="text-[10px] font-semibold px-2 py-1 rounded text-white transition-all hover:opacity-90"
+                            style={{ backgroundColor: "#7c3aed" }}
+                          >
+                            Sintesis
+                          </button>
                         </td>
                       </tr>
                     )
@@ -432,7 +610,16 @@ export default function DashboardDirectora() {
         })()}
 
       </div>
+
+      {/* Loading overlay para reportes */}
+      {loadingReporte && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-2xl text-center">
+            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-600">Generando sintesis cuatrimestral...</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-// Sun May 17 23:21:22 UTC 2026
