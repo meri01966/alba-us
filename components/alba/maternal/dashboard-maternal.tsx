@@ -101,6 +101,9 @@ export function DashboardMaternal() {
   const [showCalificacionModal, setShowCalificacionModal] = useState(false)
   const [calificaciones, setCalificaciones] = useState<{ [key: string]: string }>({})
   
+  // Sugerencias de ALBA basadas en el proyecto
+  const [sugerenciasAlba, setSugerenciasAlba] = useState<{ dia: string; actividad: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string } }[]>([])
+  const [generandoSugerencias, setGenerandoSugerencias] = useState(false)
   // Cargar datos de la sala
   useEffect(() => {
     const savedSala = localStorage.getItem("maternal-sala-activa")
@@ -226,6 +229,65 @@ export function DashboardMaternal() {
       nuevas.splice(idx, 1)
       setClasesEspeciales(nuevas)
     }
+  }
+  
+  // Generar sugerencias de ALBA basadas en el proyecto
+  async function generarSugerenciasAlba() {
+    if (!proyecto.titulo || !proyecto.objetivoGeneral) return
+    
+    setGenerandoSugerencias(true)
+    const base = typeof window !== "undefined" ? window.location.origin : ""
+    
+    try {
+      const res = await fetch(`${base}/api/brain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "sugerir_actividades_semana",
+          proyecto: {
+            titulo: proyecto.titulo,
+            objetivoGeneral: proyecto.objetivoGeneral,
+            duracion: proyecto.duracion
+          },
+          sala: salaActual,
+          dias: DIAS
+        })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        if (data.sugerencias && Array.isArray(data.sugerencias)) {
+          setSugerenciasAlba(data.sugerencias)
+        }
+      }
+    } catch (e) {
+      // Error silencioso
+    }
+    
+    setGenerandoSugerencias(false)
+  }
+  
+  // Aceptar sugerencia de ALBA (agregar al cronograma)
+  function aceptarSugerenciaAlba(dia: string) {
+    const sugerencia = sugerenciasAlba.find(s => s.dia === dia)
+    if (!sugerencia) return
+    
+    const nuevoCronograma = { ...cronograma }
+    if (!nuevoCronograma[dia].actividades) {
+      nuevoCronograma[dia].actividades = [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }]
+    }
+    
+    // Agregar la sugerencia como nueva actividad
+    nuevoCronograma[dia].actividades.push(sugerencia.actividad)
+    setCronograma(nuevoCronograma)
+    
+    // Remover la sugerencia
+    setSugerenciasAlba(sugerenciasAlba.filter(s => s.dia !== dia))
+  }
+  
+  // Rechazar sugerencia de ALBA
+  function rechazarSugerenciaAlba(dia: string) {
+    setSugerenciasAlba(sugerenciasAlba.filter(s => s.dia !== dia))
   }
   
   // Guardar cronograma
@@ -567,6 +629,23 @@ export function DashboardMaternal() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Boton ALBA sugiere */}
+                  {proyecto.titulo && (
+                    <button
+                      type="button"
+                      onClick={generarSugerenciasAlba}
+                      disabled={generandoSugerencias}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-medium transition-colors disabled:opacity-50"
+                      title="ALBA sugiere actividades basadas en tu proyecto"
+                    >
+                      {generandoSugerencias ? (
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3" />
+                      )}
+                      ALBA sugiere
+                    </button>
+                  )}
                   {editandoClases ? (
                     <button
                       type="button"
@@ -722,6 +801,33 @@ export function DashboardMaternal() {
                           </div>
                         ) : (
                           <p className="text-xs text-slate-300 text-center mt-6">Sin actividades</p>
+                        )}
+                        
+                        {/* Sugerencia de ALBA para este dia */}
+                        {sugerenciasAlba.find(s => s.dia === dia) && (
+                          <div className="mt-2 p-2 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg relative">
+                            <div className="flex items-center gap-1 mb-1">
+                              <Sparkles className="w-3 h-3 text-violet-600" />
+                              <span className="text-[9px] font-bold text-violet-600 uppercase">Sugerencia ALBA</span>
+                            </div>
+                            <p className="text-[10px] font-medium text-slate-700 truncate">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.nombre}</p>
+                            <div className="flex items-center gap-1 mt-1.5">
+                              <button
+                                type="button"
+                                onClick={() => aceptarSugerenciaAlba(dia)}
+                                className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors"
+                              >
+                                Aceptar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => rechazarSugerenciaAlba(dia)}
+                                className="flex-1 text-[9px] px-2 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded font-medium transition-colors"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
