@@ -1444,3 +1444,101 @@ export async function GET(req: Request) {
 }
 // Build timestamp: 1779400487
 // Timestamp 1779751849
+
+// POST handler para acciones especiales de ALBA
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { action, proyecto, sala, dias } = body
+    
+    if (action === "sugerir_actividades_semana" && proyecto && dias) {
+      // ALBA genera sugerencias de actividades basadas en el proyecto
+      const sugerencias = dias.map((dia: string, idx: number) => {
+        // Generar actividad basada en el proyecto y el curriculo
+        const actividadesSugeridas = generarActividadSegunProyecto(proyecto, dia, idx)
+        return {
+          dia,
+          actividad: actividadesSugeridas
+        }
+      })
+      
+      return NextResponse.json({ ok: true, sugerencias })
+    }
+    
+    return NextResponse.json({ ok: false, error: "Accion no reconocida" }, { status: 400 })
+  } catch (err) {
+    console.error("Error en POST /api/brain:", err)
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })
+  }
+}
+
+// Funcion para generar actividades basadas en el proyecto
+function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGeneral: string; duracion?: string }, dia: string, diaIdx: number) {
+  const titulo = proyecto.titulo.toLowerCase()
+  const objetivo = proyecto.objetivoGeneral.toLowerCase()
+  
+  // Banco de actividades segun temas comunes en maternal
+  const bancosActividades: { [key: string]: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }[] } = {
+    animales: [
+      { nombre: "Descubrimos a los animales de la granja", capacidades: "Exploracion del entorno natural", contenidos: "Animales domesticos y sus caracteristicas", objetivo: "Identificar animales de la granja y sus sonidos", desarrollo: "Presentar imagenes de animales, imitar sonidos, clasificar por tamano", materiales: "Imagenes, titeres de animales, audio de sonidos" },
+      { nombre: "Armamos mascaras de animales", capacidades: "Creatividad y expresion artistica", contenidos: "Tecnicas de collage y recorte", objetivo: "Crear una mascara de su animal favorito", desarrollo: "Elegir animal, decorar mascara con papeles, mostrar a los companeros", materiales: "Cartulina, papeles de colores, pegamento, elastico" },
+      { nombre: "Jugamos al veterinario", capacidades: "Juego simbolico y empatia", contenidos: "Cuidado de los animales", objetivo: "Comprender la importancia de cuidar a los animales", desarrollo: "Dramatizar atencion veterinaria con peluches, usar elementos de doctor", materiales: "Peluches, maletin de medico, vendas, jeringas de juguete" },
+      { nombre: "Caminamos como animales", capacidades: "Expresion corporal y motricidad", contenidos: "Movimientos de distintos animales", objetivo: "Explorar diferentes formas de desplazamiento", desarrollo: "Imitar caminar como oso, saltar como conejo, arrastrarse como serpiente", materiales: "Espacio amplio, musica" },
+      { nombre: "Cantamos canciones de animales", capacidades: "Expresion musical y lenguaje", contenidos: "Canciones infantiles con animales", objetivo: "Aprender canciones y ampliar vocabulario", desarrollo: "Cantar 'En la granja de mi tio', 'Los pollitos', acompanar con palmas", materiales: "Reproductor de musica, imagenes de animales" },
+    ],
+    naturaleza: [
+      { nombre: "Exploramos hojas y semillas", capacidades: "Observacion y exploracion sensorial", contenidos: "Elementos de la naturaleza", objetivo: "Descubrir texturas y formas de elementos naturales", desarrollo: "Tocar, observar con lupa, clasificar hojas por forma y color", materiales: "Hojas secas, semillas, lupas, bandejas" },
+      { nombre: "Plantamos semillas", capacidades: "Responsabilidad y cuidado del ambiente", contenidos: "Ciclo de vida de las plantas", objetivo: "Iniciar el seguimiento del crecimiento de una planta", desarrollo: "Preparar maceta, colocar tierra, plantar semilla, regar", materiales: "Vasos plasticos, tierra, semillas, agua" },
+      { nombre: "Jugamos con agua y arena", capacidades: "Exploracion sensorial y creatividad", contenidos: "Propiedades del agua y la arena", objetivo: "Descubrir que pasa al mezclar agua y arena", desarrollo: "Juego libre con recipientes, trasvasar, hacer formas", materiales: "Arena, agua, recipientes, moldes" },
+      { nombre: "Observamos el cielo", capacidades: "Curiosidad cientifica", contenidos: "El sol, las nubes, el clima", objetivo: "Describir como esta el cielo hoy", desarrollo: "Salir al patio, observar, dibujar lo que vemos, conversar", materiales: "Hojas, crayones, mantas para sentarse" },
+      { nombre: "Clasificamos elementos naturales", capacidades: "Pensamiento logico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar elementos por caracteristicas", desarrollo: "Separar piedras grandes/chicas, hojas verdes/marrones", materiales: "Piedras, hojas, palitos, cajas para clasificar" },
+    ],
+    familia: [
+      { nombre: "Mi familia en un dibujo", capacidades: "Expresion grafica y afectividad", contenidos: "Los miembros de la familia", objetivo: "Representar a su familia a traves del dibujo", desarrollo: "Conversar sobre quienes viven en casa, dibujar, compartir", materiales: "Hojas, crayones, lapices de colores" },
+      { nombre: "Jugamos a la casita", capacidades: "Juego simbolico y roles sociales", contenidos: "Roles familiares", objetivo: "Dramatizar situaciones de la vida cotidiana familiar", desarrollo: "Armar rincones (cocina, living), asumir roles, interactuar", materiales: "Elementos de cocina, munecas, disfraces" },
+      { nombre: "Armamos un arbol familiar", capacidades: "Identidad y pertenencia", contenidos: "La familia extendida", objetivo: "Reconocer a los miembros de la familia", desarrollo: "Pegar fotos traidas de casa en arbol, nombrar parentescos", materiales: "Cartulina con arbol, fotos de familia, pegamento" },
+      { nombre: "Cocinamos con recetas de familia", capacidades: "Trabajo colaborativo", contenidos: "Tradiciones familiares", objetivo: "Valorar las costumbres de cada familia", desarrollo: "Preparar receta sencilla (galletitas), compartir historias", materiales: "Ingredientes, bowls, utensilios de cocina" },
+      { nombre: "Cantamos canciones de cuna", capacidades: "Expresion musical y vinculos afectivos", contenidos: "Canciones tradicionales", objetivo: "Conocer canciones que nos cantaban de bebes", desarrollo: "Escuchar, cantar juntos, mecer munecas", materiales: "Munecas, mantas, reproductor de musica" },
+    ],
+    cuerpo: [
+      { nombre: "Conocemos las partes del cuerpo", capacidades: "Conocimiento de si mismo", contenidos: "Partes del cuerpo humano", objetivo: "Nombrar y senalar partes del cuerpo", desarrollo: "Cancion 'Cabeza, hombros, rodillas, pies', senalar en muneco", materiales: "Muneco grande, espejo, musica" },
+      { nombre: "Pintamos con el cuerpo", capacidades: "Expresion artistica y motricidad", contenidos: "Tecnicas grafoplasticas", objetivo: "Experimentar pintura con diferentes partes del cuerpo", desarrollo: "Pintar con manos, pies, codos sobre papel grande", materiales: "Papel afiche, temperas, recipientes, agua" },
+      { nombre: "Circuito de movimientos", capacidades: "Motricidad gruesa y coordinacion", contenidos: "Desplazamientos y equilibrio", objetivo: "Ejercitar diferentes formas de movimiento", desarrollo: "Armar circuito con obstaculos, trepar, reptar, saltar", materiales: "Colchonetas, aros, conos, tunel" },
+      { nombre: "Juegos con espejo", capacidades: "Autoconocimiento", contenidos: "La imagen corporal", objetivo: "Reconocerse y expresar emociones frente al espejo", desarrollo: "Hacer gestos, imitar al companero, dibujar lo que vemos", materiales: "Espejos, hojas, crayones" },
+      { nombre: "Relajacion y respiracion", capacidades: "Autoregulacion y bienestar", contenidos: "Tecnicas de relajacion", objetivo: "Aprender a calmar el cuerpo", desarrollo: "Acostarse, escuchar musica suave, respirar como globo", materiales: "Colchonetas, musica relajante, peluches" },
+    ],
+    colores: [
+      { nombre: "Buscamos colores en la sala", capacidades: "Observacion y discriminacion visual", contenidos: "Colores primarios", objetivo: "Identificar y nombrar colores", desarrollo: "Busqueda del tesoro de objetos de un color, agrupar", materiales: "Objetos de colores variados, cestos" },
+      { nombre: "Mezclamos colores", capacidades: "Experimentacion y curiosidad", contenidos: "Mezcla de colores", objetivo: "Descubrir que colores nuevos se forman al mezclar", desarrollo: "Mezclar temperas, observar resultados, pintar", materiales: "Temperas primarias, paleta, pinceles, hojas" },
+      { nombre: "Clasificamos por color", capacidades: "Pensamiento logico matematico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar objetos segun su color", desarrollo: "Separar bloques, tapitas, papeles por color", materiales: "Bloques, tapitas, papeles de colores, recipientes" },
+      { nombre: "Jugamos con luces de colores", capacidades: "Exploracion sensorial", contenidos: "La luz y los colores", objetivo: "Explorar como cambian los objetos con luces de colores", desarrollo: "Oscurecer sala, usar linternas con celofan, proyectar", materiales: "Linternas, celofan de colores, objetos blancos" },
+      { nombre: "Arcoiris con las manos", capacidades: "Expresion artistica", contenidos: "Tecnica de estampado", objetivo: "Crear un arcoiris grupal", desarrollo: "Estampar manos con temperas en orden del arcoiris", materiales: "Papel afiche grande, temperas de colores" },
+    ],
+    default: [
+      { nombre: "Exploracion libre con materiales", capacidades: "Creatividad y autonomia", contenidos: "Exploracion sensorial", objetivo: "Descubrir propiedades de diferentes materiales", desarrollo: "Disponer materiales variados, observar como los usan, guiar descubrimientos", materiales: "Cajas, telas, papeles, elementos naturales" },
+      { nombre: "Ronda de cuentos", capacidades: "Escucha atenta y comprension", contenidos: "Literatura infantil", objetivo: "Disfrutar de la lectura de un cuento", desarrollo: "Sentarse en ronda, leer cuento, hacer preguntas, dramatizar", materiales: "Cuento seleccionado, titeres opcionales" },
+      { nombre: "Juego en sectores", capacidades: "Juego simbolico y socializacion", contenidos: "Diferentes areas de juego", objetivo: "Elegir y sostener el juego en un sector", desarrollo: "Presentar sectores disponibles, elegir, jugar, guardar", materiales: "Sectores armados (construccion, hogar, arte)" },
+      { nombre: "Taller de arte libre", capacidades: "Expresion y creatividad", contenidos: "Tecnicas mixtas", objetivo: "Expresarse a traves de diferentes materiales", desarrollo: "Ofrecer variedad de materiales, crear libremente, exponer", materiales: "Papeles, temperas, plasticola, brillantina, tijeras" },
+      { nombre: "Juegos musicales", capacidades: "Expresion musical y ritmo", contenidos: "Instrumentos y ritmos", objetivo: "Explorar sonidos y ritmos", desarrollo: "Usar instrumentos, seguir ritmos, cantar, bailar", materiales: "Panderetas, maracas, tambores, musica" },
+    ]
+  }
+  
+  // Detectar tema del proyecto
+  let temaDetectado = "default"
+  if (titulo.includes("animal") || objetivo.includes("animal") || titulo.includes("granja") || titulo.includes("mascota")) {
+    temaDetectado = "animales"
+  } else if (titulo.includes("natural") || objetivo.includes("planta") || titulo.includes("ambiente") || titulo.includes("ecolog")) {
+    temaDetectado = "naturaleza"
+  } else if (titulo.includes("familia") || objetivo.includes("familia") || titulo.includes("hogar")) {
+    temaDetectado = "familia"
+  } else if (titulo.includes("cuerpo") || objetivo.includes("cuerpo") || titulo.includes("movimiento") || titulo.includes("salud")) {
+    temaDetectado = "cuerpo"
+  } else if (titulo.includes("color") || objetivo.includes("color") || titulo.includes("arte")) {
+    temaDetectado = "colores"
+  }
+  
+  const banco = bancosActividades[temaDetectado] || bancosActividades.default
+  const actividadIdx = diaIdx % banco.length
+  
+  return banco[actividadIdx]
+}
