@@ -46,16 +46,24 @@ export async function GET(req: Request) {
     fecha.setDate(fecha.getDate() + idx)
     const registro = data?.find(d => d.dia === dia)
     
+    // Actividad vacia por defecto
+    const actividadVacia = {
+      nombre: "",
+      capacidades: "",
+      contenidos: "",
+      objetivo: "",
+      desarrollo: "",
+      materiales: ""
+    }
+    
     cronograma[dia] = {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
       intercambio: registro?.intercambio || "",
-      actividad_nombre: registro?.actividad_nombre || "",
-      actividad_capacidades: registro?.actividad_capacidades || "",
-      actividad_contenidos: registro?.actividad_contenidos || "",
-      actividad_objetivo: registro?.actividad_objetivo || "",
-      actividad_desarrollo: registro?.actividad_desarrollo || "",
-      actividad_materiales: registro?.actividad_materiales || ""
+      actividades: registro?.actividades || [actividadVacia],
+      edFisica: registro?.ed_fisica || "",
+      musica: registro?.musica || "",
+      ingles: registro?.ingles || ""
     }
   })
   
@@ -100,12 +108,10 @@ export async function POST(req: Request) {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: datosDia.recibimiento || "",
       intercambio: datosDia.intercambio || "",
-      actividad_nombre: datosDia.actividad_nombre || "",
-      actividad_capacidades: datosDia.actividad_capacidades || "",
-      actividad_contenidos: datosDia.actividad_contenidos || "",
-      actividad_objetivo: datosDia.actividad_objetivo || "",
-      actividad_desarrollo: datosDia.actividad_desarrollo || "",
-      actividad_materiales: datosDia.actividad_materiales || "",
+      actividades: datosDia.actividades || [],
+      ed_fisica: datosDia.edFisica || "",
+      musica: datosDia.musica || "",
+      ingles: datosDia.ingles || "",
       updated_at: new Date().toISOString()
     }
     
