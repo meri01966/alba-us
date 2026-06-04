@@ -11,13 +11,15 @@ export async function GET() {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    const [{ data: alumnos, error: errAlumnos }, { data: registros, error: errRegistros }] = await Promise.all([
+    const [{ data: alumnos, error: errAlumnos }, { data: registros, error: errRegistros }, { data: cierres, error: errCierres }] = await Promise.all([
       supabase.from("alumnos").select("*").order("nombre"),
       supabase.from("seguimiento").select("*").order("fecha", { ascending: true }),
+      supabase.from("registro_cierre").select("sala,eje,fecha").order("fecha", { ascending: true }),
     ])
 
     if (errAlumnos) console.error("[v0] directora-data alumnos error:", errAlumnos)
     if (errRegistros) console.error("[v0] directora-data registros error:", errRegistros)
+    if (errCierres) console.error("[v0] directora-data cierres error:", errCierres)
 
     const alumnosMap = new Map((alumnos || []).map(a => [a.id, a]))
     const registrosEnriquecidos = (registros || []).map(r => ({
@@ -31,6 +33,7 @@ export async function GET() {
         ok: true,
         alumnos: alumnos || [],
         registros: registrosEnriquecidos,
+        cierres: cierres || [],
         timestamp: new Date().toISOString(),
       },
       {

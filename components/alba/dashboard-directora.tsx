@@ -135,6 +135,7 @@ function ProgressRing({ value, size = 56 }: { value: number; size?: number }) {
 export default function DashboardDirectora() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [registros, setRegistros] = useState<Registro[]>([])
+  const [cierres, setCierres] = useState<{ sala: string; eje: string; fecha: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [salasData, setSalasData] = useState<Record<string, SalaData>>({})
   
@@ -155,6 +156,7 @@ export default function DashboardDirectora() {
         if (json.ok) {
           setAlumnos(json.alumnos || [])
           setRegistros(json.registros || [])
+          setCierres(json.cierres || [])
         }
       }
     } catch (e) {
@@ -171,13 +173,13 @@ export default function DashboardDirectora() {
       const alumnosSala = alumnos.filter(a => a.sala === sala)
       const regsSala = registros.filter(r => alumnosSala.some(a => a.id === r.alumno_id))
       
-      // Calcular evaluaciones por eje (verdes, amarillos, rojos)
+      // Calcular evaluaciones por eje (verdes, amarillos, rojos) - columna correcta es "estado"
       const calcEvaluaciones = (eje: string) => {
         const regs = regsSala.filter(r => r.eje === eje)
         return {
-          green: regs.filter(r => r.resultado === "green" || r.resultado === "logrado").length,
-          yellow: regs.filter(r => r.resultado === "yellow" || r.resultado === "proceso").length,
-          red: regs.filter(r => r.resultado === "red" || r.resultado === "refuerzo").length,
+          green: regs.filter(r => r.estado === "green" || r.estado === "logrado").length,
+          yellow: regs.filter(r => r.estado === "yellow" || r.estado === "proceso").length,
+          red: regs.filter(r => r.estado === "red" || r.estado === "refuerzo").length,
           total: regs.length
         }
       }
@@ -197,11 +199,11 @@ export default function DashboardDirectora() {
       const o = calcProm(evalO)
       const promGen = (evalCF.total + evalCT.total + evalO.total) > 0 ? Math.round((cf + ct + o) / 3) : 0
       
-      // Contar actividades realizadas por eje (de registro_cierre)
-      // Por ahora usamos el total de evaluaciones como proxy de actividades
-      const actividadesCF = evalCF.total
-      const actividadesCT = evalCT.total
-      const actividadesO = evalO.total
+      // Contar CLASES CERRADAS por eje (de registro_cierre) - esto define la altura de las barras
+      const cierresSala = cierres.filter(c => c.sala === sala)
+      const clasesCF = cierresSala.filter(c => c.eje === "CF").length
+      const clasesCT = cierresSala.filter(c => c.eje === "CT").length
+      const clasesO = cierresSala.filter(c => c.eje === "O").length
       
       // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
       let alertas: BrainAlerta[] = []
@@ -223,7 +225,7 @@ export default function DashboardDirectora() {
         totalAlumnos: alumnosSala.length,
         promedioGeneral: promGen,
         promediosPorEje: { CF: cf, CT: ct, O: o },
-        actividadesPorEje: { CF: actividadesCF, CT: actividadesCT, O: actividadesO },
+        actividadesPorEje: { CF: clasesCF, CT: clasesCT, O: clasesO },
         evaluacionesPorEje: { CF: evalCF, CT: evalCT, O: evalO },
         alertasCount: alertas.length,
         alertas
@@ -241,7 +243,7 @@ export default function DashboardDirectora() {
     if (alumnos.length > 0 || registros.length > 0) {
       cargarDataPorSala()
     }
-  }, [alumnos, registros])
+  }, [alumnos, registros, cierres])
 
   async function abrirModal(sala: string, tipo: "planificacion" | "sintesis" | "alertas" | "proyectos") {
     setModalSala(sala)
