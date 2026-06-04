@@ -840,38 +840,25 @@ export function DashboardMaternal() {
                       />
                     </div>
                     
-                    {/* Bloques fijos - Especiales */}
-                    <div className="grid grid-cols-3 gap-1">
-                      <div>
-                        <label className="text-[8px] font-bold text-orange-600 flex items-center gap-0.5"><Dumbbell className="w-2 h-2" /> ED.FIS</label>
-                        <input
-                          type="text"
-                          value={cronograma[dia]?.edFisica || ""}
-                          onChange={(e) => actualizarCampo(dia, "edFisica", e.target.value)}
-                          placeholder="-"
-                          className="w-full text-[10px] p-1 border border-orange-200 rounded bg-orange-50 focus:outline-none focus:ring-1 focus:ring-orange-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[8px] font-bold text-purple-600 flex items-center gap-0.5"><Music className="w-2 h-2" /> MUSICA</label>
-                        <input
-                          type="text"
-                          value={cronograma[dia]?.musica || ""}
-                          onChange={(e) => actualizarCampo(dia, "musica", e.target.value)}
-                          placeholder="-"
-                          className="w-full text-[10px] p-1 border border-purple-200 rounded bg-purple-50 focus:outline-none focus:ring-1 focus:ring-purple-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[8px] font-bold text-blue-600 flex items-center gap-0.5"><Globe className="w-2 h-2" /> INGLES</label>
-                        <input
-                          type="text"
-                          value={cronograma[dia]?.ingles || ""}
-                          onChange={(e) => actualizarCampo(dia, "ingles", e.target.value)}
-                          placeholder="-"
-                          className="w-full text-[10px] p-1 border border-blue-200 rounded bg-blue-50 focus:outline-none focus:ring-1 focus:ring-blue-300"
-                        />
-                      </div>
+                    {/* Badges de clases especiales del dia */}
+                    <div className="space-y-1">
+                      {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
+                        <div 
+                          key={`${clase.tipo}-${idx}`} 
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                            clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-3 border-orange-500" :
+                            clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-3 border-purple-500" :
+                            "bg-blue-100 text-blue-700 border-l-3 border-blue-500"
+                          }`}
+                        >
+                          {clase.tipo === "edFisica" && <><Dumbbell className="w-3 h-3" /> Ed. Fisica</>}
+                          {clase.tipo === "musica" && <><Music className="w-3 h-3" /> Musica</>}
+                          {clase.tipo === "ingles" && <><Globe className="w-3 h-3" /> Ingles</>}
+                        </div>
+                      ))}
+                      {clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
+                        <p className="text-[10px] text-slate-400 italic">Sin clases especiales</p>
+                      )}
                     </div>
                     
                     {/* Actividades - multiples */}
