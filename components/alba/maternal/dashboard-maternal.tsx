@@ -481,6 +481,49 @@ export function DashboardMaternal() {
               </div>
             </div>
             
+            {/* Badges de clases especiales */}
+            <div className="flex flex-wrap gap-3 mb-4">
+              {/* Ed. Fisica */}
+              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-orange-500">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Ed. Fisica</p>
+                  <p className="text-[10px] text-slate-500">Horario a definir</p>
+                </div>
+              </div>
+              
+              {/* Musica */}
+              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-purple-500">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Musica</p>
+                  <p className="text-[10px] text-slate-500">Horario a definir</p>
+                </div>
+              </div>
+              
+              {/* Ingles */}
+              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-blue-500">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Ingles</p>
+                  <p className="text-[10px] text-slate-500">Horario a definir</p>
+                </div>
+              </div>
+            </div>
+            
             {/* Tarjeta Cronograma Semanal - DESTACADA */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg border-2 border-green-200 overflow-hidden hover:shadow-xl transition-shadow">
               <div className="px-5 py-4 border-b border-green-200/50 flex items-center justify-between">
