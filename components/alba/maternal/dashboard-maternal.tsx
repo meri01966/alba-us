@@ -88,6 +88,11 @@ export function DashboardMaternal() {
   // Alumnos de la sala
   const [alumnos, setAlumnos] = useState<any[]>([])
   
+  // Clases especiales (Ed Fisica, Musica, Ingles) - drag & drop
+  const [clasesEspeciales, setClasesEspeciales] = useState<{ tipo: string; dia: string }[]>([])
+  const [editandoClases, setEditandoClases] = useState(false)
+  const [draggingClase, setDraggingClase] = useState<string | null>(null)
+  
   // Cargar datos de la sala
   useEffect(() => {
     const savedSala = localStorage.getItem("maternal-sala-activa")
@@ -162,7 +167,54 @@ export function DashboardMaternal() {
       console.error("[v0] Error cargando proyecto:", e)
     }
     
+    // Cargar clases especiales
+    try {
+      const res = await fetch(`${base}/api/clases-especiales-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && data.clases) {
+          setClasesEspeciales(data.clases.map((c: any) => ({ tipo: c.tipo, dia: c.dia })))
+        }
+      }
+    } catch (e) {
+      console.error("[v0] Error cargando clases especiales:", e)
+    }
+    
     setLoading(false)
+  }
+  
+  // Guardar clases especiales
+  async function guardarClasesEspeciales() {
+    const base = typeof window !== "undefined" ? window.location.origin : ""
+    try {
+      await fetch(`${base}/api/clases-especiales-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, clases: clasesEspeciales })
+      })
+      setEditandoClases(false)
+    } catch (e) {
+      console.error("[v0] Error guardando clases especiales:", e)
+    }
+  }
+  
+  // Agregar clase especial a un dia
+  function agregarClaseADia(tipo: string, dia: string) {
+    // Verificar que no haya mas de 2 de cada tipo
+    const cantidadTipo = clasesEspeciales.filter(c => c.tipo === tipo).length
+    if (cantidadTipo >= 2) return
+    
+    setClasesEspeciales([...clasesEspeciales, { tipo, dia }])
+  }
+  
+  // Eliminar clase especial
+  function eliminarClaseEspecial(tipo: string, dia: string) {
+    const idx = clasesEspeciales.findIndex(c => c.tipo === tipo && c.dia === dia)
+    if (idx >= 0) {
+      const nuevas = [...clasesEspeciales]
+      nuevas.splice(idx, 1)
+      setClasesEspeciales(nuevas)
+    }
   }
   
   // Guardar cronograma
@@ -481,49 +533,6 @@ export function DashboardMaternal() {
               </div>
             </div>
             
-            {/* Badges de clases especiales */}
-            <div className="flex flex-wrap gap-3 mb-4">
-              {/* Ed. Fisica */}
-              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-orange-500">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Ed. Fisica</p>
-                  <p className="text-[10px] text-slate-500">Horario a definir</p>
-                </div>
-              </div>
-              
-              {/* Musica */}
-              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-purple-500">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Musica</p>
-                  <p className="text-[10px] text-slate-500">Horario a definir</p>
-                </div>
-              </div>
-              
-              {/* Ingles */}
-              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-sm border-l-4 border-blue-500">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Ingles</p>
-                  <p className="text-[10px] text-slate-500">Horario a definir</p>
-                </div>
-              </div>
-            </div>
-            
             {/* Tarjeta Cronograma Semanal - DESTACADA */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg border-2 border-green-200 overflow-hidden hover:shadow-xl transition-shadow">
               <div className="px-5 py-4 border-b border-green-200/50 flex items-center justify-between">
@@ -537,6 +546,24 @@ export function DashboardMaternal() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {editandoClases ? (
+                    <button
+                      type="button"
+                      onClick={guardarClasesEspeciales}
+                      className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors shadow-sm"
+                    >
+                      <Check className="w-4 h-4" />
+                      Listo
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditandoClases(true)}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+                    >
+                      Editar clases
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowCronogramaModal(true)}
@@ -556,15 +583,110 @@ export function DashboardMaternal() {
                 </div>
               </div>
               
+              {/* Badges arrastrables cuando esta en modo edicion */}
+              {editandoClases && (
+                <div className="px-5 py-3 bg-blue-50 border-b border-blue-200">
+                  <p className="text-xs text-blue-700 mb-2 font-medium">Arrastra los badges al dia correspondiente (2 de cada uno maximo):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Ed. Fisica badges */}
+                    {[1, 2].map(n => {
+                      const usado = clasesEspeciales.filter(c => c.tipo === "edFisica").length >= n
+                      return (
+                        <div
+                          key={`ef-${n}`}
+                          draggable={!usado}
+                          onDragStart={() => !usado && setDraggingClase("edFisica")}
+                          onDragEnd={() => setDraggingClase(null)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-orange-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                        >
+                          <Dumbbell className="w-3 h-3 text-orange-600" />
+                          <span className="text-xs font-medium text-slate-700">Ed. Fisica {n}</span>
+                        </div>
+                      )
+                    })}
+                    {/* Musica badges */}
+                    {[1, 2].map(n => {
+                      const usado = clasesEspeciales.filter(c => c.tipo === "musica").length >= n
+                      return (
+                        <div
+                          key={`mu-${n}`}
+                          draggable={!usado}
+                          onDragStart={() => !usado && setDraggingClase("musica")}
+                          onDragEnd={() => setDraggingClase(null)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-purple-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                        >
+                          <Music className="w-3 h-3 text-purple-600" />
+                          <span className="text-xs font-medium text-slate-700">Musica {n}</span>
+                        </div>
+                      )
+                    })}
+                    {/* Ingles badges */}
+                    {[1, 2].map(n => {
+                      const usado = clasesEspeciales.filter(c => c.tipo === "ingles").length >= n
+                      return (
+                        <div
+                          key={`in-${n}`}
+                          draggable={!usado}
+                          onDragStart={() => !usado && setDraggingClase("ingles")}
+                          onDragEnd={() => setDraggingClase(null)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-blue-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                        >
+                          <Globe className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs font-medium text-slate-700">Ingles {n}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              
               {/* Vista resumida del cronograma */}
               <div className="p-5">
                 <div className="grid grid-cols-5 gap-3">
                   {DIAS.map((dia) => (
-                    <div key={dia} className="flex flex-col">
+                    <div 
+                      key={dia} 
+                      className="flex flex-col"
+                      onDragOver={editandoClases ? (e) => e.preventDefault() : undefined}
+                      onDrop={editandoClases ? () => {
+                        if (draggingClase) {
+                          agregarClaseADia(draggingClase, dia)
+                          setDraggingClase(null)
+                        }
+                      } : undefined}
+                    >
                       <div className="text-center py-2 px-2 bg-green-500 rounded-t-xl font-bold text-sm text-white shadow-sm">
                         {dia} {cronograma[dia]?.fecha && <span className="font-normal text-xs opacity-80">{formatearFecha(cronograma[dia].fecha)}</span>}
                       </div>
-                      <div className="flex-1 border-2 border-t-0 border-green-200 rounded-b-xl p-3 min-h-[120px] bg-white">
+                      <div className={`flex-1 border-2 border-t-0 border-green-200 rounded-b-xl p-3 min-h-[140px] bg-white ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}>
+                        {/* Clases especiales del dia */}
+                        <div className="space-y-1 mb-2">
+                          {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
+                            <div 
+                              key={`${clase.tipo}-${idx}`} 
+                              className={`relative group flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium ${
+                                clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-2 border-orange-500" :
+                                clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-2 border-purple-500" :
+                                "bg-blue-100 text-blue-700 border-l-2 border-blue-500"
+                              }`}
+                            >
+                              {clase.tipo === "edFisica" && <><Dumbbell className="w-2.5 h-2.5" /> Ed. Fisica</>}
+                              {clase.tipo === "musica" && <><Music className="w-2.5 h-2.5" /> Musica</>}
+                              {clase.tipo === "ingles" && <><Globe className="w-2.5 h-2.5" /> Ingles</>}
+                              {editandoClases && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Contenido del dia */}
                         {cronograma[dia] && (cronograma[dia].recibimiento || cronograma[dia].actividades?.some(a => a.nombre)) ? (
                           <div className="space-y-1">
                             {cronograma[dia].recibimiento && (
@@ -576,12 +698,9 @@ export function DashboardMaternal() {
                             {cronograma[dia].actividades?.filter(a => a.nombre).map((act, i) => (
                               <p key={i} className="text-[10px] text-green-700 font-medium truncate">Act {i+1}: {act.nombre}</p>
                             ))}
-                            {cronograma[dia].edFisica && <p className="text-[10px] text-orange-600 truncate"><Dumbbell className="w-2 h-2 inline" /> Ed.Fis</p>}
-                            {cronograma[dia].musica && <p className="text-[10px] text-purple-600 truncate"><Music className="w-2 h-2 inline" /> Musica</p>}
-                            {cronograma[dia].ingles && <p className="text-[10px] text-blue-600 truncate"><Globe className="w-2 h-2 inline" /> Ingles</p>}
                           </div>
                         ) : (
-                          <p className="text-xs text-slate-300 text-center mt-8">Sin actividades</p>
+                          <p className="text-xs text-slate-300 text-center mt-6">Sin actividades</p>
                         )}
                       </div>
                     </div>
