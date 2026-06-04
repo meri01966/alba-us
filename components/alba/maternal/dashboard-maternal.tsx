@@ -172,8 +172,15 @@ export function DashboardMaternal() {
       const res = await fetch(`${base}/api/clases-especiales-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
-        if (data.ok && data.clases) {
+        console.log("[v0] Clases especiales cargadas para sala", salaActual, ":", data)
+        if (data.ok && data.clases && data.clases.length > 0) {
           setClasesEspeciales(data.clases.map((c: any) => ({ tipo: c.tipo, dia: c.dia })))
+        } else {
+          // Solo limpiar si no hay clases guardadas para esta sala
+          // pero NO si es un error
+          if (data.ok) {
+            setClasesEspeciales([])
+          }
         }
       }
     } catch (e) {
@@ -186,12 +193,15 @@ export function DashboardMaternal() {
   // Guardar clases especiales
   async function guardarClasesEspeciales() {
     const base = typeof window !== "undefined" ? window.location.origin : ""
+    console.log("[v0] Guardando clases especiales para sala", salaActual, ":", clasesEspeciales)
     try {
-      await fetch(`${base}/api/clases-especiales-maternal`, {
+      const res = await fetch(`${base}/api/clases-especiales-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala: salaActual, clases: clasesEspeciales })
       })
+      const data = await res.json()
+      console.log("[v0] Respuesta guardado:", data)
       setEditandoClases(false)
     } catch (e) {
       console.error("[v0] Error guardando clases especiales:", e)
