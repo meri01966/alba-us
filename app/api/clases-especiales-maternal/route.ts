@@ -24,7 +24,6 @@ export async function GET(request: Request) {
     .from("clases_especiales_maternal")
     .select("*")
     .eq("sala", sala)
-    .order("orden", { ascending: true })
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
@@ -36,36 +35,52 @@ export async function GET(request: Request) {
 // POST - guardar/actualizar clases especiales
 export async function POST(request: Request) {
   const supabase = getSupabase()
-  const body = await request.json()
+  
+  let body
+  try {
+    body = await request.json()
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: "JSON invalido" }, { status: 400 })
+  }
+  
   const { sala, clases } = body
 
-  if (!sala || !clases) {
-    return NextResponse.json({ ok: false, error: "Datos incompletos" }, { status: 400 })
+  if (!sala) {
+    return NextResponse.json({ ok: false, error: "Sala requerida" }, { status: 400 })
+  }
+  
+  if (!Array.isArray(clases)) {
+    return NextResponse.json({ ok: false, error: "Clases debe ser un array" }, { status: 400 })
   }
 
   // Borrar las clases anteriores de la sala
-  await supabase
+  const { error: deleteError } = await supabase
     .from("clases_especiales_maternal")
     .delete()
     .eq("sala", sala)
+    
+  if (deleteError) {
+    console.error("Error borrando clases:", deleteError)
+    return NextResponse.json({ ok: false, error: deleteError.message }, { status: 500 })
+  }
 
   // Insertar las nuevas
   if (clases.length > 0) {
-    const { error } = await supabase
+    const { error: insertError } = await supabase
       .from("clases_especiales_maternal")
       .insert(clases.map((c: any, idx: number) => ({
         sala,
         tipo: c.tipo,
-        dia: c.dia,
-        orden: idx
+        dia: c.dia
       })))
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+    if (insertError) {
+      console.error("Error insertando clases:", insertError)
+      return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 })
     }
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, saved: clases.length })
 }
 
 // DELETE - borrar una clase especial
