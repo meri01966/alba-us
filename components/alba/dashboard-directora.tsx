@@ -147,22 +147,19 @@ export default function DashboardDirectora() {
       const o = calcProm("O")
       const promGen = regsSala.length > 0 ? Math.round((cf + ct + o) / 3) : 0
       
-      // Cargar alertas del brain
+      // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
       let alertas: BrainAlerta[] = []
       try {
-        const brainRes = await fetch(`${base}/api/brain?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (brainRes.ok) {
-          const brainData = await brainRes.json()
-          // Filtrar alertas: solo alta/media, y excluir "tendencia" si el promedio es >= 75
-          const todasAlertas = brainData.alertas || []
-          alertas = todasAlertas.filter((a: BrainAlerta) => {
-            if (a.urgencia !== "alta" && a.urgencia !== "media") return false
-            // Si es alerta de tendencia y el promedio es alto, ignorarla (falso positivo)
-            if (a.tipo === "tendencia" && promGen >= 75) return false
-            // Si menciona "100%" en el mensaje, es positivo no alerta
-            if (a.mensaje?.includes("100%")) return false
-            return true
-          })
+        const alertasRes = await fetch(`${base}/api/alertas-reales?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        if (alertasRes.ok) {
+          const alertasData = await alertasRes.json()
+          // Convertir al formato esperado
+          alertas = (alertasData.alertas || []).map((a: any) => ({
+            tipo: a.tipo,
+            urgencia: a.urgencia,
+            mensaje: a.mensaje,
+            alumno: a.alumnoNombre
+          }))
         }
       } catch {}
       
