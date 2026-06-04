@@ -1,13 +1,18 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-)
+export const dynamic = "force-dynamic"
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+  )
+}
 
 // GET - obtener clases especiales de una sala
 export async function GET(request: Request) {
+  const supabase = getSupabase()
   const { searchParams } = new URL(request.url)
   const sala = searchParams.get("sala")
 
@@ -30,6 +35,7 @@ export async function GET(request: Request) {
 
 // POST - guardar/actualizar clases especiales
 export async function POST(request: Request) {
+  const supabase = getSupabase()
   const body = await request.json()
   const { sala, clases } = body
 
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
 
 // DELETE - borrar una clase especial
 export async function DELETE(request: Request) {
+  const supabase = getSupabase()
   const { searchParams } = new URL(request.url)
   const id = searchParams.get("id")
 
