@@ -703,27 +703,57 @@ export default function DashboardDirectora() {
                               </div>
                               
                               {/* Contenido del proyecto */}
-                              <div className="p-4 space-y-3">
-                                {/* Objetivo general (resumido) */}
+                              <div className="p-4 space-y-4">
+                                {/* Objetivo de aprendizaje del proyecto - COMPLETO */}
                                 {proyecto.objetivoGeneral && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Objetivo:</p>
-                                    <p className="text-sm text-foreground line-clamp-3">{proyecto.objetivoGeneral.slice(0, 200)}{proyecto.objetivoGeneral.length > 200 ? "..." : ""}</p>
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-xs font-semibold text-blue-800 mb-2">Objetivo de aprendizaje del proyecto:</p>
+                                    <p className="text-sm text-foreground whitespace-pre-line">{proyecto.objetivoGeneral}</p>
                                   </div>
                                 )}
                                 
-                                {/* Actividades del proyecto */}
-                                {proyecto.actividades?.length > 0 && (
+                                {/* Actividades del proyecto - COMPLETAS */}
+                                {proyecto.actividades?.length > 0 && proyecto.actividades.some((a: any) => a.titulo || a.objetivo || a.desarrollo || a.materiales) && (
                                   <div>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-2">Actividades:</p>
-                                    <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-muted-foreground mb-3">Actividades del proyecto:</p>
+                                    <div className="space-y-4">
                                       {proyecto.actividades.map((act: any, idx: number) => (
-                                        <div key={act.id || idx} className="bg-muted rounded-lg p-2">
-                                          <p className="text-sm font-medium text-foreground">{act.titulo || `Actividad ${idx + 1}`}</p>
-                                          {act.objetivo && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">{act.objetivo}</p>
-                                          )}
-                                        </div>
+                                        (act.titulo || act.objetivo || act.desarrollo || act.materiales) && (
+                                          <div key={act.id || idx} className="border border-border rounded-lg overflow-hidden">
+                                            {/* Titulo de la actividad */}
+                                            <div className="bg-muted px-3 py-2 border-b border-border">
+                                              <p className="text-sm font-semibold text-foreground">
+                                                {act.titulo || `Actividad ${idx + 1}`}
+                                              </p>
+                                            </div>
+                                            
+                                            <div className="p-3 space-y-3">
+                                              {/* Objetivo de aprendizaje de la actividad */}
+                                              {act.objetivo && (
+                                                <div>
+                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Objetivo de aprendizaje:</p>
+                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.objetivo}</p>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Desarrollo de la actividad */}
+                                              {act.desarrollo && (
+                                                <div>
+                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Desarrollo:</p>
+                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.desarrollo}</p>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Materiales */}
+                                              {act.materiales && (
+                                                <div>
+                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Materiales:</p>
+                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.materiales}</p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
                                       ))}
                                     </div>
                                   </div>
