@@ -536,60 +536,70 @@ export default function DashboardDirectora() {
                         <>
                           {/* Resumen simple */}
                           <div className="bg-muted rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-muted-foreground">Alumnos</span>
-                              <span className="font-bold text-foreground">{sintesisData.totalAlumnos}</span>
-                            </div>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-muted-foreground">Clases realizadas</span>
-                              <span className="font-bold text-foreground">{sintesisData.totalClases}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Periodo</span>
-                              <span className="text-xs text-foreground">{sintesisData.periodoDesde || "—"} al {sintesisData.periodoHasta || "—"}</span>
-                            </div>
+                            <p className="text-sm text-foreground mb-2">
+                              <span className="font-semibold">{sintesisData.totalAlumnos} alumnos</span>
+                              <span className="text-muted-foreground"> trabajaron en </span>
+                              <span className="font-semibold">{sintesisData.totalClases} clases</span>
+                            </p>
+                            {sintesisData.periodoDesde && (
+                              <p className="text-xs text-muted-foreground">
+                                Desde {sintesisData.periodoDesde} hasta {sintesisData.periodoHasta}
+                              </p>
+                            )}
                           </div>
                           
-                          {/* Ejes - informacion clara */}
-                          {sintesisData.ejes?.map((eje: any) => (
-                            <div key={eje.eje} className="border border-border rounded-lg overflow-hidden">
-                              <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
-                                <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
-                                <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
-                                <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
-                              </div>
-                              <div className="p-4 space-y-4">
-                                {/* Estado del grupo en este eje */}
-                                <div>
-                                  <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
+                          {/* Ejes - informacion clara sin porcentajes */}
+                          {sintesisData.ejes?.map((eje: any) => {
+                            // Determinar estado visual
+                            const estado = eje.pctLogrado >= 70 ? "bien" : eje.pctLogrado >= 50 ? "avanzando" : eje.pctRefuerzo >= 40 ? "atencion" : "proceso"
+                            const colorBorde = estado === "bien" ? "border-green-300" : estado === "atencion" ? "border-red-300" : "border-amber-300"
+                            const colorFondo = estado === "bien" ? "bg-green-50" : estado === "atencion" ? "bg-red-50" : "bg-amber-50"
+                            
+                            return (
+                              <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
+                                {/* Cabecera del eje */}
+                                <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
+                                  <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
+                                  <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
                                 </div>
                                 
-                                {/* Resumen visual simple */}
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="bg-green-50 rounded-lg p-2 text-center">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mb-1"></div>
-                                    <p className="text-sm font-bold text-green-700">{eje.pctLogrado >= 70 ? "Muy bien" : eje.pctLogrado >= 50 ? "Bien" : "En proceso"}</p>
+                                <div className="p-4 space-y-3">
+                                  {/* Que trabajamos */}
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
+                                    <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
                                   </div>
-                                  <div className="bg-amber-50 rounded-lg p-2 text-center">
-                                    <div className="w-2 h-2 bg-amber-500 rounded-full mx-auto mb-1"></div>
-                                    <p className="text-[10px] text-amber-700">En proceso</p>
+                                  
+                                  {/* Como lo trabajamos */}
+                                  {eje.metodologias?.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-muted-foreground mb-1">Como lo trabajamos:</p>
+                                      <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Estado del grupo - mensaje claro */}
+                                  <div className={`${colorFondo} rounded-lg p-3`}>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
+                                    <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
                                   </div>
-                                  <div className="bg-red-50 rounded-lg p-2 text-center">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full mx-auto mb-1"></div>
-                                    <p className="text-[10px] text-red-700">{eje.pctRefuerzo > 30 ? "Atencion" : "Pocos"}</p>
-                                  </div>
+                                  
+                                  {/* Sugerencias de ALBA solo si hay situaciones importantes */}
+                                  {(eje.pctRefuerzo >= 25 || eje.tendencia === "necesita_apoyo") && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                      <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
+                                      <ul className="text-xs text-blue-700 space-y-1">
+                                        {eje.sugerenciasContinuacion?.slice(0, 2).map((s: string, i: number) => (
+                                          <li key={i}>• {s}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
-                                
-                                {/* Sugerencias de ALBA si hay situaciones a atender */}
-                                {eje.pctRefuerzo >= 25 && (
-                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                    <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
-                                    <p className="text-xs text-blue-700">{eje.sugerenciasContinuacion?.[0]}</p>
-                                  </div>
-                                )}
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </>
                       )}
                     </div>
