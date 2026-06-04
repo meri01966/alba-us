@@ -107,6 +107,7 @@ export default function DashboardDirectora() {
   const [modalTipo, setModalTipo] = useState<"planificacion" | "sintesis" | "alertas" | "proyectos" | null>(null)
   const [loadingModal, setLoadingModal] = useState(false)
   const [sintesisData, setSintesisData] = useState<any>(null)
+  const [planificacionData, setPlanificacionData] = useState<any>(null)
 
   async function cargarDatos() {
     try {
@@ -184,14 +185,26 @@ export default function DashboardDirectora() {
     setModalTipo(tipo)
     setLoadingModal(true)
     setSintesisData(null)
+    setPlanificacionData(null)
+    
+    const base = typeof window !== "undefined" ? window.location.origin : ""
     
     if (tipo === "sintesis") {
       try {
-        const base = typeof window !== "undefined" ? window.location.origin : ""
         const res = await fetch(`${base}/api/reporte-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         if (res.ok) {
           const data = await res.json()
           setSintesisData(data)
+        }
+      } catch {}
+    }
+    
+    if (tipo === "planificacion") {
+      try {
+        const res = await fetch(`${base}/api/planificacion-sala?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        if (res.ok) {
+          const data = await res.json()
+          setPlanificacionData(data)
         }
       } catch {}
     }
@@ -203,6 +216,7 @@ export default function DashboardDirectora() {
     setModalSala(null)
     setModalTipo(null)
     setSintesisData(null)
+    setPlanificacionData(null)
   }
 
   if (loading) {
@@ -366,10 +380,94 @@ export default function DashboardDirectora() {
                   {/* Planificacion */}
                   {modalTipo === "planificacion" && (
                     <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">La planificacion semanal de esta sala se muestra aqui. Proximamente podras ver las actividades programadas por la maestra.</p>
-                      <div className="bg-muted rounded-lg p-4">
-                        <p className="text-xs text-muted-foreground text-center">Funcionalidad en desarrollo</p>
-                      </div>
+                      {!planificacionData || planificacionData.totalActividades === 0 ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                          <p className="text-sm text-amber-800">No hay actividades registradas en esta sala todavia.</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Resumen */}
+                          <div className="flex items-center justify-between bg-muted rounded-lg p-3">
+                            <div className="text-sm">
+                              <span className="font-semibold text-foreground">{planificacionData.totalActividades}</span>
+                              <span className="text-muted-foreground"> actividades en </span>
+                              <span className="font-semibold text-foreground">{planificacionData.totalDias}</span>
+                              <span className="text-muted-foreground"> dias</span>
+                            </div>
+                          </div>
+                          
+                          {/* Lista por dia */}
+                          {planificacionData.planificacion?.map((dia: any) => (
+                            <div key={dia.fecha} className="border border-border rounded-lg overflow-hidden">
+                              {/* Cabecera del dia */}
+                              <div className="bg-primary/10 px-4 py-2 border-b border-border">
+                                <p className="text-sm font-semibold text-foreground">{dia.fechaFormateada}</p>
+                              </div>
+                              
+                              {/* Actividades del dia */}
+                              <div className="divide-y divide-border">
+                                {dia.actividades.map((act: any) => (
+                                  <div key={act.id} className="px-4 py-3 flex items-start gap-3">
+                                    {/* Tilde verde o circulo gris */}
+                                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${act.completa ? "bg-green-500" : "bg-gray-200"}`}>
+                                      {act.completa && (
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Contenido */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[act.eje as Eje]?.color || "#6b7280" }}>
+                                          {act.eje}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">{act.ejeNombre}</span>
+                                        {act.hora && <span className="text-[10px] text-muted-foreground ml-auto">{act.hora}</span>}
+                                      </div>
+                                      
+                                      {/* Actividad ALBA o Docente */}
+                                      {act.actividadAlba && (
+                                        <p className="text-sm text-foreground mb-1">
+                                          <span className="text-muted-foreground">ALBA: </span>
+                                          {act.actividadAlba}
+                                        </p>
+                                      )}
+                                      {act.actividadDocente && (
+                                        <p className="text-sm text-foreground mb-1">
+                                          <span className="text-muted-foreground">Docente: </span>
+                                          {act.actividadDocente}
+                                        </p>
+                                      )}
+                                      
+                                      {/* Evaluacion general */}
+                                      {act.evaluacionGeneral && (
+                                        <p className="text-xs text-muted-foreground mb-1">
+                                          <span className="font-medium">Evaluacion: </span>
+                                          {act.evaluacionGeneral}
+                                        </p>
+                                      )}
+                                      
+                                      {/* Observaciones */}
+                                      {act.observaciones && (
+                                        <p className="text-xs text-muted-foreground italic">
+                                          {act.observaciones}
+                                        </p>
+                                      )}
+                                      
+                                      {/* Si no hay info, mostrar placeholder */}
+                                      {!act.actividadAlba && !act.actividadDocente && !act.evaluacionGeneral && (
+                                        <p className="text-xs text-muted-foreground italic">Actividad registrada sin descripcion</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
                   
