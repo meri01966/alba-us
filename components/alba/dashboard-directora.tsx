@@ -43,7 +43,7 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   O:  { label: "Oralidad", color: "#f59e0b" },
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Álamos", "Nogales TT", "Nogales TM"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
 // Grafico de barras mini para los 3 ejes
@@ -153,7 +153,16 @@ export default function DashboardDirectora() {
         const brainRes = await fetch(`${base}/api/brain?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         if (brainRes.ok) {
           const brainData = await brainRes.json()
-          alertas = (brainData.alertas || []).filter((a: BrainAlerta) => a.urgencia === "alta" || a.urgencia === "media")
+          // Filtrar alertas: solo alta/media, y excluir "tendencia" si el promedio es >= 75
+          const todasAlertas = brainData.alertas || []
+          alertas = todasAlertas.filter((a: BrainAlerta) => {
+            if (a.urgencia !== "alta" && a.urgencia !== "media") return false
+            // Si es alerta de tendencia y el promedio es alto, ignorarla (falso positivo)
+            if (a.tipo === "tendencia" && promGen >= 75) return false
+            // Si menciona "100%" en el mensaje, es positivo no alerta
+            if (a.mensaje?.includes("100%")) return false
+            return true
+          })
         }
       } catch {}
       
