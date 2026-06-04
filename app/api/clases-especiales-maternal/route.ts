@@ -4,10 +4,14 @@ import { NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 
 function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!url || !key) {
+    throw new Error("Supabase credentials not configured")
+  }
+  
+  return createClient(url, key)
 }
 
 // GET - obtener clases especiales de una sala
@@ -34,53 +38,55 @@ export async function GET(request: Request) {
 
 // POST - guardar/actualizar clases especiales
 export async function POST(request: Request) {
-  const supabase = getSupabase()
-  
-  let body
   try {
-    body = await request.json()
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: "JSON invalido" }, { status: 400 })
-  }
-  
-  const { sala, clases } = body
-
-  if (!sala) {
-    return NextResponse.json({ ok: false, error: "Sala requerida" }, { status: 400 })
-  }
-  
-  if (!Array.isArray(clases)) {
-    return NextResponse.json({ ok: false, error: "Clases debe ser un array" }, { status: 400 })
-  }
-
-  // Borrar las clases anteriores de la sala
-  const { error: deleteError } = await supabase
-    .from("clases_especiales_maternal")
-    .delete()
-    .eq("sala", sala)
+    const supabase = getSupabase()
     
-  if (deleteError) {
-    console.error("Error borrando clases:", deleteError)
-    return NextResponse.json({ ok: false, error: deleteError.message }, { status: 500 })
-  }
-
-  // Insertar las nuevas
-  if (clases.length > 0) {
-    const { error: insertError } = await supabase
-      .from("clases_especiales_maternal")
-      .insert(clases.map((c: any, idx: number) => ({
-        sala,
-        tipo: c.tipo,
-        dia: c.dia
-      })))
-
-    if (insertError) {
-      console.error("Error insertando clases:", insertError)
-      return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 })
+    let body
+    try {
+      body = await request.json()
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: "JSON invalido" }, { status: 400 })
     }
-  }
+    
+    const { sala, clases } = body
 
-  return NextResponse.json({ ok: true, saved: clases.length })
+    if (!sala) {
+      return NextResponse.json({ ok: false, error: "Sala requerida" }, { status: 400 })
+    }
+    
+    if (!Array.isArray(clases)) {
+      return NextResponse.json({ ok: false, error: "Clases debe ser un array" }, { status: 400 })
+    }
+
+    // Borrar las clases anteriores de la sala
+    const { error: deleteError } = await supabase
+      .from("clases_especiales_maternal")
+      .delete()
+      .eq("sala", sala)
+      
+    if (deleteError) {
+      return NextResponse.json({ ok: false, error: "Error borrando: " + deleteError.message }, { status: 500 })
+    }
+
+    // Insertar las nuevas
+    if (clases.length > 0) {
+      const { error: insertError } = await supabase
+        .from("clases_especiales_maternal")
+        .insert(clases.map((c: any) => ({
+          sala,
+          tipo: c.tipo,
+          dia: c.dia
+        })))
+
+      if (insertError) {
+        return NextResponse.json({ ok: false, error: "Error insertando: " + insertError.message }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json({ ok: true, saved: clases.length })
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e.message || "Error interno" }, { status: 500 })
+  }
 }
 
 // DELETE - borrar una clase especial
