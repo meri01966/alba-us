@@ -112,26 +112,6 @@ function MiniBarChart({
   )
 }
 
-// Indicador circular de progreso general
-function ProgressRing({ value, size = 56 }: { value: number; size?: number }) {
-  const r = (size - 8) / 2
-  const circ = 2 * Math.PI * r
-  const offset = circ - (value / 100) * circ
-  const color = value >= 65 ? "#22c55e" : value >= 35 ? "#eab308" : "#ef4444"
-  
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="6"
-        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
-      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
-        className="transform rotate-90 origin-center" style={{ fontSize: size * 0.28, fontWeight: 700, fill: color }}>
-        {value}%
-      </text>
-    </svg>
-  )
-}
-
 export default function DashboardDirectora() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [registros, setRegistros] = useState<Registro[]>([])
@@ -347,7 +327,6 @@ export default function DashboardDirectora() {
                       <h3 className="font-bold text-foreground">{sala}</h3>
                       <p className="text-xs text-muted-foreground">{data.totalAlumnos} alumnos</p>
                     </div>
-                    <ProgressRing value={data.promedioGeneral} />
                   </div>
                   
                   {/* Grafico de barras por eje - clickeable para ver detalle */}
