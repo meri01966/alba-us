@@ -126,6 +126,7 @@ export default function DashboardDirectora() {
   const [sintesisData, setSintesisData] = useState<any>(null)
   const [planificacionData, setPlanificacionData] = useState<any>(null)
   const [ejeSeleccionado, setEjeSeleccionado] = useState<Eje | null>(null)
+  const [proyectosData, setProyectosData] = useState<any>(null)
 
   async function cargarDatos() {
     try {
@@ -254,6 +255,17 @@ export default function DashboardDirectora() {
       } catch {}
     }
     
+    // Cargar proyectos
+    if (tipo === "proyectos") {
+      try {
+        const res = await fetch(`${base}/api/proyectos-sala?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        if (res.ok) {
+          const data = await res.json()
+          setProyectosData(data)
+        }
+      } catch {}
+    }
+    
     setLoadingModal(false)
   }
 
@@ -263,6 +275,7 @@ export default function DashboardDirectora() {
     setSintesisData(null)
     setPlanificacionData(null)
     setEjeSeleccionado(null)
+    setProyectosData(null)
   }
 
   if (loading) {
@@ -632,10 +645,101 @@ export default function DashboardDirectora() {
                   {/* Proyectos */}
                   {modalTipo === "proyectos" && (
                     <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">Los proyectos pedagogicos de esta sala se mostraran aqui.</p>
-                      <div className="bg-muted rounded-lg p-4">
-                        <p className="text-xs text-muted-foreground text-center">Funcionalidad en desarrollo</p>
-                      </div>
+                      {!proyectosData ? (
+                        <div className="flex justify-center py-8">
+                          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      ) : proyectosData.totalProyectos === 0 ? (
+                        <div className="bg-muted rounded-lg p-4 text-center">
+                          <p className="text-sm text-muted-foreground">Esta sala aun no tiene proyectos registrados</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Resumen */}
+                          <div className="bg-muted rounded-lg p-3 flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              {proyectosData.totalProyectos} {proyectosData.totalProyectos === 1 ? "proyecto" : "proyectos"}
+                            </span>
+                            <div className="flex gap-2">
+                              {proyectosData.proyectosActivos > 0 && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                  {proyectosData.proyectosActivos} activo{proyectosData.proyectosActivos > 1 ? "s" : ""}
+                                </span>
+                              )}
+                              {proyectosData.proyectosFinalizados > 0 && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                  {proyectosData.proyectosFinalizados} finalizado{proyectosData.proyectosFinalizados > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Lista de proyectos */}
+                          {proyectosData.proyectos?.map((proyecto: any) => (
+                            <div 
+                              key={proyecto.id} 
+                              className={`border-2 rounded-lg overflow-hidden ${proyecto.finalizado ? "border-green-300 bg-green-50/30" : "border-border"}`}
+                            >
+                              {/* Cabecera del proyecto */}
+                              <div className="px-4 py-3 border-b border-border bg-muted/50 flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-foreground">{proyecto.titulo}</h4>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {proyecto.cantidadActividades} {proyecto.cantidadActividades === 1 ? "actividad" : "actividades"}
+                                  </p>
+                                </div>
+                                {proyecto.finalizado ? (
+                                  <span className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Finalizado
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
+                                    En curso
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Contenido del proyecto */}
+                              <div className="p-4 space-y-3">
+                                {/* Objetivo general (resumido) */}
+                                {proyecto.objetivoGeneral && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Objetivo:</p>
+                                    <p className="text-sm text-foreground line-clamp-3">{proyecto.objetivoGeneral.slice(0, 200)}{proyecto.objetivoGeneral.length > 200 ? "..." : ""}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Actividades del proyecto */}
+                                {proyecto.actividades?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-2">Actividades:</p>
+                                    <div className="space-y-2">
+                                      {proyecto.actividades.map((act: any, idx: number) => (
+                                        <div key={act.id || idx} className="bg-muted rounded-lg p-2">
+                                          <p className="text-sm font-medium text-foreground">{act.titulo || `Actividad ${idx + 1}`}</p>
+                                          {act.objetivo && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">{act.objetivo}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Fecha de finalizacion */}
+                                {proyecto.finalizado && proyecto.finalizadoAt && (
+                                  <p className="text-xs text-green-600 mt-2">
+                                    Finalizado el {new Date(proyecto.finalizadoAt).toLocaleDateString("es-AR")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
                   
