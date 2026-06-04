@@ -655,22 +655,24 @@ export default function DashboardDirectora() {
                         </div>
                       ) : (
                         <>
-                          {/* Resumen */}
-                          <div className="bg-muted rounded-lg p-3 flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                              {proyectosData.totalProyectos} {proyectosData.totalProyectos === 1 ? "proyecto" : "proyectos"}
-                            </span>
-                            <div className="flex gap-2">
-                              {proyectosData.proyectosActivos > 0 && (
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                  {proyectosData.proyectosActivos} activo{proyectosData.proyectosActivos > 1 ? "s" : ""}
-                                </span>
-                              )}
-                              {proyectosData.proyectosFinalizados > 0 && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                  {proyectosData.proyectosFinalizados} finalizado{proyectosData.proyectosFinalizados > 1 ? "s" : ""}
-                                </span>
-                              )}
+                          {/* Lista de proyectos con tilde si estan finalizados */}
+                          <div className="bg-muted rounded-lg p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Proyectos de la sala:</p>
+                            <div className="space-y-1">
+                              {proyectosData.proyectos?.map((p: any, idx: number) => (
+                                <div key={p.id} className="flex items-center gap-2">
+                                  {p.finalizado ? (
+                                    <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : (
+                                    <div className="w-4 h-4 border-2 border-gray-300 rounded flex-shrink-0" />
+                                  )}
+                                  <span className={`text-sm ${p.finalizado ? "text-green-700" : "text-foreground"}`}>
+                                    {idx + 1}. {p.titulo}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           </div>
                           
@@ -720,8 +722,11 @@ export default function DashboardDirectora() {
                                       {proyecto.actividades.map((act: any, idx: number) => (
                                         (act.titulo || act.objetivo || act.desarrollo || act.materiales) && (
                                           <div key={act.id || idx} className="border border-border rounded-lg overflow-hidden">
-                                            {/* Titulo de la actividad */}
-                                            <div className="bg-muted px-3 py-2 border-b border-border">
+                                            {/* Titulo de la actividad con numero */}
+                                            <div className="bg-muted px-3 py-2 border-b border-border flex items-center gap-2">
+                                              <span className="text-xs font-bold bg-primary text-primary-foreground w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                                                {idx + 1}
+                                              </span>
                                               <p className="text-sm font-semibold text-foreground">
                                                 {act.titulo || `Actividad ${idx + 1}`}
                                               </p>
