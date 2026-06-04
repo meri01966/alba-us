@@ -49,16 +49,21 @@ function comoTrabajamosTxt(eje: string, actividades: string[], metodologias: str
   return `Las actividades se desarrollaron utilizando ${base}.${extra} Se priorizo la participacion activa de todos los ninos y la interaccion entre pares.`
 }
 
-// Genera redaccion de "que aprendio el grupo" con datos cuantitativos
-function queAprendioTxt(eje: string, pctLogrado: number, pctProceso: number, pctRefuerzo: number, total: number): string {
+// Genera redaccion de "que aprendio el grupo" - claro y sin porcentajes crudos
+function queAprendioTxt(eje: string, pctLogrado: number, pctProceso: number, pctRefuerzo: number, totalAlumnos: number, verdes: number, amarillos: number, rojos: number): string {
   const nombre = NOMBRE_EJE[eje] || eje
+  
   if (pctLogrado >= 70) {
-    return `El grupo demostro un muy buen nivel de apropiacion en ${nombre}. El ${pctLogrado}% de los alumnos alcanzo los objetivos propuestos en forma sostenida a lo largo de las ${total} evaluaciones realizadas. Un ${pctProceso}% se encuentra en proceso de consolidacion y continuara avanzando con la practica.`
+    const pocos = rojos > 0 ? ` Solo ${rojos} ${rojos === 1 ? "nino necesita" : "ninos necesitan"} un poco mas de practica.` : ""
+    return `El grupo avanza muy bien en ${nombre}. La gran mayoria de los ninos logro los objetivos propuestos.${pocos}`
   }
-  if (pctLogrado >= 40) {
-    return `El grupo mostro avances significativos en ${nombre}. El ${pctLogrado}% de los alumnos logro los objetivos planteados, mientras que el ${pctProceso}% esta en proceso de consolidacion. Un ${pctRefuerzo}% requiere continuidad y refuerzo especifico para alcanzar los aprendizajes esperados.`
+  if (pctLogrado >= 50) {
+    return `El grupo muestra buen avance en ${nombre}. La mayoria logro los objetivos, y ${amarillos + rojos} ${amarillos + rojos === 1 ? "nino esta" : "ninos estan"} en proceso de consolidar los aprendizajes.`
   }
-  return `El grupo se encuentra en etapa de construccion de los aprendizajes de ${nombre}. El ${pctLogrado}% alcanzo los objetivos, el ${pctProceso}% esta transitando el proceso y el ${pctRefuerzo}% necesita apoyo adicional. Las proximas actividades estaran orientadas a consolidar estos aprendizajes de manera gradual.`
+  if (pctLogrado >= 30) {
+    return `El grupo esta en proceso de construccion de los aprendizajes de ${nombre}. ${verdes} ${verdes === 1 ? "nino logro" : "ninos lograron"} los objetivos, ${amarillos} ${amarillos === 1 ? "esta" : "estan"} avanzando, y ${rojos} ${rojos === 1 ? "necesita" : "necesitan"} mas apoyo.`
+  }
+  return `El grupo necesita mas trabajo en ${nombre}. ${rojos} ${rojos === 1 ? "nino requiere" : "ninos requieren"} refuerzo especifico. Las proximas actividades se orientaran a consolidar estos aprendizajes de manera gradual.`
 }
 
 // Genera sugerencias de continuacion basadas en el nivel grupal
@@ -250,7 +255,7 @@ export async function GET(req: NextRequest) {
         // Textos listos para leer en reunion de padres
         txt_queTrabajaamos: queTrabajamosTxt(eje, datos.actividades),
         txt_comoLoTrabajaamos: comoTrabajamosTxt(eje, datos.actividades, datos.metodologias),
-        txt_queAprendioElGrupo: queAprendioTxt(eje, pctLogrado, pctProceso, pctRefuerzo, total),
+        txt_queAprendioElGrupo: queAprendioTxt(eje, pctLogrado, pctProceso, pctRefuerzo, totalAlumnos, verdes, amarillos, rojos),
         sugerenciasContinuacion: sugerenciasContinuacion(eje, promedioGrupal),
       }
     })

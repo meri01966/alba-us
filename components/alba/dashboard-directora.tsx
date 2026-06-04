@@ -525,7 +525,7 @@ export default function DashboardDirectora() {
                     </div>
                   )}
                   
-                  {/* Sintesis Grupal */}
+                  {/* Sintesis Grupal - informacion clara para la directora */}
                   {modalTipo === "sintesis" && sintesisData && (
                     <div className="space-y-4">
                       {sintesisData.sinDatos ? (
@@ -534,42 +534,59 @@ export default function DashboardDirectora() {
                         </div>
                       ) : (
                         <>
-                          {/* Resumen */}
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div className="bg-muted rounded-lg p-3">
-                              <p className="text-2xl font-bold text-foreground">{sintesisData.totalAlumnos}</p>
-                              <p className="text-[10px] text-muted-foreground">Alumnos</p>
+                          {/* Resumen simple */}
+                          <div className="bg-muted rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-muted-foreground">Alumnos</span>
+                              <span className="font-bold text-foreground">{sintesisData.totalAlumnos}</span>
                             </div>
-                            <div className="bg-muted rounded-lg p-3">
-                              <p className="text-2xl font-bold text-foreground">{sintesisData.totalClases}</p>
-                              <p className="text-[10px] text-muted-foreground">Clases</p>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-muted-foreground">Clases realizadas</span>
+                              <span className="font-bold text-foreground">{sintesisData.totalClases}</span>
                             </div>
-                            <div className="bg-muted rounded-lg p-3">
-                              <p className="text-xs text-muted-foreground">{sintesisData.periodoDesde || "—"}</p>
-                              <p className="text-xs text-muted-foreground">a {sintesisData.periodoHasta || "—"}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Periodo</span>
+                              <span className="text-xs text-foreground">{sintesisData.periodoDesde || "—"} al {sintesisData.periodoHasta || "—"}</span>
                             </div>
                           </div>
                           
-                          {/* Ejes */}
+                          {/* Ejes - informacion clara */}
                           {sintesisData.ejes?.map((eje: any) => (
                             <div key={eje.eje} className="border border-border rounded-lg overflow-hidden">
-                              <div className="px-4 py-2 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
+                              <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
                                 <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
-                                <span className="text-sm font-medium text-foreground">{eje.nombre}</span>
+                                <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
+                                <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
                               </div>
-                              <div className="p-4 space-y-3">
+                              <div className="p-4 space-y-4">
+                                {/* Estado del grupo en este eje */}
                                 <div>
-                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Que trabajamos</p>
-                                  <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Como lo trabajamos</p>
-                                  <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Que aprendio el grupo</p>
                                   <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
                                 </div>
+                                
+                                {/* Resumen visual simple */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="bg-green-50 rounded-lg p-2 text-center">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mb-1"></div>
+                                    <p className="text-sm font-bold text-green-700">{eje.pctLogrado >= 70 ? "Muy bien" : eje.pctLogrado >= 50 ? "Bien" : "En proceso"}</p>
+                                  </div>
+                                  <div className="bg-amber-50 rounded-lg p-2 text-center">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full mx-auto mb-1"></div>
+                                    <p className="text-[10px] text-amber-700">En proceso</p>
+                                  </div>
+                                  <div className="bg-red-50 rounded-lg p-2 text-center">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mx-auto mb-1"></div>
+                                    <p className="text-[10px] text-red-700">{eje.pctRefuerzo > 30 ? "Atencion" : "Pocos"}</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Sugerencias de ALBA si hay situaciones a atender */}
+                                {eje.pctRefuerzo >= 25 && (
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
+                                    <p className="text-xs text-blue-700">{eje.sugerenciasContinuacion?.[0]}</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
