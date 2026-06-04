@@ -79,16 +79,17 @@ export async function GET(request: Request) {
       const totalRojos = registros.filter(r => r.estado === "red" || r.estado === "refuerzo").length
       const porcentajeRojo = Math.round((totalRojos / registros.length) * 100)
 
-      // Verificar rojos consecutivos (ultimas evaluaciones)
-      const ultimas = registros.slice(-5) // ultimas 5 evaluaciones
-      let rojosConsecutivos = 0
-      for (let i = ultimas.length - 1; i >= 0; i--) {
-        if (ultimas[i].estado === "red" || ultimas[i].estado === "refuerzo") {
-          rojosConsecutivos++
-        } else {
-          break
-        }
-      }
+      // Verificar rojos consecutivos recientes (contando rojos en las ultimas evaluaciones)
+      // Contamos cuantos rojos hay en las ultimas 5 evaluaciones
+      const ultimas = registros.slice(-5)
+      const rojosRecientes = ultimas.filter(r => r.estado === "red" || r.estado === "refuerzo").length
+      
+      // Tambien verificamos las ultimas 3 para patron de rojos consecutivos reales
+      const ultimas3 = registros.slice(-3)
+      const rojos3 = ultimas3.filter(r => r.estado === "red" || r.estado === "refuerzo").length
+      
+      // Determinamos la severidad
+      const rojosConsecutivos = rojos3 >= 2 ? rojos3 : (rojosRecientes >= 3 ? rojosRecientes : 0)
 
       // ALERTA ALTA: 3+ rojos consecutivos
       if (rojosConsecutivos >= 3) {

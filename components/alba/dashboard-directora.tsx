@@ -33,6 +33,12 @@ interface SalaData {
   totalAlumnos: number
   promedioGeneral: number
   promediosPorEje: { CF: number; CT: number; O: number }
+  actividadesPorEje: { CF: number; CT: number; O: number }
+  evaluacionesPorEje: { 
+    CF: { green: number; yellow: number; red: number; total: number }
+    CT: { green: number; yellow: number; red: number; total: number }
+    O: { green: number; yellow: number; red: number; total: number }
+  }
   alertasCount: number
   alertas: BrainAlerta[]
 }
@@ -46,32 +52,62 @@ const EJES: Record<Eje, { label: string; color: string }> = {
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
-// Grafico de barras mini para los 3 ejes
-function MiniBarChart({ cf, ct, o }: { cf: number; ct: number; o: number }) {
-  const max = Math.max(cf, ct, o, 1)
+// Grafico de barras mini para los 3 ejes - clickeable
+function MiniBarChart({ 
+  cf, ct, o, 
+  actCF, actCT, actO,
+  onClickEje 
+}: { 
+  cf: number; ct: number; o: number
+  actCF: number; actCT: number; actO: number
+  onClickEje: (eje: Eje) => void
+}) {
+  // Las barras muestran actividades realizadas, altura proporcional a cantidad
+  const maxAct = Math.max(actCF, actCT, actO, 10) // minimo 10 para escala
   return (
-    <div className="flex items-end gap-1.5 h-12">
-      <div className="flex flex-col items-center gap-0.5">
-        <div 
-          className="w-5 rounded-t transition-all" 
-          style={{ height: `${(cf / 100) * 40}px`, backgroundColor: EJES.CF.color, minHeight: "4px" }} 
-        />
-        <span className="text-[8px] font-bold text-slate-400">CF</span>
-      </div>
-      <div className="flex flex-col items-center gap-0.5">
-        <div 
-          className="w-5 rounded-t transition-all" 
-          style={{ height: `${(ct / 100) * 40}px`, backgroundColor: EJES.CT.color, minHeight: "4px" }} 
-        />
-        <span className="text-[8px] font-bold text-slate-400">CT</span>
-      </div>
-      <div className="flex flex-col items-center gap-0.5">
-        <div 
-          className="w-5 rounded-t transition-all" 
-          style={{ height: `${(o / 100) * 40}px`, backgroundColor: EJES.O.color, minHeight: "4px" }} 
-        />
-        <span className="text-[8px] font-bold text-slate-400">O</span>
-      </div>
+    <div className="flex items-end gap-1.5 h-16">
+      <button 
+        onClick={() => onClickEje("CF")}
+        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
+        title={`CF: ${actCF} actividades - ${cf}% logrado`}
+      >
+        <div className="relative">
+          <div 
+            className="w-6 rounded-t transition-all group-hover:ring-2 ring-blue-300" 
+            style={{ height: `${Math.max((actCF / maxAct) * 44, 8)}px`, backgroundColor: EJES.CF.color }} 
+          />
+          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actCF}</span>
+        </div>
+        <span className="text-[9px] font-bold text-slate-500">CF</span>
+      </button>
+      <button 
+        onClick={() => onClickEje("CT")}
+        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
+        title={`CT: ${actCT} actividades - ${ct}% logrado`}
+      >
+        <div className="relative">
+          <div 
+            className="w-6 rounded-t transition-all group-hover:ring-2 ring-emerald-300" 
+            style={{ height: `${Math.max((actCT / maxAct) * 44, 8)}px`, backgroundColor: EJES.CT.color }} 
+          />
+          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actCT}</span>
+        </div>
+        <span className="text-[9px] font-bold text-slate-500">CT</span>
+      </button>
+      <button 
+        onClick={() => onClickEje("O")}
+        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
+        title={`O: ${actO} actividades - ${o}% logrado`}
+      >
+        <div className="relative">
+          <div 
+            className="w-6 rounded-t transition-all group-hover:ring-2 ring-amber-300" 
+            style={{ height: `${Math.max((actO / maxAct) * 44, 8)}px`, backgroundColor: EJES.O.color }} 
+          />
+          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actO}</span>
+        </div>
+        <span className="text-[9px] font-bold text-slate-500">O</span>
+      </button>
     </div>
   )
 }
@@ -104,10 +140,11 @@ export default function DashboardDirectora() {
   
   // Modales
   const [modalSala, setModalSala] = useState<string | null>(null)
-  const [modalTipo, setModalTipo] = useState<"planificacion" | "sintesis" | "alertas" | "proyectos" | null>(null)
+  const [modalTipo, setModalTipo] = useState<"planificacion" | "sintesis" | "alertas" | "proyectos" | "detalle_eje" | null>(null)
   const [loadingModal, setLoadingModal] = useState(false)
   const [sintesisData, setSintesisData] = useState<any>(null)
   const [planificacionData, setPlanificacionData] = useState<any>(null)
+  const [ejeSeleccionado, setEjeSeleccionado] = useState<Eje | null>(null)
 
   async function cargarDatos() {
     try {
@@ -134,18 +171,37 @@ export default function DashboardDirectora() {
       const alumnosSala = alumnos.filter(a => a.sala === sala)
       const regsSala = registros.filter(r => alumnosSala.some(a => a.id === r.alumno_id))
       
-      // Calcular promedios por eje
-      const calcProm = (eje: string) => {
+      // Calcular evaluaciones por eje (verdes, amarillos, rojos)
+      const calcEvaluaciones = (eje: string) => {
         const regs = regsSala.filter(r => r.eje === eje)
-        if (regs.length === 0) return 0
-        const verdes = regs.filter(r => r.resultado === "green").length
-        return Math.round((verdes / regs.length) * 100)
+        return {
+          green: regs.filter(r => r.resultado === "green" || r.resultado === "logrado").length,
+          yellow: regs.filter(r => r.resultado === "yellow" || r.resultado === "proceso").length,
+          red: regs.filter(r => r.resultado === "red" || r.resultado === "refuerzo").length,
+          total: regs.length
+        }
       }
       
-      const cf = calcProm("CF")
-      const ct = calcProm("CT")
-      const o = calcProm("O")
-      const promGen = regsSala.length > 0 ? Math.round((cf + ct + o) / 3) : 0
+      const evalCF = calcEvaluaciones("CF")
+      const evalCT = calcEvaluaciones("CT")
+      const evalO = calcEvaluaciones("O")
+      
+      // Calcular promedios (porcentaje de verdes)
+      const calcProm = (eval_: { green: number; total: number }) => {
+        if (eval_.total === 0) return 0
+        return Math.round((eval_.green / eval_.total) * 100)
+      }
+      
+      const cf = calcProm(evalCF)
+      const ct = calcProm(evalCT)
+      const o = calcProm(evalO)
+      const promGen = (evalCF.total + evalCT.total + evalO.total) > 0 ? Math.round((cf + ct + o) / 3) : 0
+      
+      // Contar actividades realizadas por eje (de registro_cierre)
+      // Por ahora usamos el total de evaluaciones como proxy de actividades
+      const actividadesCF = evalCF.total
+      const actividadesCT = evalCT.total
+      const actividadesO = evalO.total
       
       // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
       let alertas: BrainAlerta[] = []
@@ -153,7 +209,6 @@ export default function DashboardDirectora() {
         const alertasRes = await fetch(`${base}/api/alertas-reales?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         if (alertasRes.ok) {
           const alertasData = await alertasRes.json()
-          // Convertir al formato esperado
           alertas = (alertasData.alertas || []).map((a: any) => ({
             tipo: a.tipo,
             urgencia: a.urgencia,
@@ -168,6 +223,8 @@ export default function DashboardDirectora() {
         totalAlumnos: alumnosSala.length,
         promedioGeneral: promGen,
         promediosPorEje: { CF: cf, CT: ct, O: o },
+        actividadesPorEje: { CF: actividadesCF, CT: actividadesCT, O: actividadesO },
+        evaluacionesPorEje: { CF: evalCF, CT: evalCT, O: evalO },
         alertasCount: alertas.length,
         alertas
       }
@@ -223,6 +280,7 @@ export default function DashboardDirectora() {
     setModalTipo(null)
     setSintesisData(null)
     setPlanificacionData(null)
+    setEjeSeleccionado(null)
   }
 
   if (loading) {
@@ -290,12 +348,20 @@ export default function DashboardDirectora() {
                     <ProgressRing value={data.promedioGeneral} />
                   </div>
                   
-                  {/* Grafico de barras por eje */}
+                  {/* Grafico de barras por eje - clickeable para ver detalle */}
                   <div className="flex items-center justify-between">
                     <MiniBarChart 
                       cf={data.promediosPorEje.CF} 
                       ct={data.promediosPorEje.CT} 
-                      o={data.promediosPorEje.O} 
+                      o={data.promediosPorEje.O}
+                      actCF={data.actividadesPorEje?.CF || 0}
+                      actCT={data.actividadesPorEje?.CT || 0}
+                      actO={data.actividadesPorEje?.O || 0}
+                      onClickEje={(eje) => {
+                        setModalSala(sala)
+                        setEjeSeleccionado(eje)
+                        setModalTipo("detalle_eje")
+                      }}
                     />
                     <div className="text-right">
                       <p className="text-[10px] text-muted-foreground">CF: {data.promediosPorEje.CF}%</p>
@@ -367,6 +433,7 @@ export default function DashboardDirectora() {
                   {modalTipo === "sintesis" && "Sintesis Grupal Cuatrimestral"}
                   {modalTipo === "alertas" && "Alertas Pedagogicas"}
                   {modalTipo === "proyectos" && "Proyectos de la Sala"}
+                  {modalTipo === "detalle_eje" && ejeSeleccionado && `Detalle ${EJES[ejeSeleccionado].label}`}
                 </p>
               </div>
               <button onClick={cerrarModal} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
@@ -560,6 +627,107 @@ export default function DashboardDirectora() {
                       <p className="text-sm text-muted-foreground">Los proyectos pedagogicos de esta sala se mostraran aqui.</p>
                       <div className="bg-muted rounded-lg p-4">
                         <p className="text-xs text-muted-foreground text-center">Funcionalidad en desarrollo</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Detalle de Eje - muestra verdes, amarillos, rojos */}
+                  {modalTipo === "detalle_eje" && ejeSeleccionado && salasData[modalSala] && (
+                    <div className="space-y-4">
+                      {/* Resumen del eje */}
+                      <div className="bg-muted rounded-xl p-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div 
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+                            style={{ backgroundColor: EJES[ejeSeleccionado].color }}
+                          >
+                            {ejeSeleccionado}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-foreground">{EJES[ejeSeleccionado].label}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {salasData[modalSala].actividadesPorEje?.[ejeSeleccionado] || 0} evaluaciones realizadas
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Porcentaje de logro */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">Porcentaje de logro:</span>
+                          <span className="font-bold text-lg" style={{ color: EJES[ejeSeleccionado].color }}>
+                            {salasData[modalSala].promediosPorEje[ejeSeleccionado]}%
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Distribucion de resultados */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-foreground text-sm">Distribucion de resultados</h4>
+                        
+                        {(() => {
+                          const eval_ = salasData[modalSala].evaluacionesPorEje?.[ejeSeleccionado] || { green: 0, yellow: 0, red: 0, total: 0 }
+                          const total = eval_.total || 1
+                          
+                          return (
+                            <div className="space-y-2">
+                              {/* Barra verde - Logrado */}
+                              <div className="flex items-center gap-3">
+                                <div className="w-20 text-xs text-muted-foreground">Logrado</div>
+                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-green-500 rounded-full flex items-center justify-end pr-2 transition-all"
+                                    style={{ width: `${(eval_.green / total) * 100}%`, minWidth: eval_.green > 0 ? "24px" : "0" }}
+                                  >
+                                    {eval_.green > 0 && <span className="text-[10px] font-bold text-white">{eval_.green}</span>}
+                                  </div>
+                                </div>
+                                <div className="w-12 text-right text-xs font-semibold text-green-600">
+                                  {Math.round((eval_.green / total) * 100)}%
+                                </div>
+                              </div>
+                              
+                              {/* Barra amarilla - En proceso */}
+                              <div className="flex items-center gap-3">
+                                <div className="w-20 text-xs text-muted-foreground">En proceso</div>
+                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-yellow-500 rounded-full flex items-center justify-end pr-2 transition-all"
+                                    style={{ width: `${(eval_.yellow / total) * 100}%`, minWidth: eval_.yellow > 0 ? "24px" : "0" }}
+                                  >
+                                    {eval_.yellow > 0 && <span className="text-[10px] font-bold text-white">{eval_.yellow}</span>}
+                                  </div>
+                                </div>
+                                <div className="w-12 text-right text-xs font-semibold text-yellow-600">
+                                  {Math.round((eval_.yellow / total) * 100)}%
+                                </div>
+                              </div>
+                              
+                              {/* Barra roja - Necesita refuerzo */}
+                              <div className="flex items-center gap-3">
+                                <div className="w-20 text-xs text-muted-foreground">Refuerzo</div>
+                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-red-500 rounded-full flex items-center justify-end pr-2 transition-all"
+                                    style={{ width: `${(eval_.red / total) * 100}%`, minWidth: eval_.red > 0 ? "24px" : "0" }}
+                                  >
+                                    {eval_.red > 0 && <span className="text-[10px] font-bold text-white">{eval_.red}</span>}
+                                  </div>
+                                </div>
+                                <div className="w-12 text-right text-xs font-semibold text-red-600">
+                                  {Math.round((eval_.red / total) * 100)}%
+                                </div>
+                              </div>
+                              
+                              {/* Total */}
+                              <div className="pt-2 border-t border-border mt-3">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Total evaluaciones</span>
+                                  <span className="font-bold text-foreground">{eval_.total}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   )}
