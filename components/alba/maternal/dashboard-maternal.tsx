@@ -3,14 +3,20 @@
 import { useState, useEffect } from "react"
 import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil } from "lucide-react"
 
-// Salas de maternal disponibles
-const SALAS_MATERNAL = ["Patitos", "Ositos", "Conejitos", "SALA_MATERNAL_PRUEBA"]
+// Salas de maternal disponibles (2 y 3 años)
+const SALAS_MATERNAL = [
+  "Naranjos TM",      // 3 años turno mañana
+  "Naranjos TT",      // 3 años turno tarde
+  "PINITOS TM",       // 2 años turno mañana
+  "PINITOS TT",       // 2 años turno tarde
+  "Sala de prueba"
+]
 
 // Dias de la semana
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 
 export function DashboardMaternal() {
-  const [salaActual, setSalaActual] = useState("Patitos")
+  const [salaActual, setSalaActual] = useState("Naranjos TM")
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensajeGuardado, setMensajeGuardado] = useState("")
@@ -459,8 +465,22 @@ export function DashboardMaternal() {
                       <textarea
                         value={cronograma[dia]}
                         onChange={(e) => setCronograma({ ...cronograma, [dia]: e.target.value })}
-                        placeholder={`Recibimiento:\n\nIntercambio:\n\nACTIVIDAD:\nAREA:\nOBJETIVOS:\nDESARROLLO:\n\nDespedida.`}
-                        className="w-full h-48 text-xs p-2 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
+                        placeholder={`Recibimiento: Juego en la alfombra...
+
+Intercambio: Tema del dia...
+
+Patio.
+Desayuno.
+
+ACTIVIDAD: Nombre
+AREA: (Lengua/Mat/Lenguajes expresivos...)
+CAPACIDADES:
+OBJETIVOS:
+CONTENIDOS:
+DESARROLLO:
+
+Despedida.`}
+                        className="w-full h-64 text-xs p-2 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
                       />
                     </div>
                   </div>
