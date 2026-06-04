@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe } from "lucide-react"
+import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle } from "lucide-react"
 
 // Salas de maternal disponibles (2 y 3 años)
 const SALAS_MATERNAL = [
@@ -92,6 +92,14 @@ export function DashboardMaternal() {
   const [clasesEspeciales, setClasesEspeciales] = useState<{ tipo: string; dia: string }[]>([])
   const [editandoClases, setEditandoClases] = useState(false)
   const [draggingClase, setDraggingClase] = useState<string | null>(null)
+  
+  // Vistas de lectura (sin edicion)
+  const [showCronogramaLectura, setShowCronogramaLectura] = useState(false)
+  const [showProyectoLectura, setShowProyectoLectura] = useState(false)
+  
+  // Calificacion de actividades al finalizar semana
+  const [showCalificacionModal, setShowCalificacionModal] = useState(false)
+  const [calificaciones, setCalificaciones] = useState<{ [key: string]: string }>({})
   
   // Cargar datos de la sala
   useEffect(() => {
@@ -466,9 +474,14 @@ export function DashboardMaternal() {
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-lg border-2 border-amber-200 overflow-hidden hover:shadow-xl transition-shadow">
                 <div className="px-5 py-4 border-b border-amber-200/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-400 flex items-center justify-center shadow-md">
+                    <button
+                      type="button"
+                      onClick={() => proyecto.titulo && setShowProyectoLectura(true)}
+                      className={`w-12 h-12 rounded-2xl bg-amber-400 flex items-center justify-center shadow-md transition-colors ${proyecto.titulo ? "hover:bg-amber-500 cursor-pointer" : ""}`}
+                      title={proyecto.titulo ? "Ver proyecto completo" : ""}
+                    >
                       <BookOpen className="w-6 h-6 text-white" />
-                    </div>
+                    </button>
                     <div>
                       <h2 className="font-bold text-slate-800 text-lg">Proyecto</h2>
                       <p className="text-xs text-amber-600">Unidad Didactica</p>
@@ -540,9 +553,14 @@ export function DashboardMaternal() {
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg border-2 border-green-200 overflow-hidden hover:shadow-xl transition-shadow">
               <div className="px-5 py-4 border-b border-green-200/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => setShowCronogramaLectura(true)}
+                    className="w-12 h-12 rounded-2xl bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-md transition-colors cursor-pointer"
+                    title="Ver cronograma completo"
+                  >
                     <Calendar className="w-6 h-6 text-white" />
-                  </div>
+                  </button>
                   <div>
                     <h2 className="font-bold text-slate-800 text-lg">Cronograma Semanal</h2>
                     <p className="text-sm text-green-600 font-medium">{actividadesCargadas} dias con actividades</p>
@@ -577,7 +595,7 @@ export function DashboardMaternal() {
                   </button>
                   <button
                     type="button"
-                    onClick={finalizarSemana}
+                    onClick={() => setShowCalificacionModal(true)}
                     disabled={guardando}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-50 shadow-md"
                   >
@@ -1021,6 +1039,223 @@ export function DashboardMaternal() {
                   Guardar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Vista de Lectura del Cronograma */}
+      {showCronogramaLectura && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-bold text-white">Cronograma Semanal - {salaActual}</h2>
+              </div>
+              <button
+                onClick={() => setShowCronogramaLectura(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <div className="grid grid-cols-5 gap-4">
+                {DIAS.map((dia) => (
+                  <div key={dia} className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="bg-green-500 text-white text-center py-2 font-bold">
+                      {dia}
+                      {cronograma[dia]?.fecha && (
+                        <span className="block text-xs font-normal opacity-80">{formatearFecha(cronograma[dia].fecha)}</span>
+                      )}
+                    </div>
+                    <div className="p-3 space-y-3 bg-white min-h-[300px]">
+                      {/* Clases especiales */}
+                      {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
+                        <div 
+                          key={`${clase.tipo}-${idx}`} 
+                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium ${
+                            clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-3 border-orange-500" :
+                            clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-3 border-purple-500" :
+                            "bg-blue-100 text-blue-700 border-l-3 border-blue-500"
+                          }`}
+                        >
+                          {clase.tipo === "edFisica" && <><Dumbbell className="w-3 h-3" /> Ed. Fisica</>}
+                          {clase.tipo === "musica" && <><Music className="w-3 h-3" /> Musica</>}
+                          {clase.tipo === "ingles" && <><Globe className="w-3 h-3" /> Ingles</>}
+                        </div>
+                      ))}
+                      
+                      {cronograma[dia]?.recibimiento && (
+                        <div className="bg-slate-50 p-2 rounded-lg">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Recibimiento</p>
+                          <p className="text-xs text-slate-700">{cronograma[dia].recibimiento}</p>
+                        </div>
+                      )}
+                      
+                      {cronograma[dia]?.intercambio && (
+                        <div className="bg-slate-50 p-2 rounded-lg">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Intercambio</p>
+                          <p className="text-xs text-slate-700">{cronograma[dia].intercambio}</p>
+                        </div>
+                      )}
+                      
+                      {cronograma[dia]?.actividades?.filter(a => a.nombre).map((act, i) => (
+                        <div key={i} className="bg-green-50 p-2 rounded-lg border-l-3 border-green-500">
+                          <p className="text-[10px] font-bold text-green-600 uppercase">Actividad {i+1}</p>
+                          <p className="text-xs font-semibold text-slate-800">{act.nombre}</p>
+                          {act.capacidades && <p className="text-[10px] text-slate-600 mt-1"><span className="font-semibold">Capacidades:</span> {act.capacidades}</p>}
+                          {act.objetivo && <p className="text-[10px] text-slate-600"><span className="font-semibold">Objetivo:</span> {act.objetivo}</p>}
+                          {act.desarrollo && <p className="text-[10px] text-slate-600"><span className="font-semibold">Desarrollo:</span> {act.desarrollo}</p>}
+                          {act.materiales && <p className="text-[10px] text-slate-600"><span className="font-semibold">Materiales:</span> {act.materiales}</p>}
+                        </div>
+                      ))}
+                      
+                      {!cronograma[dia]?.recibimiento && !cronograma[dia]?.actividades?.some(a => a.nombre) && clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
+                        <p className="text-xs text-slate-400 text-center py-8">Sin actividades</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Vista de Lectura del Proyecto */}
+      {showProyectoLectura && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-amber-400 to-orange-500">
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-bold text-white">Proyecto - {salaActual}</h2>
+              </div>
+              <button
+                onClick={() => setShowProyectoLectura(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs font-bold text-amber-600 uppercase">Titulo</p>
+                <h3 className="text-2xl font-bold text-slate-800">{proyecto.titulo}</h3>
+              </div>
+              {proyecto.duracion && (
+                <div>
+                  <p className="text-xs font-bold text-amber-600 uppercase">Duracion</p>
+                  <p className="text-lg text-slate-700">{proyecto.duracion}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-bold text-amber-600 uppercase">Objetivo General</p>
+                <p className="text-slate-700 whitespace-pre-wrap">{proyecto.objetivoGeneral}</p>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setShowProyectoLectura(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Calificacion de Actividades antes de Finalizar Semana */}
+      {showCalificacionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-red-500 to-rose-600">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-bold text-white">Calificar Actividades de la Semana</h2>
+              </div>
+              <button
+                onClick={() => setShowCalificacionModal(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+              <p className="text-sm text-slate-600 mb-4">Califica cada actividad realizada esta semana. Esto ayuda a ALBA a mejorar sus sugerencias.</p>
+              
+              {DIAS.map((dia) => {
+                const actividadesDia = cronograma[dia]?.actividades?.filter(a => a.nombre) || []
+                if (actividadesDia.length === 0) return null
+                
+                return (
+                  <div key={dia} className="mb-6">
+                    <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-green-600" />
+                      {dia} {cronograma[dia]?.fecha && <span className="text-sm font-normal text-slate-500">({formatearFecha(cronograma[dia].fecha)})</span>}
+                    </h3>
+                    <div className="space-y-3">
+                      {actividadesDia.map((act, idx) => {
+                        const key = `${dia}-${idx}`
+                        return (
+                          <div key={key} className="bg-slate-50 p-4 rounded-xl">
+                            <p className="font-semibold text-slate-800 mb-2">{act.nombre}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-600">Calificacion:</span>
+                              {["Excelente", "Buena", "Regular"].map((cal) => (
+                                <button
+                                  key={cal}
+                                  type="button"
+                                  onClick={() => setCalificaciones({ ...calificaciones, [key]: cal })}
+                                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                    calificaciones[key] === cal
+                                      ? cal === "Excelente" ? "bg-green-500 text-white" 
+                                        : cal === "Buena" ? "bg-blue-500 text-white"
+                                        : "bg-amber-500 text-white"
+                                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                                  }`}
+                                >
+                                  {cal}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+              
+              {!DIAS.some(dia => cronograma[dia]?.actividades?.some(a => a.nombre)) && (
+                <p className="text-center text-slate-500 py-8">No hay actividades cargadas esta semana</p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+              <button
+                onClick={() => setShowCalificacionModal(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setShowCalificacionModal(false)
+                  finalizarSemana()
+                }}
+                disabled={guardando}
+                className="flex items-center gap-2 px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50 shadow-md"
+              >
+                {guardando ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                Confirmar y Finalizar Semana
+              </button>
             </div>
           </div>
         </div>
