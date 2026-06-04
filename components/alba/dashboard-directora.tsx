@@ -612,104 +612,110 @@ export default function DashboardDirectora() {
                     </div>
                   )}
                   
-                  {/* Detalle de Eje - muestra verdes, amarillos, rojos */}
+                  {/* Detalle de Eje - informacion clara y util, no numeros crudos */}
                   {modalTipo === "detalle_eje" && ejeSeleccionado && salasData[modalSala] && (
                     <div className="space-y-4">
-                      {/* Resumen del eje */}
-                      <div className="bg-muted rounded-xl p-4">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div 
-                            className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                            style={{ backgroundColor: EJES[ejeSeleccionado].color }}
-                          >
-                            {ejeSeleccionado}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-foreground">{EJES[ejeSeleccionado].label}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {salasData[modalSala].actividadesPorEje?.[ejeSeleccionado] || 0} evaluaciones realizadas
-                            </p>
-                          </div>
-                        </div>
+                      {(() => {
+                        const eval_ = salasData[modalSala].evaluacionesPorEje?.[ejeSeleccionado] || { green: 0, yellow: 0, red: 0, total: 0 }
+                        const clases = salasData[modalSala].actividadesPorEje?.[ejeSeleccionado] || 0
+                        const totalAlumnos = salasData[modalSala].totalAlumnos
+                        const total = eval_.total
                         
-                        {/* Porcentaje de logro */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Porcentaje de logro:</span>
-                          <span className="font-bold text-lg" style={{ color: EJES[ejeSeleccionado].color }}>
-                            {salasData[modalSala].promediosPorEje[ejeSeleccionado]}%
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Distribucion de resultados */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-foreground text-sm">Distribucion de resultados</h4>
+                        // Calcular situacion del grupo
+                        const pctGreen = total > 0 ? (eval_.green / total) * 100 : 0
+                        const pctYellow = total > 0 ? (eval_.yellow / total) * 100 : 0
+                        const pctRed = total > 0 ? (eval_.red / total) * 100 : 0
                         
-                        {(() => {
-                          const eval_ = salasData[modalSala].evaluacionesPorEje?.[ejeSeleccionado] || { green: 0, yellow: 0, red: 0, total: 0 }
-                          const total = eval_.total || 1
-                          
-                          return (
-                            <div className="space-y-2">
-                              {/* Barra verde - Logrado */}
-                              <div className="flex items-center gap-3">
-                                <div className="w-20 text-xs text-muted-foreground">Logrado</div>
-                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-green-500 rounded-full flex items-center justify-end pr-2 transition-all"
-                                    style={{ width: `${(eval_.green / total) * 100}%`, minWidth: eval_.green > 0 ? "24px" : "0" }}
-                                  >
-                                    {eval_.green > 0 && <span className="text-[10px] font-bold text-white">{eval_.green}</span>}
-                                  </div>
-                                </div>
-                                <div className="w-12 text-right text-xs font-semibold text-green-600">
-                                  {Math.round((eval_.green / total) * 100)}%
-                                </div>
+                        // Generar mensaje claro basado en evidencia
+                        let estadoGrupo = ""
+                        let colorEstado = ""
+                        let sugerencia = ""
+                        
+                        if (clases === 0) {
+                          estadoGrupo = "Sin actividades registradas"
+                          colorEstado = "text-muted-foreground"
+                          sugerencia = "Aun no se realizaron actividades en este eje."
+                        } else if (pctGreen >= 70) {
+                          estadoGrupo = "El grupo avanza muy bien"
+                          colorEstado = "text-green-600"
+                          sugerencia = `La mayoria de los ninos logra los objetivos de ${EJES[ejeSeleccionado].label}.`
+                        } else if (pctGreen >= 50) {
+                          estadoGrupo = "El grupo avanza con algunos a reforzar"
+                          colorEstado = "text-amber-600"
+                          if (eval_.red > 0) {
+                            sugerencia = `${eval_.red} evaluaciones necesitan refuerzo. Considerar estrategias alternativas para esos ninos.`
+                          } else {
+                            sugerencia = "Algunos ninos estan en proceso. Continuar con las actividades planificadas."
+                          }
+                        } else if (pctRed >= 40) {
+                          estadoGrupo = "Atencion: varios ninos necesitan refuerzo"
+                          colorEstado = "text-red-600"
+                          sugerencia = "Revisar si la actividad es adecuada para el grupo o si hay factores externos afectando. Considerar hablar con las familias de los ninos con mas dificultad."
+                        } else {
+                          estadoGrupo = "El grupo esta en proceso"
+                          colorEstado = "text-amber-600"
+                          sugerencia = "Continuar observando la evolucion en las proximas actividades."
+                        }
+                        
+                        return (
+                          <>
+                            {/* Cabecera del eje */}
+                            <div className="flex items-center gap-3 pb-3 border-b border-border">
+                              <div 
+                                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                                style={{ backgroundColor: EJES[ejeSeleccionado].color }}
+                              >
+                                {ejeSeleccionado}
                               </div>
-                              
-                              {/* Barra amarilla - En proceso */}
-                              <div className="flex items-center gap-3">
-                                <div className="w-20 text-xs text-muted-foreground">En proceso</div>
-                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-yellow-500 rounded-full flex items-center justify-end pr-2 transition-all"
-                                    style={{ width: `${(eval_.yellow / total) * 100}%`, minWidth: eval_.yellow > 0 ? "24px" : "0" }}
-                                  >
-                                    {eval_.yellow > 0 && <span className="text-[10px] font-bold text-white">{eval_.yellow}</span>}
-                                  </div>
-                                </div>
-                                <div className="w-12 text-right text-xs font-semibold text-yellow-600">
-                                  {Math.round((eval_.yellow / total) * 100)}%
-                                </div>
-                              </div>
-                              
-                              {/* Barra roja - Necesita refuerzo */}
-                              <div className="flex items-center gap-3">
-                                <div className="w-20 text-xs text-muted-foreground">Refuerzo</div>
-                                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-red-500 rounded-full flex items-center justify-end pr-2 transition-all"
-                                    style={{ width: `${(eval_.red / total) * 100}%`, minWidth: eval_.red > 0 ? "24px" : "0" }}
-                                  >
-                                    {eval_.red > 0 && <span className="text-[10px] font-bold text-white">{eval_.red}</span>}
-                                  </div>
-                                </div>
-                                <div className="w-12 text-right text-xs font-semibold text-red-600">
-                                  {Math.round((eval_.red / total) * 100)}%
-                                </div>
-                              </div>
-                              
-                              {/* Total */}
-                              <div className="pt-2 border-t border-border mt-3">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-muted-foreground">Total evaluaciones</span>
-                                  <span className="font-bold text-foreground">{eval_.total}</span>
-                                </div>
+                              <div>
+                                <h3 className="font-bold text-foreground">{EJES[ejeSeleccionado].label}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {clases} {clases === 1 ? "actividad realizada" : "actividades realizadas"}
+                                </p>
                               </div>
                             </div>
-                          )
-                        })()}
-                      </div>
+                            
+                            {/* Estado del grupo - mensaje claro */}
+                            <div className="bg-muted rounded-lg p-4">
+                              <p className={`font-semibold ${colorEstado}`}>{estadoGrupo}</p>
+                              <p className="text-sm text-muted-foreground mt-1">{sugerencia}</p>
+                            </div>
+                            
+                            {/* Resumen visual simple */}
+                            {clases > 0 && (
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="bg-green-50 rounded-lg p-3 text-center">
+                                  <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-1"></div>
+                                  <p className="text-lg font-bold text-green-700">{eval_.green}</p>
+                                  <p className="text-[10px] text-green-600">Logrado</p>
+                                </div>
+                                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                                  <div className="w-3 h-3 bg-amber-500 rounded-full mx-auto mb-1"></div>
+                                  <p className="text-lg font-bold text-amber-700">{eval_.yellow}</p>
+                                  <p className="text-[10px] text-amber-600">En proceso</p>
+                                </div>
+                                <div className="bg-red-50 rounded-lg p-3 text-center">
+                                  <div className="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
+                                  <p className="text-lg font-bold text-red-700">{eval_.red}</p>
+                                  <p className="text-[10px] text-red-600">Refuerzo</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Inferencias de ALBA si hay patrones preocupantes */}
+                            {pctRed >= 30 && clases >= 2 && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencias de ALBA:</p>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                  {pctRed >= 50 && <li>• Considerar una reunion con las familias de los ninos con mas dificultad</li>}
+                                  {pctRed >= 30 && <li>• Evaluar si hay factores emocionales o de atencion afectando el desempeno</li>}
+                                  <li>• Probar estrategias alternativas para las proximas actividades de este eje</li>
+                                </ul>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                   )}
                 </>
