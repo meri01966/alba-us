@@ -28,6 +28,8 @@ interface DayPlanningProps {
   sala?: string
   onActividadALBA?: (actividad: string) => void
   onEjeALBA?: (eje: string) => void
+  /** Que columna renderizar: "proyecto", "sugerencia" o "ambas" (default) */
+  section?: "proyecto" | "sugerencia" | "ambas"
 }
 
 interface BrainActivity {
@@ -452,11 +454,6 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
         </div>
       ) : (
         <div className="space-y-3 flex-1">
-          {activity.razon && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">
-              {activity.razon}
-            </div>
-          )}
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
           </div>
@@ -857,7 +854,7 @@ export interface DayPlanningHandle {
 }
 
 export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(function DayPlanning(
-  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA },
+  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA, section = "ambas" },
   ref
 ) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
@@ -956,11 +953,54 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   }, [sala])
 
   useEffect(() => {
-    fetchBrain()
-    fetchPlanning()
-    fetchProyecto()
-  }, [fetchBrain, fetchPlanning, fetchProyecto])
+    if (section !== "proyecto") {
+      fetchBrain()
+      fetchPlanning()
+    }
+    if (section !== "sugerencia") {
+      fetchProyecto()
+    }
+  }, [fetchBrain, fetchPlanning, fetchProyecto, section])
 
+  // Solo columna de Sugerencia de ALBA
+  if (section === "sugerencia") {
+    return (
+      <Card className="h-full shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-primary">
+            Actividad sugerida por ALBA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Solo columna de Proyecto / Unidad Didactica
+  if (section === "proyecto") {
+    return (
+      <Card className="h-full shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-primary">
+            Proyecto / Unidad Didáctica
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ProyectoColumn
+            proyecto={proyecto}
+            isLoading={isProyectoLoading}
+            onGuardado={p => setProyecto(p)}
+            onFinalizado={() => { setProyecto(null); fetchBrain() }}
+            sala={sala}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Ambas columnas (layout original)
   return (
     <Card className="h-full shadow-md">
       <CardHeader className="pb-3">

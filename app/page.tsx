@@ -1307,51 +1307,73 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-4 flex flex-col gap-3">
-                  <HeatMap
-                    students={students}
-                    evaluaciones={evaluaciones}
-                    onEvaluacion={handleEvaluacion}
-                    onClearEvaluacion={handleClearEvaluacion}
-                    onClearAllEvaluaciones={handleClearAllEvaluaciones}
-
-                    actividadSugeridaALBA={actividadSugeridaALBA}
-                    ejeDeALBA={ejeActual}
-                    sala={salaActual}
-                    isLoading={isLoading}
-                  />
-                </div>
-                <div className="lg:col-span-8">
-                  <DayPlanning 
-                    ref={dayPlanningRef}
-                    evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
-                    ejeActual={ejeActual as "CF" | "CT" | "O"}
-                    actividadActual={actividadActual}
-                    totalAlumnos={students.length}
-                    sala={salaActual}
-                    onActividadALBA={setActividadSugeridaALBA}
-                    onEjeALBA={setEjeActual}
-                  />
-                </div>
+              {/* Fila 1: Proyecto (izq) + Registro del Aula / HeatMap (der) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DayPlanning
+                  ref={dayPlanningRef}
+                  section="proyecto"
+                  sala={salaActual}
+                  onActividadALBA={setActividadSugeridaALBA}
+                  onEjeALBA={setEjeActual}
+                />
+                <HeatMap
+                  students={students}
+                  evaluaciones={evaluaciones}
+                  onEvaluacion={handleEvaluacion}
+                  onClearEvaluacion={handleClearEvaluacion}
+                  onClearAllEvaluaciones={handleClearAllEvaluaciones}
+                  actividadSugeridaALBA={actividadSugeridaALBA}
+                  ejeDeALBA={ejeActual}
+                  sala={salaActual}
+                  isLoading={isLoading}
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Fila 2: Cronograma Semanal (ancho completo) */}
+              <button
+                type="button"
+                onClick={() => setShowCronograma(true)}
+                className="w-full flex items-center justify-between gap-3 bg-white rounded-2xl shadow-md border border-slate-200 px-5 py-4 hover:border-[#1e3a5f]/40 hover:shadow-lg transition-all text-left"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-11 h-11 rounded-xl" style={{ backgroundColor: "#1e3a5f" }}>
+                    <CalendarDays className="w-5 h-5 text-white" />
+                  </span>
+                  <span>
+                    <span className="block font-semibold" style={{ color: "#1e3a5f" }}>Cronograma Semanal</span>
+                    <span className="block text-xs text-slate-500">Planifica la semana completa de la sala</span>
+                  </span>
+                </span>
+                <span className="text-sm font-medium px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: "#1e3a5f" }}>
+                  Abrir
+                </span>
+              </button>
+
+              {/* Fila 3: Sugerencia de ALBA (izq) + Capacitacion (der) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DayPlanning
+                  section="sugerencia"
+                  sala={salaActual}
+                  onActividadALBA={setActividadSugeridaALBA}
+                  onEjeALBA={setEjeActual}
+                />
                 <MicroTraining 
                   ejeDelDia={ejeActual as "CF" | "CT" | "O"} 
                   actividadDelDia={actividadSugeridaALBA || actividadActual} 
                 />
-                <QuickRegister 
-                  actividadDelDia={actividadSugeridaALBA || actividadActual}
-                  evaluados={Object.keys(evaluaciones).length}
-                  totalAlumnos={students.length}
-                  // Los sin marcar se asumen logrado al finalizar, por eso se suman a verdes
-                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
-                  statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
-                  statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
-                  statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
-                  onGuardar={handleRegistroCierre}
-                />
               </div>
+
+              {/* Registro de cierre de jornada */}
+              <QuickRegister 
+                actividadDelDia={actividadSugeridaALBA || actividadActual}
+                evaluados={Object.keys(evaluaciones).length}
+                totalAlumnos={students.length}
+                statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
+                statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
+                statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
+                statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
+                onGuardar={handleRegistroCierre}
+              />
             </>
           )}
         </div>

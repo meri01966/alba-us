@@ -245,15 +245,6 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanifi
               </span>
             </div>
 
-            {/* Icono Calendario - abre modal de visualizacion */}
-            <button
-              onClick={() => setShowCalendarModal(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
-            >
-              <Calendar className="w-5 h-5" />
-              <span className="text-xs font-semibold hidden sm:inline">Recorrido</span>
-            </button>
-
             {/* User */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
