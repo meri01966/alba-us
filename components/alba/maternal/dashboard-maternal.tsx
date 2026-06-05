@@ -105,6 +105,10 @@ export function DashboardMaternal() {
   const [sugerenciasAlba, setSugerenciasAlba] = useState<{ dia: string; actividad: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string } }[]>([])
   const [generandoSugerencias, setGenerandoSugerencias] = useState(false)
   const [actividadesYaSugeridas, setActividadesYaSugeridas] = useState<string[]>([]) // Nombres de actividades ya sugeridas para no repetir
+  
+  // Recursos de capacitacion basados en las actividades planificadas
+  const [recursosCapacitacion, setRecursosCapacitacion] = useState<{ titulo: string; autor: string; descripcion: string; tipo: string }[]>([])
+  
   // Cargar datos de la sala
   useEffect(() => {
     const savedSala = localStorage.getItem("maternal-sala-activa")
@@ -244,75 +248,56 @@ export function DashboardMaternal() {
     const titulo = proyecto.titulo.toLowerCase()
     const objetivo = proyecto.objetivoGeneral?.toLowerCase() || ""
     
-    // Tips basados en teorias pedagogicas: Vigotsky, Perkins, Montessori, Reggio Emilia
+    // Tips practicos de ALBA para la planificacion (sin teoria, concretos)
     const tipsGenerales = [
-      // Vigotsky - Zona de Desarrollo Proximo
-      "Vigotsky: Ofrece andamiaje - ayuda inicial que vas retirando a medida que el nino gana confianza",
-      "Vigotsky: Promueve el trabajo entre pares - los ninos aprenden unos de otros en su ZDP",
-      "Vigotsky: El lenguaje guia el pensamiento - verbaliza en voz alta mientras modelas la actividad",
-      // Perkins - Ensenanza para la Comprension
-      "Perkins: Comienza con preguntas abiertas que despierten curiosidad genuina",
-      "Perkins: Conecta con lo que ya saben - construye sobre conocimientos previos",
-      "Perkins: Haz visible el pensamiento - pregunta 'Como lo pensaste?' 'Que te hizo elegir eso?'",
-      // Montessori
-      "Montessori: Prepara el ambiente - todo al alcance del nino, ordenado y atractivo",
-      "Montessori: Sigue al nino - observa sus intereses y adapta la propuesta",
-      "Montessori: Un material, un proposito - evita sobrecargar con demasiadas opciones",
-      "Montessori: Respeta la concentracion - no interrumpas cuando estan absortos en una tarea",
-      // Reggio Emilia
-      "Reggio Emilia: Documenta el proceso - fotos, frases de los ninos, producciones",
-      "Reggio Emilia: El ambiente es el tercer maestro - cuida la estetica y la organizacion",
-      "Reggio Emilia: Ofrece provocaciones - materiales dispuestos de forma atractiva que inviten a explorar",
-      "Reggio Emilia: Los 100 lenguajes - ofrece multiples formas de expresion (dibujo, cuerpo, palabras)",
-      // Tips practicos de didactica
       "Comienza cada actividad con una cancion o rima para captar la atencion del grupo",
       "Respeta los tiempos de atencion: 10-15 minutos de actividad dirigida en maternal",
       "Incorpora momentos de movimiento entre actividades para liberar energia",
+      "Prepara todos los materiales antes de que lleguen los ninos",
       "Cierra cada actividad con una reflexion grupal: Que hicimos? Que aprendimos?",
-      "Usa el juego como vehiculo principal de aprendizaje - todo se aprende mejor jugando"
+      "Ofrece opciones para respetar los diferentes ritmos de aprendizaje",
+      "Documenta con fotos el proceso, no solo el resultado final",
+      "Usa el juego como vehiculo principal - todo se aprende mejor jugando",
+      "Involucra los 5 sentidos en las experiencias de exploracion",
+      "Anticipa posibles dificultades y ten un plan B preparado"
     ]
     
-    // Tips especificos segun el tema del proyecto con fundamentos teoricos
+    // Tips especificos segun el tema del proyecto
     const tipsEspecificos: { [key: string]: string[] } = {
       animales: [
-        "Vigotsky: Construyan conocimiento juntos investigando que comen los animales del proyecto",
-        "Montessori: Usa animales de goma realistas para explorar caracteristicas (patas, alas, escamas)",
-        "Reggio Emilia: Crea un rincon de investigacion con libros, imagenes y elementos naturales",
-        "Perkins: Plantea un misterio - 'Por que este animal tiene esas orejas tan grandes?'",
-        "Invita a un familiar que tenga mascota a compartir su experiencia con el grupo",
-        "Usa sonidos de animales reales para ejercicios de escucha activa y reconocimiento"
+        "Invita a un familiar que tenga mascota a compartir su experiencia",
+        "Crea un rincon de observacion con imagenes y elementos de animales",
+        "Usa sonidos reales de animales para ejercicios de escucha",
+        "Propone dramatizaciones donde imiten comportamientos animales",
+        "Arma una granja con animales de goma para juego libre"
       ],
       naturaleza: [
-        "Montessori: Usa materiales sensoriales reales - hojas, cortezas, semillas, tierra",
-        "Reggio Emilia: Documenta el crecimiento de plantas con dibujos semanales de los ninos",
-        "Vigotsky: Guia la observacion con preguntas que amplien lo que ven espontaneamente",
-        "Perkins: Conecta con experiencias previas - 'Vieron plantas en su casa? Como son?'",
-        "Organiza una salida al patio o jardin para observar elementos naturales in situ",
-        "Registra el clima diariamente en un calendario grupal como rutina"
+        "Organiza una salida al patio para observar elementos naturales",
+        "Crea un sector de ciencias con lupas y recipientes para explorar",
+        "Registra el clima diariamente en un calendario grupal",
+        "Inicia germinadores para observar el ciclo de vida de las plantas",
+        "Recolecta hojas, semillas y piedras para clasificar"
       ],
       familia: [
-        "Reggio Emilia: Crea un mural de pertenencia con fotos de todas las familias",
-        "Vigotsky: Valora lo que cada nino trae de su familia como conocimiento previo",
-        "Montessori: Respeta los tiempos de cada nino para hablar de su familia",
-        "Perkins: Reflexiona sobre diversidad - todas las familias son diferentes y valiosas",
-        "Invita a familiares a compartir oficios, tradiciones, musica o comidas tipicas",
-        "Propone actividades de cocina con recetas sencillas traidas de las familias"
+        "Solicita fotos familiares para crear un mural de pertenencia",
+        "Invita a familiares a compartir oficios o tradiciones",
+        "Respeta la diversidad de conformaciones familiares",
+        "Propone cocinar recetas sencillas traidas de las familias",
+        "Arma un rincon de casita con elementos del hogar"
       ],
       cuerpo: [
-        "Montessori: Usa espejos grandes para que exploren su imagen corporal",
-        "Vigotsky: Nombra las partes del cuerpo mientras las tocan - el lenguaje construye conocimiento",
-        "Reggio Emilia: Crea siluetas a tamano real como documentacion del crecimiento",
-        "Perkins: Conecta con lo cotidiano - 'Para que usamos las manos? Y los pies?'",
-        "Incorpora circuitos motores con diferentes desafios de movimiento",
-        "Trabaja la relajacion y respiracion como cierre de jornada - cuida el bienestar emocional"
+        "Usa espejos grandes para explorar la imagen corporal",
+        "Incorpora circuitos motores con diferentes desafios",
+        "Trabaja relajacion y respiracion al cierre de jornada",
+        "Crea siluetas corporales en papel afiche",
+        "Juega a estatuas musicales para trabajar control corporal"
       ],
       colores: [
-        "Montessori: Usa tabletas de color para gradaciones y emparejamiento",
-        "Reggio Emilia: Explora con mesa de luz y acetatos para descubrir mezclas",
-        "Vigotsky: Nombra los colores constantemente en contexto - 'Veo que elegiste el rojo!'",
-        "Perkins: Pregunta por decisiones - 'Por que elegiste ese color para el cielo?'",
-        "Propone un dia de cada color donde todo gira en torno a ese tono",
-        "Usa elementos traslucidos y luz natural para explorar como cambian los colores"
+        "Propone un dia de cada color donde todo gire en torno a ese tono",
+        "Usa elementos traslucidos y luz para explorar mezclas",
+        "Crea un rincon de arte con materiales ordenados por color",
+        "Realiza busquedas del tesoro de objetos de un color",
+        "Mezcla temperas para descubrir colores nuevos"
       ]
     }
     
@@ -355,6 +340,72 @@ export function DashboardMaternal() {
   useEffect(() => {
     generarTipsALBA()
   }, [proyecto.titulo])
+  
+  // Generar recursos de capacitacion basados en las actividades del cronograma
+  function generarRecursosCapacitacion() {
+    const actividadesNombres: string[] = []
+    DIAS.forEach(dia => {
+      cronograma[dia]?.actividades?.forEach(act => {
+        if (act.nombre) actividadesNombres.push(act.nombre.toLowerCase())
+      })
+    })
+    
+    if (actividadesNombres.length === 0) {
+      setRecursosCapacitacion([])
+      return
+    }
+    
+    // Banco de recursos pedagogicos por tema/tipo de actividad
+    const bancoPedagogico = [
+      // Vigotsky
+      { titulo: "Zona de Desarrollo Proximo (ZDP)", autor: "Lev Vigotsky", descripcion: "El aprendizaje ocurre en la brecha entre lo que el nino puede hacer solo y lo que puede lograr con ayuda. Ofrece andamiaje gradual.", tipo: "teoria", keywords: ["construir", "colabor", "juntos", "ayuda", "guia"] },
+      { titulo: "El lenguaje como herramienta del pensamiento", autor: "Lev Vigotsky", descripcion: "Verbaliza en voz alta mientras modelas. El lenguaje guia y organiza el pensamiento infantil.", tipo: "teoria", keywords: ["nombr", "conversa", "lenguaje", "palabr", "canta"] },
+      // Montessori
+      { titulo: "Ambiente preparado", autor: "Maria Montessori", descripcion: "Todo al alcance del nino, ordenado y atractivo. El ambiente es el primer maestro.", tipo: "teoria", keywords: ["rincon", "sector", "explor", "material", "sensorial"] },
+      { titulo: "Periodos sensibles", autor: "Maria Montessori", descripcion: "Respeta los intereses espontaneos del nino. Hay momentos optimos para cada tipo de aprendizaje.", tipo: "teoria", keywords: ["observ", "interes", "atencion", "concentra"] },
+      { titulo: "Vida practica", autor: "Maria Montessori", descripcion: "Las actividades cotidianas desarrollan autonomia, concentracion y motricidad fina.", tipo: "teoria", keywords: ["trasvas", "verter", "cocin", "orden", "limpi"] },
+      // Reggio Emilia
+      { titulo: "Los 100 lenguajes del nino", autor: "Loris Malaguzzi", descripcion: "Ofrece multiples formas de expresion: dibujo, cuerpo, palabras, construccion, dramatizacion.", tipo: "teoria", keywords: ["expresi", "dibuj", "crea", "art", "dramatiz"] },
+      { titulo: "Documentacion pedagogica", autor: "Reggio Emilia", descripcion: "Registra el proceso con fotos, frases de los ninos, producciones. Hace visible el aprendizaje.", tipo: "teoria", keywords: ["document", "foto", "registr", "proces"] },
+      { titulo: "Provocaciones", autor: "Reggio Emilia", descripcion: "Materiales dispuestos de forma atractiva que invitan a explorar sin instrucciones directas.", tipo: "teoria", keywords: ["provocac", "invita", "dispon", "atractiv"] },
+      // Perkins
+      { titulo: "Ensenanza para la Comprension", autor: "David Perkins", descripcion: "Comienza con preguntas genuinas, conecta con conocimientos previos, haz visible el pensamiento.", tipo: "teoria", keywords: ["pregunt", "comprend", "piensa", "reflexion", "por que"] },
+      // Piaget
+      { titulo: "Estadio preoperacional", autor: "Jean Piaget", descripcion: "Los ninos de 2-7 anos aprenden a traves del juego simbolico, la imitacion y la exploracion sensorial.", tipo: "teoria", keywords: ["juego", "simbolic", "imita", "explor", "sensorial"] },
+      // Pikler
+      { titulo: "Movimiento libre", autor: "Emmi Pikler", descripcion: "Respeta el desarrollo motor autonomo. No forzar posturas ni movimientos que el nino no logra solo.", tipo: "teoria", keywords: ["movimient", "motor", "cuerpo", "gatear", "caminar", "trepar"] },
+      // Gardner
+      { titulo: "Inteligencias multiples", autor: "Howard Gardner", descripcion: "Existen diferentes formas de ser inteligente. Ofrece actividades que estimulen diversas inteligencias.", tipo: "teoria", keywords: ["musical", "corporal", "visual", "logica", "inteligenc"] },
+    ]
+    
+    // Encontrar recursos relevantes segun las actividades
+    const recursosRelevantes: typeof bancoPedagogico = []
+    
+    bancoPedagogico.forEach(recurso => {
+      const esRelevante = recurso.keywords.some(keyword => 
+        actividadesNombres.some(act => act.includes(keyword))
+      )
+      if (esRelevante && !recursosRelevantes.includes(recurso)) {
+        recursosRelevantes.push(recurso)
+      }
+    })
+    
+    // Si no hay coincidencias, mostrar recursos generales
+    if (recursosRelevantes.length === 0) {
+      setRecursosCapacitacion([
+        bancoPedagogico[0], // ZDP
+        bancoPedagogico[2], // Ambiente preparado
+        bancoPedagogico[5], // 100 lenguajes
+      ])
+    } else {
+      setRecursosCapacitacion(recursosRelevantes.slice(0, 4))
+    }
+  }
+  
+  // Actualizar recursos cuando cambia el cronograma
+  useEffect(() => {
+    generarRecursosCapacitacion()
+  }, [cronograma])
   
   // Generar sugerencias de ALBA basadas en el proyecto
   async function generarSugerenciasAlba() {
@@ -910,12 +961,31 @@ export function DashboardMaternal() {
                   </div>
                 </div>
                 <div className="p-5">
-                  <div className="text-center py-6">
-                    <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-3">
-                      <FileText className="w-7 h-7 text-teal-400" />
+                  {recursosCapacitacion.length > 0 ? (
+                    <div className="space-y-3">
+                      {recursosCapacitacion.map((recurso, i) => (
+                        <div key={i} className="bg-white p-3 rounded-xl border border-teal-100 hover:border-teal-300 transition-colors">
+                          <div className="flex items-start gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                              <BookOpen className="w-4 h-4 text-teal-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-slate-800 text-sm">{recurso.titulo}</h4>
+                              <p className="text-[10px] text-teal-600 font-medium">{recurso.autor}</p>
+                              <p className="text-xs text-slate-600 mt-1 line-clamp-2">{recurso.descripcion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-slate-500">Recursos y guias apareceran segun las actividades</p>
-                  </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-3">
+                        <FileText className="w-7 h-7 text-teal-400" />
+                      </div>
+                      <p className="text-slate-500 text-sm">Agrega actividades al cronograma para ver recursos pedagogicos relacionados</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -935,23 +1005,21 @@ export function DashboardMaternal() {
                 <h2 className="text-xl font-bold text-white">Cronograma Semanal</h2>
               </div>
               <div className="flex items-center gap-2">
-                {/* Boton ALBA sugiere */}
-                {proyecto.titulo && (
-                  <button
-                    type="button"
-                    onClick={generarSugerenciasAlba}
-                    disabled={generandoSugerencias}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-                    title="ALBA sugiere actividades basadas en tu proyecto"
-                  >
-                    {generandoSugerencias ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    ALBA sugiere
-                  </button>
-                )}
+                {/* Boton ALBA sugiere - siempre visible */}
+                <button
+                  type="button"
+                  onClick={generarSugerenciasAlba}
+                  disabled={generandoSugerencias || !proyecto.titulo}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={proyecto.titulo ? "ALBA sugiere actividades basadas en tu proyecto" : "Carga un proyecto primero"}
+                >
+                  {generandoSugerencias ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  ALBA sugiere
+                </button>
                 {/* Boton Editar clases especiales */}
                 {editandoClases ? (
                   <button
