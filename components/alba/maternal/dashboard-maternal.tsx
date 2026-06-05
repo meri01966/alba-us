@@ -996,8 +996,11 @@ export function DashboardMaternal() {
       
       {/* Modal Cronograma Semanal - TODA LA SEMANA VISIBLE */}
       {showCronogramaModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-7xl my-4">
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCronogramaModal(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-7xl my-4" onClick={(e) => e.stopPropagation()}>
             {/* Header del modal */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-green-500 rounded-t-2xl">
               <div className="flex items-center gap-3">
@@ -1056,9 +1059,10 @@ export function DashboardMaternal() {
                 <button
                   type="button"
                   onClick={() => setShowCronogramaModal(false)}
-                  className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
+                  Cerrar
                 </button>
               </div>
             </div>
