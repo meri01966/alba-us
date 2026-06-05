@@ -267,8 +267,8 @@ export function DashboardMaternal() {
     setGenerandoSugerencias(false)
   }
   
-  // Aceptar sugerencia de ALBA (agregar al cronograma)
-  function aceptarSugerenciaAlba(dia: string) {
+  // Aceptar sugerencia de ALBA (agregar al cronograma y guardar)
+  async function aceptarSugerenciaAlba(dia: string) {
     const sugerencia = sugerenciasAlba.find(s => s.dia === dia)
     if (!sugerencia) return
     
@@ -283,6 +283,18 @@ export function DashboardMaternal() {
     
     // Remover la sugerencia
     setSugerenciasAlba(sugerenciasAlba.filter(s => s.dia !== dia))
+    
+    // Guardar en Supabase inmediatamente
+    const base = typeof window !== "undefined" ? window.location.origin : ""
+    try {
+      await fetch(`${base}/api/cronograma-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevoCronograma })
+      })
+    } catch (e) {
+      // Error silencioso
+    }
   }
   
   // Rechazar sugerencia de ALBA
