@@ -1160,6 +1160,7 @@ export function DashboardMaternal() {
                 <h2 className="text-xl font-bold text-white">Cronograma Semanal - {salaActual}</h2>
               </div>
               <button
+                type="button"
                 onClick={() => setShowCronogramaLectura(false)}
                 className="text-white/80 hover:text-white transition-colors"
               >
@@ -1240,6 +1241,7 @@ export function DashboardMaternal() {
                 <h2 className="text-xl font-bold text-white">Proyecto - {salaActual}</h2>
               </div>
               <button
+                type="button"
                 onClick={() => setShowProyectoLectura(false)}
                 className="text-white/80 hover:text-white transition-colors"
               >
@@ -1264,6 +1266,7 @@ export function DashboardMaternal() {
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex justify-end">
               <button
+                type="button"
                 onClick={() => setShowProyectoLectura(false)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
               >
