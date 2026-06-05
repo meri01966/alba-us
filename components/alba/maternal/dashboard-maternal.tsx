@@ -1472,8 +1472,11 @@ export function DashboardMaternal() {
       
       {/* Modal Vista de Lectura del Proyecto */}
       {showProyectoLectura && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowProyectoLectura(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-amber-400 to-orange-500">
               <div className="flex items-center gap-3">
                 <BookOpen className="w-6 h-6 text-white" />
@@ -1482,9 +1485,10 @@ export function DashboardMaternal() {
               <button
                 type="button"
                 onClick={() => setShowProyectoLectura(false)}
-                className="text-white/80 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-4 h-4" />
+                Cerrar
               </button>
             </div>
             <div className="p-6 space-y-4">
