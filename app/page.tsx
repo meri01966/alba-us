@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
+import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check, CalendarDays } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning, type DayPlanningHandle } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
-import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
+import { CronogramaSemanal } from "@/components/sia/cronograma-semanal"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
@@ -356,6 +356,7 @@ export default function ALBADashboard() {
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
   const [showAlertas, setShowAlertas] = useState(false)
+  const [showCronograma, setShowCronograma] = useState(false)
   const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
   const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
@@ -1238,6 +1239,15 @@ useEffect(() => {
                 <>
                   <button
                     type="button"
+                    onClick={() => setShowCronograma(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: "#1e3a5f" }}
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    Cronograma
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowConfigSala(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
                     style={{ color: "#1e3a5f" }}
@@ -1325,14 +1335,10 @@ useEffect(() => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <MicroTraining 
                   ejeDelDia={ejeActual as "CF" | "CT" | "O"} 
                   actividadDelDia={actividadSugeridaALBA || actividadActual} 
-                />
-<AlertsPanel
-                  students={students}
-                  evaluaciones={evaluaciones}
                 />
                 <QuickRegister 
                   actividadDelDia={actividadSugeridaALBA || actividadActual}
@@ -1593,7 +1599,8 @@ useEffect(() => {
           onClose={() => setShowAlertas(false)} 
         />
       )}
+      {/* Cronograma Semanal Modal */}
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} />
     </div>
   )
 }
-// force rebuild 1780161830
