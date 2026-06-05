@@ -104,6 +104,7 @@ export function DashboardMaternal() {
   // Sugerencias de ALBA basadas en el proyecto
   const [sugerenciasAlba, setSugerenciasAlba] = useState<{ dia: string; actividad: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string } }[]>([])
   const [generandoSugerencias, setGenerandoSugerencias] = useState(false)
+  const [actividadesYaSugeridas, setActividadesYaSugeridas] = useState<string[]>([]) // Nombres de actividades ya sugeridas para no repetir
   // Cargar datos de la sala
   useEffect(() => {
     const savedSala = localStorage.getItem("maternal-sala-activa")
@@ -243,51 +244,75 @@ export function DashboardMaternal() {
     const titulo = proyecto.titulo.toLowerCase()
     const objetivo = proyecto.objetivoGeneral?.toLowerCase() || ""
     
-    // Tips generales de didactica infantil
+    // Tips basados en teorias pedagogicas: Vigotsky, Perkins, Montessori, Reggio Emilia
     const tipsGenerales = [
+      // Vigotsky - Zona de Desarrollo Proximo
+      "Vigotsky: Ofrece andamiaje - ayuda inicial que vas retirando a medida que el nino gana confianza",
+      "Vigotsky: Promueve el trabajo entre pares - los ninos aprenden unos de otros en su ZDP",
+      "Vigotsky: El lenguaje guia el pensamiento - verbaliza en voz alta mientras modelas la actividad",
+      // Perkins - Ensenanza para la Comprension
+      "Perkins: Comienza con preguntas abiertas que despierten curiosidad genuina",
+      "Perkins: Conecta con lo que ya saben - construye sobre conocimientos previos",
+      "Perkins: Haz visible el pensamiento - pregunta 'Como lo pensaste?' 'Que te hizo elegir eso?'",
+      // Montessori
+      "Montessori: Prepara el ambiente - todo al alcance del nino, ordenado y atractivo",
+      "Montessori: Sigue al nino - observa sus intereses y adapta la propuesta",
+      "Montessori: Un material, un proposito - evita sobrecargar con demasiadas opciones",
+      "Montessori: Respeta la concentracion - no interrumpas cuando estan absortos en una tarea",
+      // Reggio Emilia
+      "Reggio Emilia: Documenta el proceso - fotos, frases de los ninos, producciones",
+      "Reggio Emilia: El ambiente es el tercer maestro - cuida la estetica y la organizacion",
+      "Reggio Emilia: Ofrece provocaciones - materiales dispuestos de forma atractiva que inviten a explorar",
+      "Reggio Emilia: Los 100 lenguajes - ofrece multiples formas de expresion (dibujo, cuerpo, palabras)",
+      // Tips practicos de didactica
       "Comienza cada actividad con una cancion o rima para captar la atencion del grupo",
-      "Usa materiales concretos y manipulables antes de pasar a lo abstracto",
       "Respeta los tiempos de atencion: 10-15 minutos de actividad dirigida en maternal",
       "Incorpora momentos de movimiento entre actividades para liberar energia",
-      "Documenta con fotos el proceso, no solo el resultado",
-      "Ofrece opciones para respetar los diferentes ritmos de aprendizaje",
       "Cierra cada actividad con una reflexion grupal: Que hicimos? Que aprendimos?",
-      "Prepara los materiales antes de que lleguen los ninos para aprovechar el tiempo",
-      "Usa el juego como vehiculo principal de aprendizaje",
-      "Involucra los 5 sentidos en las experiencias de exploracion"
+      "Usa el juego como vehiculo principal de aprendizaje - todo se aprende mejor jugando"
     ]
     
-    // Tips especificos segun el tema del proyecto
+    // Tips especificos segun el tema del proyecto con fundamentos teoricos
     const tipsEspecificos: { [key: string]: string[] } = {
       animales: [
+        "Vigotsky: Construyan conocimiento juntos investigando que comen los animales del proyecto",
+        "Montessori: Usa animales de goma realistas para explorar caracteristicas (patas, alas, escamas)",
+        "Reggio Emilia: Crea un rincon de investigacion con libros, imagenes y elementos naturales",
+        "Perkins: Plantea un misterio - 'Por que este animal tiene esas orejas tan grandes?'",
         "Invita a un familiar que tenga mascota a compartir su experiencia con el grupo",
-        "Crea un rincon de observacion con imagenes y elementos relacionados a los animales",
-        "Usa sonidos de animales para ejercicios de escucha activa y reconocimiento",
-        "Propone dramatizaciones donde los ninos imiten comportamientos animales"
+        "Usa sonidos de animales reales para ejercicios de escucha activa y reconocimiento"
       ],
       naturaleza: [
+        "Montessori: Usa materiales sensoriales reales - hojas, cortezas, semillas, tierra",
+        "Reggio Emilia: Documenta el crecimiento de plantas con dibujos semanales de los ninos",
+        "Vigotsky: Guia la observacion con preguntas que amplien lo que ven espontaneamente",
+        "Perkins: Conecta con experiencias previas - 'Vieron plantas en su casa? Como son?'",
         "Organiza una salida al patio o jardin para observar elementos naturales in situ",
-        "Crea un sector de ciencias con lupas, recipientes y elementos para explorar",
-        "Registra el clima diariamente en un calendario grupal",
-        "Inicia un proyecto de huerta o germinadores para observar el ciclo de vida"
+        "Registra el clima diariamente en un calendario grupal como rutina"
       ],
       familia: [
-        "Solicita fotos familiares para crear un mural de pertenencia",
-        "Invita a familiares a compartir oficios, tradiciones o talentos",
-        "Respeta la diversidad de conformaciones familiares al abordar el tema",
-        "Propone actividades de cocina con recetas traidas de las familias"
+        "Reggio Emilia: Crea un mural de pertenencia con fotos de todas las familias",
+        "Vigotsky: Valora lo que cada nino trae de su familia como conocimiento previo",
+        "Montessori: Respeta los tiempos de cada nino para hablar de su familia",
+        "Perkins: Reflexiona sobre diversidad - todas las familias son diferentes y valiosas",
+        "Invita a familiares a compartir oficios, tradiciones, musica o comidas tipicas",
+        "Propone actividades de cocina con recetas sencillas traidas de las familias"
       ],
       cuerpo: [
-        "Usa espejos grandes para que los ninos exploren su imagen corporal",
+        "Montessori: Usa espejos grandes para que exploren su imagen corporal",
+        "Vigotsky: Nombra las partes del cuerpo mientras las tocan - el lenguaje construye conocimiento",
+        "Reggio Emilia: Crea siluetas a tamano real como documentacion del crecimiento",
+        "Perkins: Conecta con lo cotidiano - 'Para que usamos las manos? Y los pies?'",
         "Incorpora circuitos motores con diferentes desafios de movimiento",
-        "Trabaja la relajacion y respiracion como cierre de jornada",
-        "Crea siluetas corporales en papel para identificar las partes del cuerpo"
+        "Trabaja la relajacion y respiracion como cierre de jornada - cuida el bienestar emocional"
       ],
       colores: [
+        "Montessori: Usa tabletas de color para gradaciones y emparejamiento",
+        "Reggio Emilia: Explora con mesa de luz y acetatos para descubrir mezclas",
+        "Vigotsky: Nombra los colores constantemente en contexto - 'Veo que elegiste el rojo!'",
+        "Perkins: Pregunta por decisiones - 'Por que elegiste ese color para el cielo?'",
         "Propone un dia de cada color donde todo gira en torno a ese tono",
-        "Usa elementos traslucidos y luz para explorar mezclas de colores",
-        "Crea un rincon de arte con materiales ordenados por color",
-        "Realiza busquedas del tesoro de objetos de un color especifico"
+        "Usa elementos traslucidos y luz natural para explorar como cambian los colores"
       ]
     }
     
@@ -350,7 +375,8 @@ export function DashboardMaternal() {
             duracion: proyecto.duracion
           },
           sala: salaActual,
-          dias: DIAS
+          dias: DIAS,
+          actividadesYaSugeridas // Enviar actividades ya aceptadas/rechazadas para no repetir
         })
       })
       
@@ -371,6 +397,9 @@ export function DashboardMaternal() {
   async function aceptarSugerenciaAlba(dia: string) {
     const sugerencia = sugerenciasAlba.find(s => s.dia === dia)
     if (!sugerencia) return
+    
+    // Registrar actividad aceptada para no repetirla
+    setActividadesYaSugeridas([...actividadesYaSugeridas, sugerencia.actividad.nombre])
     
     const nuevoCronograma = { ...cronograma }
     if (!nuevoCronograma[dia].actividades) {
@@ -397,8 +426,12 @@ export function DashboardMaternal() {
     }
   }
   
-  // Rechazar sugerencia de ALBA
+  // Rechazar sugerencia de ALBA (tambien la registramos para no repetirla)
   function rechazarSugerenciaAlba(dia: string) {
+    const sugerencia = sugerenciasAlba.find(s => s.dia === dia)
+    if (sugerencia) {
+      setActividadesYaSugeridas([...actividadesYaSugeridas, sugerencia.actividad.nombre])
+    }
     setSugerenciasAlba(sugerenciasAlba.filter(s => s.dia !== dia))
   }
   
@@ -741,41 +774,6 @@ export function DashboardMaternal() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Boton ALBA sugiere */}
-                  {proyecto.titulo && (
-                    <button
-                      type="button"
-                      onClick={generarSugerenciasAlba}
-                      disabled={generandoSugerencias}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-medium transition-colors disabled:opacity-50"
-                      title="ALBA sugiere actividades basadas en tu proyecto"
-                    >
-                      {generandoSugerencias ? (
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3 h-3" />
-                      )}
-                      ALBA sugiere
-                    </button>
-                  )}
-                  {editandoClases ? (
-                    <button
-                      type="button"
-                      onClick={guardarClasesEspeciales}
-                      className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors shadow-sm"
-                    >
-                      <Check className="w-4 h-4" />
-                      Listo
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setEditandoClases(true)}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
-                    >
-                      Editar clases
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={() => setShowCronogramaModal(true)}
@@ -795,63 +793,6 @@ export function DashboardMaternal() {
                 </div>
               </div>
               
-              {/* Badges arrastrables cuando esta en modo edicion */}
-              {editandoClases && (
-                <div className="px-5 py-3 bg-blue-50 border-b border-blue-200">
-                  <p className="text-xs text-blue-700 mb-2 font-medium">Arrastra los badges al dia correspondiente (2 de cada uno maximo):</p>
-                  <div className="flex flex-wrap gap-2">
-                    {/* Ed. Fisica badges */}
-                    {[1, 2].map(n => {
-                      const usado = clasesEspeciales.filter(c => c.tipo === "edFisica").length >= n
-                      return (
-                        <div
-                          key={`ef-${n}`}
-                          draggable={!usado}
-                          onDragStart={() => !usado && setDraggingClase("edFisica")}
-                          onDragEnd={() => setDraggingClase(null)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-orange-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
-                        >
-                          <Dumbbell className="w-3 h-3 text-orange-600" />
-                          <span className="text-xs font-medium text-slate-700">Ed. Fisica {n}</span>
-                        </div>
-                      )
-                    })}
-                    {/* Musica badges */}
-                    {[1, 2].map(n => {
-                      const usado = clasesEspeciales.filter(c => c.tipo === "musica").length >= n
-                      return (
-                        <div
-                          key={`mu-${n}`}
-                          draggable={!usado}
-                          onDragStart={() => !usado && setDraggingClase("musica")}
-                          onDragEnd={() => setDraggingClase(null)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-purple-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
-                        >
-                          <Music className="w-3 h-3 text-purple-600" />
-                          <span className="text-xs font-medium text-slate-700">Musica {n}</span>
-                        </div>
-                      )
-                    })}
-                    {/* Ingles badges */}
-                    {[1, 2].map(n => {
-                      const usado = clasesEspeciales.filter(c => c.tipo === "ingles").length >= n
-                      return (
-                        <div
-                          key={`in-${n}`}
-                          draggable={!usado}
-                          onDragStart={() => !usado && setDraggingClase("ingles")}
-                          onDragEnd={() => setDraggingClase(null)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-blue-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
-                        >
-                          <Globe className="w-3 h-3 text-blue-600" />
-                          <span className="text-xs font-medium text-slate-700">Ingles {n}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              
               {/* Vista resumida del cronograma */}
               <div className="p-5">
                 <div className="grid grid-cols-5 gap-3">
@@ -859,24 +800,17 @@ export function DashboardMaternal() {
                     <div 
                       key={dia} 
                       className="flex flex-col"
-                      onDragOver={editandoClases ? (e) => e.preventDefault() : undefined}
-                      onDrop={editandoClases ? () => {
-                        if (draggingClase) {
-                          agregarClaseADia(draggingClase, dia)
-                          setDraggingClase(null)
-                        }
-                      } : undefined}
                     >
                       <div className="text-center py-2 px-2 bg-green-500 rounded-t-xl font-bold text-sm text-white shadow-sm">
                         {dia} {cronograma[dia]?.fecha && <span className="font-normal text-xs opacity-80">{formatearFecha(cronograma[dia].fecha)}</span>}
                       </div>
-                      <div className={`flex-1 border-2 border-t-0 border-green-200 rounded-b-xl p-3 min-h-[140px] bg-white ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}>
+                      <div className="flex-1 border-2 border-t-0 border-green-200 rounded-b-xl p-3 min-h-[140px] bg-white">
                         {/* Clases especiales del dia */}
                         <div className="space-y-1 mb-2">
                           {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
                             <div 
                               key={`${clase.tipo}-${idx}`} 
-                              className={`relative group flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium ${
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium ${
                                 clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-2 border-orange-500" :
                                 clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-2 border-purple-500" :
                                 "bg-blue-100 text-blue-700 border-l-2 border-blue-500"
@@ -885,15 +819,6 @@ export function DashboardMaternal() {
                               {clase.tipo === "edFisica" && <><Dumbbell className="w-2.5 h-2.5" /> Ed. Fisica</>}
                               {clase.tipo === "musica" && <><Music className="w-2.5 h-2.5" /> Musica</>}
                               {clase.tipo === "ingles" && <><Globe className="w-2.5 h-2.5" /> Ingles</>}
-                              {editandoClases && (
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-2.5 h-2.5" />
-                                </button>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -913,33 +838,6 @@ export function DashboardMaternal() {
                           </div>
                         ) : (
                           <p className="text-xs text-slate-300 text-center mt-6">Sin actividades</p>
-                        )}
-                        
-                        {/* Sugerencia de ALBA para este dia */}
-                        {sugerenciasAlba.find(s => s.dia === dia) && (
-                          <div className="mt-2 p-2 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg relative">
-                            <div className="flex items-center gap-1 mb-1">
-                              <Sparkles className="w-3 h-3 text-violet-600" />
-                              <span className="text-[9px] font-bold text-violet-600 uppercase">Sugerencia ALBA</span>
-                            </div>
-                            <p className="text-[10px] font-medium text-slate-700 truncate">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.nombre}</p>
-                            <div className="flex items-center gap-1 mt-1.5">
-                              <button
-                                type="button"
-                                onClick={() => aceptarSugerenciaAlba(dia)}
-                                className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors"
-                              >
-                                Aceptar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => rechazarSugerenciaAlba(dia)}
-                                className="flex-1 text-[9px] px-2 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded font-medium transition-colors"
-                              >
-                                Eliminar
-                              </button>
-                            </div>
-                          </div>
                         )}
                       </div>
                     </div>
@@ -1037,7 +935,45 @@ export function DashboardMaternal() {
                 <h2 className="text-xl font-bold text-white">Cronograma Semanal</h2>
               </div>
               <div className="flex items-center gap-2">
+                {/* Boton ALBA sugiere */}
+                {proyecto.titulo && (
+                  <button
+                    type="button"
+                    onClick={generarSugerenciasAlba}
+                    disabled={generandoSugerencias}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                    title="ALBA sugiere actividades basadas en tu proyecto"
+                  >
+                    {generandoSugerencias ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    ALBA sugiere
+                  </button>
+                )}
+                {/* Boton Editar clases especiales */}
+                {editandoClases ? (
+                  <button
+                    type="button"
+                    onClick={guardarClasesEspeciales}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                    Listo
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditandoClases(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium transition-colors"
+                  >
+                    <Dumbbell className="w-4 h-4" />
+                    Editar clases
+                  </button>
+                )}
                 <button
+                  type="button"
                   onClick={guardarCronograma}
                   disabled={guardando}
                   className="flex items-center gap-2 px-5 py-2 bg-white text-green-700 rounded-xl font-medium hover:bg-green-50 transition-colors disabled:opacity-50"
@@ -1050,6 +986,7 @@ export function DashboardMaternal() {
                   Guardar
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowCronogramaModal(false)}
                   className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
                 >
@@ -1058,10 +995,74 @@ export function DashboardMaternal() {
               </div>
             </div>
             
+            {/* Badges arrastrables cuando esta en modo edicion */}
+            {editandoClases && (
+              <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+                <p className="text-xs text-blue-700 mb-2 font-medium">Arrastra los badges al dia correspondiente (2 de cada uno maximo):</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2].map(n => {
+                    const usado = clasesEspeciales.filter(c => c.tipo === "edFisica").length >= n
+                    return (
+                      <div
+                        key={`ef-${n}`}
+                        draggable={!usado}
+                        onDragStart={() => !usado && setDraggingClase("edFisica")}
+                        onDragEnd={() => setDraggingClase(null)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-orange-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                      >
+                        <Dumbbell className="w-3 h-3 text-orange-600" />
+                        <span className="text-xs font-medium text-slate-700">Ed. Fisica {n}</span>
+                      </div>
+                    )
+                  })}
+                  {[1, 2].map(n => {
+                    const usado = clasesEspeciales.filter(c => c.tipo === "musica").length >= n
+                    return (
+                      <div
+                        key={`mu-${n}`}
+                        draggable={!usado}
+                        onDragStart={() => !usado && setDraggingClase("musica")}
+                        onDragEnd={() => setDraggingClase(null)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-purple-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                      >
+                        <Music className="w-3 h-3 text-purple-600" />
+                        <span className="text-xs font-medium text-slate-700">Musica {n}</span>
+                      </div>
+                    )
+                  })}
+                  {[1, 2].map(n => {
+                    const usado = clasesEspeciales.filter(c => c.tipo === "ingles").length >= n
+                    return (
+                      <div
+                        key={`in-${n}`}
+                        draggable={!usado}
+                        onDragStart={() => !usado && setDraggingClase("ingles")}
+                        onDragEnd={() => setDraggingClase(null)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-l-4 border-blue-500 ${usado ? "bg-gray-100 opacity-50" : "bg-white cursor-grab active:cursor-grabbing shadow-sm hover:shadow"}`}
+                      >
+                        <Globe className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs font-medium text-slate-700">Ingles {n}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            
             {/* Contenido - Los 5 dias */}
             <div className="p-4 grid grid-cols-5 gap-3 max-h-[80vh] overflow-y-auto">
               {DIAS.map((dia) => (
-                <div key={dia} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                <div 
+                  key={dia} 
+                  className={`bg-slate-50 rounded-xl border border-slate-200 overflow-hidden ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}
+                  onDragOver={editandoClases ? (e) => e.preventDefault() : undefined}
+                  onDrop={editandoClases ? () => {
+                    if (draggingClase) {
+                      agregarClaseADia(draggingClase, dia)
+                      setDraggingClase(null)
+                    }
+                  } : undefined}
+                >
                   {/* Header del dia */}
                   <div className="bg-green-500 text-white px-3 py-2 text-center">
                     <div className="font-bold">{dia}</div>
@@ -1069,6 +1070,34 @@ export function DashboardMaternal() {
                   </div>
                   
                   <div className="p-3 space-y-3">
+                    {/* Sugerencia de ALBA para este dia */}
+                    {sugerenciasAlba.find(s => s.dia === dia) && (
+                      <div className="p-2 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Sparkles className="w-3 h-3 text-violet-600" />
+                          <span className="text-[9px] font-bold text-violet-600 uppercase">Sugerencia ALBA</span>
+                        </div>
+                        <p className="text-[10px] font-medium text-slate-700 mb-1">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.nombre}</p>
+                        <p className="text-[9px] text-slate-500 mb-2 line-clamp-2">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.objetivo}</p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => aceptarSugerenciaAlba(dia)}
+                            className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors"
+                          >
+                            Aceptar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rechazarSugerenciaAlba(dia)}
+                            className="flex-1 text-[9px] px-2 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded font-medium transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Recibimiento */}
                     <div>
                       <label className="text-[10px] font-bold text-slate-600 uppercase">Recibimiento</label>
@@ -1096,7 +1125,7 @@ export function DashboardMaternal() {
                       {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
                         <div 
                           key={`${clase.tipo}-${idx}`} 
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                          className={`relative group flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
                             clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-3 border-orange-500" :
                             clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-3 border-purple-500" :
                             "bg-blue-100 text-blue-700 border-l-3 border-blue-500"
@@ -1105,6 +1134,15 @@ export function DashboardMaternal() {
                           {clase.tipo === "edFisica" && <><Dumbbell className="w-3 h-3" /> Ed. Fisica</>}
                           {clase.tipo === "musica" && <><Music className="w-3 h-3" /> Musica</>}
                           {clase.tipo === "ingles" && <><Globe className="w-3 h-3" /> Ingles</>}
+                          {editandoClases && (
+                            <button
+                              type="button"
+                              onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          )}
                         </div>
                       ))}
                       {clasesEspeciales.filter(c => c.dia === dia).length === 0 && (

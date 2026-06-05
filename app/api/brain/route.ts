@@ -1449,16 +1449,16 @@ export async function GET(req: Request) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { action, proyecto, sala, dias } = body
+    const { action, proyecto, sala, dias, actividadesYaSugeridas = [] } = body
     
     if (action === "sugerir_actividades_semana" && proyecto && dias) {
       // ALBA genera sugerencias de actividades basadas en el proyecto
+      // Filtra actividades que ya fueron sugeridas/aceptadas
       const sugerencias = dias.map((dia: string, idx: number) => {
-        // Generar actividad basada en el proyecto y el curriculo
-        const actividadesSugeridas = generarActividadSegunProyecto(proyecto, dia, idx)
+        const actividadSugerida = generarActividadSegunProyecto(proyecto, dia, idx, actividadesYaSugeridas)
         return {
           dia,
-          actividad: actividadesSugeridas
+          actividad: actividadSugerida
         }
       })
       
@@ -1473,11 +1473,18 @@ export async function POST(req: NextRequest) {
 }
 
 // Funcion para generar actividades basadas en el proyecto
-function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGeneral: string; duracion?: string }, dia: string, diaIdx: number) {
+// Implementa principios pedagogicos de Vigotsky (ZDP), Perkins (EpC), Montessori y Reggio Emilia
+function generarActividadSegunProyecto(
+  proyecto: { titulo: string; objetivoGeneral: string; duracion?: string }, 
+  dia: string, 
+  diaIdx: number,
+  actividadesYaSugeridas: string[] = []
+) {
   const titulo = proyecto.titulo.toLowerCase()
   const objetivo = proyecto.objetivoGeneral.toLowerCase()
   
-  // Banco de actividades segun temas comunes en maternal
+  // Banco ampliado de actividades con fundamentos pedagogicos
+  // Basado en: Vigotsky (andamiaje, ZDP), Perkins (comprension), Montessori (sensorial), Reggio Emilia (100 lenguajes)
   const bancosActividades: { [key: string]: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }[] } = {
     animales: [
       { nombre: "Descubrimos a los animales de la granja", capacidades: "Exploracion del entorno natural", contenidos: "Animales domesticos y sus caracteristicas", objetivo: "Identificar animales de la granja y sus sonidos", desarrollo: "Presentar imagenes de animales, imitar sonidos, clasificar por tamano", materiales: "Imagenes, titeres de animales, audio de sonidos" },
@@ -1485,6 +1492,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Jugamos al veterinario", capacidades: "Juego simbolico y empatia", contenidos: "Cuidado de los animales", objetivo: "Comprender la importancia de cuidar a los animales", desarrollo: "Dramatizar atencion veterinaria con peluches, usar elementos de doctor", materiales: "Peluches, maletin de medico, vendas, jeringas de juguete" },
       { nombre: "Caminamos como animales", capacidades: "Expresion corporal y motricidad", contenidos: "Movimientos de distintos animales", objetivo: "Explorar diferentes formas de desplazamiento", desarrollo: "Imitar caminar como oso, saltar como conejo, arrastrarse como serpiente", materiales: "Espacio amplio, musica" },
       { nombre: "Cantamos canciones de animales", capacidades: "Expresion musical y lenguaje", contenidos: "Canciones infantiles con animales", objetivo: "Aprender canciones y ampliar vocabulario", desarrollo: "Cantar 'En la granja de mi tio', 'Los pollitos', acompanar con palmas", materiales: "Reproductor de musica, imagenes de animales" },
+      // Actividades adicionales basadas en Montessori y Reggio Emilia
+      { nombre: "Mesa de luz con animales (Reggio Emilia)", capacidades: "Exploracion visual y sensorial", contenidos: "Siluetas y transparencias", objetivo: "Descubrir propiedades de luz y sombra con formas de animales", desarrollo: "Explorar siluetas en mesa de luz, crear historias, combinar colores", materiales: "Mesa de luz, siluetas de animales, acetatos de colores" },
+      { nombre: "Bandeja sensorial de la granja (Montessori)", capacidades: "Desarrollo sensorial y motricidad fina", contenidos: "Texturas y materiales naturales", objetivo: "Explorar texturas asociadas al habitat de los animales", desarrollo: "Tocar heno, arena, plumas; clasificar por textura; asociar animal-habitat", materiales: "Bandeja, heno, arena, plumas, piedras, animales de goma" },
+      { nombre: "Investigamos: Como nacen los animales (Vigotsky)", capacidades: "Pensamiento cientifico y lenguaje", contenidos: "Oviparos y viviparos", objetivo: "Construir conocimiento colaborativo sobre reproduccion animal", desarrollo: "Preguntas iniciales, observar imagenes, clasificar con ayuda del docente (andamiaje)", materiales: "Imagenes de huevos, animales bebes, carteles para clasificar" },
+      { nombre: "Teatro de sombras de animales", capacidades: "Expresion artistica y narrativa", contenidos: "Luz, sombra y narracion", objetivo: "Crear una historia usando siluetas de animales", desarrollo: "Armar teatro, manipular siluetas, narrar cuento grupal", materiales: "Linterna, tela blanca, siluetas de carton negro" },
+      { nombre: "Puzzle de animales y sus partes", capacidades: "Pensamiento logico y vocabulario", contenidos: "Partes del cuerpo animal", objetivo: "Reconocer y nombrar partes de diferentes animales", desarrollo: "Armar puzzles, nombrar partes, comparar entre animales", materiales: "Puzzles de animales, tarjetas de partes" },
     ],
     naturaleza: [
       { nombre: "Exploramos hojas y semillas", capacidades: "Observacion y exploracion sensorial", contenidos: "Elementos de la naturaleza", objetivo: "Descubrir texturas y formas de elementos naturales", desarrollo: "Tocar, observar con lupa, clasificar hojas por forma y color", materiales: "Hojas secas, semillas, lupas, bandejas" },
@@ -1492,6 +1505,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Jugamos con agua y arena", capacidades: "Exploracion sensorial y creatividad", contenidos: "Propiedades del agua y la arena", objetivo: "Descubrir que pasa al mezclar agua y arena", desarrollo: "Juego libre con recipientes, trasvasar, hacer formas", materiales: "Arena, agua, recipientes, moldes" },
       { nombre: "Observamos el cielo", capacidades: "Curiosidad cientifica", contenidos: "El sol, las nubes, el clima", objetivo: "Describir como esta el cielo hoy", desarrollo: "Salir al patio, observar, dibujar lo que vemos, conversar", materiales: "Hojas, crayones, mantas para sentarse" },
       { nombre: "Clasificamos elementos naturales", capacidades: "Pensamiento logico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar elementos por caracteristicas", desarrollo: "Separar piedras grandes/chicas, hojas verdes/marrones", materiales: "Piedras, hojas, palitos, cajas para clasificar" },
+      // Actividades adicionales con fundamentos pedagogicos
+      { nombre: "Diario de la naturaleza (Reggio Emilia)", capacidades: "Documentacion y registro", contenidos: "Cambios en la naturaleza", objetivo: "Observar y registrar cambios en el entorno natural", desarrollo: "Salir a observar, dibujar, pegar elementos, comparar con dias anteriores", materiales: "Cuaderno grupal, crayones, pegamento, elementos naturales" },
+      { nombre: "Bandeja sensorial del bosque (Montessori)", capacidades: "Exploracion multisensorial", contenidos: "Ecosistema del bosque", objetivo: "Explorar elementos del bosque con todos los sentidos", desarrollo: "Tocar musgo, oler pinos, escuchar sonidos grabados, clasificar", materiales: "Musgo, corteza, pinas, hojas, audio de bosque" },
+      { nombre: "Experimento: Que necesitan las plantas (Vigotsky)", capacidades: "Pensamiento cientifico", contenidos: "Necesidades de las plantas", objetivo: "Formular hipotesis y verificarlas con guia del docente", desarrollo: "Plantar 3 semillas: con luz, sin luz, sin agua. Predecir, observar, comparar", materiales: "3 vasos, semillas, tierra, agua, caja para oscurecer" },
+      { nombre: "Mandalas con elementos naturales", capacidades: "Expresion artistica y concentracion", contenidos: "Patrones y simetria", objetivo: "Crear composiciones artisticas con materiales naturales", desarrollo: "Recolectar elementos, crear mandala grupal, fotografiar", materiales: "Hojas, flores, piedras, palitos" },
+      { nombre: "Caminata de texturas al aire libre", capacidades: "Percepcion sensorial y vocabulario", contenidos: "Texturas naturales", objetivo: "Ampliar vocabulario sensorial explorando texturas", desarrollo: "Caminar descalzos por pasto, arena, piedras; describir sensaciones", materiales: "Espacio exterior seguro, diferentes superficies" },
     ],
     familia: [
       { nombre: "Mi familia en un dibujo", capacidades: "Expresion grafica y afectividad", contenidos: "Los miembros de la familia", objetivo: "Representar a su familia a traves del dibujo", desarrollo: "Conversar sobre quienes viven en casa, dibujar, compartir", materiales: "Hojas, crayones, lapices de colores" },
@@ -1499,6 +1518,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Armamos un arbol familiar", capacidades: "Identidad y pertenencia", contenidos: "La familia extendida", objetivo: "Reconocer a los miembros de la familia", desarrollo: "Pegar fotos traidas de casa en arbol, nombrar parentescos", materiales: "Cartulina con arbol, fotos de familia, pegamento" },
       { nombre: "Cocinamos con recetas de familia", capacidades: "Trabajo colaborativo", contenidos: "Tradiciones familiares", objetivo: "Valorar las costumbres de cada familia", desarrollo: "Preparar receta sencilla (galletitas), compartir historias", materiales: "Ingredientes, bowls, utensilios de cocina" },
       { nombre: "Cantamos canciones de cuna", capacidades: "Expresion musical y vinculos afectivos", contenidos: "Canciones tradicionales", objetivo: "Conocer canciones que nos cantaban de bebes", desarrollo: "Escuchar, cantar juntos, mecer munecas", materiales: "Munecas, mantas, reproductor de musica" },
+      // Actividades adicionales
+      { nombre: "Caja de los recuerdos familiares", capacidades: "Memoria y narracion", contenidos: "Historia familiar", objetivo: "Valorar objetos significativos de la familia", desarrollo: "Traer objeto de casa, contar su historia, exponerlo", materiales: "Objetos de casa, caja decorada, etiquetas" },
+      { nombre: "Titeres de la familia (Reggio Emilia)", capacidades: "Expresion dramatica y creatividad", contenidos: "Representacion familiar", objetivo: "Crear titeres que representen a su familia", desarrollo: "Crear titeres con medias/cucharas, dramatizar escenas", materiales: "Medias, cucharas de madera, lana, ojos moviles" },
+      { nombre: "Mapa de mi casa (Vigotsky)", capacidades: "Representacion espacial", contenidos: "El hogar y sus espacios", objetivo: "Representar espacios conocidos con ayuda guiada", desarrollo: "Conversar sobre habitaciones, dibujar mapa, ubicar a cada familiar", materiales: "Papel grande, crayones, fotos de familiares" },
+      { nombre: "Roles y responsabilidades en casa", capacidades: "Autonomia y colaboracion", contenidos: "Tareas del hogar", objetivo: "Reconocer como cada uno colabora en casa", desarrollo: "Dramatizar tareas, conversar sobre ayuda en casa, hacer compromisos", materiales: "Elementos de limpieza de juguete, delantales" },
+      { nombre: "Album de familias diversas", capacidades: "Respeto por la diversidad", contenidos: "Diferentes tipos de familias", objetivo: "Reconocer y valorar la diversidad familiar", desarrollo: "Ver imagenes de familias diversas, conversar sin prejuicios, dibujar", materiales: "Imagenes de familias diversas, hojas, crayones" },
     ],
     cuerpo: [
       { nombre: "Conocemos las partes del cuerpo", capacidades: "Conocimiento de si mismo", contenidos: "Partes del cuerpo humano", objetivo: "Nombrar y senalar partes del cuerpo", desarrollo: "Cancion 'Cabeza, hombros, rodillas, pies', senalar en muneco", materiales: "Muneco grande, espejo, musica" },
@@ -1506,6 +1531,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Circuito de movimientos", capacidades: "Motricidad gruesa y coordinacion", contenidos: "Desplazamientos y equilibrio", objetivo: "Ejercitar diferentes formas de movimiento", desarrollo: "Armar circuito con obstaculos, trepar, reptar, saltar", materiales: "Colchonetas, aros, conos, tunel" },
       { nombre: "Juegos con espejo", capacidades: "Autoconocimiento", contenidos: "La imagen corporal", objetivo: "Reconocerse y expresar emociones frente al espejo", desarrollo: "Hacer gestos, imitar al companero, dibujar lo que vemos", materiales: "Espejos, hojas, crayones" },
       { nombre: "Relajacion y respiracion", capacidades: "Autoregulacion y bienestar", contenidos: "Tecnicas de relajacion", objetivo: "Aprender a calmar el cuerpo", desarrollo: "Acostarse, escuchar musica suave, respirar como globo", materiales: "Colchonetas, musica relajante, peluches" },
+      // Actividades adicionales con base pedagogica
+      { nombre: "Silueta corporal a tamano real", capacidades: "Esquema corporal", contenidos: "Proporciones del cuerpo", objetivo: "Reconocer el tamano real de su cuerpo", desarrollo: "Acostarse sobre papel, dibujar contorno, decorar, comparar", materiales: "Papel grande, marcadores, materiales para decorar" },
+      { nombre: "Los 5 sentidos (Montessori)", capacidades: "Discriminacion sensorial", contenidos: "Vista, oido, tacto, gusto, olfato", objetivo: "Identificar y usar cada sentido", desarrollo: "Estaciones sensoriales: cajas de texturas, frascos de olores, sabores", materiales: "Cajas, telas, especias, alimentos, vendas" },
+      { nombre: "Yoga para ninos", capacidades: "Conciencia corporal y concentracion", contenidos: "Posturas y equilibrio", objetivo: "Explorar posturas de yoga adaptadas", desarrollo: "Imitar animales con posturas de yoga, respirar, relajar", materiales: "Colchonetas, tarjetas de posturas, musica suave" },
+      { nombre: "Estatuas musicales con emociones", capacidades: "Expresion emocional y corporal", contenidos: "Emociones basicas", objetivo: "Expresar emociones con el cuerpo", desarrollo: "Bailar, al parar mostrar emocion indicada, conversar", materiales: "Musica, tarjetas de emociones" },
+      { nombre: "Masaje con pelotas", capacidades: "Percepcion tactil y relajacion", contenidos: "Partes del cuerpo", objetivo: "Reconocer partes del cuerpo a traves del tacto", desarrollo: "En parejas, pasar pelota por partes indicadas, nombrar", materiales: "Pelotas de texturas, musica relajante" },
     ],
     colores: [
       { nombre: "Buscamos colores en la sala", capacidades: "Observacion y discriminacion visual", contenidos: "Colores primarios", objetivo: "Identificar y nombrar colores", desarrollo: "Busqueda del tesoro de objetos de un color, agrupar", materiales: "Objetos de colores variados, cestos" },
@@ -1513,6 +1544,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Clasificamos por color", capacidades: "Pensamiento logico matematico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar objetos segun su color", desarrollo: "Separar bloques, tapitas, papeles por color", materiales: "Bloques, tapitas, papeles de colores, recipientes" },
       { nombre: "Jugamos con luces de colores", capacidades: "Exploracion sensorial", contenidos: "La luz y los colores", objetivo: "Explorar como cambian los objetos con luces de colores", desarrollo: "Oscurecer sala, usar linternas con celofan, proyectar", materiales: "Linternas, celofan de colores, objetos blancos" },
       { nombre: "Arcoiris con las manos", capacidades: "Expresion artistica", contenidos: "Tecnica de estampado", objetivo: "Crear un arcoiris grupal", desarrollo: "Estampar manos con temperas en orden del arcoiris", materiales: "Papel afiche grande, temperas de colores" },
+      // Actividades adicionales
+      { nombre: "Botellas sensoriales de colores (Montessori)", capacidades: "Exploracion visual y calma", contenidos: "Colores y movimiento", objetivo: "Observar movimiento de colores para calmar", desarrollo: "Crear botellas con agua, aceite y colorante; observar; describir", materiales: "Botellas plasticas, agua, aceite, colorante" },
+      { nombre: "Mesa de luz y colores (Reggio Emilia)", capacidades: "Exploracion luminica", contenidos: "Transparencia y color", objetivo: "Descubrir como se ven los colores con luz", desarrollo: "Explorar acetatos, superponer colores, crear composiciones", materiales: "Mesa de luz, acetatos de colores, objetos translucidos" },
+      { nombre: "Dia monocromatico", capacidades: "Identificacion de colores", contenidos: "Un color en profundidad", objetivo: "Explorar todas las variantes de un color", desarrollo: "Vestir del color elegido, buscar objetos, comer alimentos de ese color", materiales: "Objetos del color, alimentos, ropa" },
+      { nombre: "Pintura con elementos naturales", capacidades: "Creatividad y naturaleza", contenidos: "Pigmentos naturales", objetivo: "Descubrir colores que dan elementos naturales", desarrollo: "Frotar flores, hojas, frutas en papel; observar colores", materiales: "Petalos, hojas, remolachas, papel blanco" },
+      { nombre: "Collage de revista por colores", capacidades: "Motricidad fina y clasificacion", contenidos: "Reconocimiento de colores", objetivo: "Buscar y clasificar colores en imagenes", desarrollo: "Recortar/rasgar partes de revista de un color, pegar en cartel grupal", materiales: "Revistas, tijeras, pegamento, cartulinas" },
     ],
     default: [
       { nombre: "Exploracion libre con materiales", capacidades: "Creatividad y autonomia", contenidos: "Exploracion sensorial", objetivo: "Descubrir propiedades de diferentes materiales", desarrollo: "Disponer materiales variados, observar como los usan, guiar descubrimientos", materiales: "Cajas, telas, papeles, elementos naturales" },
@@ -1520,6 +1557,12 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
       { nombre: "Juego en sectores", capacidades: "Juego simbolico y socializacion", contenidos: "Diferentes areas de juego", objetivo: "Elegir y sostener el juego en un sector", desarrollo: "Presentar sectores disponibles, elegir, jugar, guardar", materiales: "Sectores armados (construccion, hogar, arte)" },
       { nombre: "Taller de arte libre", capacidades: "Expresion y creatividad", contenidos: "Tecnicas mixtas", objetivo: "Expresarse a traves de diferentes materiales", desarrollo: "Ofrecer variedad de materiales, crear libremente, exponer", materiales: "Papeles, temperas, plasticola, brillantina, tijeras" },
       { nombre: "Juegos musicales", capacidades: "Expresion musical y ritmo", contenidos: "Instrumentos y ritmos", objetivo: "Explorar sonidos y ritmos", desarrollo: "Usar instrumentos, seguir ritmos, cantar, bailar", materiales: "Panderetas, maracas, tambores, musica" },
+      // Actividades adicionales basadas en pedagogias
+      { nombre: "Provocacion artistica (Reggio Emilia)", capacidades: "Creatividad e iniciativa", contenidos: "Exploracion abierta", objetivo: "Responder creativamente a una propuesta abierta", desarrollo: "Disponer materiales de forma atractiva, observar, guiar sin dirigir", materiales: "Materiales variados dispuestos esteticamente" },
+      { nombre: "Vida practica (Montessori)", capacidades: "Autonomia y concentracion", contenidos: "Actividades cotidianas", objetivo: "Desarrollar independencia en tareas cotidianas", desarrollo: "Trasvasar, abotonar, verter agua, doblar telas", materiales: "Jarras, botones, telas, bandejas" },
+      { nombre: "Construccion colaborativa (Vigotsky)", capacidades: "Trabajo en equipo y resolucion", contenidos: "Construccion con bloques", objetivo: "Construir juntos con ayuda mutua", desarrollo: "Proponer construccion grupal, asignar roles, reflexionar sobre proceso", materiales: "Bloques grandes, fotos de inspiracion" },
+      { nombre: "Cuentos con finales abiertos (Perkins)", capacidades: "Pensamiento creativo", contenidos: "Narrativa y prediccion", objetivo: "Imaginar y argumentar posibles finales", desarrollo: "Leer cuento hasta el nudo, preguntar que pasara, dibujar finales", materiales: "Cuento seleccionado, hojas, crayones" },
+      { nombre: "Juego heuristico", capacidades: "Exploracion y descubrimiento", contenidos: "Propiedades de objetos", objetivo: "Descubrir que se puede hacer con objetos cotidianos", desarrollo: "Ofrecer objetos variados (no juguetes), observar uso creativo", materiales: "Cajas, tubos, cadenas, telas, pelotas" },
     ]
   }
   
@@ -1538,7 +1581,21 @@ function generarActividadSegunProyecto(proyecto: { titulo: string; objetivoGener
   }
   
   const banco = bancosActividades[temaDetectado] || bancosActividades.default
-  const actividadIdx = diaIdx % banco.length
   
-  return banco[actividadIdx]
+  // Filtrar actividades que ya fueron sugeridas/aceptadas
+  const bancoDisponible = banco.filter(act => !actividadesYaSugeridas.includes(act.nombre))
+  
+  // Si ya se usaron todas las actividades del tema, usar el banco default
+  const bancoFinal = bancoDisponible.length > 0 
+    ? bancoDisponible 
+    : bancosActividades.default.filter(act => !actividadesYaSugeridas.includes(act.nombre))
+  
+  // Si aun asi no hay disponibles, volver al banco original (permitir repeticion)
+  if (bancoFinal.length === 0) {
+    return banco[diaIdx % banco.length]
+  }
+  
+  // Seleccionar actividad basada en el indice del dia pero dentro del banco disponible
+  const actividadIdx = diaIdx % bancoFinal.length
+  return bancoFinal[actividadIdx]
 }
