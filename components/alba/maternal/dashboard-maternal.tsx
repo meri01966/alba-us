@@ -1299,18 +1299,23 @@ export function DashboardMaternal() {
       
       {/* Modal Proyecto */}
       {showProyectoModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowProyectoModal(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-amber-500 rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <BookOpen className="w-6 h-6 text-white" />
                 <h2 className="text-xl font-bold text-white">Proyecto / Unidad Didactica</h2>
               </div>
               <button
+                type="button"
                 onClick={() => setShowProyectoModal(false)}
-                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
+                Cerrar
               </button>
             </div>
             
