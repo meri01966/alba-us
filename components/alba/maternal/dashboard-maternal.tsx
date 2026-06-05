@@ -231,6 +231,106 @@ export function DashboardMaternal() {
     }
   }
   
+  // Generar tips didacticos de ALBA basados en el proyecto
+  function generarTipsALBA() {
+    if (!proyecto.titulo) {
+      setSugerenciasALBA([])
+      return
+    }
+    
+    setLoadingSugerencias(true)
+    
+    const titulo = proyecto.titulo.toLowerCase()
+    const objetivo = proyecto.objetivoGeneral?.toLowerCase() || ""
+    
+    // Tips generales de didactica infantil
+    const tipsGenerales = [
+      "Comienza cada actividad con una cancion o rima para captar la atencion del grupo",
+      "Usa materiales concretos y manipulables antes de pasar a lo abstracto",
+      "Respeta los tiempos de atencion: 10-15 minutos de actividad dirigida en maternal",
+      "Incorpora momentos de movimiento entre actividades para liberar energia",
+      "Documenta con fotos el proceso, no solo el resultado",
+      "Ofrece opciones para respetar los diferentes ritmos de aprendizaje",
+      "Cierra cada actividad con una reflexion grupal: Que hicimos? Que aprendimos?",
+      "Prepara los materiales antes de que lleguen los ninos para aprovechar el tiempo",
+      "Usa el juego como vehiculo principal de aprendizaje",
+      "Involucra los 5 sentidos en las experiencias de exploracion"
+    ]
+    
+    // Tips especificos segun el tema del proyecto
+    const tipsEspecificos: { [key: string]: string[] } = {
+      animales: [
+        "Invita a un familiar que tenga mascota a compartir su experiencia con el grupo",
+        "Crea un rincon de observacion con imagenes y elementos relacionados a los animales",
+        "Usa sonidos de animales para ejercicios de escucha activa y reconocimiento",
+        "Propone dramatizaciones donde los ninos imiten comportamientos animales"
+      ],
+      naturaleza: [
+        "Organiza una salida al patio o jardin para observar elementos naturales in situ",
+        "Crea un sector de ciencias con lupas, recipientes y elementos para explorar",
+        "Registra el clima diariamente en un calendario grupal",
+        "Inicia un proyecto de huerta o germinadores para observar el ciclo de vida"
+      ],
+      familia: [
+        "Solicita fotos familiares para crear un mural de pertenencia",
+        "Invita a familiares a compartir oficios, tradiciones o talentos",
+        "Respeta la diversidad de conformaciones familiares al abordar el tema",
+        "Propone actividades de cocina con recetas traidas de las familias"
+      ],
+      cuerpo: [
+        "Usa espejos grandes para que los ninos exploren su imagen corporal",
+        "Incorpora circuitos motores con diferentes desafios de movimiento",
+        "Trabaja la relajacion y respiracion como cierre de jornada",
+        "Crea siluetas corporales en papel para identificar las partes del cuerpo"
+      ],
+      colores: [
+        "Propone un dia de cada color donde todo gira en torno a ese tono",
+        "Usa elementos traslucidos y luz para explorar mezclas de colores",
+        "Crea un rincon de arte con materiales ordenados por color",
+        "Realiza busquedas del tesoro de objetos de un color especifico"
+      ]
+    }
+    
+    // Detectar tema
+    let tema = ""
+    if (titulo.includes("animal") || objetivo.includes("animal") || titulo.includes("granja")) {
+      tema = "animales"
+    } else if (titulo.includes("natural") || objetivo.includes("planta") || titulo.includes("ambiente")) {
+      tema = "naturaleza"
+    } else if (titulo.includes("familia") || objetivo.includes("familia")) {
+      tema = "familia"
+    } else if (titulo.includes("cuerpo") || objetivo.includes("cuerpo") || titulo.includes("movimiento")) {
+      tema = "cuerpo"
+    } else if (titulo.includes("color") || objetivo.includes("color") || titulo.includes("arte")) {
+      tema = "colores"
+    }
+    
+    // Combinar tips generales con especificos
+    const tips: string[] = []
+    
+    // Agregar 2 tips generales aleatorios
+    const shuffledGenerales = [...tipsGenerales].sort(() => Math.random() - 0.5)
+    tips.push(shuffledGenerales[0], shuffledGenerales[1])
+    
+    // Agregar tips especificos si hay tema detectado
+    if (tema && tipsEspecificos[tema]) {
+      const shuffledEspecificos = [...tipsEspecificos[tema]].sort(() => Math.random() - 0.5)
+      tips.push(shuffledEspecificos[0], shuffledEspecificos[1])
+    } else {
+      tips.push(shuffledGenerales[2], shuffledGenerales[3])
+    }
+    
+    setTimeout(() => {
+      setSugerenciasALBA(tips)
+      setLoadingSugerencias(false)
+    }, 500)
+  }
+  
+  // Llamar a generarTipsALBA cuando cambia el proyecto
+  useEffect(() => {
+    generarTipsALBA()
+  }, [proyecto.titulo])
+  
   // Generar sugerencias de ALBA basadas en el proyecto
   async function generarSugerenciasAlba() {
     if (!proyecto.titulo || !proyecto.objetivoGeneral) return
@@ -853,26 +953,38 @@ export function DashboardMaternal() {
               
               {/* Tarjeta Sugerencias de ALBA - DESTACADA */}
               <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl shadow-lg border-2 border-purple-200 overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="px-5 py-4 border-b border-purple-200/50 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500 flex items-center justify-center shadow-md">
-                    <Sparkles className="w-6 h-6 text-white" />
+                <div className="px-5 py-4 border-b border-purple-200/50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-500 flex items-center justify-center shadow-md">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-slate-800 text-lg">Sugerencias de ALBA</h2>
+                      <p className="text-xs text-purple-600">Tips para tu planificacion</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-slate-800 text-lg">Sugerencias de ALBA</h2>
-                    <p className="text-xs text-purple-600">Ideas para tu planificacion</p>
-                  </div>
+                  {proyecto.titulo && (
+                    <button
+                      type="button"
+                      onClick={generarTipsALBA}
+                      disabled={loadingSugerencias}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium transition-colors disabled:opacity-50"
+                    >
+                      Nuevos tips
+                    </button>
+                  )}
                 </div>
                 <div className="p-5">
                   {loadingSugerencias ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="w-6 h-6 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
-                      <span className="ml-3 text-sm text-slate-500">ALBA esta analizando...</span>
+                      <span className="ml-3 text-sm text-slate-500">ALBA esta pensando...</span>
                     </div>
                   ) : sugerenciasALBA.length > 0 ? (
                     <ul className="space-y-3">
                       {sugerenciasALBA.map((sug, i) => (
                         <li key={i} className="flex items-start gap-3 text-sm text-slate-700 bg-white p-3 rounded-xl border border-purple-100">
-                          <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 flex-shrink-0" />
+                          <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                           {sug}
                         </li>
                       ))}
@@ -882,7 +994,7 @@ export function DashboardMaternal() {
                       <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
                         <Sparkles className="w-7 h-7 text-purple-400" />
                       </div>
-                      <p className="text-slate-500">Guarda el cronograma para recibir sugerencias</p>
+                      <p className="text-slate-500 text-sm">Carga un proyecto para recibir tips didacticos personalizados</p>
                     </div>
                   )}
                 </div>
