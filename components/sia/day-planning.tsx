@@ -533,6 +533,79 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
   )
 }
 
+// Tarjeta compacta de proyecto — titulo + estado visible, detalle expandible
+function ProyectoCard({
+  proyecto,
+  onEdit,
+  onFinalizar,
+  isFinalizing,
+}: {
+  proyecto: Proyecto
+  onEdit: () => void
+  onFinalizar: () => void
+  isFinalizing: boolean
+}) {
+  const [expandido, setExpandido] = useState(false)
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+      {/* Fila compacta siempre visible */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-amber-100/60 transition-colors"
+        onClick={() => setExpandido(!expandido)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span className="text-sm font-semibold text-amber-900 truncate">{proyecto.titulo}</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold border border-green-200">
+            Activo
+          </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            className="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-700 font-semibold hover:bg-amber-100 transition-colors"
+          >
+            Editar
+          </button>
+          <ChevronDown className={`w-3.5 h-3.5 text-amber-500 transition-transform ${expandido ? "rotate-180" : ""}`} />
+        </div>
+      </div>
+
+      {/* Detalle expandible */}
+      {expandido && (
+        <div className="px-3 pb-3 space-y-2 border-t border-amber-200">
+          {proyecto.objetivo_general && (
+            <div className="pt-2">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Objetivos de aprendizaje</p>
+              <p className="text-xs text-slate-700 leading-relaxed">{proyecto.objetivo_general}</p>
+            </div>
+          )}
+          <div className="bg-amber-100/60 rounded-lg p-2">
+            <p className="text-[10px] text-amber-700">
+              Las actividades se planifican en el <strong>Cronograma Semanal</strong>.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+            onClick={onFinalizar}
+            disabled={isFinalizing}
+          >
+            {isFinalizing ? (
+              <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-1.5" />
+            ) : (
+              <CheckCircle2 className="w-3 h-3 mr-1.5" />
+            )}
+            Finalizar proyecto
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ProyectoColumn({
   proyecto,
   isLoading,
@@ -637,13 +710,13 @@ function ProyectoColumn({
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Header */}
+      {/* Header compacto estilo maternal */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
           <FolderOpen className="w-4 h-4 text-accent" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-accent leading-tight">Proyecto / Unidad Didactica</p>
+          <p className="text-sm font-semibold text-accent leading-tight">Proyecto / Unidad Didáctica</p>
           <p className="text-xs text-muted-foreground">
             {proyecto ? "Proyecto activo" : "Sin proyecto activo"}
           </p>
@@ -664,47 +737,11 @@ function ProyectoColumn({
           <FolderOpen className="w-10 h-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No hay proyecto activo.</p>
           <p className="text-xs text-muted-foreground/70">
-            Usa el boton <strong>Nueva</strong> para cargar un proyecto o unidad didactica.
+            Usá el botón <strong>Nueva</strong> para cargar un proyecto o unidad didáctica.
           </p>
         </div>
       ) : (
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-          {/* Titulo */}
-          <p className="text-base font-semibold text-foreground leading-snug">{proyecto.titulo}</p>
-
-          {/* Objetivo general */}
-          {proyecto.objetivo_general && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo general</p>
-              <p className="text-sm text-foreground leading-relaxed">{proyecto.objetivo_general}</p>
-            </div>
-          )}
-
-          {/* Nota: las actividades se cargan en el Cronograma Semanal */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-            <p className="text-xs text-amber-700 leading-relaxed">
-              Las actividades de este proyecto se planifican y cargan en el <strong>Cronograma Semanal</strong>.
-            </p>
-          </div>
-
-          {/* Boton Finalizar Proyecto */}
-          <div className="pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-              onClick={handleFinalizar}
-              disabled={isFinalizing}
-            >
-              {isFinalizing ? (
-                <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-1.5" />
-              ) : (
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Guardar y finalizar proyecto
-            </Button>
-          </div>
-        </div>
+        <ProyectoCard proyecto={proyecto} onEdit={handleOpenModal} onFinalizar={handleFinalizar} isFinalizing={isFinalizing} />
       )}
 
       {/* Modal carga/edicion proyecto */}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, CheckCircle } from "lucide-react"
+import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, CheckCircle, ChevronDown } from "lucide-react"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 // Las 3 actividades de alfabetizacion sugeridas por ALBA van en estos dias
@@ -431,6 +431,9 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     setShowCalificacionModal(false)
   }
 
+  // Estado para actividad expandida: "dia-idx" o null
+  const [actividadAbierta, setActividadAbierta] = useState<string | null>(null)
+
   if (!isOpen) return null
 
   return (
@@ -558,40 +561,139 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                   className={`bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}
                   onDragOver={editandoClases ? (e) => e.preventDefault() : undefined}
                   onDrop={editandoClases ? () => {
-                    if (draggingClase) {
-                      agregarClaseADia(draggingClase, dia)
-                      setDraggingClase(null)
-                    }
+                    if (draggingClase) { agregarClaseADia(draggingClase, dia); setDraggingClase(null) }
                   } : undefined}
                 >
                   {/* Header del dia */}
                   <div className="text-white px-3 py-2 text-center" style={{ background: "#1e3a5f" }}>
-                    <div className="font-bold">{dia}</div>
-                    <div className="text-xs opacity-80">{cronograma[dia]?.fecha && formatearFecha(cronograma[dia].fecha)}</div>
+                    <div className="font-bold text-sm">{dia}</div>
+                    <div className="text-[10px] opacity-80">{cronograma[dia]?.fecha && formatearFecha(cronograma[dia].fecha)}</div>
                   </div>
 
-                  <div className="p-3 space-y-3">
-                    {/* Sugerencia de ALBA (alfabetizacion) */}
+                  <div className="p-2.5 space-y-2 flex-1">
+
+                    {/* Clases especiales del dia — badges compactos */}
+                    {(clasesDelDia.length > 0 || editandoClases) && (
+                      <div className="flex flex-wrap gap-1">
+                        {clasesDelDia.map((clase, idx) => {
+                          const cfg = CONFIG_CLASES[clase.tipo]
+                          const Icon = cfg.icon
+                          return (
+                            <div
+                              key={`${clase.tipo}-${idx}`}
+                              className={`relative group flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border-l-2 ${colorBadge(clase.tipo, "dia")}`}
+                            >
+                              <Icon className="w-2.5 h-2.5" /> {cfg.label}
+                              {editandoClases && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
+                                  className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2 h-2" />
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Recibimiento e intercambio — compactos (solo titulo + icono editar) */}
+                    {(cronograma[dia]?.recibimiento || cronograma[dia]?.intercambio) ? (
+                      <div className="space-y-1">
+                        {cronograma[dia]?.recibimiento && (
+                          <div
+                            className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-2 py-1 cursor-pointer hover:border-slate-300"
+                            onClick={() => setActividadAbierta(actividadAbierta === `${dia}-rec` ? null : `${dia}-rec`)}
+                          >
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase">Recibimiento</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${actividadAbierta === `${dia}-rec` ? "rotate-180" : ""}`} />
+                          </div>
+                        )}
+                        {actividadAbierta === `${dia}-rec` && (
+                          <textarea
+                            autoFocus
+                            value={cronograma[dia]?.recibimiento || ""}
+                            onChange={(e) => actualizarCampo(dia, "recibimiento", e.target.value)}
+                            placeholder="Rutina de inicio..."
+                            className="w-full text-[10px] p-2 border border-slate-300 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                        )}
+                        {cronograma[dia]?.intercambio && (
+                          <div
+                            className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-2 py-1 cursor-pointer hover:border-slate-300"
+                            onClick={() => setActividadAbierta(actividadAbierta === `${dia}-int` ? null : `${dia}-int`)}
+                          >
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase">Intercambio</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${actividadAbierta === `${dia}-int` ? "rotate-180" : ""}`} />
+                          </div>
+                        )}
+                        {actividadAbierta === `${dia}-int` && (
+                          <textarea
+                            autoFocus
+                            value={cronograma[dia]?.intercambio || ""}
+                            onChange={(e) => actualizarCampo(dia, "intercambio", e.target.value)}
+                            placeholder="Tema del dia..."
+                            className="w-full text-[10px] p-2 border border-slate-300 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div
+                          className="flex items-center justify-between bg-white border border-dashed border-slate-200 rounded-lg px-2 py-1 cursor-pointer hover:border-slate-300"
+                          onClick={() => setActividadAbierta(actividadAbierta === `${dia}-rec` ? null : `${dia}-rec`)}
+                        >
+                          <span className="text-[10px] text-slate-400">+ Recibimiento</span>
+                        </div>
+                        {actividadAbierta === `${dia}-rec` && (
+                          <textarea
+                            autoFocus
+                            value={cronograma[dia]?.recibimiento || ""}
+                            onChange={(e) => actualizarCampo(dia, "recibimiento", e.target.value)}
+                            placeholder="Rutina de inicio..."
+                            className="w-full text-[10px] p-2 border border-slate-300 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                        )}
+                        <div
+                          className="flex items-center justify-between bg-white border border-dashed border-slate-200 rounded-lg px-2 py-1 cursor-pointer hover:border-slate-300"
+                          onClick={() => setActividadAbierta(actividadAbierta === `${dia}-int` ? null : `${dia}-int`)}
+                        >
+                          <span className="text-[10px] text-slate-400">+ Intercambio</span>
+                        </div>
+                        {actividadAbierta === `${dia}-int` && (
+                          <textarea
+                            autoFocus
+                            value={cronograma[dia]?.intercambio || ""}
+                            onChange={(e) => actualizarCampo(dia, "intercambio", e.target.value)}
+                            placeholder="Tema del dia..."
+                            className="w-full text-[10px] p-2 border border-slate-300 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sugerencia de ALBA — compacta con Aceptar/Cambiar siempre visible */}
                     {sugerencia && (
-                      <div className="p-2 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
+                      <div className="p-2 bg-violet-50 border border-violet-200 rounded-lg">
                         <div className="flex items-center gap-1 mb-1">
                           <Sparkles className="w-3 h-3 text-violet-600" />
-                          <span className="text-[9px] font-bold text-violet-600 uppercase">Alfabetizacion · ALBA</span>
+                          <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">ALBA · Alfabetizacion</span>
                         </div>
-                        <p className="text-[10px] font-medium text-slate-700 mb-1">{sugerencia.actividad.nombre}</p>
-                        <p className="text-[9px] text-slate-500 mb-2 line-clamp-2">{sugerencia.actividad.objetivo}</p>
+                        <p className="text-[10px] font-semibold text-violet-800 mb-1.5 leading-tight">{sugerencia.actividad.nombre}</p>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => aceptarSugerenciaAlba(dia)}
-                            className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors"
+                            className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-semibold transition-colors"
                           >
                             Aceptar
                           </button>
                           <button
                             type="button"
                             onClick={() => cambiarSugerenciaAlba(dia)}
-                            className="flex-1 text-[9px] px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded font-medium transition-colors"
+                            className="flex-1 text-[9px] px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded font-semibold transition-colors"
                           >
                             Cambiar
                           </button>
@@ -599,130 +701,91 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                       </div>
                     )}
 
-                    {/* Recibimiento */}
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 uppercase">Recibimiento</label>
-                      <textarea
-                        value={cronograma[dia]?.recibimiento || ""}
-                        onChange={(e) => actualizarCampo(dia, "recibimiento", e.target.value)}
-                        placeholder="Rutina de inicio..."
-                        className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-12 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                      />
-                    </div>
-
-                    {/* Intercambio */}
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 uppercase">Intercambio</label>
-                      <textarea
-                        value={cronograma[dia]?.intercambio || ""}
-                        onChange={(e) => actualizarCampo(dia, "intercambio", e.target.value)}
-                        placeholder="Tema del dia..."
-                        className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-12 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                      />
-                    </div>
-
-                    {/* Clases especiales del dia */}
-                    <div className="space-y-1">
-                      {clasesDelDia.map((clase, idx) => {
-                        const cfg = CONFIG_CLASES[clase.tipo]
-                        const Icon = cfg.icon
-                        return (
-                          <div
-                            key={`${clase.tipo}-${idx}`}
-                            className={`relative group flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border-l-3 ${colorBadge(clase.tipo, "dia")}`}
-                          >
-                            <Icon className="w-3 h-3" /> {cfg.label}
-                            {editandoClases && (
-                              <button
-                                type="button"
-                                onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                      {clasesDelDia.length === 0 && (
-                        <p className="text-[10px] text-slate-400 italic">Sin clases especiales</p>
-                      )}
-                    </div>
-
-                    {/* Actividades */}
-                    <div className="space-y-2">
+                    {/* Actividades — titulo visible siempre, detalle al abrir */}
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold uppercase" style={{ color: "#1e3a5f" }}>Actividades</label>
+                        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#1e3a5f" }}>Actividades</span>
                         <button
                           type="button"
                           onClick={() => agregarActividad(dia)}
-                          className="text-[10px] font-medium flex items-center gap-0.5 hover:opacity-70"
+                          className="text-[10px] font-semibold flex items-center gap-0.5 hover:opacity-70 transition-opacity"
                           style={{ color: "#1e3a5f" }}
                         >
                           <Plus className="w-3 h-3" /> Agregar
                         </button>
                       </div>
 
-                      {cronograma[dia]?.actividades?.map((act, idx) => (
-                        <div
-                          key={idx}
-                          className={`border rounded-lg p-2 space-y-1.5 ${act.alfabetizacion ? "bg-violet-50 border-violet-200" : "bg-white border-slate-200"}`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold flex items-center gap-1" style={{ color: act.alfabetizacion ? "#7c3aed" : "#1e3a5f" }}>
-                              {act.alfabetizacion && <BookOpen className="w-3 h-3" />}
-                              {act.alfabetizacion ? "Alfabetizacion" : `Actividad ${idx + 1}`}
-                            </span>
-                            {cronograma[dia].actividades.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => eliminarActividad(dia, idx)}
-                                className="text-red-400 hover:text-red-600"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                      {cronograma[dia]?.actividades?.map((act, idx) => {
+                        const key = `${dia}-act-${idx}`
+                        const abierta = actividadAbierta === key
+                        const esAlfa = act.alfabetizacion
+                        return (
+                          <div
+                            key={idx}
+                            className={`rounded-lg border overflow-hidden ${esAlfa ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-white"}`}
+                          >
+                            {/* Fila compacta: titulo + boton abrir */}
+                            <div
+                              className="flex items-center justify-between px-2 py-1.5 cursor-pointer hover:bg-black/5 transition-colors"
+                              onClick={() => setActividadAbierta(abierta ? null : key)}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                {esAlfa && <BookOpen className="w-3 h-3 text-violet-500 flex-shrink-0" />}
+                                <span
+                                  className={`text-[10px] font-semibold truncate ${esAlfa ? "text-violet-700" : "text-slate-700"}`}
+                                  title={act.nombre || (esAlfa ? "Actividad de alfabetizacion" : "Sin nombre")}
+                                >
+                                  {act.nombre || <span className="text-slate-400 italic">{esAlfa ? "Alfabetizacion (sin titulo)" : "Sin nombre"}</span>}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {cronograma[dia].actividades.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); eliminarActividad(dia, idx) }}
+                                    className="text-red-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${abierta ? "rotate-180" : ""}`} />
+                              </div>
+                            </div>
+
+                            {/* Detalle completo — solo visible al abrir */}
+                            {abierta && (
+                              <div className="px-2 pb-2 space-y-1.5 border-t border-slate-200/80">
+                                <input
+                                  type="text"
+                                  value={act.nombre}
+                                  onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
+                                  onBlur={() => onBlurActividad(dia, idx)}
+                                  placeholder="Nombre de la actividad"
+                                  className="w-full mt-1.5 text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-semibold"
+                                />
+                                {[
+                                  { campo: "capacidades" as keyof Actividad, label: "Capacidades" },
+                                  { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
+                                  { campo: "objetivo" as keyof Actividad, label: "Objetivo" },
+                                  { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
+                                  { campo: "materiales" as keyof Actividad, label: "Materiales" },
+                                ].map(({ campo, label, tall }) => (
+                                  <div key={campo}>
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</label>
+                                    <textarea
+                                      value={(act[campo] as string) || ""}
+                                      onChange={(e) => actualizarActividad(dia, idx, campo, e.target.value)}
+                                      placeholder={label}
+                                      className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                                      rows={tall ? 3 : 2}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <input
-                            type="text"
-                            value={act.nombre}
-                            onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
-                            onBlur={() => onBlurActividad(dia, idx)}
-                            placeholder="Nombre de la actividad"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-medium"
-                          />
-                          <textarea
-                            value={act.capacidades}
-                            onChange={(e) => actualizarActividad(dia, idx, "capacidades", e.target.value)}
-                            placeholder="Capacidades"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                          <textarea
-                            value={act.contenidos}
-                            onChange={(e) => actualizarActividad(dia, idx, "contenidos", e.target.value)}
-                            placeholder="Contenidos"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                          <textarea
-                            value={act.objetivo}
-                            onChange={(e) => actualizarActividad(dia, idx, "objetivo", e.target.value)}
-                            placeholder="Objetivo"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                          <textarea
-                            value={act.desarrollo}
-                            onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
-                            placeholder="Desarrollo"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-12 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                          <textarea
-                            value={act.materiales}
-                            onChange={(e) => actualizarActividad(dia, idx, "materiales", e.target.value)}
-                            placeholder="Materiales"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
