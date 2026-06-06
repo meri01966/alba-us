@@ -358,6 +358,7 @@ export default function ALBADashboard() {
   const [showPlanificacion, setShowPlanificacion] = useState(false)
   const [showAlertas, setShowAlertas] = useState(false)
   const [showCronograma, setShowCronograma] = useState(false)
+  const [cronogramaRefreshKey, setCronogramaRefreshKey] = useState(0)
   const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
   const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
@@ -1343,6 +1344,7 @@ useEffect(() => {
 
               {/* Fila 1: Cronograma Semanal inline — 5 dias con titulos y boton Abrir */}
               <CronogramaInlinePreview
+                key={cronogramaRefreshKey}
                 sala={salaActual}
                 onAbrirCompleto={() => setShowCronograma(true)}
                 mensajesPendientes={mensajesDirectora.filter(m => !m.leido).length}
@@ -1658,7 +1660,7 @@ useEffect(() => {
         />
       )}
       {/* Cronograma Semanal Modal */}
-      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} students={students} />
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => { setShowCronograma(false); setCronogramaRefreshKey(k => k + 1) }} sala={salaActual} students={students} />
     </div>
   )
 }
