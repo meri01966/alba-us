@@ -14,13 +14,50 @@ function getLunesSemana(fecha: Date): Date {
   return new Date(d.setDate(diff))
 }
 
-// GET - Obtener cronograma de la semana actual
+// GET - Obtener cronograma de la semana actual, o historial de semanas finalizadas
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const sala = searchParams.get("sala")
-  
+  const historial = searchParams.get("historial") === "true"
+
   if (!sala) {
     return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
+  }
+
+  // ── HISTORIAL: devuelve semanas finalizadas agrupadas por semana_inicio ────
+  if (historial) {
+    const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+    const salaKey = normalizarSala(sala)
+
+    const { data: todos } = await supabase
+      .from("cronograma_maternal")
+      .select("id, sala, dia, semana_inicio, fecha, actividades, recibimiento, intercambio, finalizado")
+      .eq("finalizado", true)
+      .order("semana_inicio", { ascending: false })
+      .limit(200)
+
+    // Filtrar por sala normalizada en memoria
+    const deSala = (todos || []).filter((r: any) => normalizarSala(r.sala || "") === salaKey)
+
+    // Agrupar por semana_inicio
+    const mapa: Record<string, any> = {}
+    for (const r of deSala) {
+      if (!mapa[r.semana_inicio]) {
+        mapa[r.semana_inicio] = { id: r.semana_inicio, semana_inicio: r.semana_inicio, dias: {} }
+      }
+      mapa[r.semana_inicio].dias[r.dia] = {
+        fecha: r.fecha,
+        actividades: r.actividades || [],
+        recibimiento: r.recibimiento || "",
+        intercambio: r.intercambio || "",
+      }
+    }
+
+    const semanas = Object.values(mapa).sort((a: any, b: any) =>
+      b.semana_inicio.localeCompare(a.semana_inicio)
+    )
+
+    return NextResponse.json({ ok: true, historial: semanas })
   }
   
   const lunesSemana = getLunesSemana(new Date())
