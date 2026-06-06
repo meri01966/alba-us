@@ -331,7 +331,7 @@ function getMicroCapacitacion(titulo: string): MicroCap {
 // El cerebro de ALBA usa esta secuencia como NORTE y la ajusta segun el desempenio real del grupo
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas" }[]> = {
+const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas" }[]> = {
   // ── CONCIENCIA FONOLOGICA ────────────────────────────────────────────────
   // DC CABA 2025: sala 4 trabaja escucha, rimas, silabas y vocales.
   // Sala 5 profundiza fonemas consonanticos, blending y segmentacion fonemica.
@@ -820,6 +820,98 @@ const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; d
       sala: "ambas"
     },
   ],
+
+  // ── APROXIMACION A LA ESCRITURA (EA) — segunda mitad de ano ─────────────
+  // DC CABA 2025: Practicas de lectura y escritura en contextos reales.
+  // Se incorpora desde julio aproximadamente, cuando la CF ya esta consolidada.
+  // Sala 5 es el foco principal; sala 4 trabaja solo los niveles iniciales.
+  EA: [
+    {
+      titulo: "Escritura del nombre propio",
+      objetivo: "Reconocer y escribir el nombre propio como primer texto significativo",
+      descripcion: "La docente presenta tarjetas con los nombres del grupo. Cada nino busca la suya, la observa y copia su nombre en papel sin renglones. Se trabaja letra por letra con la tarjeta como modelo. Se comparan nombres: cuales son largos, cuales cortos, cuales empiezan igual. El nombre queda pegado en el cuaderno como referente permanente.",
+      materiales: ["Tarjetas con nombres en mayuscula imprenta", "Papel blanco sin renglones", "Marcadores gruesos", "Cuaderno personal"],
+      dccaba: "DC CABA 2025 - EA: El nombre propio es el primer texto con significado real para el nino. Base de todos los programas de alfabetizacion temprana (Ferreiro & Teberosky, 1979).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Letras de mi nombre en el cuerpo",
+      objetivo: "Identificar y reconocer las letras del nombre propio en diferentes soportes",
+      descripcion: "Los ninos buscan las letras de su nombre en diarios, revistas y envases. Las recortan o senalan. Luego arman su nombre con letras moviles (tarjetas). Se trabaja la idea de que las letras son fijas: siempre son las mismas para el mismo nombre. Cierre: cada nino presenta su nombre armado al grupo.",
+      materiales: ["Diarios y revistas", "Tijeras con punta roma", "Letras moviles (tarjetas o imanes)", "Pegamento"],
+      dccaba: "DC CABA 2025 - EA: Exploracion de portadores de texto. Reconocer letras conocidas en distintos soportes desarrolla la nocion de que la escritura es un sistema estable.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Escritura espontanea: que quiero decir?",
+      objetivo: "Producir escritura espontanea para comunicar un mensaje personal",
+      descripcion: "Cada nino elige algo que quiere contarle a alguien (un familiar, un amigo imaginario) y lo escribe como puede: con letras que conoce, con dibujo-escritura, con letras mezcladas. La docente pregunta a cada uno que quiso escribir y lo anota al pie en escritura convencional. Se leen las producciones en voz alta.",
+      materiales: ["Papel carta", "Lapices y marcadores", "Sobres de carta opcionales"],
+      dccaba: "DC CABA 2025 - EA: La produccion de escritura con intencion comunicativa real es mas efectiva que la copia mecanica. Ferreiro (1979): los ninos pasan por niveles de conceptualizacion que deben respetarse.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Palabras del proyecto: mural de escritura",
+      objetivo: "Escribir palabras significativas del proyecto con apoyo del mural del aula",
+      descripcion: "Se arma un mural con las palabras clave del proyecto en curso (ej: si el proyecto es Los Insectos, van: mariposa, hormiga, alas, antenas). Los ninos copian la palabra de su eleccion en una tira de papel y la ilustran. El mural queda como banco de palabras disponible todo el mes.",
+      materiales: ["Papel afiche para el mural", "Tiras de papel", "Marcadores de colores", "Imagenes del proyecto"],
+      dccaba: "DC CABA 2025 - EA: El vocabulario del proyecto como recurso de escritura. La copia con sentido (no mecanica) del nivel inicial desarrolla la relacion sonido-grafia en contexto real.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Etiquetas: escribir para nombrar el mundo",
+      objetivo: "Producir escritura funcional etiquetando objetos del aula",
+      descripcion: "La sala se convierte en un museo: cada sector, caja y rincón necesita una etiqueta. Los ninos escriben las etiquetas (con modelo o autonomamente segun nivel). Se pegan en los objetos reales. La docente lee cada etiqueta en voz alta con el grupo. Queda como instalacion permanente del mes.",
+      materiales: ["Tarjetas en blanco", "Marcadores", "Cinta adhesiva", "Lista de palabras de referencia"],
+      dccaba: "DC CABA 2025 - EA: Escritura funcional con proposito real. El DC enfatiza que los ninos deben escribir para algo, no solo por ejercicio.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Dictado al docente: texto colectivo",
+      objetivo: "Participar en la produccion de un texto colectivo dictado al docente",
+      descripcion: "El grupo dicta una historia, noticia o carta y la docente escribe en el pizarron en tiempo real, verbalizando cada decision: escribo una mayuscula porque empieza la oracion, pongo punto porque termina la idea. Los ninos observan como el habla se convierte en escritura. Luego la docente lee el texto completo y los ninos ilustran su parte favorita.",
+      materiales: ["Pizarron o papel afiche", "Marcadores gruesos", "Hoja para ilustrar"],
+      dccaba: "DC CABA 2025 - EA: El dictado al docente es la estrategia de maxima evidencia para mostrar la relacion oral-escrito. Chambers (1993): el adulto como escriba modela el proceso de manera visible.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Lectura de lista: escribir para recordar",
+      objetivo: "Producir una lista con proposito real como texto funcional basico",
+      descripcion: "El grupo necesita una lista real: ingredientes para una receta, materiales para manualidades, libros de la biblioteca. Los ninos dictan los items y la docente va anotando. Luego cada nino copia un item de la lista con modelo a la vista. Se usa la lista realmente (para ir a buscar lo que falta, por ejemplo).",
+      materiales: ["Hoja para la lista colectiva", "Copias individuales", "Lapices", "Hoja para copiar"],
+      dccaba: "DC CABA 2025 - EA: Las listas son el tipo de texto mas simple estructuralmente y con alto valor funcional. Base para la escritura convencional segun Tolchinsky (2003).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Escritura con apoyo: sonido a letra",
+      objetivo: "Escribir palabras cortas identificando fonemas y sus grafias con apoyo de la docente",
+      descripcion: "La docente elige 3-4 palabras cortas de alta frecuencia del proyecto (ej: sol, mar, casa). Para cada una: 1) La dicen lentamente estirando los sonidos. 2) Cuentan cuantos sonidos tiene. 3) Piensan qué letra va para cada sonido. 4) La escriben en el cuaderno. La docente circula y da apoyo individual sin corregir el resultado sino el proceso.",
+      materiales: ["Cuaderno personal", "Lapiz y goma", "Abecedario de pared", "Lista de palabras del proyecto"],
+      dccaba: "DC CABA 2025 - EA: Relacion sonido-letra en palabras del contexto real. El DC recomienda partir de palabras significativas del proyecto para que la escritura tenga sentido.",
+      sala: "5"
+    },
+    {
+      titulo: "Revision colectiva: mejoramos el texto",
+      objetivo: "Revisar colectivamente un texto escrito para mejorarlo como escritores reales",
+      descripcion: "Se retoma un texto producido la clase anterior (la historia dictada, la carta, las etiquetas). La docente lo lee y pregunta: que le falta? que podemos mejorar? Se hacen 2-3 correcciones colectivas: agregar una palabra, cambiar el final, agregar un detalle. Se relee el texto mejorado. Los ninos descubren que los textos se reescriben.",
+      materiales: ["Texto producido en clase anterior", "Marcadores de color para las correcciones", "Pizarron o afiche"],
+      dccaba: "DC CABA 2025 - EA: La revision es parte del proceso escritor. Ensenar desde el inicio que los textos se pueden mejorar instala la mentalidad de escritor segun el DC.",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion EA: muestra de producciones escritas",
+      objetivo: "Evaluar el nivel de escritura individual mediante la produccion autonoma de un texto breve",
+      descripcion: "Cada nino produce de forma autonoma una escritura corta: su nombre + una palabra que elija + un dibujo que la represente. La docente registra el nivel de escritura: presilabico, silabico, silabico-alfabetico, alfabetico. No se corrige ni se pide reescritura. La muestra va al portfolio del nino como evidencia de su nivel al finalizar el primer semestre.",
+      materiales: ["Hoja blanca A4", "Lapices y marcadores", "Portfolio individual", "Rubrica de niveles de escritura"],
+      dccaba: "DC CABA 2025 - EA: Evaluacion formativa de escritura. El DC propone registrar el nivel de conceptualizacion, no calificar la produccion.",
+      sala: "ambas"
+    },
+  ],
+
+  // ── OCT: alias O+CT combinados — segunda mitad de ano ──────────────────────
+  // En la segunda mitad del año ALBA rota: CF / O+CT / EA
+  // OCT alterna automaticamente entre O y CT segun la clase par/impar del eje
+  OCT: [],  // se resuelve en runtime — ver logica de rotacion mitad de año
 }
 
 const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
@@ -828,17 +920,36 @@ function esde4Anios(sala: string): boolean {
   return SALAS_4_ANIOS.some(ref => s.includes(ref.replace(/\s/g, "")))
 }
 
+// Detectar segunda mitad del ciclo lectivo (aproximadamente julio en adelante)
+// El ciclo lectivo CABA va de marzo a diciembre (semanas 1-40 aprox.)
+// Mitad = semana 21 → aprox. 1 de julio
+// Se calcula desde el primer lunes de marzo del año en curso
+function esSegundaMitadAnio(): boolean {
+  const ahora = new Date()
+  const anio = ahora.getFullYear()
+  // Primer lunes de marzo
+  const inicioMarzo = new Date(anio, 2, 1) // 1 de marzo
+  const diaSemana = inicioMarzo.getDay() // 0=dom, 1=lun
+  const diasHastaLunes = diaSemana === 0 ? 1 : diaSemana === 1 ? 0 : 8 - diaSemana
+  const primerLunesMarzo = new Date(anio, 2, 1 + diasHastaLunes)
+  // Semanas transcurridas desde el inicio del ciclo
+  const msTranscurridos = ahora.getTime() - primerLunesMarzo.getTime()
+  const semanasTranscurridas = Math.floor(msTranscurridos / (7 * 24 * 60 * 60 * 1000))
+  return semanasTranscurridas >= 21
+}
+
 function calcularActividadDelDia(
-  eje: "CF" | "CT" | "O",
+  eje: "CF" | "CT" | "O" | "EA",
   clasesCompletadasEnEje: number,
   promedioEje: number,
   sala = "Manzanos"
-): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
+): { actividad: (typeof SECUENCIA)["CF"][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
   // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
-  // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
-  const limites4 = { CF: 11, CT: 9, O: 10 }
-  const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
+  // Para EA sala 4 solo accede a los 7 primeros (escritura emergente, antes de escritura convencional)
+  const limites4: Record<string, number> = { CF: 11, CT: 9, O: 10, EA: 7 }
+  const limite = limites4[eje] ?? fullSeq.length
+  const seq = esde4Anios(sala) ? fullSeq.slice(0, limite) : fullSeq
   if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
   let indice = clasesCompletadasEnEje % seq.length
