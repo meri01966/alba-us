@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     .select("*")
     .eq("sala", sala)
     .eq("semana_inicio", lunesStr)
-    .eq("finalizado", false)
+    .or("finalizado.eq.false,finalizado.is.null")
   
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
@@ -112,6 +112,7 @@ export async function POST(req: Request) {
       ed_fisica: datosDia.edFisica || "",
       musica: datosDia.musica || "",
       ingles: datosDia.ingles || "",
+      finalizado: false,
       updated_at: new Date().toISOString()
     }
     
