@@ -1622,7 +1622,7 @@ useEffect(() => {
         />
       )}
       {/* Cronograma Semanal Modal */}
-      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} />
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} students={students} />
     </div>
   )
 }

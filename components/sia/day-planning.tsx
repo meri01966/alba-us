@@ -680,24 +680,12 @@ function ProyectoColumn({
             </div>
           )}
 
-          {/* Actividades */}
-          {proyecto.actividades.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Actividades ({proyecto.actividades.length})
-              </p>
-              <div className="space-y-2">
-                {proyecto.actividades.map((act, i) => (
-                  <div key={act.id} className="bg-accent/5 rounded-lg p-2.5">
-                    <p className="text-xs font-semibold text-accent mb-1">Actividad {i + 1}{act.titulo ? ` — ${act.titulo}` : ""}</p>
-                    {act.objetivo && <p className="text-xs text-muted-foreground leading-relaxed mb-1"><span className="font-medium">Obj:</span> {act.objetivo}</p>}
-                    {act.desarrollo && <p className="text-xs text-foreground leading-relaxed mb-1">{act.desarrollo}</p>}
-                    {act.materiales && <p className="text-xs text-muted-foreground"><span className="font-medium">Mat:</span> {act.materiales}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Nota: las actividades se cargan en el Cronograma Semanal */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Las actividades de este proyecto se planifican y cargan en el <strong>Cronograma Semanal</strong>.
+            </p>
+          </div>
 
           {/* Boton Finalizar Proyecto */}
           <div className="pt-1">
@@ -753,72 +741,6 @@ function ProyectoColumn({
                   rows={3}
                 />
               </Field>
-
-              {/* Actividades */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-foreground">Actividades</p>
-                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addActividad}>
-                    <Plus className="w-3 h-3 mr-1" /> Agregar actividad
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  {form.actividades.map((act, idx) => (
-                    <div key={act.id} className="border border-border rounded-lg p-3 space-y-3 relative">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-accent">Actividad {idx + 1}</p>
-                        {form.actividades.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeActividad(idx)}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <Field>
-                        <FieldLabel htmlFor={`act-titulo-${idx}`}>Titulo</FieldLabel>
-                        <Input
-                          id={`act-titulo-${idx}`}
-                          placeholder="Ej: Observacion de hormigas en el jardin"
-                          value={act.titulo}
-                          onChange={e => updateActividad(idx, "titulo", e.target.value)}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-objetivo-${idx}`}>Objetivo de aprendizaje</FieldLabel>
-                        <Textarea
-                          id={`act-objetivo-${idx}`}
-                          placeholder="Ej: Identificar partes del cuerpo de una hormiga y describirlas oralmente."
-                          value={act.objetivo}
-                          onChange={e => updateActividad(idx, "objetivo", e.target.value)}
-                          rows={2}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-desarrollo-${idx}`}>Desarrollo de la actividad</FieldLabel>
-                        <Textarea
-                          id={`act-desarrollo-${idx}`}
-                          placeholder="Describe paso a paso como se desarrolla la actividad..."
-                          value={act.desarrollo}
-                          onChange={e => updateActividad(idx, "desarrollo", e.target.value)}
-                          rows={3}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-materiales-${idx}`}>Materiales</FieldLabel>
-                        <Input
-                          id={`act-materiales-${idx}`}
-                          placeholder="Ej: Lupas, laminas de insectos, plasticina"
-                          value={act.materiales}
-                          onChange={e => updateActividad(idx, "materiales", e.target.value)}
-                        />
-                      </Field>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </FieldGroup>
 
             {saveError && (
