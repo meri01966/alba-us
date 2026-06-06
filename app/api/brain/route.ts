@@ -1102,16 +1102,29 @@ export async function GET(req: Request) {
 
       const candidatos: any[] = []
 
-      // 1. Dias de esta semana desde hoy (sin finalizar)
-      for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
-        const r = pendientes.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
-        if (r) candidatos.push(r)
+      // Detectar si la semana actual está completa (todos los dias finalizados)
+      const diasDeEstaSemana = deSala.filter((x: any) => x.semana_inicio === estaLunes)
+      const estaSemanaCompleta = diasDeEstaSemana.length > 0 && diasDeEstaSemana.every((r: any) => r.dia_finalizado === true)
+
+      if (estaSemanaCompleta) {
+        // Si la semana actual está completa, buscar directamente en la semana siguiente
+        for (const d of ORDEN_DIAS) {
+          const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
+          if (r) candidatos.push(r)
+        }
+      } else {
+        // 1. Dias de esta semana desde hoy (sin finalizar)
+        for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
+          const r = pendientes.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
+          if (r) candidatos.push(r)
+        }
+        // 2. Dias de la semana siguiente (sin finalizar)
+        for (const d of ORDEN_DIAS) {
+          const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
+          if (r) candidatos.push(r)
+        }
       }
-      // 2. Dias de la semana siguiente (sin finalizar)
-      for (const d of ORDEN_DIAS) {
-        const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
-        if (r) candidatos.push(r)
-      }
+
       // 3. Fallback: semana anterior (si el cronograma fue cargado hace una semana)
       for (const d of ORDEN_DIAS) {
         const r = pendientes.find((x: any) => x.semana_inicio === antLunes && x.dia === d)
