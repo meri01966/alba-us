@@ -1065,37 +1065,56 @@ export async function GET(req: Request) {
 
     const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
       const lunesEsta = getLunes(hoy)
+      const lunesAnt = new Date(lunesEsta); lunesAnt.setDate(lunesAnt.getDate() - 7)
       const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
-      const semanasABuscar = [lunesEsta.toISOString().split("T")[0], lunesSig.toISOString().split("T")[0]]
+
+      // Buscar semana anterior + actual + siguiente para tolerar desfase de carga
+      const semanasABuscar = [
+        lunesAnt.toISOString().split("T")[0],
+        lunesEsta.toISOString().split("T")[0],
+        lunesSig.toISOString().split("T")[0],
+      ]
 
       // Buscar en cronograma_jardin (tabla exclusiva del tablero de Jardin 4/5 años)
+      // Sin filtrar por sala en la query — filtrar en memoria con normalizacion
       const { data: registros } = await supabase
         .from("cronograma_jardin")
         .select("sala, dia, semana_inicio, actividades, finalizado, dia_finalizado")
         .in("semana_inicio", semanasABuscar)
-        .eq("sala", sala)
 
       if (!registros || registros.length === 0) return null
 
-      // Excluir dias ya finalizados (dia_finalizado = true) para avanzar al siguiente
-      const pendientes = registros.filter((r: any) => !r.finalizado && !r.dia_finalizado)
+      // Filtrar por sala normalizada en memoria (tolerante a mayusculas y espacios)
+      // "SALADEPRUEBA" == "Sala de Prueba" == "saladeprueba"
+      const deSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey)
+      if (deSala.length === 0) return null
+
+      // Excluir dias ya finalizados para avanzar al siguiente
+      const pendientes = deSala.filter((r: any) => !r.dia_finalizado)
 
       const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
       const diaHoyNombre = diasNombresArray[diaHoy] || "Lunes"
       const idxHoy = ORDEN_DIAS.indexOf(diaHoyNombre)
 
-      const candidatos: any[] = []
+      const antLunes = lunesAnt.toISOString().split("T")[0]
       const estaLunes = lunesEsta.toISOString().split("T")[0]
       const sigLunes = lunesSig.toISOString().split("T")[0]
 
-      // Dias de esta semana desde hoy (sin finalizar)
+      const candidatos: any[] = []
+
+      // 1. Dias de esta semana desde hoy (sin finalizar)
       for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
         const r = pendientes.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
         if (r) candidatos.push(r)
       }
-      // Dias de la semana siguiente
-      for (const d of ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]) {
+      // 2. Dias de la semana siguiente (sin finalizar)
+      for (const d of ORDEN_DIAS) {
         const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
+        if (r) candidatos.push(r)
+      }
+      // 3. Fallback: semana anterior (si el cronograma fue cargado hace una semana)
+      for (const d of ORDEN_DIAS) {
+        const r = pendientes.find((x: any) => x.semana_inicio === antLunes && x.dia === d)
         if (r) candidatos.push(r)
       }
 

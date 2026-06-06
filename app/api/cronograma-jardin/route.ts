@@ -21,6 +21,8 @@ function getLunesSemana(fecha: Date): Date {
   return d
 }
 
+const normSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+
 // GET - Obtener cronograma de la semana actual, o historial de semanas finalizadas
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -29,18 +31,22 @@ export async function GET(req: Request) {
 
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
+  const salaKey = normSala(sala)
+
   // HISTORIAL: semanas con finalizado = true ordenadas por fecha desc
   if (historial) {
     const { data: todos } = await supabase
       .from(TABLA)
       .select("id, sala, dia, semana_inicio, fecha, actividades, recibimiento, intercambio, finalizado")
-      .eq("sala", sala)
       .eq("finalizado", true)
       .order("semana_inicio", { ascending: false })
       .limit(200)
 
+    // Filtrar por sala normalizada en memoria
+    const deSala = (todos || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+
     const mapa: Record<string, any> = {}
-    for (const r of todos || []) {
+    for (const r of deSala) {
       if (!mapa[r.semana_inicio]) {
         mapa[r.semana_inicio] = { semana_inicio: r.semana_inicio, dias: {} }
       }
@@ -57,24 +63,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, historial: semanas })
   }
 
-  // SEMANA ACTUAL: busca registros no finalizados
+  // SEMANA ACTUAL: busca los registros mas recientes no finalizados de esta sala
+  // Busca semana actual + semana anterior para tolerar desfase de carga
   const lunes = getLunesSemana(new Date())
+  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
   const lunesStr = lunes.toISOString().split("T")[0]
+  const lunesAntStr = lunesAnt.toISOString().split("T")[0]
 
-  const { data, error } = await supabase
+  const { data: todos, error } = await supabase
     .from(TABLA)
     .select("*")
-    .eq("sala", sala)
-    .eq("semana_inicio", lunesStr)
+    .in("semana_inicio", [lunesStr, lunesAntStr])
     .or("finalizado.eq.false,finalizado.is.null")
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
 
+  // Filtrar por sala normalizada en memoria
+  const data = (todos || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+
+  // Determinar cual es la semana a usar (priorizar la actual, sino la anterior)
+  const semanaUsada = data.some((r: any) => r.semana_inicio === lunesStr) ? lunesStr : lunesAntStr
+  const lunesUsado = semanaUsada === lunesStr ? lunes : lunesAnt
+
   const cronograma: Record<string, any> = {}
   DIAS.forEach((dia, idx) => {
-    const fecha = new Date(lunes)
+    const fecha = new Date(lunesUsado)
     fecha.setDate(fecha.getDate() + idx)
-    const registro = data?.find((d: any) => d.dia === dia)
+    const registro = data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
     cronograma[dia] = {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
@@ -86,12 +101,12 @@ export async function GET(req: Request) {
     }
   })
 
-  const hayRegistros = (data?.length ?? 0) > 0 &&
-    (data ?? []).some((r: any) =>
+  const hayRegistros = data.length > 0 &&
+    data.some((r: any) =>
       Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
     )
 
-  return NextResponse.json({ ok: true, cronograma, semanaInicio: lunesStr, hayRegistros })
+  return NextResponse.json({ ok: true, cronograma, semanaInicio: semanaUsada, hayRegistros })
 }
 
 // POST - Guardar cronograma de la semana
@@ -151,15 +166,30 @@ export async function PATCH(req: Request) {
   const { sala, dia, semana_inicio } = body
   if (!sala || !dia) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
+  const salaKey = normSala(sala)
+
+  // Buscar el registro buscando por sala normalizada en memoria
+  // Buscar en las ultimas 2 semanas para tolerar desfase
   const lunes = getLunesSemana(new Date())
-  const semana = semana_inicio || lunes.toISOString().split("T")[0]
+  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
+  const semanasABuscar = semana_inicio
+    ? [semana_inicio]
+    : [lunes.toISOString().split("T")[0], lunesAnt.toISOString().split("T")[0]]
+
+  const { data: registros } = await supabase
+    .from(TABLA)
+    .select("id, sala, semana_inicio")
+    .in("semana_inicio", semanasABuscar)
+    .eq("dia", dia)
+
+  // Filtrar por sala normalizada
+  const registro = (registros || []).find((r: any) => normSala(r.sala || "") === salaKey)
+  if (!registro) return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
 
   const { error } = await supabase
     .from(TABLA)
     .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
-    .eq("sala", sala)
-    .eq("semana_inicio", semana)
-    .eq("dia", dia)
+    .eq("id", registro.id)
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
