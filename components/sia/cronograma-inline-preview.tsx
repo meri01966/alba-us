@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
+import useSWR, { mutate as globalMutate } from "swr"
 import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen, Eye, Pencil, MessageSquare } from "lucide-react"
 import { CronogramaVerModal } from "./cronograma-ver-modal"
 
@@ -73,61 +74,41 @@ interface Props {
 }
 
 export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendientes = 0 }: Props) {
-  const [cronograma, setCronograma] = useState<Record<string, DiaData>>({})
-  const [clasesEspeciales, setClasesEspeciales] = useState<ClaseEspecial[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hayDatos, setHayDatos] = useState(false)
   const [verModalOpen, setVerModalOpen] = useState(false)
 
-  const cargar = useCallback(async () => {
-    if (!sala) { setLoading(false); return }
-    setLoading(true)
-    try {
-      const [resCron, resClases] = await Promise.all([
-        fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
-        fetch(`/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
-      ])
+  // SWR: revalida automaticamente al volver a pestaña y al reconectar
+  const cronKey = sala ? `/api/cronograma-maternal?sala=${encodeURIComponent(sala)}` : null
+  const clasesKey = sala ? `/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}` : null
+  const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
 
-      if (resCron.ok) {
-        const data = await resCron.json()
-        if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
-          setCronograma(data.cronograma)
-          // Prioridad: hayRegistros del servidor (calculado desde Supabase real)
-          if (typeof data.hayRegistros === "boolean") {
-            setHayDatos(data.hayRegistros)
-          } else {
-            const tieneActividades = Object.values(data.cronograma as Record<string, DiaData>).some(
-              (d) => (d.actividades || []).some((a) => (a.nombre || "").trim().length > 0)
-            )
-            setHayDatos(tieneActividades)
-          }
-        } else {
-          const lunes = getLunesSemana()
-          const nuevo: Record<string, DiaData> = {}
-          DIAS.forEach((dia, idx) => {
-            const fecha = new Date(lunes)
-            fecha.setDate(fecha.getDate() + idx)
-            nuevo[dia] = { fecha: fecha.toISOString().split("T")[0], recibimiento: "", intercambio: "", actividades: [] }
-          })
-          setCronograma(nuevo)
-          setHayDatos(false)
-        }
-      }
+  const { data: cronData, isLoading: cronLoading } = useSWR(cronKey, fetcher, { revalidateOnFocus: true, revalidateOnReconnect: true })
+  const { data: clasesData } = useSWR(clasesKey, fetcher, { revalidateOnFocus: true })
 
-      if (resClases.ok) {
-        const dataC = await resClases.json()
-        if (dataC.ok && Array.isArray(dataC.clases)) {
-          setClasesEspeciales(dataC.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia })))
-        }
-      }
-    } catch {
-      setHayDatos(false)
-    } finally {
-      setLoading(false)
-    }
-  }, [sala])
+  // Derivar datos del SWR
+  const lunes = getLunesSemana()
+  const cronogramaVacio: Record<string, DiaData> = Object.fromEntries(
+    DIAS.map((dia, idx) => {
+      const fecha = new Date(lunes); fecha.setDate(fecha.getDate() + idx)
+      return [dia, { fecha: fecha.toISOString().split("T")[0], recibimiento: "", intercambio: "", actividades: [] }]
+    })
+  )
 
-  useEffect(() => { cargar() }, [cargar])
+  const cronograma: Record<string, DiaData> =
+    cronData?.ok && cronData?.cronograma && Object.keys(cronData.cronograma).length > 0
+      ? cronData.cronograma
+      : cronogramaVacio
+
+  const hayDatos: boolean =
+    typeof cronData?.hayRegistros === "boolean"
+      ? cronData.hayRegistros
+      : Object.values(cronograma).some(d => (d.actividades || []).some(a => (a.nombre || "").trim().length > 0))
+
+  const clasesEspeciales: ClaseEspecial[] =
+    clasesData?.ok && Array.isArray(clasesData.clases)
+      ? clasesData.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia }))
+      : []
+
+  const loading = cronLoading
 
   if (loading) {
     return (

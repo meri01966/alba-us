@@ -952,8 +952,12 @@ function calcularActividadDelDia(
   const limite = limites4[eje] ?? fullSeq.length
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limite) : fullSeq
   if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
+  // Offset de mitad de año: si la sala no tiene cierres en este eje, arrancar en la actividad 9
+  // Esto evita mostrar actividades del primer semestre en Junio
+  const OFFSET_MITAD_ANIO = 8
+  const clasesBase = clasesCompletadasEnEje === 0 ? OFFSET_MITAD_ANIO : clasesCompletadasEnEje
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
-  let indice = clasesCompletadasEnEje % seq.length
+  let indice = clasesBase % seq.length
   let esRepeticion = false
   let esAvanzado = false
 
@@ -1014,44 +1018,58 @@ export async function GET(req: Request) {
       return d
     }
 
-    // Buscar en el cronograma: hoy primero, luego resto de la semana, luego semana siguiente
-    const buscarActividadCronograma = async (salaParam: string): Promise<any | null> => {
-      const candidatos: { semana: string; dia: string }[] = []
+    // Buscar actividad del cronograma: hoy → resto de semana → semana siguiente
+    // Normaliza nombre de sala para tolerar variantes (SALADEPRUEBA vs Sala de prueba)
+    const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+    const salaKey = normalizarSala(sala)
+
+    const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
       const lunesEsta = getLunes(hoy)
       const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
+      const semanasABuscar = [lunesEsta.toISOString().split("T")[0], lunesSig.toISOString().split("T")[0]]
 
-      // Días de esta semana desde hoy (Lunes=1 .. Viernes=5)
-      const LECTIVOS = [1,2,3,4,5] // Lun-Vie
-      for (const d of LECTIVOS) {
-        const nombre = diasNombresArray[d]
-        const lunesStr = lunesEsta.toISOString().split("T")[0]
-        if (d >= diaHoy) candidatos.push({ semana: lunesStr, dia: nombre })
+      // Traer todos los registros de las dos semanas de una sola query
+      const { data: registros } = await supabase
+        .from("cronograma_maternal")
+        .select("sala, dia, semana_inicio, actividades, finalizado")
+        .in("semana_inicio", semanasABuscar)
+
+      if (!registros || registros.length === 0) return null
+
+      // Filtrar por sala normalizada en memoria (tolerante a espacios y mayusculas)
+      const deEstaSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey && !r.finalizado)
+
+      // Ordenar: primero los dias de esta semana desde hoy, luego semana siguiente
+      const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+      const diaHoyNombre = diasNombresArray[diaHoy] || "Lunes"
+      const idxHoy = ORDEN_DIAS.indexOf(diaHoyNombre)
+
+      // Dias de esta semana desde hoy
+      const candidatos: any[] = []
+      const estaLunes = lunesEsta.toISOString().split("T")[0]
+      const sigLunes = lunesSig.toISOString().split("T")[0]
+
+      for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
+        const r = deEstaSala.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
+        if (r) candidatos.push(r)
       }
-      // Lunes de la semana siguiente
-      candidatos.push({ semana: lunesSig.toISOString().split("T")[0], dia: "Lunes" })
-      candidatos.push({ semana: lunesSig.toISOString().split("T")[0], dia: "Martes" })
+      // Lunes y martes de la semana siguiente
+      for (const d of ["Lunes", "Martes", "Miercoles"]) {
+        const r = deEstaSala.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
+        if (r) candidatos.push(r)
+      }
 
-      for (const c of candidatos) {
-        const { data: reg } = await supabase
-          .from("cronograma_maternal")
-          .select("actividades, dia")
-          .ilike("sala", salaParam) // ilike para tolerancia de mayúsculas
-          .eq("semana_inicio", c.semana)
-          .eq("dia", c.dia)
-          .or("finalizado.eq.false,finalizado.is.null")
-          .maybeSingle()
-
-        if (reg?.actividades && Array.isArray(reg.actividades)) {
-          const actAlfa = reg.actividades.find(
-            (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
-          )
-          if (actAlfa) return { actAlfa, dia: c.dia }
-        }
+      for (const reg of candidatos) {
+        if (!Array.isArray(reg.actividades)) continue
+        const actAlfa = reg.actividades.find(
+          (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
+        )
+        if (actAlfa) return { actAlfa, dia: reg.dia }
       }
       return null
     }
 
-    const resultadoCronograma = await buscarActividadCronograma(sala)
+    const resultadoCronograma = await buscarActividadCronograma()
     if (resultadoCronograma) {
       const { actAlfa, dia: diaActividad } = resultadoCronograma
       const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
@@ -1123,7 +1141,11 @@ export async function GET(req: Request) {
         ? SECUENCIA[ejeElegido].slice(0, ({ CF: 12, CT: 8, O: 10 })[ejeElegido])
         : SECUENCIA[ejeElegido]
       const cierresDeEje = ejeElegido === "CF" ? cierresCF : ejeElegido === "CT" ? cierresCT : cierresO
-      const indiceActividad = cierresDeEje % secuenciaEje.length
+      // Estamos a mitad de año: si la sala no tiene cierres, arrancar desde la actividad 9
+      // OFFSET_MITAD_ANIO = 8 (actividades 1-8 corresponden a primer semestre)
+      const OFFSET_MITAD_ANIO = 8
+      const indiceBase = cierresDeEje === 0 ? OFFSET_MITAD_ANIO : cierresDeEje
+      const indiceActividad = indiceBase % secuenciaEje.length
       console.log("[v0] FALLBACK rotacion - totalCierres:", totalCierres, "ejeElegido:", ejeElegido, "cierresDeEje:", cierresDeEje, "indice:", indiceActividad)
       const actividadInicial = secuenciaEje[indiceActividad]
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react"
+import useSWR, { mutate as globalMutate } from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -857,44 +858,50 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
     }
   }, [evaluaciones, totalAlumnos])
 
-  // Fetch Cerebro Central - usa GET mapeando data.sugerencia
-  const fetchBrain = useCallback(async () => {
-    setIsBrainLoading(true)
-    try {
-      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`, { cache: "no-store" })
-      const data = await res.json()
-      const sugerencia = data.sugerencia ?? null
-      if (sugerencia) {
-        const activity: BrainActivity = {
-          id: `${sugerencia.eje}-${Date.now()}`,
-          dia: 1,
-          titulo: sugerencia.actividad,
-          descripcion: sugerencia.descripcion || "",
-          objetivo: sugerencia.objetivo,
-          capacidades: sugerencia.capacidades || "",
-          contenidos: sugerencia.contenidos || "",
-          materiales: sugerencia.materiales || [],
-          razon: sugerencia.razon,
-          source: "secuencia",
-          ejeRecomendado: sugerencia.eje,
-          aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
-          salaRed: sugerencia.salaRed || null,
-          temaProyecto: sugerencia.temaProyecto || null,
-          sugerenciaPedagogica: sugerencia.sugerenciaPedagogica || null,
-        }
-        setBrain(activity)
-        setMicroCapacitacion(data.microCapacitacion || null)
-        if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
-        if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
-      } else {
-        setBrain(null)
+  // SWR: Cerebro Central — se revalida automaticamente al volver a la pestaña,
+  // al reconectar y cuando el padre llama globalMutate(brainKey)
+  const brainKey = sala ? `/api/brain?sala=${encodeURIComponent(sala)}` : null
+  const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
+  const { data: brainData, isLoading: isBrainLoadingSWR, mutate: mutateBrain } = useSWR(
+    brainKey,
+    fetcher,
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 0 }
+  )
+
+  // Sincronizar los datos del SWR con el estado local existente
+  useEffect(() => {
+    if (!brainData) return
+    setIsBrainLoading(isBrainLoadingSWR)
+    const sugerencia = brainData.sugerencia ?? null
+    if (sugerencia) {
+      const activity: BrainActivity = {
+        id: `${sugerencia.eje}-brain`,
+        dia: 1,
+        titulo: sugerencia.actividad,
+        descripcion: sugerencia.descripcion || "",
+        objetivo: sugerencia.objetivo,
+        capacidades: sugerencia.capacidades || "",
+        contenidos: sugerencia.contenidos || "",
+        materiales: sugerencia.materiales || [],
+        razon: sugerencia.razon,
+        source: "secuencia",
+        ejeRecomendado: sugerencia.eje,
+        aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
+        salaRed: sugerencia.salaRed || null,
+        temaProyecto: sugerencia.temaProyecto || null,
+        sugerenciaPedagogica: sugerencia.sugerenciaPedagogica || null,
       }
-    } catch {
-      // Si falla la API no pisar la actividad anterior
-    } finally {
-      setIsBrainLoading(false)
+      setBrain(activity)
+      setMicroCapacitacion(brainData.microCapacitacion || null)
+      if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
+      if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
+    } else {
+      setBrain(null)
     }
-  }, [sala]) // solo sala como dependencia - los callbacks van por ref
+  }, [brainData, isBrainLoadingSWR])
+
+  // fetchBrain ahora es un alias de mutateBrain para compatibilidad con el resto del componente
+  const fetchBrain = useCallback(() => mutateBrain(), [mutateBrain])
 
   // Exponer fetchBrain al padre para llamarlo con timing correcto tras guardar cierre
   useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])
