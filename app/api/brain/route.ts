@@ -1065,77 +1065,39 @@ export async function GET(req: Request) {
     const esSalaPrueba = salaKey.includes("prueba")
 
     const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
-      const lunesEsta = getLunes(hoy)
-      const lunesAnt = new Date(lunesEsta); lunesAnt.setDate(lunesAnt.getDate() - 7)
-      const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
+      // LÓGICA SIMPLE: 
+      // 1. Traer TODOS los registros de esta sala
+      // 2. Filtrar solo los no finalizados (dia_finalizado: false)
+      // 3. Devolver el PRIMERO en orden semana + día
+      
+      const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+      const salaKey = normalizarSala(sala)
 
-      // En sala de prueba: buscar sin depender del día actual (permite testear cualquier día)
-      // En otras salas: buscar semana anterior + actual + siguiente
-      const semanasABuscar = esSalaPrueba
-        ? [lunesEsta.toISOString().split("T")[0], lunesSig.toISOString().split("T")[0]]
-        : [
-            lunesAnt.toISOString().split("T")[0],
-            lunesEsta.toISOString().split("T")[0],
-            lunesSig.toISOString().split("T")[0],
-          ]
-
-      // Buscar en cronograma_jardin (tabla exclusiva del tablero de Jardin 4/5 años)
-      // Sin filtrar por sala en la query — filtrar en memoria con normalizacion
+      // Buscar SIN restricción de semana — traer todo
       const { data: registros } = await supabase
         .from("cronograma_jardin")
-        .select("sala, dia, semana_inicio, actividades, finalizado, dia_finalizado")
-        .in("semana_inicio", semanasABuscar)
+        .select("sala, dia, semana_inicio, actividades, dia_finalizado")
 
       if (!registros || registros.length === 0) return null
 
-      // Filtrar por sala normalizada en memoria (tolerante a mayusculas y espacios)
-      // "SALADEPRUEBA" == "Sala de Prueba" == "saladeprueba"
+      // Filtrar por sala normalizada
       const deSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey)
       if (deSala.length === 0) return null
 
-      // Excluir dias ya finalizados para avanzar al siguiente
-      const pendientes = deSala.filter((r: any) => !r.dia_finalizado)
+      // Filtrar solo los NO finalizados
+      const pendientes = deSala.filter((r: any) => r.dia_finalizado !== true)
+      if (pendientes.length === 0) return null
 
+      // Ordenar por semana + día (semana anterior primero)
       const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
-      const diaHoyNombre = diasNombresArray[diaHoy] || "Lunes"
-      const idxHoy = ORDEN_DIAS.indexOf(diaHoyNombre)
+      pendientes.sort((a: any, b: any) => {
+        const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
+        if (semanaCmp !== 0) return semanaCmp
+        return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+      })
 
-      const antLunes = lunesAnt.toISOString().split("T")[0]
-      const estaLunes = lunesEsta.toISOString().split("T")[0]
-      const sigLunes = lunesSig.toISOString().split("T")[0]
-
-      const candidatos: any[] = []
-
-      // Detectar si la semana actual está completa (todos los dias finalizados)
-      const diasDeEstaSemana = deSala.filter((x: any) => x.semana_inicio === estaLunes)
-      const estaSemanaCompleta = diasDeEstaSemana.length > 0 && diasDeEstaSemana.every((r: any) => r.dia_finalizado === true)
-
-      if (estaSemanaCompleta) {
-        // Si la semana actual está completa, buscar directamente en la semana siguiente
-        for (const d of ORDEN_DIAS) {
-          const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
-          if (r) candidatos.push(r)
-        }
-      } else {
-        // 1. Dias de esta semana desde hoy (sin finalizar)
-        for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
-          const r = pendientes.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
-          if (r) candidatos.push(r)
-        }
-        // 2. Dias de la semana siguiente (sin finalizar)
-        for (const d of ORDEN_DIAS) {
-          const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
-          if (r) candidatos.push(r)
-        }
-      }
-
-      // 3. Fallback: semana anterior (si el cronograma fue cargado hace una semana)
-      for (const d of ORDEN_DIAS) {
-        const r = pendientes.find((x: any) => x.semana_inicio === antLunes && x.dia === d)
-        if (r) candidatos.push(r)
-      }
-
-      for (const reg of candidatos) {
+      // Devolver el PRIMERO que tenga actividad alfabetización
+      for (const reg of pendientes) {
         if (!Array.isArray(reg.actividades)) continue
         const actAlfa = reg.actividades.find(
           (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0

@@ -191,29 +191,22 @@ export async function POST(req: Request) {
 // PATCH - Marcar un dia especifico como finalizado (se llama al Finalizar Jornada)
 export async function PATCH(req: Request) {
   const body = await req.json()
-  const { sala, dia, semana_inicio } = body
+  const { sala, dia } = body
   if (!sala || !dia) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
   const salaKey = normSala(sala)
 
-  // Buscar el registro buscando por sala normalizada en memoria
-  // Buscar en las ultimas 2 semanas para tolerar desfase
-  const lunes = getLunesSemana(new Date())
-  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
-  const semanasABuscar = semana_inicio
-    ? [semana_inicio]
-    : [lunes.toISOString().split("T")[0], lunesAnt.toISOString().split("T")[0]]
-
+  // Buscar ANY registro con esta sala + dia (sin importar semana)
   const { data: registros } = await supabase
     .from(TABLA)
-    .select("id, sala, semana_inicio")
-    .in("semana_inicio", semanasABuscar)
+    .select("id, sala")
     .eq("dia", dia)
 
   // Filtrar por sala normalizada
   const registro = (registros || []).find((r: any) => normSala(r.sala || "") === salaKey)
   if (!registro) return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
 
+  // Marcar como finalizado
   const { error } = await supabase
     .from(TABLA)
     .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
