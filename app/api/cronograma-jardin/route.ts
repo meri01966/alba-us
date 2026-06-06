@@ -230,14 +230,23 @@ export async function PUT(req: Request) {
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
   const salaKey = normSala(sala)
+  
+  // Buscar en las últimas 3 semanas (para encontrar cualquier semana no finalizada)
   const lunes = getLunesSemana(new Date())
-  const lunesStr = lunes.toISOString().split("T")[0]
+  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
+  const lunesSig = new Date(lunes); lunesSig.setDate(lunesSig.getDate() + 7)
+  
+  const semanasABuscar = [
+    lunesAnt.toISOString().split("T")[0],
+    lunes.toISOString().split("T")[0],
+    lunesSig.toISOString().split("T")[0],
+  ]
 
-  // Buscar todos los registros de esta semana
+  // Buscar todos los registros de esta sala en cualquiera de las 3 semanas
   const { data: registros } = await supabase
     .from(TABLA)
-    .select("id, sala")
-    .eq("semana_inicio", lunesStr)
+    .select("id, sala, semana_inicio")
+    .in("semana_inicio", semanasABuscar)
 
   // Filtrar por sala normalizada y actualizar todos
   const registrosDeSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
@@ -248,5 +257,5 @@ export async function PUT(req: Request) {
       .eq("id", r.id)
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, actualizados: registrosDeSala.length })
 }
