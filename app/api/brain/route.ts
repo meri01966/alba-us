@@ -994,66 +994,94 @@ export async function GET(req: Request) {
   )
 
   try {
-    // ── 0a. Leer cronograma de HOY: si hay actividad de alfabetizacion aceptada, usarla ─
-    // Esto garantiza que la sugerencia de ALBA en el dashboard coincide con lo del cronograma
     const hoy = new Date()
     const diaHoy = hoy.getDay() // 0=Dom, 1=Lun...5=Vie
-    const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
-    const nombreDiaHoy = diasNombres[diaHoy]
-    const lunesSemana = new Date(hoy)
-    const diffLunes = hoy.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1)
-    lunesSemana.setDate(diffLunes)
-    const lunesStr = lunesSemana.toISOString().split("T")[0]
 
-    // Solo buscar en dias lectivos (Lun-Vie)
-    if (diaHoy >= 1 && diaHoy <= 5) {
-      const { data: registroHoy } = await supabase
-        .from("cronograma_maternal")
-        .select("actividades")
-        .eq("sala", sala)
-        .eq("semana_inicio", lunesStr)
-        .eq("dia", nombreDiaHoy)
-        .or("finalizado.eq.false,finalizado.is.null")
-        .maybeSingle()
+    // ── 0a. Buscar actividad del cronograma guardado para mostrar en el dashboard ──
+    // Lógica: buscar el próximo día lectivo que tiene actividades aceptadas.
+    // Si hoy es lectivo y hay actividad → usar hoy.
+    // Si hoy es Viernes/Finde/no hay actividad → buscar siguiente semana Lunes.
+    // Esto garantiza que la sugerencia de ALBA siempre coincide con el cronograma.
+    const diasNombresArray = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
 
-      if (registroHoy?.actividades && Array.isArray(registroHoy.actividades)) {
-        // Buscar la primera actividad de alfabetizacion con nombre real
-        const actAlfa = registroHoy.actividades.find(
-          (a: any) => (a.alfabetizacion || a.origen === "alba") && (a.nombre || "").trim().length > 0
-        )
-        if (actAlfa) {
-          // Devolver la actividad del cronograma guardado — no calcular una nueva
-          const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
-          // Splitear materiales si vienen como string separado por comas
-          const materialesArr: string[] = Array.isArray(actAlfa.materiales)
-            ? actAlfa.materiales.filter((m: string) => (m || "").trim())
-            : typeof actAlfa.materiales === "string" && actAlfa.materiales.trim()
-              ? actAlfa.materiales.split(",").map((m: string) => m.trim()).filter(Boolean)
-              : []
-          return NextResponse.json({
-            sugerencia: {
-              eje: ejeActividad,
-              actividad: actAlfa.nombre,
-              descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
-              objetivo: actAlfa.objetivo || "",
-              capacidades: actAlfa.capacidades || "",
-              contenidos: actAlfa.contenidos || "",
-              materiales: materialesArr,
-              razon: `Actividad del cronograma de hoy (${nombreDiaHoy}) — aceptada por la docente`,
-              alumnosEnRiesgo: 0,
-              totalAlumnos: 0,
-              tendencia: "progreso",
-              aprendidoDeLaRed: false,
-              salaRed: null,
-              desdeCronograma: true,
-            },
-            microCapacitacion: getMicroCapacitacion(actAlfa.nombre),
-            alertas: [],
-            historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
-            progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
-          })
+    // Calcular semana actual (lunes)
+    const getLunes = (fecha: Date) => {
+      const d = new Date(fecha)
+      const day = d.getDay()
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      d.setDate(diff)
+      d.setHours(0,0,0,0)
+      return d
+    }
+
+    // Buscar en el cronograma: hoy primero, luego resto de la semana, luego semana siguiente
+    const buscarActividadCronograma = async (salaParam: string): Promise<any | null> => {
+      const candidatos: { semana: string; dia: string }[] = []
+      const lunesEsta = getLunes(hoy)
+      const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
+
+      // Días de esta semana desde hoy (Lunes=1 .. Viernes=5)
+      const LECTIVOS = [1,2,3,4,5] // Lun-Vie
+      for (const d of LECTIVOS) {
+        const nombre = diasNombresArray[d]
+        const lunesStr = lunesEsta.toISOString().split("T")[0]
+        if (d >= diaHoy) candidatos.push({ semana: lunesStr, dia: nombre })
+      }
+      // Lunes de la semana siguiente
+      candidatos.push({ semana: lunesSig.toISOString().split("T")[0], dia: "Lunes" })
+      candidatos.push({ semana: lunesSig.toISOString().split("T")[0], dia: "Martes" })
+
+      for (const c of candidatos) {
+        const { data: reg } = await supabase
+          .from("cronograma_maternal")
+          .select("actividades, dia")
+          .ilike("sala", salaParam) // ilike para tolerancia de mayúsculas
+          .eq("semana_inicio", c.semana)
+          .eq("dia", c.dia)
+          .or("finalizado.eq.false,finalizado.is.null")
+          .maybeSingle()
+
+        if (reg?.actividades && Array.isArray(reg.actividades)) {
+          const actAlfa = reg.actividades.find(
+            (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
+          )
+          if (actAlfa) return { actAlfa, dia: c.dia }
         }
       }
+      return null
+    }
+
+    const resultadoCronograma = await buscarActividadCronograma(sala)
+    if (resultadoCronograma) {
+      const { actAlfa, dia: diaActividad } = resultadoCronograma
+      const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+      const materialesArr: string[] = Array.isArray(actAlfa.materiales)
+        ? actAlfa.materiales.filter((m: string) => (m || "").trim())
+        : typeof actAlfa.materiales === "string" && actAlfa.materiales.trim()
+          ? actAlfa.materiales.split(",").map((m: string) => m.trim()).filter(Boolean)
+          : []
+      return NextResponse.json({
+        sugerencia: {
+          eje: ejeActividad,
+          actividad: actAlfa.nombre,
+          descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
+          objetivo: actAlfa.objetivo || "",
+          capacidades: actAlfa.capacidades || "",
+          contenidos: actAlfa.contenidos || "",
+          materiales: materialesArr,
+          razon: `Actividad del cronograma del ${diaActividad} — aceptada por la docente`,
+          alumnosEnRiesgo: 0,
+          totalAlumnos: 0,
+          tendencia: "progreso",
+          aprendidoDeLaRed: false,
+          salaRed: null,
+          desdeCronograma: true,
+        },
+        microCapacitacion: getMicroCapacitacion(actAlfa.nombre),
+        alertas: [],
+        historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
+        progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+      })
     }
     const { data: proyectoActivo } = await supabase
       .from("proyectos")
