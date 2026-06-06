@@ -192,7 +192,7 @@ export function PlanificacionModal({ isOpen, onClose, sala }: PlanificacionModal
   const [tab, setTab] = useState<Tab>("proyectos")
 
   const proyKey = isOpen && sala ? `/api/proyectos?sala=${encodeURIComponent(sala)}` : null
-  const cronKey = isOpen && sala ? `/api/cronograma-maternal?sala=${encodeURIComponent(sala)}&historial=true` : null
+  const cronKey = isOpen && sala ? `/api/cronograma-jardin?sala=${encodeURIComponent(sala)}&historial=true` : null
 
   const { data: proyData, isLoading: proyLoading } = useSWR(proyKey, fetcher, { revalidateOnFocus: false })
   const { data: cronData, isLoading: cronLoading } = useSWR(cronKey, fetcher, { revalidateOnFocus: false })

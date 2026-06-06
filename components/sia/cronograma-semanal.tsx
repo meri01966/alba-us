@@ -159,7 +159,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   const cargarDatos = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      const res = await fetch(`/api/cronograma-jardin?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
@@ -235,7 +235,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   async function guardarCronograma() {
     setGuardando(true)
     try {
-      const res = await fetch(`/api/cronograma-maternal`, {
+      const res = await fetch(`/api/cronograma-jardin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala, cronograma }),
@@ -352,7 +352,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     setSugerenciasAlba(sugerenciasAlba.filter((s) => s.dia !== dia))
 
     try {
-      await fetch(`/api/cronograma-maternal`, {
+      await fetch(`/api/cronograma-jardin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala, cronograma: nuevo }),
@@ -442,7 +442,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     if (!confirm("Finalizar esta semana? El cronograma se blanqueara para la semana siguiente.")) return
     setGuardando(true)
     try {
-      await fetch(`/api/cronograma-maternal`, {
+      await fetch(`/api/cronograma-jardin`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala }),

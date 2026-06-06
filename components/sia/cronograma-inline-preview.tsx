@@ -77,7 +77,7 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
   const [verModalOpen, setVerModalOpen] = useState(false)
 
   // SWR: revalida automaticamente al volver a pestaña y al reconectar
-  const cronKey = sala ? `/api/cronograma-maternal?sala=${encodeURIComponent(sala)}` : null
+  const cronKey = sala ? `/api/cronograma-jardin?sala=${encodeURIComponent(sala)}` : null
   const clasesKey = sala ? `/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}` : null
   const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
 

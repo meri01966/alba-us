@@ -1068,34 +1068,34 @@ export async function GET(req: Request) {
       const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
       const semanasABuscar = [lunesEsta.toISOString().split("T")[0], lunesSig.toISOString().split("T")[0]]
 
-      // Traer todos los registros de las dos semanas de una sola query
+      // Buscar en cronograma_jardin (tabla exclusiva del tablero de Jardin 4/5 años)
       const { data: registros } = await supabase
-        .from("cronograma_maternal")
-        .select("sala, dia, semana_inicio, actividades, finalizado")
+        .from("cronograma_jardin")
+        .select("sala, dia, semana_inicio, actividades, finalizado, dia_finalizado")
         .in("semana_inicio", semanasABuscar)
+        .eq("sala", sala)
 
       if (!registros || registros.length === 0) return null
 
-      // Filtrar por sala normalizada en memoria (tolerante a espacios y mayusculas)
-      const deEstaSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey && !r.finalizado)
+      // Excluir dias ya finalizados (dia_finalizado = true) para avanzar al siguiente
+      const pendientes = registros.filter((r: any) => !r.finalizado && !r.dia_finalizado)
 
-      // Ordenar: primero los dias de esta semana desde hoy, luego semana siguiente
       const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
       const diaHoyNombre = diasNombresArray[diaHoy] || "Lunes"
       const idxHoy = ORDEN_DIAS.indexOf(diaHoyNombre)
 
-      // Dias de esta semana desde hoy
       const candidatos: any[] = []
       const estaLunes = lunesEsta.toISOString().split("T")[0]
       const sigLunes = lunesSig.toISOString().split("T")[0]
 
+      // Dias de esta semana desde hoy (sin finalizar)
       for (let i = Math.max(0, idxHoy); i < ORDEN_DIAS.length; i++) {
-        const r = deEstaSala.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
+        const r = pendientes.find((x: any) => x.semana_inicio === estaLunes && x.dia === ORDEN_DIAS[i])
         if (r) candidatos.push(r)
       }
-      // Lunes y martes de la semana siguiente
-      for (const d of ["Lunes", "Martes", "Miercoles"]) {
-        const r = deEstaSala.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
+      // Dias de la semana siguiente
+      for (const d of ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]) {
+        const r = pendientes.find((x: any) => x.semana_inicio === sigLunes && x.dia === d)
         if (r) candidatos.push(r)
       }
 

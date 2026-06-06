@@ -549,11 +549,25 @@ export default function ALBADashboard() {
       const data = await response.json()
 
       if (data.success) {
-        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
+        // --- Paso 4: Marcar el dia de hoy como finalizado en cronograma_jardin ---
+        // Esto hace que el brain GET salte al dia siguiente en la proxima consulta
+        const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
+        const hoy = new Date()
+        const diaHoyNombre = diasNombres[hoy.getDay()]
+        const lunesHoy = new Date(hoy)
+        const diffLunes = hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)
+        lunesHoy.setDate(diffLunes)
+        const semanaStr = lunesHoy.toISOString().split("T")[0]
+
+        fetch("/api/cronograma-jardin", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre, semana_inicio: semanaStr }),
+        }).catch(() => {/* silencioso */})
+
+        // --- Paso 5: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
-        // Invalidar SWR del brain para que el widget del dashboard se actualice inmediatamente
         globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-        // Tres intentos con delay para asegurar que Supabase confirmo el insert antes de releer
         setTimeout(() => {
           dayPlanningRef.current?.fetchBrain()
           globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
