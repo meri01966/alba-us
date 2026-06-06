@@ -550,38 +550,34 @@ export default function ALBADashboard() {
 
       if (data.success) {
         // --- Paso 4: Marcar el dia de hoy como finalizado en cronograma_jardin ---
-        // Esto hace que el brain GET salte al dia siguiente en la proxima consulta
         const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
+        const diasValidos = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
         const hoy = new Date()
-        const diaHoyNombre = diasNombres[hoy.getDay()]
+        let diaHoyNombre = diasNombres[hoy.getDay()]
 
-        console.log("[v0] Finalizando jornada:", { sala: salaActual, dia: diaHoyNombre })
+        // Si es sabado o domingo, marcar el viernes como finalizado
+        if (!diasValidos.includes(diaHoyNombre)) {
+          diaHoyNombre = "Viernes"
+        }
 
-        // PRIMERO: hacer el PATCH y esperar respuesta antes de invalidar cache
+        // PRIMERO: hacer el PATCH y esperar respuesta
         try {
           const patchRes = await fetch("/api/cronograma-jardin", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
           })
-          const patchData = await patchRes.json()
-          console.log("[v0] PATCH response:", patchData)
-          
-          if (!patchData.ok) {
-            console.error("[v0] PATCH error:", patchData.error)
-          }
+          await patchRes.json()
         } catch (err) {
-          console.error("[v0] PATCH fetch error:", err)
+          // silencioso
         }
 
         // DESPUES: invalidar SWR del brain para que busque nuevamente
-        console.log("[v0] Invalidando brain SWR...")
         fetchHistorialMes()
         globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
         
-        // Reintentar después de 2 segundos para asegurar que Supabase confirmó
+        // Reintentar después de 2 segundos
         setTimeout(() => {
-          console.log("[v0] Refetching brain después de 2s...")
           dayPlanningRef.current?.fetchBrain()
           globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
         }, 2000)

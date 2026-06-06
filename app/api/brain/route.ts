@@ -1087,12 +1087,7 @@ export async function GET(req: Request) {
       // Filtrar por sala normalizada en memoria (tolerante a mayusculas y espacios)
       // "SALADEPRUEBA" == "Sala de Prueba" == "saladeprueba"
       const deSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey)
-      if (deSala.length === 0) {
-        console.log("[brain] No hay registros para sala:", sala, "normalizada:", salaKey)
-        return null
-      }
-
-      console.log("[brain] Registros de sala:", deSala.length, "buscar dias no finalizados...")
+      if (deSala.length === 0) return null
 
       // Excluir dias ya finalizados para avanzar al siguiente
       const pendientes = deSala.filter((r: any) => !r.dia_finalizado)
