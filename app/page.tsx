@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { mutate as globalMutate } from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check, CalendarDays, MessageSquare, Settings } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
@@ -412,9 +412,6 @@ export default function ALBADashboard() {
   }>>([])
 
   // Mensajes de la directora hacia la maestra
-  const [mensajesDirectora, setMensajesDirectora] = useState<Array<{
-    id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string
-  }>>([])
   const [marcandoLeido, setMarcandoLeido] = useState<string | null>(null)  // Cargar evaluaciones de hoy desde Supabase para la sala actual
   // Los botones del Registro de Clase arrancan siempre vacios al cargar la pagina.
   // Son el "pizarron del dia" — se usan solo durante la clase en curso.
@@ -554,17 +551,17 @@ export default function ALBADashboard() {
       if (data.success) {
         // --- Paso 4: ALBA recalcula la proxima sugerencia ---
         fetchHistorialMes()
-        // Tres intentos para asegurar que Supabase ya confirmo el insert antes de releer
+        // Invalidar SWR del brain para que el widget del dashboard se actualice inmediatamente
+        globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        // Tres intentos con delay para asegurar que Supabase confirmo el insert antes de releer
         setTimeout(() => {
-          fetchProgreso()
           dayPlanningRef.current?.fetchBrain()
+          globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
         }, 1500)
         setTimeout(() => {
           dayPlanningRef.current?.fetchBrain()
-        }, 3500)
-        setTimeout(() => {
-          dayPlanningRef.current?.fetchBrain()
-        }, 7000)
+          globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        }, 4000)
         
         // --- Paso 5: indexar actividad evaluada a la red de ALBA (para redistribucion) ---
         if (actividadDelDia) {
@@ -631,15 +628,16 @@ export default function ALBADashboard() {
     }
   }, [progress])
 
-  const fetchMensajes = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}`)
-      const data = await res.json()
-      if (data.ok) setMensajesDirectora(data.mensajes || [])
-    } catch (e) {
-      console.error("[v0] Error cargando mensajes directora:", e)
-    }
-  }, [salaActual])
+  // SWR para mensajes: se revalida al volver al tab y cada 30 segundos automaticamente
+  // Los mensajes NO leidos persisten hasta que la docente los marca leidos en Supabase
+  const mensajesKey = salaActual ? `/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}` : null
+  const { data: mensajesData, mutate: mutateMensajes } = useSWR(
+    mensajesKey,
+    (url: string) => fetch(url).then(r => r.json()),
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
+  )
+  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string }> =
+    mensajesData?.ok ? (mensajesData.mensajes || []) : []
 
   const marcarLeido = async (id: string) => {
     setMarcandoLeido(id)
@@ -651,7 +649,11 @@ export default function ALBADashboard() {
       })
       const data = await res.json()
       if (data.ok) {
-        setMensajesDirectora(prev => prev.map(m => m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m))
+        // Actualizar SWR optimistamente para que el badge se actualice al instante
+        mutateMensajes(
+          (prev: any) => prev ? { ...prev, mensajes: prev.mensajes.map((m: any) => m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m) } : prev,
+          { revalidate: false }
+        )
       }
     } catch (e) {
       console.error("[v0] Error marcando leido:", e)
@@ -873,8 +875,7 @@ export default function ALBADashboard() {
 useEffect(() => {
   fetchProgreso()
   fetchHistorialMes()
-  fetchMensajes()
-  }, [fetchProgreso, fetchHistorialMes, fetchMensajes])
+  }, [fetchProgreso, fetchHistorialMes])
 
   const handleNavigate = (view: ViewType) => {
     setActiveView(view)

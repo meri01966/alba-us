@@ -900,12 +900,52 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
       sala: "5"
     },
     {
-      titulo: "Evaluacion EA: muestra de producciones escritas",
-      objetivo: "Evaluar el nivel de escritura individual mediante la produccion autonoma de un texto breve",
-      descripcion: "Cada nino produce de forma autonoma una escritura corta: su nombre + una palabra que elija + un dibujo que la represente. La docente registra el nivel de escritura: presilabico, silabico, silabico-alfabetico, alfabetico. No se corrige ni se pide reescritura. La muestra va al portfolio del nino como evidencia de su nivel al finalizar el primer semestre.",
-      materiales: ["Hoja blanca A4", "Lapices y marcadores", "Portfolio individual", "Rubrica de niveles de escritura"],
-      dccaba: "DC CABA 2025 - EA: Evaluacion formativa de escritura. El DC propone registrar el nivel de conceptualizacion, no calificar la produccion.",
-      sala: "ambas"
+      titulo: "Escritura de oracion: sujeto + accion",
+      objetivo: "Producir una oracion escrita simple con sujeto y verbo de forma autonoma",
+      descripcion: "La docente modela en el pizarron: El gato duerme. Luego cada nino elige un personaje del proyecto y escribe su propia oracion. Se trabaja en tres pasos: 1) Decir la oracion en voz alta. 2) Contar las palabras con los dedos. 3) Escribir cada palabra separada. La docente circula y pregunta: cuantas palabras tiene tu oracion? Ambas son palabras o una sola? El objetivo es la separacion entre palabras, no la ortografia.",
+      materiales: ["Cuaderno personal", "Lapiz", "Diccionario de imagenes del proyecto", "Abecedario de pared"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones simples. La separacion entre palabras es el hito clave del nivel alfabetico inicial (Ferreiro & Teberosky, 1979). Sala 5 accede a la escritura de oraciones en la segunda mitad del año.",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura compartida: construimos un texto juntos",
+      objetivo: "Participar en la produccion colectiva de un texto breve con estructura",
+      descripcion: "Docente y ninos escriben juntos un texto de 3-4 oraciones. La docente escribe en el pizarron mientras los ninos dictan. Se detiene en cada decision: que ponemos primero? como empieza? con que termina? Los ninos copian el texto en su cuaderno y lo ilustran. Al releerlo se pregunta: tiene inicio, desarrollo y fin? La escritura compartida es el puente entre el dictado al docente y la escritura autonoma.",
+      materiales: ["Pizarron", "Marcadores gruesos", "Cuadernos", "Hojas para ilustrar"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura compartida como andamiaje para la escritura autonoma. Chambers (1993): el adulto como copiloto del proceso escritor. Gradual Release of Responsibility (Pearson & Gallagher, 1983).",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura de descripcion: como es mi personaje?",
+      objetivo: "Escribir una descripcion de dos o tres atributos de un personaje conocido",
+      descripcion: "Cada nino elige un personaje del proyecto o de un cuento trabajado y escribe 2-3 oraciones descriptivas: Como se ve. Que hace. Como es su personalidad. Se usa el organizador grafico CUERPO / ACCIONES / SENTIMIENTOS como andamio. La docente modela primero con un personaje colectivo. Al terminar cada nino lee su descripcion al grupo y el resto adivina de quien se trata.",
+      materiales: ["Organizador grafico impreso", "Cuaderno", "Lapices y marcadores", "Imagenes de personajes del proyecto"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos descriptivos. La descripcion escrita requiere manejo del adjetivo y la oracion nominal, que aparece consolidado en sala 5 (DC CABA 2025).",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura de cuento: inicio, conflicto y final",
+      objetivo: "Producir un cuento breve con estructura narrativa completa de forma autonoma",
+      descripcion: "Cada nino escribe un cuento de tres partes en hojas dobladas: INICIO (Habia una vez...), CONFLICTO (Pero un dia...) y FINAL (Al final...). La docente muestra la estructura en cartel y modela con un cuento de 3 oraciones. Los ninos escriben y luego se comparten en circulo. Se festeja que son autores reales. Los cuentos quedan en la biblioteca de la sala.",
+      materiales: ["Hojas A4 dobladas en tres partes", "Lapices y marcadores", "Cartel de estructura narrativa", "Cinta para armar biblioteca"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos narrativos con estructura. La escritura con estructura narrativa en sala 5 es el antecedente directo de la escritura de cuentos en primero y segundo grado (DC CABA Primaria).",
+      sala: "5"
+    },
+    {
+      titulo: "Revision por pares: el escritor y el lector",
+      objetivo: "Revisar la escritura propia con apoyo de un par para mejorar la comunicacion",
+      descripcion: "En parejas un nino lee su texto al otro. El lector dice: entendi... / no entendi... / me gustaria saber mas de... El escritor anota o recuerda una sola mejora para hacer. Se hace la mejora y se relee. La docente modela primero con un texto anonimo en el pizarron. El objetivo es que descubran que escribir es para que otro lo entienda.",
+      materiales: ["Textos producidos en clases anteriores", "Lapiz de color para las revisiones", "Ficha de rol escritor/lector"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Revision y correccion como parte del proceso escritor. Reading-Writing Workshop (Calkins, 2001): la revision por pares instala la conciencia del lector desde el nivel inicial.",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion EA sala 5: texto autonomo + portfolio",
+      objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma de un texto breve",
+      descripcion: "Cada nino produce de forma totalmente autonoma: su nombre + una oracion sobre algo del proyecto + un dibujo. La docente registra: nivel de escritura (silabico / silabico-alfabetico / alfabetico), separacion entre palabras, correspondencia sonido-letra, uso de mayuscula al inicio. No se corrige ni se pide reescritura. La produccion va al portfolio como evidencia del nivel al finalizar el segundo trimestre.",
+      materiales: ["Hoja blanca A4", "Lapiz y goma", "Portfolio individual", "Rubrica de niveles Ferreiro"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Evaluacion formativa del nivel de escritura. La rubrica de niveles (Ferreiro & Teberosky) es el instrumento de evaluacion recomendado por el DC CABA para el nivel inicial.",
+      sala: "5"
     },
   ],
 
