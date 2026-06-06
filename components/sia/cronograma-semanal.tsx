@@ -148,14 +148,29 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
 
   const cargarDatos = useCallback(async () => {
     setLoading(true)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
       // Cronograma
-      const res = await fetch(`${base}/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      const res = await fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
-          setCronograma(data.cronograma)
+          // Normalizar: asegurarse que cada dia tenga al menos un slot de actividad
+          const cronogramaBase = inicializarCronograma()
+          const cronogramaCargado: Record<string, DiaData> = {}
+          DIAS.forEach((dia) => {
+            const diaGuardado = data.cronograma[dia]
+            const diaBase = cronogramaBase[dia]
+            cronogramaCargado[dia] = {
+              fecha: diaGuardado?.fecha || diaBase.fecha,
+              recibimiento: diaGuardado?.recibimiento || "",
+              intercambio: diaGuardado?.intercambio || "",
+              actividades: (diaGuardado?.actividades?.length > 0) ? diaGuardado.actividades : [{ ...actividadVacia }],
+              edFisica: diaGuardado?.edFisica || "",
+              musica: diaGuardado?.musica || "",
+              ingles: diaGuardado?.ingles || "",
+            }
+          })
+          setCronograma(cronogramaCargado)
         } else {
           setCronograma(inicializarCronograma())
         }
@@ -164,7 +179,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       }
 
       // Clases especiales
-      const resClases = await fetch(`${base}/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      const resClases = await fetch(`/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (resClases.ok) {
         const dataC = await resClases.json()
         if (dataC.ok && Array.isArray(dataC.clases)) {
@@ -175,7 +190,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       }
 
       // Proyecto activo (para que ALBA sugiera en contexto)
-      const resProy = await fetch(`${base}/api/proyecto-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      const resProy = await fetch(`/api/proyecto-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (resProy.ok) {
         const dataP = await resProy.json()
         if (dataP.ok && dataP.proyecto) {
@@ -200,9 +215,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
 
   async function guardarCronograma() {
     setGuardando(true)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
-      const res = await fetch(`${base}/api/cronograma-maternal`, {
+      const res = await fetch(`/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala, cronograma }),
@@ -217,11 +231,10 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     setGuardando(false)
   }
 
-  // ── Clases especiales ──────────────────────────────────────────────
+  // ── Clases especiales ───────────────────────────────────��──────────
   async function guardarClasesEspeciales() {
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
-      await fetch(`${base}/api/clases-especiales-maternal`, {
+      await fetch(`/api/clases-especiales-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala, clases: clasesEspeciales }),
@@ -252,10 +265,9 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   // Toda actividad cargada por la maestra se incorpora a la red para que ALBA la redistribuya
   async function incorporarARed(actividad: Actividad, dia: string) {
     if (!actividad?.nombre?.trim()) return
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     const fecha = cronograma[dia]?.fecha || getLunesSemana().toISOString().split("T")[0]
     try {
-      await fetch(`${base}/api/actividad-planificada`, {
+      await fetch(`/api/actividad-planificada`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -273,9 +285,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   // ── ALBA sugiere 3 actividades de alfabetizacion (Lun/Mar/Vie) ──────
   async function generarSugerenciasAlba() {
     setGenerandoSugerencias(true)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
-      const res = await fetch(`${base}/api/brain`, {
+      const res = await fetch(`/api/brain`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -321,9 +332,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     setCronograma(nuevo)
     setSugerenciasAlba(sugerenciasAlba.filter((s) => s.dia !== dia))
 
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
-      await fetch(`${base}/api/cronograma-maternal`, {
+      await fetch(`/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala, cronograma: nuevo }),
@@ -414,9 +424,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   async function finalizarSemana() {
     if (!confirm("Finalizar esta semana? El cronograma se blanqueara para la semana siguiente.")) return
     setGuardando(true)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
-      await fetch(`${base}/api/cronograma-maternal`, {
+      await fetch(`/api/cronograma-maternal`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sala }),

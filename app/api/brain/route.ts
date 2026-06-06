@@ -994,7 +994,59 @@ export async function GET(req: Request) {
   )
 
   try {
-    // ── 0. Proyecto activo de la sala (tema para contextualizar) ────────────
+    // ── 0a. Leer cronograma de HOY: si hay actividad de alfabetizacion aceptada, usarla ─
+    // Esto garantiza que la sugerencia de ALBA en el dashboard coincide con lo del cronograma
+    const hoy = new Date()
+    const diaHoy = hoy.getDay() // 0=Dom, 1=Lun...5=Vie
+    const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
+    const nombreDiaHoy = diasNombres[diaHoy]
+    const lunesSemana = new Date(hoy)
+    const diffLunes = hoy.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1)
+    lunesSemana.setDate(diffLunes)
+    const lunesStr = lunesSemana.toISOString().split("T")[0]
+
+    // Solo buscar en dias lectivos (Lun-Vie)
+    if (diaHoy >= 1 && diaHoy <= 5) {
+      const { data: registroHoy } = await supabase
+        .from("cronograma_maternal")
+        .select("actividades")
+        .eq("sala", sala)
+        .eq("semana_inicio", lunesStr)
+        .eq("dia", nombreDiaHoy)
+        .or("finalizado.eq.false,finalizado.is.null")
+        .maybeSingle()
+
+      if (registroHoy?.actividades && Array.isArray(registroHoy.actividades)) {
+        // Buscar la primera actividad de alfabetizacion con nombre real
+        const actAlfa = registroHoy.actividades.find(
+          (a: any) => (a.alfabetizacion || a.origen === "alba") && (a.nombre || "").trim().length > 0
+        )
+        if (actAlfa) {
+          // Devolver la actividad del cronograma guardado — no calcular una nueva
+          const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+          return NextResponse.json({
+            sugerencia: {
+              eje: ejeActividad,
+              actividad: actAlfa.nombre,
+              descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
+              objetivo: actAlfa.objetivo || "",
+              materiales: actAlfa.materiales ? [actAlfa.materiales] : [],
+              razon: `Actividad del cronograma de hoy (${nombreDiaHoy}) — aceptada por la docente`,
+              alumnosEnRiesgo: 0,
+              totalAlumnos: 0,
+              tendencia: "progreso",
+              aprendidoDeLaRed: false,
+              salaRed: null,
+              desdeCronograma: true,
+            },
+            microCapacitacion: getMicroCapacitacion(actAlfa.nombre),
+            alertas: [],
+            historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
+            progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+          })
+        }
+      }
+    }
     const { data: proyectoActivo } = await supabase
       .from("proyectos")
       .select("id, titulo, objetivo_general, actividades")
