@@ -43,9 +43,9 @@ const CONFIG_CLASES: Record<TipoClase, { label: string; icon: React.ElementType;
 }
 
 const EJE_COLOR: Record<string, { bg: string; text: string; border: string }> = {
-  CF:       { bg: "bg-violet-50",  text: "text-violet-700", border: "border-violet-200" },
-  CT:       { bg: "bg-sky-50",     text: "text-sky-700",    border: "border-sky-200" },
-  Escritura:{ bg: "bg-emerald-50", text: "text-emerald-700",border: "border-emerald-200" },
+  CF:        { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  CT:        { bg: "bg-sky-50",     text: "text-sky-700",     border: "border-sky-200" },
+  Escritura: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
 }
 
 function getLunesSemana(): Date {
@@ -57,14 +57,13 @@ function getLunesSemana(): Date {
 
 function formatearFechaCompleta(fecha: string): string {
   if (!fecha) return ""
-  const [y, m, d] = fecha.split("-")
+  const parts = fecha.split("-")
   const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
-  return `${parseInt(d)} ${meses[parseInt(m) - 1]}`
+  return `${parseInt(parts[2])} ${meses[parseInt(parts[1]) - 1]}`
 }
 
 function esHoy(fecha: string): boolean {
-  const hoy = new Date().toISOString().split("T")[0]
-  return fecha === hoy
+  return fecha === new Date().toISOString().split("T")[0]
 }
 
 interface Props {
@@ -96,13 +95,11 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
         const data = await resCron.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
           setCronograma(data.cronograma)
-          // hay datos si al menos 1 dia tiene actividad con nombre
           const tieneActividades = Object.values(data.cronograma as Record<string, DiaData>).some(
-            d => (d.actividades || []).some(a => (a.nombre || "").trim().length > 0)
+            (d) => (d.actividades || []).some((a) => (a.nombre || "").trim().length > 0)
           )
           setHayDatos(tieneActividades)
         } else {
-          // Sin cronograma guardado — generar estructura vacía con fechas de la semana actual
           const lunes = getLunesSemana()
           const nuevo: Record<string, DiaData> = {}
           DIAS.forEach((dia, idx) => {
@@ -117,7 +114,9 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
       if (resClases.ok) {
         const dataC = await resClases.json()
         if (dataC.ok && Array.isArray(dataC.clases)) {
-          setClasesEspeciales(dataC.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia })))
+          setClasesEspeciales(
+            dataC.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia }))
+          )
         }
       }
     } catch (e) {
@@ -179,23 +178,20 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
         </div>
       </div>
 
-      {/* 5 dias — solo títulos, compacto. Para ver detalles usar boton "Ver" */}
+      {/* 5 dias — solo titulos. Para ver detalles usar boton "Ver" */}
       <div className="grid grid-cols-5 divide-x divide-slate-100">
         {DIAS.map((dia) => {
           const data = cronograma[dia]
           const fecha = data?.fecha || ""
           const hoy = esHoy(fecha)
-          const clasesDelDia = clasesEspeciales.filter(c => c.dia === dia)
-          const actividades = data?.actividades?.filter(a => a.nombre?.trim()) || []
-          const actAlba = actividades.find(a => a.origen === "alba" || a.alfabetizacion)
-          const actDocente = actividades.filter(a => a.origen !== "alba" && !a.alfabetizacion)
+          const clasesDelDia = clasesEspeciales.filter((c) => c.dia === dia)
+          const actividades = data?.actividades?.filter((a) => a.nombre?.trim()) || []
+          const actAlba = actividades.find((a) => a.origen === "alba" || a.alfabetizacion)
+          const actDocente = actividades.filter((a) => a.origen !== "alba" && !a.alfabetizacion)
           const ejeColor = actAlba?.eje ? (EJE_COLOR[actAlba.eje] || EJE_COLOR.CF) : EJE_COLOR.CF
 
           return (
-            <div
-              key={dia}
-              className={`flex flex-col ${hoy ? "bg-blue-50/40" : "bg-white"}`}
-            >
+            <div key={dia} className={`flex flex-col ${hoy ? "bg-blue-50/40" : "bg-white"}`}>
               {/* Cabecera del dia */}
               <div
                 className={`px-2 py-2 text-center border-b ${hoy ? "border-blue-300" : "border-slate-100"}`}
@@ -209,7 +205,7 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                 </p>
               </div>
 
-              {/* Clases especiales — iconos compactos */}
+              {/* Clases especiales */}
               {clasesDelDia.length > 0 && (
                 <div className="flex flex-wrap gap-1 px-2 pt-1.5">
                   {clasesDelDia.map((c) => {
@@ -225,9 +221,8 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                 </div>
               )}
 
-              {/* Actividades — SOLO TÍTULO */}
+              {/* Actividades — SOLO TITULO */}
               <div className="flex-1 px-2 py-2 space-y-1.5">
-                {/* Titulo actividad ALBA */}
                 {actAlba ? (
                   <button
                     type="button"
@@ -237,12 +232,10 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                     <div className="flex items-center gap-1 mb-1">
                       <Sparkles className={`w-2.5 h-2.5 flex-shrink-0 ${ejeColor.text}`} />
                       <span className={`text-[9px] font-bold uppercase tracking-wide ${ejeColor.text}`}>
-                        ALBA {actAlba.eje ? `— ${actAlba.eje}` : ""}
+                        ALBA{actAlba.eje ? ` — ${actAlba.eje}` : ""}
                       </span>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-800 leading-snug">
-                      {actAlba.nombre}
-                    </p>
+                    <p className="text-[11px] font-semibold text-slate-800 leading-snug">{actAlba.nombre}</p>
                   </button>
                 ) : (
                   <button
@@ -255,7 +248,6 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                   </button>
                 )}
 
-                {/* Titulos actividades docente */}
                 {actDocente.map((act, i) => (
                   <button
                     key={i}
@@ -271,7 +263,6 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                   </button>
                 ))}
 
-                {/* Sin nada cargado */}
                 {!actAlba && actDocente.length === 0 && clasesDelDia.length === 0 && (
                   <button
                     type="button"
