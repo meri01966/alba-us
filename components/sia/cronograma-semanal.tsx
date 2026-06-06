@@ -149,25 +149,36 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   const cargarDatos = useCallback(async () => {
     setLoading(true)
     try {
-      // Cronograma
       const res = await fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
-          // Normalizar: asegurarse que cada dia tenga al menos un slot de actividad
           const cronogramaBase = inicializarCronograma()
           const cronogramaCargado: Record<string, DiaData> = {}
           DIAS.forEach((dia) => {
             const diaGuardado = data.cronograma[dia]
             const diaBase = cronogramaBase[dia]
+            // Normalizar cada actividad para que todos los campos string requeridos existan
+            const actividadesNormalizadas: Actividad[] =
+              diaGuardado?.actividades?.map((a: any) => ({
+                nombre:         a?.nombre         ?? "",
+                capacidades:    a?.capacidades     ?? "",
+                contenidos:     a?.contenidos      ?? "",
+                objetivo:       a?.objetivo        ?? "",
+                desarrollo:     a?.desarrollo      ?? "",
+                materiales:     a?.materiales      ?? "",
+                alfabetizacion: a?.alfabetizacion  ?? false,
+                origen:         a?.origen          ?? "docente",
+                eje:            a?.eje             ?? undefined,
+              })) ?? []
             cronogramaCargado[dia] = {
-              fecha: diaGuardado?.fecha || diaBase.fecha,
-              recibimiento: diaGuardado?.recibimiento || "",
+              fecha:       diaGuardado?.fecha       || diaBase.fecha,
+              recibimiento:diaGuardado?.recibimiento|| "",
               intercambio: diaGuardado?.intercambio || "",
-              actividades: (diaGuardado?.actividades?.length > 0) ? diaGuardado.actividades : [{ ...actividadVacia }],
-              edFisica: diaGuardado?.edFisica || "",
-              musica: diaGuardado?.musica || "",
-              ingles: diaGuardado?.ingles || "",
+              actividades: actividadesNormalizadas.length > 0 ? actividadesNormalizadas : [{ ...actividadVacia }],
+              edFisica:    diaGuardado?.edFisica     || "",
+              musica:      diaGuardado?.musica       || "",
+              ingles:      diaGuardado?.ingles       || "",
             }
           })
           setCronograma(cronogramaCargado)
@@ -178,7 +189,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
         setCronograma(inicializarCronograma())
       }
 
-      // Clases especiales
       const resClases = await fetch(`/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (resClases.ok) {
         const dataC = await resClases.json()
@@ -189,7 +199,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
         }
       }
 
-      // Proyecto activo (para que ALBA sugiera en contexto)
       const resProy = await fetch(`/api/proyecto-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
       if (resProy.ok) {
         const dataP = await resProy.json()
@@ -327,7 +336,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
 
     const nuevo = { ...cronograma }
     if (!nuevo[dia]) return
-    const acts = (nuevo[dia].actividades || []).filter((a) => a.nombre.trim() !== "")
+    const acts = (nuevo[dia].actividades || []).filter((a) => (a.nombre || "").trim() !== "")
     nuevo[dia] = { ...nuevo[dia], actividades: [...acts, { ...sugerencia.actividad }] }
     setCronograma(nuevo)
     setSugerenciasAlba(sugerenciasAlba.filter((s) => s.dia !== dia))
@@ -409,13 +418,11 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     })
   }
 
-  // ── Finalizar semana (calificar) ───────────────────────────────────
-  // Reune todas las actividades de alfabetizacion cargadas en la semana
   function actividadesAlfabetizacion(): { dia: string; idx: number; act: Actividad }[] {
     const out: { dia: string; idx: number; act: Actividad }[] = []
     DIAS.forEach((dia) => {
       cronograma[dia]?.actividades?.forEach((act, idx) => {
-        if (act.alfabetizacion && act.nombre.trim()) out.push({ dia, idx, act })
+        if (act.alfabetizacion && (act.nombre || "").trim()) out.push({ dia, idx, act })
       })
     })
     return out

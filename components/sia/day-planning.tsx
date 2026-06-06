@@ -39,6 +39,8 @@ interface BrainActivity {
   titulo:      string
   descripcion: string
   objetivo:    string
+  capacidades?: string
+  contenidos?: string
   materiales?: string[]
   source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
@@ -463,6 +465,18 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
               <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
             </div>
           )}
+          {activity.capacidades && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Capacidades</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.capacidades}</p>
+            </div>
+          )}
+          {activity.contenidos && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Contenidos</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.contenidos}</p>
+            </div>
+          )}
           {activity.objetivo && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo</p>
@@ -857,6 +871,8 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
           titulo: sugerencia.actividad,
           descripcion: sugerencia.descripcion || "",
           objetivo: sugerencia.objetivo,
+          capacidades: sugerencia.capacidades || "",
+          contenidos: sugerencia.contenidos || "",
           materiales: sugerencia.materiales || [],
           razon: sugerencia.razon,
           source: "secuencia",

@@ -1024,13 +1024,21 @@ export async function GET(req: Request) {
         if (actAlfa) {
           // Devolver la actividad del cronograma guardado — no calcular una nueva
           const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+          // Splitear materiales si vienen como string separado por comas
+          const materialesArr: string[] = Array.isArray(actAlfa.materiales)
+            ? actAlfa.materiales.filter((m: string) => (m || "").trim())
+            : typeof actAlfa.materiales === "string" && actAlfa.materiales.trim()
+              ? actAlfa.materiales.split(",").map((m: string) => m.trim()).filter(Boolean)
+              : []
           return NextResponse.json({
             sugerencia: {
               eje: ejeActividad,
               actividad: actAlfa.nombre,
               descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
               objetivo: actAlfa.objetivo || "",
-              materiales: actAlfa.materiales ? [actAlfa.materiales] : [],
+              capacidades: actAlfa.capacidades || "",
+              contenidos: actAlfa.contenidos || "",
+              materiales: materialesArr,
               razon: `Actividad del cronograma de hoy (${nombreDiaHoy}) — aceptada por la docente`,
               alumnosEnRiesgo: 0,
               totalAlumnos: 0,
