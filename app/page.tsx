@@ -555,8 +555,10 @@ export default function ALBADashboard() {
         const hoy = new Date()
         let diaHoyNombre = diasNombres[hoy.getDay()]
 
-        // Si es sabado o domingo, marcar el viernes como finalizado
-        if (!diasValidos.includes(diaHoyNombre)) {
+        // En sala de prueba: permitir finalizar cualquier día sin restricción
+        // En otras salas: si es fin de semana, marcar viernes como finalizado
+        const esSalaPrueba = salaActual.toLowerCase().includes("prueba")
+        if (!esSalaPrueba && !diasValidos.includes(diaHoyNombre)) {
           diaHoyNombre = "Viernes"
         }
 
@@ -576,6 +578,7 @@ export default function ALBADashboard() {
         fetchHistorialMes()
         globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
         
+
         // Reintentar después de 2 segundos
         setTimeout(() => {
           dayPlanningRef.current?.fetchBrain()

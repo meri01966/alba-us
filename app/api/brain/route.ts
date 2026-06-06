@@ -1062,18 +1062,22 @@ export async function GET(req: Request) {
     // Normaliza nombre de sala para tolerar variantes (SALADEPRUEBA vs Sala de prueba)
     const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
     const salaKey = normalizarSala(sala)
+    const esSalaPrueba = salaKey.includes("prueba")
 
     const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
       const lunesEsta = getLunes(hoy)
       const lunesAnt = new Date(lunesEsta); lunesAnt.setDate(lunesAnt.getDate() - 7)
       const lunesSig = new Date(lunesEsta); lunesSig.setDate(lunesSig.getDate() + 7)
 
-      // Buscar semana anterior + actual + siguiente para tolerar desfase de carga
-      const semanasABuscar = [
-        lunesAnt.toISOString().split("T")[0],
-        lunesEsta.toISOString().split("T")[0],
-        lunesSig.toISOString().split("T")[0],
-      ]
+      // En sala de prueba: buscar sin depender del día actual (permite testear cualquier día)
+      // En otras salas: buscar semana anterior + actual + siguiente
+      const semanasABuscar = esSalaPrueba
+        ? [lunesEsta.toISOString().split("T")[0], lunesSig.toISOString().split("T")[0]]
+        : [
+            lunesAnt.toISOString().split("T")[0],
+            lunesEsta.toISOString().split("T")[0],
+            lunesSig.toISOString().split("T")[0],
+          ]
 
       // Buscar en cronograma_jardin (tabla exclusiva del tablero de Jardin 4/5 años)
       // Sin filtrar por sala en la query — filtrar en memoria con normalizacion

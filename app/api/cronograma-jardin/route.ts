@@ -67,6 +67,7 @@ export async function GET(req: Request) {
   // 1. Si hay datos en la semana actual → usar semana actual
   // 2. Si hay datos en la semana anterior (cronograma cargado la semana pasada) → usar semana anterior
   // 3. Si no hay datos → mostrar la semana que viene (proximo lunes)
+  // En sala de prueba: no depender de fechas reales, permitir simular cualquier día
   const lunes = getLunesSemana(new Date())
   const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
   const lunesSig = new Date(lunes); lunesSig.setDate(lunesSig.getDate() + 7)
@@ -74,10 +75,18 @@ export async function GET(req: Request) {
   const lunesAntStr = lunesAnt.toISOString().split("T")[0]
   const lunesSigStr = lunesSig.toISOString().split("T")[0]
 
+  const esSalaPrueba = salaKey.includes("prueba")
+  
+  // En sala de prueba: buscar solo semana actual + siguiente (no pasada)
+  // En otras salas: buscar pasada + actual
+  const semanasABuscar = esSalaPrueba 
+    ? [lunesStr, lunesSigStr]
+    : [lunesStr, lunesAntStr]
+
   const { data: todos, error } = await supabase
     .from(TABLA)
     .select("*")
-    .in("semana_inicio", [lunesStr, lunesAntStr])
+    .in("semana_inicio", semanasABuscar)
     .or("finalizado.eq.false,finalizado.is.null")
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
