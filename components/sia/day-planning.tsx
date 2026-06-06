@@ -213,6 +213,32 @@ const SECUENCIA_ANUAL: Record<string, EjeSecuencia> = {
       { semana: 25, titulo: "Evaluacion O: Ciclo ECO completo",        objetivo: "Evaluar Escuchar-Comprender-Oralizar en actividad integrada",            descripcion: "Actividad integradora: la docente lee un texto, los ninos escuchan, responden preguntas de comprension y finalmente narran oralmente lo que entendieron.", metodologia: "Evaluacion ECO" },
     ],
   },
+  EA: {
+    nombre: "Escritura - Secuencia de Escritura Convencional",
+    color: "#8b5cf6",
+    bgColor: "#f5f3ff",
+    metodologia: "Secuencia de Escritura (Ferreiro & Teberosky + DC CABA 2025)",
+    actividades: [
+      // BLOQUE 1: Escritura emergente - Sala 4 y primeros meses sala 5 (Semanas 1-8)
+      { semana: 1,  titulo: "Escritura del nombre propio", objetivo: "Reconocer y reproducir el propio nombre escrito como primera referencia estable", descripcion: "Cada nino tiene una tarjeta con su nombre. Lo observa, lo traza con el dedo y luego lo copia. La docente muestra que el nombre tiene letras fijas y en orden. Se expone en el panel de la sala." },
+      { semana: 2,  titulo: "Escritura espontanea: que quiero decir?", objetivo: "Producir escrituras propias con intencion comunicativa real", descripcion: "Cada nino elige un mensaje para escribir (regalo, dedicatoria, aviso). Escribe como pueda. La docente no corrige — registra el nivel de conceptualizacion. Se lee en voz alta lo que cada uno quiso escribir." },
+      { semana: 3,  titulo: "Escritura con apoyo: abecedario visible", objetivo: "Usar el abecedario de la sala como herramienta de escritura", descripcion: "Los ninos escriben una palabra del proyecto usando el abecedario colgado en la pared. La docente modela como se busca una letra. Se trabaja en la correspondencia sonido-letra con apoyo visual." },
+      { semana: 4,  titulo: "Listas de palabras: lo que sabemos del proyecto", objetivo: "Escribir palabras relacionadas con el proyecto con apoyo del docente", descripcion: "En grupo se construye una lista de palabras del proyecto (animales, objetos, personajes). La docente escribe lo que los ninos dictan y luego cada nino copia una palabra elegida." },
+      { semana: 5,  titulo: "Escritura con apoyo: sonido a letra", objetivo: "Establecer correspondencia grafofonetica en situacion de escritura real", descripcion: "La docente dicta una palabra del proyecto. Los ninos 'escuchan' cada sonido y buscan la letra correspondiente. Se escribe en el cuaderno letra por letra. No se exige ortografia correcta — si correspondencia sonido-letra." },
+      { semana: 6,  titulo: "El nombre de los companeros", objetivo: "Leer y escribir nombres del grupo como palabras significativas", descripcion: "Se trabaja con las tarjetas de nombres de todos. Los ninos las leen, las ordenan por letra inicial, eligen una para copiar. Se juega a 'de quien es este nombre?' con tarjetas mezcladas." },
+      { semana: 7,  titulo: "Escritura de palabras del proyecto", objetivo: "Escribir palabras conocidas de forma autonoma usando referencias de la sala", descripcion: "Cada nino escribe 3 palabras del proyecto de forma autonoma. Puede consultar el abecedario y los carteles de la sala. La docente registra si usa referencias o escribe de memoria." },
+      { semana: 8,  titulo: "Evaluacion EA primer bloque", objetivo: "Registrar el nivel de conceptualizacion de escritura de cada nino", descripcion: "Produccion individual: el nombre + una palabra del proyecto + un dibujo. La docente registra el nivel (presilabico / silabico / silabico-alfabetico / alfabetico). Va al portfolio." },
+      // BLOQUE 2: Escritura convencional - Sala 5 segunda mitad (Semanas 9-16, se trabaja desde la mitad del año)
+      { semana: 9,  titulo: "Escritura de oracion: sujeto + accion", objetivo: "Producir una oracion escrita simple con sujeto y verbo de forma autonoma", descripcion: "La docente modela en el pizarron: El gato duerme. Cada nino elige un personaje del proyecto y escribe su propia oracion. Tres pasos: 1) Decir la oracion en voz alta. 2) Contar las palabras con los dedos. 3) Escribir cada palabra separada. El objetivo es la separacion entre palabras, no la ortografia." },
+      { semana: 10, titulo: "Escritura compartida: construimos un texto juntos", objetivo: "Participar en la produccion colectiva de un texto breve con estructura", descripcion: "Docente y ninos escriben juntos 3-4 oraciones. La docente escribe en el pizarron mientras los ninos dictan y toman decisiones: que ponemos primero? como empieza? Los ninos copian el texto en el cuaderno y lo ilustran." },
+      { semana: 11, titulo: "Escritura de descripcion: como es mi personaje?", objetivo: "Escribir una descripcion de dos o tres atributos de un personaje conocido", descripcion: "Cada nino elige un personaje del proyecto y escribe 2-3 oraciones: como se ve, que hace, como es. Se usa el organizador CUERPO / ACCIONES / SENTIMIENTOS como andamio. Al terminar cada nino lee y el grupo adivina de quien se trata." },
+      { semana: 12, titulo: "Dictado al docente: produccion con revision", objetivo: "Dictar un texto al docente y participar en su revision colectiva", descripcion: "Los ninos dictan un texto colectivo sobre el proyecto. La docente escribe exactamente lo que dicen. Luego rele y entre todos deciden si se entiende, si falta algo, si hay que cambiar algo. Primera aproximacion a la revision de texto." },
+      { semana: 13, titulo: "Escritura de cuento: inicio, conflicto y final", objetivo: "Producir un cuento breve con estructura narrativa completa", descripcion: "Cada nino escribe un cuento de tres partes en hojas dobladas: INICIO (Habia una vez...), CONFLICTO (Pero un dia...) y FINAL (Al final...). La docente muestra la estructura en cartel. Los cuentos quedan en la biblioteca de la sala." },
+      { semana: 14, titulo: "Revision por pares: el escritor y el lector", objetivo: "Revisar la escritura propia con apoyo de un par para mejorar la comunicacion", descripcion: "En parejas un nino lee su texto al otro. El lector dice: entendi... / no entendi... / me gustaria saber mas de... El escritor hace una sola mejora. La docente modela primero con un texto anonimo en el pizarron." },
+      { semana: 15, titulo: "Escritura para publicar: preparar el texto final", objetivo: "Reescribir un texto incorporando mejoras para publicarlo en la sala", descripcion: "Cada nino elige un texto producido en semanas anteriores, incorpora las revisiones y lo pasa en limpio para publicar. Se hace una muestra de escritura para las familias." },
+      { semana: 16, titulo: "Evaluacion EA sala 5: texto autonomo + portfolio", objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma", descripcion: "Produccion totalmente autonoma: nombre + oracion sobre el proyecto + dibujo. La docente registra: nivel de escritura, separacion entre palabras, correspondencia sonido-letra, uso de mayuscula. Va al portfolio como evidencia del segundo trimestre." },
+    ],
+  },
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -235,7 +261,7 @@ function SecuenciaModal({
   onClose: () => void;
 }) {
   const [ejeExpandido, setEjeExpandido] = useState<string | null>(null)
-  const [tabActivo, setTabActivo] = useState<"CF" | "CT" | "O">("CF")
+  const [tabActivo, setTabActivo] = useState<"CF" | "CT" | "O" | "EA">("CF")
 
   if (!isOpen) return null
 

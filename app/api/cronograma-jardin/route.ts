@@ -63,12 +63,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, historial: semanas })
   }
 
-  // SEMANA ACTUAL: busca los registros mas recientes no finalizados de esta sala
-  // Busca semana actual + semana anterior para tolerar desfase de carga
+  // SEMANA A MOSTRAR:
+  // 1. Si hay datos en la semana actual → usar semana actual
+  // 2. Si hay datos en la semana anterior (cronograma cargado la semana pasada) → usar semana anterior
+  // 3. Si no hay datos → mostrar la semana que viene (proximo lunes)
   const lunes = getLunesSemana(new Date())
   const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
+  const lunesSig = new Date(lunes); lunesSig.setDate(lunesSig.getDate() + 7)
   const lunesStr = lunes.toISOString().split("T")[0]
   const lunesAntStr = lunesAnt.toISOString().split("T")[0]
+  const lunesSigStr = lunesSig.toISOString().split("T")[0]
 
   const { data: todos, error } = await supabase
     .from(TABLA)
@@ -81,9 +85,22 @@ export async function GET(req: Request) {
   // Filtrar por sala normalizada en memoria
   const data = (todos || []).filter((r: any) => normSala(r.sala || "") === salaKey)
 
-  // Determinar cual es la semana a usar (priorizar la actual, sino la anterior)
-  const semanaUsada = data.some((r: any) => r.semana_inicio === lunesStr) ? lunesStr : lunesAntStr
-  const lunesUsado = semanaUsada === lunesStr ? lunes : lunesAnt
+  // Determinar semana y lunes a usar
+  let semanaUsada: string
+  let lunesUsado: Date
+  if (data.some((r: any) => r.semana_inicio === lunesStr)) {
+    // Hay datos esta semana
+    semanaUsada = lunesStr
+    lunesUsado = lunes
+  } else if (data.some((r: any) => r.semana_inicio === lunesAntStr)) {
+    // Hay datos de la semana anterior (cronograma cargado antes)
+    semanaUsada = lunesAntStr
+    lunesUsado = lunesAnt
+  } else {
+    // Sin datos — mostrar semana que viene para que la maestra cargue el proximo cronograma
+    semanaUsada = lunesSigStr
+    lunesUsado = lunesSig
+  }
 
   const cronograma: Record<string, any> = {}
   DIAS.forEach((dia, idx) => {
@@ -112,11 +129,13 @@ export async function GET(req: Request) {
 // POST - Guardar cronograma de la semana
 export async function POST(req: Request) {
   const body = await req.json()
-  const { sala, cronograma } = body
+  const { sala, cronograma, semana_inicio } = body
   if (!sala || !cronograma) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
-  const lunes = getLunesSemana(new Date())
-  const lunesStr = lunes.toISOString().split("T")[0]
+  // Usar la semana que manda el cliente (la que tiene en pantalla)
+  // Si no la manda, calcular el proximo lunes
+  const lunes = semana_inicio ? new Date(semana_inicio + "T00:00:00") : getLunesSemana(new Date())
+  const lunesStr = semana_inicio || lunes.toISOString().split("T")[0]
 
   for (let idx = 0; idx < DIAS.length; idx++) {
     const dia = DIAS[idx]

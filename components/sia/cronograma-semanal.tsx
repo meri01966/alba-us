@@ -105,6 +105,7 @@ interface CronogramaSemanalProps {
 
 export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: CronogramaSemanalProps) {
   const [cronograma, setCronograma] = useState<Record<string, DiaData>>({})
+  const [semanaInicioActual, setSemanaInicioActual] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [guardadoOk, setGuardadoOk] = useState(false)
@@ -163,6 +164,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
+          // Guardar la semana que devolvio el servidor para usarla al guardar
+          if (data.semanaInicio) setSemanaInicioActual(data.semanaInicio)
           const cronogramaBase = inicializarCronograma()
           const cronogramaCargado: Record<string, DiaData> = {}
           DIAS.forEach((dia) => {
@@ -238,7 +241,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       const res = await fetch(`/api/cronograma-jardin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala, cronograma }),
+        // Mandar la semana que tiene en pantalla para que guarde en la semana correcta
+        body: JSON.stringify({ sala, cronograma, semana_inicio: semanaInicioActual || undefined }),
       })
       if (res.ok) {
         setGuardadoOk(true)

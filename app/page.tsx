@@ -562,7 +562,8 @@ export default function ALBADashboard() {
         fetch("/api/cronograma-jardin", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre, semana_inicio: semanaStr }),
+          // NO se manda semana_inicio — el endpoint busca en las ultimas 2 semanas por sala+dia normalizado
+          body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
         }).catch(() => {/* silencioso */})
 
         // --- Paso 5: ALBA recalcula la proxima sugerencia ---
