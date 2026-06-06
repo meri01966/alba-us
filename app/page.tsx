@@ -469,6 +469,32 @@ export default function ALBADashboard() {
     const ejeDelDia = ejeActual
     const actividadDelDia = actividadSugeridaALBA || actividadActual
 
+    // Si la actividad no se realizo, solo registrar el cierre con flag no_realizada
+    // sin blanquear alumnos ni limpiar evaluaciones
+    if (datos.evaluacion === "no_realizada") {
+      try {
+        await fetch("/api/registro-cierre", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actividadALBA: actividadDelDia,
+            actividadDocente: actividadDelDia,
+            eje: ejeDelDia,
+            sala: salaActual,
+            evaluacionGeneral: "no_realizada",
+            observaciones: datos.observaciones,
+            sugerenciaParaIA: datos.sugerencia,
+            stats: { green: 0, yellow: 0, red: 0, ausentes: students.length },
+          }),
+        })
+      } catch (e) {
+        console.error("[v0] Error guardando no_realizada:", e)
+      }
+      setJornadaToast({ tipo: "ok", mensaje: "Registrado. ALBA volvera a sugerir esta actividad en la proxima planificacion." })
+      setTimeout(() => setJornadaToast(null), 4000)
+      return
+    }
+
     // --- Paso 1: marcar como verde a todos los alumnos sin evaluacion explicita ---
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
     const evaluacionesFinales = { ...evaluaciones }
@@ -538,7 +564,23 @@ export default function ALBADashboard() {
           dayPlanningRef.current?.fetchBrain()
         }, 7000)
         
-        // --- Paso 5: limpiar evaluaciones para la nueva clase ---
+        // --- Paso 5: indexar actividad evaluada a la red de ALBA (para redistribucion) ---
+        if (actividadDelDia) {
+          fetch("/api/actividad-planificada", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fecha: new Date().toISOString().split("T")[0],
+              actividad: actividadDelDia,
+              eje: ejeDelDia,
+              sala: salaActual,
+              evaluacion: datos.evaluacion,
+              origen: "cierre_jornada",
+            }),
+          }).catch(() => {/* silencioso */})
+        }
+
+        // --- Paso 6: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(STORAGE_PROGRESS_KEY)
@@ -1303,6 +1345,7 @@ useEffect(() => {
               <CronogramaInlinePreview
                 sala={salaActual}
                 onAbrirCompleto={() => setShowCronograma(true)}
+                mensajesPendientes={mensajesDirectora.filter(m => !m.leido).length}
               />
 
               {/* Fila 2: Proyecto (izq) + Sugerencia ALBA (der) */}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen } from "lucide-react"
+import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen, Eye, Pencil, MessageSquare } from "lucide-react"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 
@@ -61,13 +61,16 @@ function esHoy(fecha: string): boolean {
 interface Props {
   sala: string
   onAbrirCompleto: () => void
+  mensajesPendientes?: number
 }
 
-export function CronogramaInlinePreview({ sala, onAbrirCompleto }: Props) {
+export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendientes = 0 }: Props) {
   const [cronograma, setCronograma] = useState<Record<string, DiaData>>({})
   const [clasesEspeciales, setClasesEspeciales] = useState<ClaseEspecial[]>([])
   const [loading, setLoading] = useState(true)
   const [diaExpandido, setDiaExpandido] = useState<string | null>(null)
+  // hayDatos: si hay cronograma guardado, el header muestra Ver + Editar; si no, solo Planificar
+  const [hayDatos, setHayDatos] = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -82,6 +85,11 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto }: Props) {
         const data = await resCron.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
           setCronograma(data.cronograma)
+          // Determinar si hay actividades reales guardadas
+          const tieneActividades = Object.values(data.cronograma as Record<string, DiaData>).some(
+            d => d.actividades?.some(a => a.nombre?.trim())
+          )
+          setHayDatos(tieneActividades)
         } else {
           // Inicializar con fechas de la semana actual
           const lunes = getLunesSemana()
@@ -114,21 +122,43 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto }: Props) {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-5 py-3 border-b border-slate-100"
+        className="flex items-center justify-between px-4 py-3 border-b border-slate-100"
         style={{ backgroundColor: "#1e3a5f" }}
       >
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-white" />
           <span className="text-sm font-bold text-white">Cronograma Semanal</span>
         </div>
-        <button
-          type="button"
-          onClick={onAbrirCompleto}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 hover:bg-white/30 text-white transition-colors"
-        >
-          Editar semana
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Boton mensajes — siempre visible, badge si hay pendientes */}
+          {mensajesPendientes > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-400 text-white text-xs font-bold">
+              <MessageSquare className="w-3.5 h-3.5" />
+              {mensajesPendientes}
+            </div>
+          )}
+          {/* Ver en modo lectura (solo si hay cronograma guardado) */}
+          {hayDatos && (
+            <button
+              type="button"
+              onClick={onAbrirCompleto}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Ver
+            </button>
+          )}
+          {/* Editar / Planificar semana */}
+          <button
+            type="button"
+            onClick={onAbrirCompleto}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 hover:bg-white/30 text-white transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {hayDatos ? "Editar" : "Planificar semana"}
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       {/* Grid de 5 dias */}

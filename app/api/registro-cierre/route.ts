@@ -32,6 +32,7 @@ export async function POST(request: Request) {
 
     // Determinar si la actividad fue efectiva
     const actividadEfectiva = evaluacionGeneral === "excelente" || evaluacionGeneral === "buena"
+    const noRealizada = evaluacionGeneral === "no_realizada"
     const usarEnFuturo = actividadEfectiva && promedio >= 60
 
     const registro = {
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       observaciones,
       sugerencia_ia: sugerenciaParaIA,
       stats: safeStats,
+      no_realizada: noRealizada,      // flag para que ALBA la vuelva a sugerir
     }
 
     const supabase = getSupabase()
@@ -60,7 +62,9 @@ export async function POST(request: Request) {
 
     // Generar feedback para el docente
     let feedback = ""
-    if (actividadEfectiva) {
+    if (noRealizada) {
+      feedback = `Actividad "${actividadDocente}" registrada como no realizada. ALBA la volvera a sugerir en la proxima planificacion.`
+    } else if (actividadEfectiva) {
       feedback = `Excelente! La actividad "${actividadDocente}" ha sido registrada como efectiva para ${eje}. `
       if (usarEnFuturo) {
         feedback += "ALBA la considerara para futuras recomendaciones de esta sala."
