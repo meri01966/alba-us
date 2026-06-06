@@ -1251,39 +1251,65 @@ export async function GET(req: Request) {
       analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales: actividadesExitosas, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
-    // ── 5. Elegir eje: ROTACION CICLICA CF → O → CT → CF → O → CT
-    // Cada Finalizar Jornada inserta un cierre nuevo → totalClasesCompletadasGlobal aumenta
-    // La rotacion garantiza que los 3 ejes avanzan en paralelo, cada uno a su propio ritmo
+    // ── 5. Elegir eje: ROTACION CICLICA con logica de mitad de año ─────────
+    // Primera mitad (sem 1-20): CF → O → CT → CF → O → CT
+    // Segunda mitad (sem 21+):  CF → OCT → EA  (OCT = O+CT combinados, EA = Escritura)
+    //   OCT alterna O y CT en clases pares/impares para mantener ambos ejes activos
     // Excepcion: si un eje tiene 2 clases seguidas en rojo, ALBA lo repite antes de rotar
-    const ORDEN_EJES: ("CF" | "CT" | "O")[] = ["CF", "O", "CT"]
-    let ejeSugerido: "CF" | "CT" | "O" = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length]
+    const segundaMitad = esSegundaMitadAnio()
+    const ORDEN_EJES: ("CF" | "CT" | "O" | "EA")[] = segundaMitad
+      ? ["CF", "O", "CT", "EA"]   // en segunda mitad: CF/O/CT alternan con EA como 4to slot
+      : ["CF", "O", "CT"]
+
+    // Para segunda mitad: el slot 1 (indice 1) alterna O y CT segun paridad del total de clases
+    // Esto garantiza que tanto O como CT siguen siendo trabajados
+    let ejeSugerido: "CF" | "CT" | "O" | "EA"
+    if (segundaMitad) {
+      const slotIndex = totalClasesCompletadasGlobal % 3  // rota en 3: CF / O|CT / EA
+      if (slotIndex === 0) {
+        ejeSugerido = "CF"
+      } else if (slotIndex === 1) {
+        // Alterna O y CT segun paridad del total de veces que se paso por este slot
+        const vecesSlot1 = Math.floor(totalClasesCompletadasGlobal / 3)
+        ejeSugerido = vecesSlot1 % 2 === 0 ? "O" : "CT"
+      } else {
+        ejeSugerido = "EA"
+      }
+    } else {
+      ejeSugerido = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length] as "CF" | "CT" | "O"
+    }
 
     // Si el eje elegido por rotacion tiene 2+ clases seguidas en rojo, ALBA lo mantiene
     // para consolidar antes de continuar la rotacion (maximo 2 repeticiones)
-    const ejeRotado = ejeSugerido
-    const datosEjeRotado = analisis[ejeRotado]
-    if (datosEjeRotado.ultimasClasesEnRojo >= 2) {
-      // Mantener el mismo eje para consolidar — no rotar todavia
-      ejeSugerido = ejeRotado
+    // EA no aplica esta logica (es nueva, no hay historico de rojos)
+    if (ejeSugerido !== "EA") {
+      const datosEjeRotado = analisis[ejeSugerido as "CF" | "CT" | "O"]
+      if (datosEjeRotado.ultimasClasesEnRojo >= 2) {
+        ejeSugerido = ejeSugerido  // mantener el mismo eje para consolidar
+      }
     }
 
     const CHECKPOINT_CADA = 10
     const esCheckpoint = totalClasesCompletadasGlobal > 0 && totalClasesCompletadasGlobal % CHECKPOINT_CADA === 0
 
     // ── 6. Elegir actividad: combinar secuencia + evidencia inter-salas ────
-    const ejeDatos = analisis[ejeSugerido]
+    // EA no tiene analisis historico (eje nuevo); usamos defaults para no crashear
+    const ejeParaAnalisis: "CF" | "CT" | "O" = ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF" | "CT" | "O"
+    const ejeDatos = analisis[ejeParaAnalisis]
+    const ejeDatosEA = { clasesCompletadas: 0, promedio: 0, ultimasClasesEnRojo: 0, actividadesExitosasLocales: [] }
+    const ejeDatosActivos = ejeSugerido === "EA" ? ejeDatosEA : ejeDatos
 
     // Si hay 2+ clases seguidas con promedio bajo, retroceder en la secuencia
     // Solo retroceder si hay mas de 1 clase completada (no tiene sentido retroceder de la primera)
-    let clasesParaCalculo = ejeDatos.clasesCompletadas
-    if (ejeDatos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 1) {
+    let clasesParaCalculo = ejeDatosActivos.clasesCompletadas
+    if (ejeDatosActivos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 1) {
       clasesParaCalculo = Math.max(1, clasesParaCalculo - 1)
     }
 
     const { actividad, indice, esRepeticion, esAvanzado } = calcularActividadDelDia(
-      ejeSugerido,
+      ejeSugerido as "CF" | "CT" | "O" | "EA",
       clasesParaCalculo,
-      ejeDatos.promedio,
+      ejeDatosActivos.promedio,
       sala
     )
 
@@ -1296,17 +1322,17 @@ export async function GET(req: Request) {
     }
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
-    // Si es asi, y hay una actividad de la red con >= 70%, usar esa
-    const actividadLocal = analisis[ejeSugerido].actividadesExitosasLocales
-    const actTasaLocal = actividadLocal.find(a => a.actividad === actividad.titulo)
+    // EA no tiene historico de red todavia — se salta el check de red para ese eje
+    const actividadLocal = ejeSugerido === "EA" ? [] : analisis[ejeSugerido as "CF" | "CT" | "O"].actividadesExitosasLocales
+    const actTasaLocal = actividadLocal.find((a: { actividad: string; tasa: number }) => a.actividad === actividad.titulo)
     const tasaLocal = actTasaLocal ? actTasaLocal.tasa : -1 // -1 = sin datos
 
-    const redParaEje = exitosasRed[ejeSugerido] || []
+    const redParaEje = ejeSugerido === "EA" ? [] : (exitosasRed[ejeSugerido as "CF" | "CT" | "O"] || [])
     // Buscar en la SECUENCIA la actividad de la red que no hayamos hecho aun
-    const actividadesHechasEnEste = new Set(regs.filter(r => r.eje === ejeSugerido).map(r => r.actividad))
+    const actividadesHechasEnEste = new Set(regs.filter((r: { eje: string }) => r.eje === ejeSugerido).map((r: { actividad: string }) => r.actividad))
     const candidataRed = redParaEje
-      .filter(r => !actividadesHechasEnEste.has(r.actividad))
-      .sort((a, b) => b.tasa - a.tasa)[0]
+      .filter((r: { actividad: string }) => !actividadesHechasEnEste.has(r.actividad))
+      .sort((a: { tasa: number }, b: { tasa: number }) => b.tasa - a.tasa)[0]
 
     // Usar actividad de la red si:
     // - La actividad de la secuencia tiene tasa local mala (< 30%), O
@@ -1315,7 +1341,7 @@ export async function GET(req: Request) {
     const usarRed = (tasaLocal !== -1 && tasaLocal < 30 && candidataRed != null)
       || (candidataEsDocente && candidataRed && candidataRed.tasa >= 80 && candidataRed.salas >= 2)
     const actividadFinal = usarRed
-      ? (SECUENCIA[ejeSugerido].find(a => a.titulo === candidataRed.actividad) ?? actividad)
+      ? (SECUENCIA[ejeSugerido as "CF" | "CT" | "O" | "EA"].find((a: { titulo: string }) => a.titulo === candidataRed.actividad) ?? actividad)
       : actividad
     const aprendidoDeLaRed = usarRed
     const salaRedNombre = usarRed && candidataRed ? `${candidataRed.salas} sala${candidataRed.salas > 1 ? "s" : ""} de la red` : null
@@ -1323,12 +1349,13 @@ export async function GET(req: Request) {
     // ── 7. Construir respuesta ─���───────────────────────────────────────────
     // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
   // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
-  const limites4 = { CF: 11, CT: 9, O: 10 }
+  const limites4: Record<string, number> = { CF: 11, CT: 9, O: 10, EA: 7 }
+    const ejeKey = ejeSugerido as "CF" | "CT" | "O" | "EA"
     const totalEnSecuencia = esde4Anios(sala)
-      ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
-      : SECUENCIA[ejeSugerido].length
+      ? SECUENCIA[ejeKey].slice(0, limites4[ejeKey] ?? SECUENCIA[ejeKey].length).length
+      : SECUENCIA[ejeKey].length
     const edadLabel = esde4Anios(sala) ? " (4 anos)" : " (5 anos)"
-    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO)"
+    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : ejeSugerido === "EA" ? "Aproximacion a la Escritura" : "Oralidad (ECO)"
 
     // Enriquecer la razon con evidencia internacional si existe
     const evidencia = EVIDENCIA_INTERNACIONAL[actividadFinal.titulo]
@@ -1428,7 +1455,7 @@ export async function GET(req: Request) {
       : ""
     
     // Agregar marco curricular DC Inicial GCBA 2025
-    razon += enriquecerConDC(ejeSugerido, sala, indice, ejeDatos.tendencia)
+    razon += enriquecerConDC(ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O", sala, indice, ejeDatos.tendencia)
 
     // Agregar contextualización del proyecto al final de la razón
     razon += temaEnRazon
@@ -1534,10 +1561,10 @@ export async function GET(req: Request) {
           ? DC_BSAS_2025.propositos.sala4[indice % DC_BSAS_2025.propositos.sala4.length]
           : DC_BSAS_2025.propositos.sala5[indice % DC_BSAS_2025.propositos.sala5.length],
         contenidos: esde4Anios(sala) 
-          ? DC_BSAS_2025.contenidos[ejeSugerido].sala4
-          : DC_BSAS_2025.contenidos[ejeSugerido].sala5,
-        expectativaLogro: DC_BSAS_2025.expectativasLogro[ejeSugerido][Math.min(Math.floor(indice / 3), DC_BSAS_2025.expectativasLogro[ejeSugerido].length - 1)],
-        estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido],
+          ? DC_BSAS_2025.contenidos[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].sala4
+          : DC_BSAS_2025.contenidos[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].sala5,
+        expectativaLogro: DC_BSAS_2025.expectativasLogro[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"][Math.min(Math.floor(indice / 3), DC_BSAS_2025.expectativasLogro[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].length - 1)],
+        estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"],
         principiosDC: DC_BSAS_2025.enfoqueDid.principios.slice(0, 3),
       },
     }, {
