@@ -1,6 +1,7 @@
-// ALBA Brain API v10.1 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
+// ALBA Brain API v10.3 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { generateText } from "ai"
 
 const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
@@ -331,7 +332,7 @@ function getMicroCapacitacion(titulo: string): MicroCap {
 // El cerebro de ALBA usa esta secuencia como NORTE y la ajusta segun el desempenio real del grupo
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas" }[]> = {
+const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas" }[]> = {
   // ── CONCIENCIA FONOLOGICA ────────────────────────────────────────────────
   // DC CABA 2025: sala 4 trabaja escucha, rimas, silabas y vocales.
   // Sala 5 profundiza fonemas consonanticos, blending y segmentacion fonemica.
@@ -820,6 +821,98 @@ const SECUENCIA: Record<"CF" | "CT" | "O", { titulo: string; objetivo: string; d
       sala: "ambas"
     },
   ],
+
+  // ── APROXIMACION A LA ESCRITURA (EA) — segunda mitad de ano ─────────────
+  // DC CABA 2025: Practicas de lectura y escritura en contextos reales.
+  // Se incorpora desde julio aproximadamente, cuando la CF ya esta consolidada.
+  // Sala 5 es el foco principal; sala 4 trabaja solo los niveles iniciales.
+  EA: [
+    {
+      titulo: "Escritura del nombre propio",
+      objetivo: "Reconocer y escribir el nombre propio como primer texto significativo",
+      descripcion: "La docente presenta tarjetas con los nombres del grupo. Cada nino busca la suya, la observa y copia su nombre en papel sin renglones. Se trabaja letra por letra con la tarjeta como modelo. Se comparan nombres: cuales son largos, cuales cortos, cuales empiezan igual. El nombre queda pegado en el cuaderno como referente permanente.",
+      materiales: ["Tarjetas con nombres en mayuscula imprenta", "Papel blanco sin renglones", "Marcadores gruesos", "Cuaderno personal"],
+      dccaba: "DC CABA 2025 - EA: El nombre propio es el primer texto con significado real para el nino. Base de todos los programas de alfabetizacion temprana (Ferreiro & Teberosky, 1979).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Letras de mi nombre en el cuerpo",
+      objetivo: "Identificar y reconocer las letras del nombre propio en diferentes soportes",
+      descripcion: "Los ninos buscan las letras de su nombre en diarios, revistas y envases. Las recortan o senalan. Luego arman su nombre con letras moviles (tarjetas). Se trabaja la idea de que las letras son fijas: siempre son las mismas para el mismo nombre. Cierre: cada nino presenta su nombre armado al grupo.",
+      materiales: ["Diarios y revistas", "Tijeras con punta roma", "Letras moviles (tarjetas o imanes)", "Pegamento"],
+      dccaba: "DC CABA 2025 - EA: Exploracion de portadores de texto. Reconocer letras conocidas en distintos soportes desarrolla la nocion de que la escritura es un sistema estable.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Escritura espontanea: que quiero decir?",
+      objetivo: "Producir escritura espontanea para comunicar un mensaje personal",
+      descripcion: "Cada nino elige algo que quiere contarle a alguien (un familiar, un amigo imaginario) y lo escribe como puede: con letras que conoce, con dibujo-escritura, con letras mezcladas. La docente pregunta a cada uno que quiso escribir y lo anota al pie en escritura convencional. Se leen las producciones en voz alta.",
+      materiales: ["Papel carta", "Lapices y marcadores", "Sobres de carta opcionales"],
+      dccaba: "DC CABA 2025 - EA: La produccion de escritura con intencion comunicativa real es mas efectiva que la copia mecanica. Ferreiro (1979): los ninos pasan por niveles de conceptualizacion que deben respetarse.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Palabras del proyecto: mural de escritura",
+      objetivo: "Escribir palabras significativas del proyecto con apoyo del mural del aula",
+      descripcion: "Se arma un mural con las palabras clave del proyecto en curso (ej: si el proyecto es Los Insectos, van: mariposa, hormiga, alas, antenas). Los ninos copian la palabra de su eleccion en una tira de papel y la ilustran. El mural queda como banco de palabras disponible todo el mes.",
+      materiales: ["Papel afiche para el mural", "Tiras de papel", "Marcadores de colores", "Imagenes del proyecto"],
+      dccaba: "DC CABA 2025 - EA: El vocabulario del proyecto como recurso de escritura. La copia con sentido (no mecanica) del nivel inicial desarrolla la relacion sonido-grafia en contexto real.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Etiquetas: escribir para nombrar el mundo",
+      objetivo: "Producir escritura funcional etiquetando objetos del aula",
+      descripcion: "La sala se convierte en un museo: cada sector, caja y rincón necesita una etiqueta. Los ninos escriben las etiquetas (con modelo o autonomamente segun nivel). Se pegan en los objetos reales. La docente lee cada etiqueta en voz alta con el grupo. Queda como instalacion permanente del mes.",
+      materiales: ["Tarjetas en blanco", "Marcadores", "Cinta adhesiva", "Lista de palabras de referencia"],
+      dccaba: "DC CABA 2025 - EA: Escritura funcional con proposito real. El DC enfatiza que los ninos deben escribir para algo, no solo por ejercicio.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Dictado al docente: texto colectivo",
+      objetivo: "Participar en la produccion de un texto colectivo dictado al docente",
+      descripcion: "El grupo dicta una historia, noticia o carta y la docente escribe en el pizarron en tiempo real, verbalizando cada decision: escribo una mayuscula porque empieza la oracion, pongo punto porque termina la idea. Los ninos observan como el habla se convierte en escritura. Luego la docente lee el texto completo y los ninos ilustran su parte favorita.",
+      materiales: ["Pizarron o papel afiche", "Marcadores gruesos", "Hoja para ilustrar"],
+      dccaba: "DC CABA 2025 - EA: El dictado al docente es la estrategia de maxima evidencia para mostrar la relacion oral-escrito. Chambers (1993): el adulto como escriba modela el proceso de manera visible.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Lectura de lista: escribir para recordar",
+      objetivo: "Producir una lista con proposito real como texto funcional basico",
+      descripcion: "El grupo necesita una lista real: ingredientes para una receta, materiales para manualidades, libros de la biblioteca. Los ninos dictan los items y la docente va anotando. Luego cada nino copia un item de la lista con modelo a la vista. Se usa la lista realmente (para ir a buscar lo que falta, por ejemplo).",
+      materiales: ["Hoja para la lista colectiva", "Copias individuales", "Lapices", "Hoja para copiar"],
+      dccaba: "DC CABA 2025 - EA: Las listas son el tipo de texto mas simple estructuralmente y con alto valor funcional. Base para la escritura convencional segun Tolchinsky (2003).",
+      sala: "ambas"
+    },
+    {
+      titulo: "Escritura con apoyo: sonido a letra",
+      objetivo: "Escribir palabras cortas identificando fonemas y sus grafias con apoyo de la docente",
+      descripcion: "La docente elige 3-4 palabras cortas de alta frecuencia del proyecto (ej: sol, mar, casa). Para cada una: 1) La dicen lentamente estirando los sonidos. 2) Cuentan cuantos sonidos tiene. 3) Piensan qué letra va para cada sonido. 4) La escriben en el cuaderno. La docente circula y da apoyo individual sin corregir el resultado sino el proceso.",
+      materiales: ["Cuaderno personal", "Lapiz y goma", "Abecedario de pared", "Lista de palabras del proyecto"],
+      dccaba: "DC CABA 2025 - EA: Relacion sonido-letra en palabras del contexto real. El DC recomienda partir de palabras significativas del proyecto para que la escritura tenga sentido.",
+      sala: "5"
+    },
+    {
+      titulo: "Revision colectiva: mejoramos el texto",
+      objetivo: "Revisar colectivamente un texto escrito para mejorarlo como escritores reales",
+      descripcion: "Se retoma un texto producido la clase anterior (la historia dictada, la carta, las etiquetas). La docente lo lee y pregunta: que le falta? que podemos mejorar? Se hacen 2-3 correcciones colectivas: agregar una palabra, cambiar el final, agregar un detalle. Se relee el texto mejorado. Los ninos descubren que los textos se reescriben.",
+      materiales: ["Texto producido en clase anterior", "Marcadores de color para las correcciones", "Pizarron o afiche"],
+      dccaba: "DC CABA 2025 - EA: La revision es parte del proceso escritor. Ensenar desde el inicio que los textos se pueden mejorar instala la mentalidad de escritor segun el DC.",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion EA: muestra de producciones escritas",
+      objetivo: "Evaluar el nivel de escritura individual mediante la produccion autonoma de un texto breve",
+      descripcion: "Cada nino produce de forma autonoma una escritura corta: su nombre + una palabra que elija + un dibujo que la represente. La docente registra el nivel de escritura: presilabico, silabico, silabico-alfabetico, alfabetico. No se corrige ni se pide reescritura. La muestra va al portfolio del nino como evidencia de su nivel al finalizar el primer semestre.",
+      materiales: ["Hoja blanca A4", "Lapices y marcadores", "Portfolio individual", "Rubrica de niveles de escritura"],
+      dccaba: "DC CABA 2025 - EA: Evaluacion formativa de escritura. El DC propone registrar el nivel de conceptualizacion, no calificar la produccion.",
+      sala: "ambas"
+    },
+  ],
+
+  // ── OCT: alias O+CT combinados — segunda mitad de ano ──────────────────────
+  // En la segunda mitad del año ALBA rota: CF / O+CT / EA
+  // OCT alterna automaticamente entre O y CT segun la clase par/impar del eje
+  OCT: [],  // se resuelve en runtime — ver logica de rotacion mitad de año
 }
 
 const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
@@ -828,17 +921,36 @@ function esde4Anios(sala: string): boolean {
   return SALAS_4_ANIOS.some(ref => s.includes(ref.replace(/\s/g, "")))
 }
 
+// Detectar segunda mitad del ciclo lectivo (aproximadamente julio en adelante)
+// El ciclo lectivo CABA va de marzo a diciembre (semanas 1-40 aprox.)
+// Mitad = semana 21 → aprox. 1 de julio
+// Se calcula desde el primer lunes de marzo del año en curso
+function esSegundaMitadAnio(): boolean {
+  const ahora = new Date()
+  const anio = ahora.getFullYear()
+  // Primer lunes de marzo
+  const inicioMarzo = new Date(anio, 2, 1) // 1 de marzo
+  const diaSemana = inicioMarzo.getDay() // 0=dom, 1=lun
+  const diasHastaLunes = diaSemana === 0 ? 1 : diaSemana === 1 ? 0 : 8 - diaSemana
+  const primerLunesMarzo = new Date(anio, 2, 1 + diasHastaLunes)
+  // Semanas transcurridas desde el inicio del ciclo
+  const msTranscurridos = ahora.getTime() - primerLunesMarzo.getTime()
+  const semanasTranscurridas = Math.floor(msTranscurridos / (7 * 24 * 60 * 60 * 1000))
+  return semanasTranscurridas >= 21
+}
+
 function calcularActividadDelDia(
-  eje: "CF" | "CT" | "O",
+  eje: "CF" | "CT" | "O" | "EA",
   clasesCompletadasEnEje: number,
   promedioEje: number,
   sala = "Manzanos"
-): { actividad: (typeof SECUENCIA)[typeof eje][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
+): { actividad: (typeof SECUENCIA)["CF"][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
   // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
-  // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
-  const limites4 = { CF: 11, CT: 9, O: 10 }
-  const seq = esde4Anios(sala) ? fullSeq.slice(0, limites4[eje]) : fullSeq
+  // Para EA sala 4 solo accede a los 7 primeros (escritura emergente, antes de escritura convencional)
+  const limites4: Record<string, number> = { CF: 11, CT: 9, O: 10, EA: 7 }
+  const limite = limites4[eje] ?? fullSeq.length
+  const seq = esde4Anios(sala) ? fullSeq.slice(0, limite) : fullSeq
   if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
   let indice = clasesCompletadasEnEje % seq.length
@@ -1140,38 +1252,65 @@ export async function GET(req: Request) {
       analisis[eje] = { total, verdes, amarillos, rojos, promedio, alumnosEnRojo, actividadesExitosasLocales: actividadesExitosas, tendencia, clasesCompletadas, ultimasClasesEnRojo }
     }
 
-    // ── 5. Elegir eje: ROTACION CICLICA CF → O → CT → CF → O → CT
-    // Cada Finalizar Jornada inserta un cierre nuevo → totalClasesCompletadasGlobal aumenta
-    // La rotacion garantiza que los 3 ejes avanzan en paralelo, cada uno a su propio ritmo
+    // ── 5. Elegir eje: ROTACION CICLICA con logica de mitad de año ─────────
+    // Primera mitad (sem 1-20): CF → O → CT → CF → O → CT
+    // Segunda mitad (sem 21+):  CF → OCT → EA  (OCT = O+CT combinados, EA = Escritura)
+    //   OCT alterna O y CT en clases pares/impares para mantener ambos ejes activos
     // Excepcion: si un eje tiene 2 clases seguidas en rojo, ALBA lo repite antes de rotar
-    const ORDEN_EJES: ("CF" | "CT" | "O")[] = ["CF", "O", "CT"]
-    let ejeSugerido: "CF" | "CT" | "O" = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length]
+    const segundaMitad = esSegundaMitadAnio()
+    const ORDEN_EJES: ("CF" | "CT" | "O" | "EA")[] = segundaMitad
+      ? ["CF", "O", "CT", "EA"]   // en segunda mitad: CF/O/CT alternan con EA como 4to slot
+      : ["CF", "O", "CT"]
+
+    // Para segunda mitad: el slot 1 (indice 1) alterna O y CT segun paridad del total de clases
+    // Esto garantiza que tanto O como CT siguen siendo trabajados
+    let ejeSugerido: "CF" | "CT" | "O" | "EA"
+    if (segundaMitad) {
+      const slotIndex = totalClasesCompletadasGlobal % 3  // rota en 3: CF / O|CT / EA
+      if (slotIndex === 0) {
+        ejeSugerido = "CF"
+      } else if (slotIndex === 1) {
+        // Alterna O y CT segun paridad del total de veces que se paso por este slot
+        const vecesSlot1 = Math.floor(totalClasesCompletadasGlobal / 3)
+        ejeSugerido = vecesSlot1 % 2 === 0 ? "O" : "CT"
+      } else {
+        ejeSugerido = "EA"
+      }
+    } else {
+      ejeSugerido = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length] as "CF" | "CT" | "O"
+    }
 
     // Si el eje elegido por rotacion tiene 2+ clases seguidas en rojo, ALBA lo mantiene
     // para consolidar antes de continuar la rotacion (maximo 2 repeticiones)
-    const ejeRotado = ejeSugerido
-    const datosEjeRotado = analisis[ejeRotado]
-    if (datosEjeRotado.ultimasClasesEnRojo >= 2) {
-      // Mantener el mismo eje para consolidar — no rotar todavia
-      ejeSugerido = ejeRotado
+    // EA no aplica esta logica (es nueva, no hay historico de rojos)
+    if (ejeSugerido !== "EA") {
+      const datosEjeRotado = analisis[ejeSugerido as "CF" | "CT" | "O"]
+      if (datosEjeRotado.ultimasClasesEnRojo >= 2) {
+        ejeSugerido = ejeSugerido  // mantener el mismo eje para consolidar
+      }
     }
 
     const CHECKPOINT_CADA = 10
     const esCheckpoint = totalClasesCompletadasGlobal > 0 && totalClasesCompletadasGlobal % CHECKPOINT_CADA === 0
 
     // ── 6. Elegir actividad: combinar secuencia + evidencia inter-salas ────
-    const ejeDatos = analisis[ejeSugerido]
+    // EA no tiene analisis historico (eje nuevo); usamos defaults para no crashear
+    const ejeParaAnalisis: "CF" | "CT" | "O" = ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF" | "CT" | "O"
+    const ejeDatos = analisis[ejeParaAnalisis]
+    const ejeDatosEA = { clasesCompletadas: 0, promedio: 0, ultimasClasesEnRojo: 0, actividadesExitosasLocales: [] }
+    const ejeDatosActivos = ejeSugerido === "EA" ? ejeDatosEA : ejeDatos
 
     // Si hay 2+ clases seguidas con promedio bajo, retroceder en la secuencia
-    let clasesParaCalculo = ejeDatos.clasesCompletadas
-    if (ejeDatos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 0) {
-      clasesParaCalculo = Math.max(0, clasesParaCalculo - 1)
+    // Solo retroceder si hay mas de 1 clase completada (no tiene sentido retroceder de la primera)
+    let clasesParaCalculo = ejeDatosActivos.clasesCompletadas
+    if (ejeDatosActivos.ultimasClasesEnRojo >= 2 && clasesParaCalculo > 1) {
+      clasesParaCalculo = Math.max(1, clasesParaCalculo - 1)
     }
 
     const { actividad, indice, esRepeticion, esAvanzado } = calcularActividadDelDia(
-      ejeSugerido,
+      ejeSugerido as "CF" | "CT" | "O" | "EA",
       clasesParaCalculo,
-      ejeDatos.promedio,
+      ejeDatosActivos.promedio,
       sala
     )
 
@@ -1184,17 +1323,17 @@ export async function GET(req: Request) {
     }
 
     // Verificar si la actividad sugerida tiene mala tasa local (< 30%)
-    // Si es asi, y hay una actividad de la red con >= 70%, usar esa
-    const actividadLocal = analisis[ejeSugerido].actividadesExitosasLocales
-    const actTasaLocal = actividadLocal.find(a => a.actividad === actividad.titulo)
+    // EA no tiene historico de red todavia — se salta el check de red para ese eje
+    const actividadLocal = ejeSugerido === "EA" ? [] : analisis[ejeSugerido as "CF" | "CT" | "O"].actividadesExitosasLocales
+    const actTasaLocal = actividadLocal.find((a: { actividad: string; tasa: number }) => a.actividad === actividad.titulo)
     const tasaLocal = actTasaLocal ? actTasaLocal.tasa : -1 // -1 = sin datos
 
-    const redParaEje = exitosasRed[ejeSugerido] || []
+    const redParaEje = ejeSugerido === "EA" ? [] : (exitosasRed[ejeSugerido as "CF" | "CT" | "O"] || [])
     // Buscar en la SECUENCIA la actividad de la red que no hayamos hecho aun
-    const actividadesHechasEnEste = new Set(regs.filter(r => r.eje === ejeSugerido).map(r => r.actividad))
+    const actividadesHechasEnEste = new Set(regs.filter((r: { eje: string }) => r.eje === ejeSugerido).map((r: { actividad: string }) => r.actividad))
     const candidataRed = redParaEje
-      .filter(r => !actividadesHechasEnEste.has(r.actividad))
-      .sort((a, b) => b.tasa - a.tasa)[0]
+      .filter((r: { actividad: string }) => !actividadesHechasEnEste.has(r.actividad))
+      .sort((a: { tasa: number }, b: { tasa: number }) => b.tasa - a.tasa)[0]
 
     // Usar actividad de la red si:
     // - La actividad de la secuencia tiene tasa local mala (< 30%), O
@@ -1203,7 +1342,7 @@ export async function GET(req: Request) {
     const usarRed = (tasaLocal !== -1 && tasaLocal < 30 && candidataRed != null)
       || (candidataEsDocente && candidataRed && candidataRed.tasa >= 80 && candidataRed.salas >= 2)
     const actividadFinal = usarRed
-      ? (SECUENCIA[ejeSugerido].find(a => a.titulo === candidataRed.actividad) ?? actividad)
+      ? (SECUENCIA[ejeSugerido as "CF" | "CT" | "O" | "EA"].find((a: { titulo: string }) => a.titulo === candidataRed.actividad) ?? actividad)
       : actividad
     const aprendidoDeLaRed = usarRed
     const salaRedNombre = usarRed && candidataRed ? `${candidataRed.salas} sala${candidataRed.salas > 1 ? "s" : ""} de la red` : null
@@ -1211,12 +1350,13 @@ export async function GET(req: Request) {
     // ── 7. Construir respuesta ─���───────────────────────────────────────────
     // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
   // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
-  const limites4 = { CF: 11, CT: 9, O: 10 }
+  const limites4: Record<string, number> = { CF: 11, CT: 9, O: 10, EA: 7 }
+    const ejeKey = ejeSugerido as "CF" | "CT" | "O" | "EA"
     const totalEnSecuencia = esde4Anios(sala)
-      ? SECUENCIA[ejeSugerido].slice(0, limites4[ejeSugerido]).length
-      : SECUENCIA[ejeSugerido].length
+      ? SECUENCIA[ejeKey].slice(0, limites4[ejeKey] ?? SECUENCIA[ejeKey].length).length
+      : SECUENCIA[ejeKey].length
     const edadLabel = esde4Anios(sala) ? " (4 anos)" : " (5 anos)"
-    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : "Oralidad (ECO)"
+    const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : ejeSugerido === "EA" ? "Aproximacion a la Escritura" : "Oralidad (ECO)"
 
     // Enriquecer la razon con evidencia internacional si existe
     const evidencia = EVIDENCIA_INTERNACIONAL[actividadFinal.titulo]
@@ -1316,7 +1456,7 @@ export async function GET(req: Request) {
       : ""
     
     // Agregar marco curricular DC Inicial GCBA 2025
-    razon += enriquecerConDC(ejeSugerido, sala, indice, ejeDatos.tendencia)
+    razon += enriquecerConDC(ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O", sala, indice, ejeDatos.tendencia)
 
     // Agregar contextualización del proyecto al final de la razón
     razon += temaEnRazon
@@ -1422,10 +1562,10 @@ export async function GET(req: Request) {
           ? DC_BSAS_2025.propositos.sala4[indice % DC_BSAS_2025.propositos.sala4.length]
           : DC_BSAS_2025.propositos.sala5[indice % DC_BSAS_2025.propositos.sala5.length],
         contenidos: esde4Anios(sala) 
-          ? DC_BSAS_2025.contenidos[ejeSugerido].sala4
-          : DC_BSAS_2025.contenidos[ejeSugerido].sala5,
-        expectativaLogro: DC_BSAS_2025.expectativasLogro[ejeSugerido][Math.min(Math.floor(indice / 3), DC_BSAS_2025.expectativasLogro[ejeSugerido].length - 1)],
-        estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido],
+          ? DC_BSAS_2025.contenidos[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].sala4
+          : DC_BSAS_2025.contenidos[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].sala5,
+        expectativaLogro: DC_BSAS_2025.expectativasLogro[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"][Math.min(Math.floor(indice / 3), DC_BSAS_2025.expectativasLogro[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"].length - 1)],
+        estrategiasDocente: DC_BSAS_2025.enfoqueDid.estrategiasRecomendadas[ejeSugerido === "EA" ? "CF" : ejeSugerido as "CF"|"CT"|"O"],
         principiosDC: DC_BSAS_2025.enfoqueDid.principios.slice(0, 3),
       },
     }, {
@@ -1443,3 +1583,292 @@ export async function GET(req: Request) {
 }
 // Build timestamp: 1779400487
 // Timestamp 1779751849
+
+// POST handler para acciones especiales de ALBA
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { action, proyecto, sala, dias, actividadesYaSugeridas = [] } = body
+    
+    if (action === "sugerir_actividades_semana" && proyecto && dias) {
+      // ALBA usa IA real para generar actividades de alfabetizacion ricas, variadas y siempre nuevas.
+      // Lee el historial de cierres para no repetir actividades ya realizadas.
+      // Prioriza actividades marcadas como no_realizada para volver a sugerirlas.
+
+      const supabase = getSupabase()
+
+      // Semana del año para determinar segunda mitad (semana >= 20 = desde mayo)
+      const hoy = new Date()
+      const inicioAnio = new Date(hoy.getFullYear(), 0, 1)
+      const semanaAnio = Math.ceil(((hoy.getTime() - inicioAnio.getTime()) / 86400000 + inicioAnio.getDay() + 1) / 7)
+
+      // Leer historial de cierres para contexto
+      let historialResumen = ""
+      let actividadesNoRealizadas: string[] = []
+      try {
+        const { data: cierres } = await supabase
+          .from("registro_cierre")
+          .select("actividad_alba, evaluacion_general, eje, fecha")
+          .eq("sala", sala || "Girasoles")
+          .order("fecha", { ascending: false })
+          .limit(20)
+        if (cierres && cierres.length > 0) {
+          const realizadas = cierres.filter(c => c.evaluacion_general !== "no_realizada")
+          actividadesNoRealizadas = cierres
+            .filter(c => c.evaluacion_general === "no_realizada")
+            .map(c => c.actividad_alba).filter(Boolean)
+          historialResumen = realizadas.slice(0, 10).map(c =>
+            `- ${c.actividad_alba || "sin nombre"} (${c.eje}, ${c.evaluacion_general}, ${c.fecha})`
+          ).join("\n")
+        }
+      } catch (e) {
+        // silencioso
+      }
+
+      // Los 3 dias de alfabetizacion rotan eje: dia[0]=CF, dia[1]=CT+O, dia[2]=Escritura
+      const EJES = ["CF", "CT", "Escritura"]
+      const diasArray = dias as string[]
+
+      const prompt = `Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos) de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
+
+CONTEXTO DE LA SALA:
+- Sala: ${sala}
+- Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
+- Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
+- Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
+
+MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
+Ejes: CF (Conciencia Fonologica), CT (Comprension Textual), Escritura inicial.
+
+HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
+${historialResumen || "Sin historial previo — esta es la primera semana."}
+
+${actividadesNoRealizadas.length > 0 ? `ACTIVIDADES NO REALIZADAS (volver a sugerir si son pertinentes):\n${actividadesNoRealizadas.join(", ")}` : ""}
+
+ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
+${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
+
+TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia indicado.
+Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica)
+Dia 2 (${diasArray[1]}): eje CT (Comprension Textual)  
+Dia 3 (${diasArray[2]}): eje Escritura inicial
+
+REQUISITOS DE CADA ACTIVIDAD:
+1. Novedosa, original, no repetida respecto al historial
+2. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
+3. Rica en recursos: puede incluir juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, etc.)
+4. Practicable por una sola maestra con 20-25 ninos de jardin
+5. Tiempo de ejecucion: 20-30 minutos
+6. Materiales accesibles en un jardin de infantes comun de Argentina
+
+FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JSON:
+[
+  {
+    "dia": "${diasArray[0]}",
+    "eje": "CF",
+    "nombre": "nombre corto y atractivo",
+    "capacidades": "una linea con las capacidades que desarrolla",
+    "contenidos": "contenidos curriculares especificos del DC CABA 2025",
+    "objetivo": "objetivo especifico de la actividad en una oracion",
+    "desarrollo": "descripcion paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave",
+    "materiales": "lista de materiales necesarios"
+  },
+  {
+    "dia": "${diasArray[1]}",
+    "eje": "CT",
+    ...
+  },
+  {
+    "dia": "${diasArray[2]}",
+    "eje": "Escritura",
+    ...
+  }
+]
+
+Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que ya estan en el historial. Responde SOLO con el JSON, sin ningun texto adicional.`
+
+      try {
+        const result = await generateText({
+          model: "openai/gpt-4o-mini",
+          prompt,
+          maxOutputTokens: 2000,
+          temperature: 0.85,
+        })
+
+        // Parsear JSON
+        const texto = result.text.trim()
+        const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
+        const sugerenciasIA = JSON.parse(jsonStr)
+
+        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
+          dia: s.dia,
+          actividad: {
+            nombre: s.nombre,
+            capacidades: s.capacidades,
+            contenidos: s.contenidos,
+            objetivo: s.objetivo,
+            desarrollo: s.desarrollo,
+            materiales: s.materiales,
+            eje: s.eje,
+            alfabetizacion: true,
+            origen: "alba" as const,
+          }
+        }))
+
+        return NextResponse.json({ ok: true, sugerencias })
+      } catch (iaError) {
+        console.error("[v0] Error en IA para sugerencias:", iaError)
+        // Fallback con actividades ricas predefinidas si la IA falla
+        const FALLBACK = diasArray.map((dia, idx) => ({
+          dia,
+          actividad: {
+            nombre: idx === 0 ? "Juego de sonidos con los nombres del grupo" : idx === 1 ? "Lectura dialogica: anticipacion por imagenes" : "Escritura del nombre propio con modelo",
+            capacidades: idx === 0 ? "Conciencia silabica y fonemica" : idx === 1 ? "Comprension lectora predictiva" : "Sistema de escritura — nombre como modelo estable",
+            contenidos: idx === 0 ? "Segmentacion silabica, identificacion de sonido inicial" : idx === 1 ? "Anticipacion a partir de portada e ilustraciones, comprension literal" : "Correspondencia sonido-letra, escritura espontanea con referente",
+            objetivo: idx === 0 ? "Segmentar nombres de companeros en silabas y reconocer el sonido inicial" : idx === 1 ? "Formular hipotesis sobre el contenido antes de leer y verificarlas" : "Escribir el nombre propio de memoria usando el cartel como referencia",
+            desarrollo: idx === 0 ? "En ronda, cada nino dice su nombre palmeando las silabas. Luego todos repiten. Enfatizar el primer sonido. Armar lista en afiche con los nombres y sus silabas." : idx === 1 ? "Mostrar tapa del libro. Preguntar: de que crees que trata? Por que? Registrar predicciones. Leer el cuento. Volver a las predicciones: acertaron?" : "Entregar tarjeta con nombre de cada nino. Observar, trazar con el dedo, copiar en papel. Comparar con companeros: cuales son mas largos?",
+            materiales: idx === 0 ? "Afiche, marcadores, lista de nombres de la sala" : idx === 1 ? "Cuento seleccionado, pizarron o afiche para registrar predicciones" : "Tarjetas plastificadas con nombres, hojas, lapices",
+            eje: EJES[idx],
+            alfabetizacion: true,
+            origen: "alba" as const,
+          }
+        }))
+        return NextResponse.json({ ok: true, sugerencias: FALLBACK })
+      }
+    }
+
+    
+    return NextResponse.json({ ok: false, error: "Accion no reconocida" }, { status: 400 })
+  } catch (err) {
+    console.error("Error en POST /api/brain:", err)
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })
+  }
+}
+
+// Funcion para generar actividades basadas en el proyecto
+// Implementa principios pedagogicos de Vigotsky (ZDP), Perkins (EpC), Montessori y Reggio Emilia
+function generarActividadSegunProyecto(
+  proyecto: { titulo: string; objetivoGeneral: string; duracion?: string }, 
+  dia: string, 
+  diaIdx: number,
+  actividadesYaSugeridas: string[] = []
+) {
+  const titulo = proyecto.titulo.toLowerCase()
+  const objetivo = proyecto.objetivoGeneral.toLowerCase()
+  
+  // Banco ampliado de actividades con fundamentos pedagogicos
+  // Basado en: Vigotsky (andamiaje, ZDP), Perkins (comprension), Montessori (sensorial), Reggio Emilia (100 lenguajes)
+  const bancosActividades: { [key: string]: { nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }[] } = {
+    animales: [
+      { nombre: "Descubrimos a los animales de la granja", capacidades: "Exploracion del entorno natural", contenidos: "Animales domesticos y sus caracteristicas", objetivo: "Identificar animales de la granja y sus sonidos", desarrollo: "Presentar imagenes de animales, imitar sonidos, clasificar por tamano", materiales: "Imagenes, titeres de animales, audio de sonidos" },
+      { nombre: "Armamos mascaras de animales", capacidades: "Creatividad y expresion artistica", contenidos: "Tecnicas de collage y recorte", objetivo: "Crear una mascara de su animal favorito", desarrollo: "Elegir animal, decorar mascara con papeles, mostrar a los companeros", materiales: "Cartulina, papeles de colores, pegamento, elastico" },
+      { nombre: "Jugamos al veterinario", capacidades: "Juego simbolico y empatia", contenidos: "Cuidado de los animales", objetivo: "Comprender la importancia de cuidar a los animales", desarrollo: "Dramatizar atencion veterinaria con peluches, usar elementos de doctor", materiales: "Peluches, maletin de medico, vendas, jeringas de juguete" },
+      { nombre: "Caminamos como animales", capacidades: "Expresion corporal y motricidad", contenidos: "Movimientos de distintos animales", objetivo: "Explorar diferentes formas de desplazamiento", desarrollo: "Imitar caminar como oso, saltar como conejo, arrastrarse como serpiente", materiales: "Espacio amplio, musica" },
+      { nombre: "Cantamos canciones de animales", capacidades: "Expresion musical y lenguaje", contenidos: "Canciones infantiles con animales", objetivo: "Aprender canciones y ampliar vocabulario", desarrollo: "Cantar 'En la granja de mi tio', 'Los pollitos', acompanar con palmas", materiales: "Reproductor de musica, imagenes de animales" },
+      // Actividades adicionales basadas en Montessori y Reggio Emilia
+      { nombre: "Mesa de luz con animales (Reggio Emilia)", capacidades: "Exploracion visual y sensorial", contenidos: "Siluetas y transparencias", objetivo: "Descubrir propiedades de luz y sombra con formas de animales", desarrollo: "Explorar siluetas en mesa de luz, crear historias, combinar colores", materiales: "Mesa de luz, siluetas de animales, acetatos de colores" },
+      { nombre: "Bandeja sensorial de la granja (Montessori)", capacidades: "Desarrollo sensorial y motricidad fina", contenidos: "Texturas y materiales naturales", objetivo: "Explorar texturas asociadas al habitat de los animales", desarrollo: "Tocar heno, arena, plumas; clasificar por textura; asociar animal-habitat", materiales: "Bandeja, heno, arena, plumas, piedras, animales de goma" },
+      { nombre: "Investigamos: Como nacen los animales (Vigotsky)", capacidades: "Pensamiento cientifico y lenguaje", contenidos: "Oviparos y viviparos", objetivo: "Construir conocimiento colaborativo sobre reproduccion animal", desarrollo: "Preguntas iniciales, observar imagenes, clasificar con ayuda del docente (andamiaje)", materiales: "Imagenes de huevos, animales bebes, carteles para clasificar" },
+      { nombre: "Teatro de sombras de animales", capacidades: "Expresion artistica y narrativa", contenidos: "Luz, sombra y narracion", objetivo: "Crear una historia usando siluetas de animales", desarrollo: "Armar teatro, manipular siluetas, narrar cuento grupal", materiales: "Linterna, tela blanca, siluetas de carton negro" },
+      { nombre: "Puzzle de animales y sus partes", capacidades: "Pensamiento logico y vocabulario", contenidos: "Partes del cuerpo animal", objetivo: "Reconocer y nombrar partes de diferentes animales", desarrollo: "Armar puzzles, nombrar partes, comparar entre animales", materiales: "Puzzles de animales, tarjetas de partes" },
+    ],
+    naturaleza: [
+      { nombre: "Exploramos hojas y semillas", capacidades: "Observacion y exploracion sensorial", contenidos: "Elementos de la naturaleza", objetivo: "Descubrir texturas y formas de elementos naturales", desarrollo: "Tocar, observar con lupa, clasificar hojas por forma y color", materiales: "Hojas secas, semillas, lupas, bandejas" },
+      { nombre: "Plantamos semillas", capacidades: "Responsabilidad y cuidado del ambiente", contenidos: "Ciclo de vida de las plantas", objetivo: "Iniciar el seguimiento del crecimiento de una planta", desarrollo: "Preparar maceta, colocar tierra, plantar semilla, regar", materiales: "Vasos plasticos, tierra, semillas, agua" },
+      { nombre: "Jugamos con agua y arena", capacidades: "Exploracion sensorial y creatividad", contenidos: "Propiedades del agua y la arena", objetivo: "Descubrir que pasa al mezclar agua y arena", desarrollo: "Juego libre con recipientes, trasvasar, hacer formas", materiales: "Arena, agua, recipientes, moldes" },
+      { nombre: "Observamos el cielo", capacidades: "Curiosidad cientifica", contenidos: "El sol, las nubes, el clima", objetivo: "Describir como esta el cielo hoy", desarrollo: "Salir al patio, observar, dibujar lo que vemos, conversar", materiales: "Hojas, crayones, mantas para sentarse" },
+      { nombre: "Clasificamos elementos naturales", capacidades: "Pensamiento logico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar elementos por caracteristicas", desarrollo: "Separar piedras grandes/chicas, hojas verdes/marrones", materiales: "Piedras, hojas, palitos, cajas para clasificar" },
+      // Actividades adicionales con fundamentos pedagogicos
+      { nombre: "Diario de la naturaleza (Reggio Emilia)", capacidades: "Documentacion y registro", contenidos: "Cambios en la naturaleza", objetivo: "Observar y registrar cambios en el entorno natural", desarrollo: "Salir a observar, dibujar, pegar elementos, comparar con dias anteriores", materiales: "Cuaderno grupal, crayones, pegamento, elementos naturales" },
+      { nombre: "Bandeja sensorial del bosque (Montessori)", capacidades: "Exploracion multisensorial", contenidos: "Ecosistema del bosque", objetivo: "Explorar elementos del bosque con todos los sentidos", desarrollo: "Tocar musgo, oler pinos, escuchar sonidos grabados, clasificar", materiales: "Musgo, corteza, pinas, hojas, audio de bosque" },
+      { nombre: "Experimento: Que necesitan las plantas (Vigotsky)", capacidades: "Pensamiento cientifico", contenidos: "Necesidades de las plantas", objetivo: "Formular hipotesis y verificarlas con guia del docente", desarrollo: "Plantar 3 semillas: con luz, sin luz, sin agua. Predecir, observar, comparar", materiales: "3 vasos, semillas, tierra, agua, caja para oscurecer" },
+      { nombre: "Mandalas con elementos naturales", capacidades: "Expresion artistica y concentracion", contenidos: "Patrones y simetria", objetivo: "Crear composiciones artisticas con materiales naturales", desarrollo: "Recolectar elementos, crear mandala grupal, fotografiar", materiales: "Hojas, flores, piedras, palitos" },
+      { nombre: "Caminata de texturas al aire libre", capacidades: "Percepcion sensorial y vocabulario", contenidos: "Texturas naturales", objetivo: "Ampliar vocabulario sensorial explorando texturas", desarrollo: "Caminar descalzos por pasto, arena, piedras; describir sensaciones", materiales: "Espacio exterior seguro, diferentes superficies" },
+    ],
+    familia: [
+      { nombre: "Mi familia en un dibujo", capacidades: "Expresion grafica y afectividad", contenidos: "Los miembros de la familia", objetivo: "Representar a su familia a traves del dibujo", desarrollo: "Conversar sobre quienes viven en casa, dibujar, compartir", materiales: "Hojas, crayones, lapices de colores" },
+      { nombre: "Jugamos a la casita", capacidades: "Juego simbolico y roles sociales", contenidos: "Roles familiares", objetivo: "Dramatizar situaciones de la vida cotidiana familiar", desarrollo: "Armar rincones (cocina, living), asumir roles, interactuar", materiales: "Elementos de cocina, munecas, disfraces" },
+      { nombre: "Armamos un arbol familiar", capacidades: "Identidad y pertenencia", contenidos: "La familia extendida", objetivo: "Reconocer a los miembros de la familia", desarrollo: "Pegar fotos traidas de casa en arbol, nombrar parentescos", materiales: "Cartulina con arbol, fotos de familia, pegamento" },
+      { nombre: "Cocinamos con recetas de familia", capacidades: "Trabajo colaborativo", contenidos: "Tradiciones familiares", objetivo: "Valorar las costumbres de cada familia", desarrollo: "Preparar receta sencilla (galletitas), compartir historias", materiales: "Ingredientes, bowls, utensilios de cocina" },
+      { nombre: "Cantamos canciones de cuna", capacidades: "Expresion musical y vinculos afectivos", contenidos: "Canciones tradicionales", objetivo: "Conocer canciones que nos cantaban de bebes", desarrollo: "Escuchar, cantar juntos, mecer munecas", materiales: "Munecas, mantas, reproductor de musica" },
+      // Actividades adicionales
+      { nombre: "Caja de los recuerdos familiares", capacidades: "Memoria y narracion", contenidos: "Historia familiar", objetivo: "Valorar objetos significativos de la familia", desarrollo: "Traer objeto de casa, contar su historia, exponerlo", materiales: "Objetos de casa, caja decorada, etiquetas" },
+      { nombre: "Titeres de la familia (Reggio Emilia)", capacidades: "Expresion dramatica y creatividad", contenidos: "Representacion familiar", objetivo: "Crear titeres que representen a su familia", desarrollo: "Crear titeres con medias/cucharas, dramatizar escenas", materiales: "Medias, cucharas de madera, lana, ojos moviles" },
+      { nombre: "Mapa de mi casa (Vigotsky)", capacidades: "Representacion espacial", contenidos: "El hogar y sus espacios", objetivo: "Representar espacios conocidos con ayuda guiada", desarrollo: "Conversar sobre habitaciones, dibujar mapa, ubicar a cada familiar", materiales: "Papel grande, crayones, fotos de familiares" },
+      { nombre: "Roles y responsabilidades en casa", capacidades: "Autonomia y colaboracion", contenidos: "Tareas del hogar", objetivo: "Reconocer como cada uno colabora en casa", desarrollo: "Dramatizar tareas, conversar sobre ayuda en casa, hacer compromisos", materiales: "Elementos de limpieza de juguete, delantales" },
+      { nombre: "Album de familias diversas", capacidades: "Respeto por la diversidad", contenidos: "Diferentes tipos de familias", objetivo: "Reconocer y valorar la diversidad familiar", desarrollo: "Ver imagenes de familias diversas, conversar sin prejuicios, dibujar", materiales: "Imagenes de familias diversas, hojas, crayones" },
+    ],
+    cuerpo: [
+      { nombre: "Conocemos las partes del cuerpo", capacidades: "Conocimiento de si mismo", contenidos: "Partes del cuerpo humano", objetivo: "Nombrar y senalar partes del cuerpo", desarrollo: "Cancion 'Cabeza, hombros, rodillas, pies', senalar en muneco", materiales: "Muneco grande, espejo, musica" },
+      { nombre: "Pintamos con el cuerpo", capacidades: "Expresion artistica y motricidad", contenidos: "Tecnicas grafoplasticas", objetivo: "Experimentar pintura con diferentes partes del cuerpo", desarrollo: "Pintar con manos, pies, codos sobre papel grande", materiales: "Papel afiche, temperas, recipientes, agua" },
+      { nombre: "Circuito de movimientos", capacidades: "Motricidad gruesa y coordinacion", contenidos: "Desplazamientos y equilibrio", objetivo: "Ejercitar diferentes formas de movimiento", desarrollo: "Armar circuito con obstaculos, trepar, reptar, saltar", materiales: "Colchonetas, aros, conos, tunel" },
+      { nombre: "Juegos con espejo", capacidades: "Autoconocimiento", contenidos: "La imagen corporal", objetivo: "Reconocerse y expresar emociones frente al espejo", desarrollo: "Hacer gestos, imitar al companero, dibujar lo que vemos", materiales: "Espejos, hojas, crayones" },
+      { nombre: "Relajacion y respiracion", capacidades: "Autoregulacion y bienestar", contenidos: "Tecnicas de relajacion", objetivo: "Aprender a calmar el cuerpo", desarrollo: "Acostarse, escuchar musica suave, respirar como globo", materiales: "Colchonetas, musica relajante, peluches" },
+      // Actividades adicionales con base pedagogica
+      { nombre: "Silueta corporal a tamano real", capacidades: "Esquema corporal", contenidos: "Proporciones del cuerpo", objetivo: "Reconocer el tamano real de su cuerpo", desarrollo: "Acostarse sobre papel, dibujar contorno, decorar, comparar", materiales: "Papel grande, marcadores, materiales para decorar" },
+      { nombre: "Los 5 sentidos (Montessori)", capacidades: "Discriminacion sensorial", contenidos: "Vista, oido, tacto, gusto, olfato", objetivo: "Identificar y usar cada sentido", desarrollo: "Estaciones sensoriales: cajas de texturas, frascos de olores, sabores", materiales: "Cajas, telas, especias, alimentos, vendas" },
+      { nombre: "Yoga para ninos", capacidades: "Conciencia corporal y concentracion", contenidos: "Posturas y equilibrio", objetivo: "Explorar posturas de yoga adaptadas", desarrollo: "Imitar animales con posturas de yoga, respirar, relajar", materiales: "Colchonetas, tarjetas de posturas, musica suave" },
+      { nombre: "Estatuas musicales con emociones", capacidades: "Expresion emocional y corporal", contenidos: "Emociones basicas", objetivo: "Expresar emociones con el cuerpo", desarrollo: "Bailar, al parar mostrar emocion indicada, conversar", materiales: "Musica, tarjetas de emociones" },
+      { nombre: "Masaje con pelotas", capacidades: "Percepcion tactil y relajacion", contenidos: "Partes del cuerpo", objetivo: "Reconocer partes del cuerpo a traves del tacto", desarrollo: "En parejas, pasar pelota por partes indicadas, nombrar", materiales: "Pelotas de texturas, musica relajante" },
+    ],
+    colores: [
+      { nombre: "Buscamos colores en la sala", capacidades: "Observacion y discriminacion visual", contenidos: "Colores primarios", objetivo: "Identificar y nombrar colores", desarrollo: "Busqueda del tesoro de objetos de un color, agrupar", materiales: "Objetos de colores variados, cestos" },
+      { nombre: "Mezclamos colores", capacidades: "Experimentacion y curiosidad", contenidos: "Mezcla de colores", objetivo: "Descubrir que colores nuevos se forman al mezclar", desarrollo: "Mezclar temperas, observar resultados, pintar", materiales: "Temperas primarias, paleta, pinceles, hojas" },
+      { nombre: "Clasificamos por color", capacidades: "Pensamiento logico matematico", contenidos: "Clasificacion por atributos", objetivo: "Agrupar objetos segun su color", desarrollo: "Separar bloques, tapitas, papeles por color", materiales: "Bloques, tapitas, papeles de colores, recipientes" },
+      { nombre: "Jugamos con luces de colores", capacidades: "Exploracion sensorial", contenidos: "La luz y los colores", objetivo: "Explorar como cambian los objetos con luces de colores", desarrollo: "Oscurecer sala, usar linternas con celofan, proyectar", materiales: "Linternas, celofan de colores, objetos blancos" },
+      { nombre: "Arcoiris con las manos", capacidades: "Expresion artistica", contenidos: "Tecnica de estampado", objetivo: "Crear un arcoiris grupal", desarrollo: "Estampar manos con temperas en orden del arcoiris", materiales: "Papel afiche grande, temperas de colores" },
+      // Actividades adicionales
+      { nombre: "Botellas sensoriales de colores (Montessori)", capacidades: "Exploracion visual y calma", contenidos: "Colores y movimiento", objetivo: "Observar movimiento de colores para calmar", desarrollo: "Crear botellas con agua, aceite y colorante; observar; describir", materiales: "Botellas plasticas, agua, aceite, colorante" },
+      { nombre: "Mesa de luz y colores (Reggio Emilia)", capacidades: "Exploracion luminica", contenidos: "Transparencia y color", objetivo: "Descubrir como se ven los colores con luz", desarrollo: "Explorar acetatos, superponer colores, crear composiciones", materiales: "Mesa de luz, acetatos de colores, objetos translucidos" },
+      { nombre: "Dia monocromatico", capacidades: "Identificacion de colores", contenidos: "Un color en profundidad", objetivo: "Explorar todas las variantes de un color", desarrollo: "Vestir del color elegido, buscar objetos, comer alimentos de ese color", materiales: "Objetos del color, alimentos, ropa" },
+      { nombre: "Pintura con elementos naturales", capacidades: "Creatividad y naturaleza", contenidos: "Pigmentos naturales", objetivo: "Descubrir colores que dan elementos naturales", desarrollo: "Frotar flores, hojas, frutas en papel; observar colores", materiales: "Petalos, hojas, remolachas, papel blanco" },
+      { nombre: "Collage de revista por colores", capacidades: "Motricidad fina y clasificacion", contenidos: "Reconocimiento de colores", objetivo: "Buscar y clasificar colores en imagenes", desarrollo: "Recortar/rasgar partes de revista de un color, pegar en cartel grupal", materiales: "Revistas, tijeras, pegamento, cartulinas" },
+    ],
+    default: [
+      { nombre: "Exploracion libre con materiales", capacidades: "Creatividad y autonomia", contenidos: "Exploracion sensorial", objetivo: "Descubrir propiedades de diferentes materiales", desarrollo: "Disponer materiales variados, observar como los usan, guiar descubrimientos", materiales: "Cajas, telas, papeles, elementos naturales" },
+      { nombre: "Ronda de cuentos", capacidades: "Escucha atenta y comprension", contenidos: "Literatura infantil", objetivo: "Disfrutar de la lectura de un cuento", desarrollo: "Sentarse en ronda, leer cuento, hacer preguntas, dramatizar", materiales: "Cuento seleccionado, titeres opcionales" },
+      { nombre: "Juego en sectores", capacidades: "Juego simbolico y socializacion", contenidos: "Diferentes areas de juego", objetivo: "Elegir y sostener el juego en un sector", desarrollo: "Presentar sectores disponibles, elegir, jugar, guardar", materiales: "Sectores armados (construccion, hogar, arte)" },
+      { nombre: "Taller de arte libre", capacidades: "Expresion y creatividad", contenidos: "Tecnicas mixtas", objetivo: "Expresarse a traves de diferentes materiales", desarrollo: "Ofrecer variedad de materiales, crear libremente, exponer", materiales: "Papeles, temperas, plasticola, brillantina, tijeras" },
+      { nombre: "Juegos musicales", capacidades: "Expresion musical y ritmo", contenidos: "Instrumentos y ritmos", objetivo: "Explorar sonidos y ritmos", desarrollo: "Usar instrumentos, seguir ritmos, cantar, bailar", materiales: "Panderetas, maracas, tambores, musica" },
+      // Actividades adicionales basadas en pedagogias
+      { nombre: "Provocacion artistica (Reggio Emilia)", capacidades: "Creatividad e iniciativa", contenidos: "Exploracion abierta", objetivo: "Responder creativamente a una propuesta abierta", desarrollo: "Disponer materiales de forma atractiva, observar, guiar sin dirigir", materiales: "Materiales variados dispuestos esteticamente" },
+      { nombre: "Vida practica (Montessori)", capacidades: "Autonomia y concentracion", contenidos: "Actividades cotidianas", objetivo: "Desarrollar independencia en tareas cotidianas", desarrollo: "Trasvasar, abotonar, verter agua, doblar telas", materiales: "Jarras, botones, telas, bandejas" },
+      { nombre: "Construccion colaborativa (Vigotsky)", capacidades: "Trabajo en equipo y resolucion", contenidos: "Construccion con bloques", objetivo: "Construir juntos con ayuda mutua", desarrollo: "Proponer construccion grupal, asignar roles, reflexionar sobre proceso", materiales: "Bloques grandes, fotos de inspiracion" },
+      { nombre: "Cuentos con finales abiertos (Perkins)", capacidades: "Pensamiento creativo", contenidos: "Narrativa y prediccion", objetivo: "Imaginar y argumentar posibles finales", desarrollo: "Leer cuento hasta el nudo, preguntar que pasara, dibujar finales", materiales: "Cuento seleccionado, hojas, crayones" },
+      { nombre: "Juego heuristico", capacidades: "Exploracion y descubrimiento", contenidos: "Propiedades de objetos", objetivo: "Descubrir que se puede hacer con objetos cotidianos", desarrollo: "Ofrecer objetos variados (no juguetes), observar uso creativo", materiales: "Cajas, tubos, cadenas, telas, pelotas" },
+    ]
+  }
+  
+  // Detectar tema del proyecto
+  let temaDetectado = "default"
+  if (titulo.includes("animal") || objetivo.includes("animal") || titulo.includes("granja") || titulo.includes("mascota")) {
+    temaDetectado = "animales"
+  } else if (titulo.includes("natural") || objetivo.includes("planta") || titulo.includes("ambiente") || titulo.includes("ecolog")) {
+    temaDetectado = "naturaleza"
+  } else if (titulo.includes("familia") || objetivo.includes("familia") || titulo.includes("hogar")) {
+    temaDetectado = "familia"
+  } else if (titulo.includes("cuerpo") || objetivo.includes("cuerpo") || titulo.includes("movimiento") || titulo.includes("salud")) {
+    temaDetectado = "cuerpo"
+  } else if (titulo.includes("color") || objetivo.includes("color") || titulo.includes("arte")) {
+    temaDetectado = "colores"
+  }
+  
+  const banco = bancosActividades[temaDetectado] || bancosActividades.default
+  
+  // Filtrar actividades que ya fueron sugeridas/aceptadas
+  const bancoDisponible = banco.filter(act => !actividadesYaSugeridas.includes(act.nombre))
+  
+  // Si ya se usaron todas las actividades del tema, usar el banco default
+  const bancoFinal = bancoDisponible.length > 0 
+    ? bancoDisponible 
+    : bancosActividades.default.filter(act => !actividadesYaSugeridas.includes(act.nombre))
+  
+  // Si aun asi no hay disponibles, volver al banco original (permitir repeticion)
+  if (bancoFinal.length === 0) {
+    return banco[diaIdx % banco.length]
+  }
+  
+  // Seleccionar actividad basada en el indice del dia pero dentro del banco disponible
+  const actividadIdx = diaIdx % bancoFinal.length
+  return bancoFinal[actividadIdx]
+}

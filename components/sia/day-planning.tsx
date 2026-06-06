@@ -28,6 +28,8 @@ interface DayPlanningProps {
   sala?: string
   onActividadALBA?: (actividad: string) => void
   onEjeALBA?: (eje: string) => void
+  /** Que columna renderizar: "proyecto", "sugerencia" o "ambas" (default) */
+  section?: "proyecto" | "sugerencia" | "ambas"
 }
 
 interface BrainActivity {
@@ -452,11 +454,6 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
         </div>
       ) : (
         <div className="space-y-3 flex-1">
-          {activity.razon && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">
-              {activity.razon}
-            </div>
-          )}
           <div>
             <p className="text-base font-semibold text-foreground leading-snug">{activity.titulo}</p>
           </div>
@@ -533,6 +530,79 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
       </div>
     </div>
     </>
+  )
+}
+
+// Tarjeta compacta de proyecto — titulo + estado visible, detalle expandible
+function ProyectoCard({
+  proyecto,
+  onEdit,
+  onFinalizar,
+  isFinalizing,
+}: {
+  proyecto: Proyecto
+  onEdit: () => void
+  onFinalizar: () => void
+  isFinalizing: boolean
+}) {
+  const [expandido, setExpandido] = useState(false)
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+      {/* Fila compacta siempre visible */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-amber-100/60 transition-colors"
+        onClick={() => setExpandido(!expandido)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span className="text-sm font-semibold text-amber-900 truncate">{proyecto.titulo}</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold border border-green-200">
+            Activo
+          </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            className="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-amber-300 text-amber-700 font-semibold hover:bg-amber-100 transition-colors"
+          >
+            Editar
+          </button>
+          <ChevronDown className={`w-3.5 h-3.5 text-amber-500 transition-transform ${expandido ? "rotate-180" : ""}`} />
+        </div>
+      </div>
+
+      {/* Detalle expandible */}
+      {expandido && (
+        <div className="px-3 pb-3 space-y-2 border-t border-amber-200">
+          {proyecto.objetivo_general && (
+            <div className="pt-2">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Objetivos de aprendizaje</p>
+              <p className="text-xs text-slate-700 leading-relaxed">{proyecto.objetivo_general}</p>
+            </div>
+          )}
+          <div className="bg-amber-100/60 rounded-lg p-2">
+            <p className="text-[10px] text-amber-700">
+              Las actividades se planifican en el <strong>Cronograma Semanal</strong>.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+            onClick={onFinalizar}
+            disabled={isFinalizing}
+          >
+            {isFinalizing ? (
+              <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-1.5" />
+            ) : (
+              <CheckCircle2 className="w-3 h-3 mr-1.5" />
+            )}
+            Finalizar proyecto
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -640,13 +710,13 @@ function ProyectoColumn({
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Header */}
+      {/* Header compacto estilo maternal */}
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
           <FolderOpen className="w-4 h-4 text-accent" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-accent leading-tight">Proyecto / Unidad Didactica</p>
+          <p className="text-sm font-semibold text-accent leading-tight">Proyecto / Unidad Didáctica</p>
           <p className="text-xs text-muted-foreground">
             {proyecto ? "Proyecto activo" : "Sin proyecto activo"}
           </p>
@@ -667,59 +737,11 @@ function ProyectoColumn({
           <FolderOpen className="w-10 h-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No hay proyecto activo.</p>
           <p className="text-xs text-muted-foreground/70">
-            Usa el boton <strong>Nueva</strong> para cargar un proyecto o unidad didactica.
+            Usá el botón <strong>Nueva</strong> para cargar un proyecto o unidad didáctica.
           </p>
         </div>
       ) : (
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-          {/* Titulo */}
-          <p className="text-base font-semibold text-foreground leading-snug">{proyecto.titulo}</p>
-
-          {/* Objetivo general */}
-          {proyecto.objetivo_general && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Objetivo general</p>
-              <p className="text-sm text-foreground leading-relaxed">{proyecto.objetivo_general}</p>
-            </div>
-          )}
-
-          {/* Actividades */}
-          {proyecto.actividades.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Actividades ({proyecto.actividades.length})
-              </p>
-              <div className="space-y-2">
-                {proyecto.actividades.map((act, i) => (
-                  <div key={act.id} className="bg-accent/5 rounded-lg p-2.5">
-                    <p className="text-xs font-semibold text-accent mb-1">Actividad {i + 1}{act.titulo ? ` — ${act.titulo}` : ""}</p>
-                    {act.objetivo && <p className="text-xs text-muted-foreground leading-relaxed mb-1"><span className="font-medium">Obj:</span> {act.objetivo}</p>}
-                    {act.desarrollo && <p className="text-xs text-foreground leading-relaxed mb-1">{act.desarrollo}</p>}
-                    {act.materiales && <p className="text-xs text-muted-foreground"><span className="font-medium">Mat:</span> {act.materiales}</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Boton Finalizar Proyecto */}
-          <div className="pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-              onClick={handleFinalizar}
-              disabled={isFinalizing}
-            >
-              {isFinalizing ? (
-                <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-1.5" />
-              ) : (
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Guardar y finalizar proyecto
-            </Button>
-          </div>
-        </div>
+        <ProyectoCard proyecto={proyecto} onEdit={handleOpenModal} onFinalizar={handleFinalizar} isFinalizing={isFinalizing} />
       )}
 
       {/* Modal carga/edicion proyecto */}
@@ -756,72 +778,6 @@ function ProyectoColumn({
                   rows={3}
                 />
               </Field>
-
-              {/* Actividades */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-foreground">Actividades</p>
-                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addActividad}>
-                    <Plus className="w-3 h-3 mr-1" /> Agregar actividad
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  {form.actividades.map((act, idx) => (
-                    <div key={act.id} className="border border-border rounded-lg p-3 space-y-3 relative">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-accent">Actividad {idx + 1}</p>
-                        {form.actividades.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeActividad(idx)}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <Field>
-                        <FieldLabel htmlFor={`act-titulo-${idx}`}>Titulo</FieldLabel>
-                        <Input
-                          id={`act-titulo-${idx}`}
-                          placeholder="Ej: Observacion de hormigas en el jardin"
-                          value={act.titulo}
-                          onChange={e => updateActividad(idx, "titulo", e.target.value)}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-objetivo-${idx}`}>Objetivo de aprendizaje</FieldLabel>
-                        <Textarea
-                          id={`act-objetivo-${idx}`}
-                          placeholder="Ej: Identificar partes del cuerpo de una hormiga y describirlas oralmente."
-                          value={act.objetivo}
-                          onChange={e => updateActividad(idx, "objetivo", e.target.value)}
-                          rows={2}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-desarrollo-${idx}`}>Desarrollo de la actividad</FieldLabel>
-                        <Textarea
-                          id={`act-desarrollo-${idx}`}
-                          placeholder="Describe paso a paso como se desarrolla la actividad..."
-                          value={act.desarrollo}
-                          onChange={e => updateActividad(idx, "desarrollo", e.target.value)}
-                          rows={3}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`act-materiales-${idx}`}>Materiales</FieldLabel>
-                        <Input
-                          id={`act-materiales-${idx}`}
-                          placeholder="Ej: Lupas, laminas de insectos, plasticina"
-                          value={act.materiales}
-                          onChange={e => updateActividad(idx, "materiales", e.target.value)}
-                        />
-                      </Field>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </FieldGroup>
 
             {saveError && (
@@ -857,7 +813,7 @@ export interface DayPlanningHandle {
 }
 
 export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(function DayPlanning(
-  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA },
+  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA, section = "ambas" },
   ref
 ) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
@@ -956,11 +912,54 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   }, [sala])
 
   useEffect(() => {
-    fetchBrain()
-    fetchPlanning()
-    fetchProyecto()
-  }, [fetchBrain, fetchPlanning, fetchProyecto])
+    if (section !== "proyecto") {
+      fetchBrain()
+      fetchPlanning()
+    }
+    if (section !== "sugerencia") {
+      fetchProyecto()
+    }
+  }, [fetchBrain, fetchPlanning, fetchProyecto, section])
 
+  // Solo columna de Sugerencia de ALBA
+  if (section === "sugerencia") {
+    return (
+      <Card className="h-full shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-primary">
+            Actividad sugerida por ALBA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Solo columna de Proyecto / Unidad Didactica
+  if (section === "proyecto") {
+    return (
+      <Card className="h-full shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-primary">
+            Proyecto / Unidad Didáctica
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ProyectoColumn
+            proyecto={proyecto}
+            isLoading={isProyectoLoading}
+            onGuardado={p => setProyecto(p)}
+            onFinalizado={() => { setProyecto(null); fetchBrain() }}
+            sala={sala}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Ambas columnas (layout original)
   return (
     <Card className="h-full shadow-md">
       <CardHeader className="pb-3">

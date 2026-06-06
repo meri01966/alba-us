@@ -150,18 +150,18 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanifi
   }, {} as Record<string, number>)
 
   return (
-    <header className="bg-primary text-primary-foreground shadow-lg relative">
+    <header className="bg-gradient-to-r from-[#1e3a5f] via-[#244a73] to-[#1e3a5f] text-primary-foreground shadow-lg relative">
       <div className="px-4 py-3 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 backdrop-blur">
+            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur shadow-inner">
               <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-tight">ALBA</h1>
               <p className="text-xs sm:text-sm text-primary-foreground/70 font-medium">
-                Alfabetizacion con Acompanamiento
+                Sala de 4 y 5 anos · Alfabetizacion
               </p>
             </div>
           </div>
@@ -244,15 +244,6 @@ export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanifi
                 {salaActual}
               </span>
             </div>
-
-            {/* Icono Calendario - abre modal de visualizacion */}
-            <button
-              onClick={() => setShowCalendarModal(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
-            >
-              <Calendar className="w-5 h-5" />
-              <span className="text-xs font-semibold hidden sm:inline">Recorrido</span>
-            </button>
 
             {/* User */}
             <div className="flex items-center gap-2">

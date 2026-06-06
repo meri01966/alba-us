@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check } from "lucide-react"
+import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check, CalendarDays, MessageSquare, Settings } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning, type DayPlanningHandle } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
-import { AlertsPanel } from "@/components/sia/alerts-panel"
 import { QuickRegister } from "@/components/sia/quick-register"
+import { CronogramaSemanal } from "@/components/sia/cronograma-semanal"
+import { CronogramaInlinePreview } from "@/components/sia/cronograma-inline-preview"
 import ClassEvaluation from "@/components/alba/class-evaluation"
 import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
@@ -356,6 +357,7 @@ export default function ALBADashboard() {
   const [showSintesis, setShowSintesis] = useState(false)
   const [showPlanificacion, setShowPlanificacion] = useState(false)
   const [showAlertas, setShowAlertas] = useState(false)
+  const [showCronograma, setShowCronograma] = useState(false)
   const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
   const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
@@ -407,7 +409,11 @@ export default function ALBADashboard() {
     completado: boolean
   }>>([])
 
-  // Cargar evaluaciones de hoy desde Supabase para la sala actual
+  // Mensajes de la directora hacia la maestra
+  const [mensajesDirectora, setMensajesDirectora] = useState<Array<{
+    id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string
+  }>>([])
+  const [marcandoLeido, setMarcandoLeido] = useState<string | null>(null)  // Cargar evaluaciones de hoy desde Supabase para la sala actual
   // Los botones del Registro de Clase arrancan siempre vacios al cargar la pagina.
   // Son el "pizarron del dia" — se usan solo durante la clase en curso.
   // Solo se persisten en el historial (Mapa de Progreso) al presionar Finalizar Jornada.
@@ -462,6 +468,32 @@ export default function ALBADashboard() {
   const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
     const ejeDelDia = ejeActual
     const actividadDelDia = actividadSugeridaALBA || actividadActual
+
+    // Si la actividad no se realizo, solo registrar el cierre con flag no_realizada
+    // sin blanquear alumnos ni limpiar evaluaciones
+    if (datos.evaluacion === "no_realizada") {
+      try {
+        await fetch("/api/registro-cierre", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actividadALBA: actividadDelDia,
+            actividadDocente: actividadDelDia,
+            eje: ejeDelDia,
+            sala: salaActual,
+            evaluacionGeneral: "no_realizada",
+            observaciones: datos.observaciones,
+            sugerenciaParaIA: datos.sugerencia,
+            stats: { green: 0, yellow: 0, red: 0, ausentes: students.length },
+          }),
+        })
+      } catch (e) {
+        console.error("[v0] Error guardando no_realizada:", e)
+      }
+      setJornadaToast({ tipo: "ok", mensaje: "Registrado. ALBA volvera a sugerir esta actividad en la proxima planificacion." })
+      setTimeout(() => setJornadaToast(null), 4000)
+      return
+    }
 
     // --- Paso 1: marcar como verde a todos los alumnos sin evaluacion explicita ---
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
@@ -532,7 +564,23 @@ export default function ALBADashboard() {
           dayPlanningRef.current?.fetchBrain()
         }, 7000)
         
-        // --- Paso 5: limpiar evaluaciones para la nueva clase ---
+        // --- Paso 5: indexar actividad evaluada a la red de ALBA (para redistribucion) ---
+        if (actividadDelDia) {
+          fetch("/api/actividad-planificada", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fecha: new Date().toISOString().split("T")[0],
+              actividad: actividadDelDia,
+              eje: ejeDelDia,
+              sala: salaActual,
+              evaluacion: datos.evaluacion,
+              origen: "cierre_jornada",
+            }),
+          }).catch(() => {/* silencioso */})
+        }
+
+        // --- Paso 6: limpiar evaluaciones para la nueva clase ---
         setEvaluaciones({})
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(STORAGE_PROGRESS_KEY)
@@ -580,6 +628,35 @@ export default function ALBADashboard() {
       localStorage.setItem(STORAGE_PROGRESS_KEY, JSON.stringify(progress))
     }
   }, [progress])
+
+  const fetchMensajes = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}`)
+      const data = await res.json()
+      if (data.ok) setMensajesDirectora(data.mensajes || [])
+    } catch (e) {
+      console.error("[v0] Error cargando mensajes directora:", e)
+    }
+  }, [salaActual])
+
+  const marcarLeido = async (id: string) => {
+    setMarcandoLeido(id)
+    try {
+      const res = await fetch("/api/mensajes-directora", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setMensajesDirectora(prev => prev.map(m => m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m))
+      }
+    } catch (e) {
+      console.error("[v0] Error marcando leido:", e)
+    } finally {
+      setMarcandoLeido(null)
+    }
+  }
 
   const fetchProgreso = useCallback(async () => {
     setIsLoading(true)
@@ -794,7 +871,8 @@ export default function ALBADashboard() {
 useEffect(() => {
   fetchProgreso()
   fetchHistorialMes()
-  }, [fetchProgreso, fetchHistorialMes])
+  fetchMensajes()
+  }, [fetchProgreso, fetchHistorialMes, fetchMensajes])
 
   const handleNavigate = (view: ViewType) => {
     setActiveView(view)
@@ -1194,79 +1272,18 @@ useEffect(() => {
                 </span>
               )}
             </div>
-            
-            {/* Botones de gestion */}
+
+            {/* Boton unico de gestion */}
             <div className="flex items-center gap-2">
-              {showAddStudent ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newStudentName}
-                    onChange={(e) => setNewStudentName(e.target.value)}
-                    placeholder="Nombre del alumno"
-                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 w-40"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddStudent()
-                      if (e.key === "Escape") {
-                        setShowAddStudent(false)
-                        setNewStudentName("")
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddStudent}
-                    disabled={addingStudent || !newStudentName.trim()}
-                    className="px-3 py-1.5 text-sm text-white rounded-lg disabled:opacity-50"
-                    style={{ backgroundColor: "#1e3a5f" }}
-                  >
-                    {addingStudent ? "..." : "Agregar"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddStudent(false)
-                      setNewStudentName("")
-                    }}
-                    className="px-2 py-1.5 text-sm text-slate-500 hover:text-slate-700"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowConfigSala(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                    style={{ color: "#1e3a5f" }}
-                  >
-                    <Users className="w-4 h-4" />
-                    Cargar Lista
-                  </button>
-                  {students.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowEditList(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                      style={{ color: "#1e3a5f" }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                      Editar Lista
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowAddStudent(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: "#1e3a5f" }}
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    + Alumno
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowConfigSala(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                style={{ color: "#1e3a5f" }}
+              >
+                <Settings className="w-4 h-4" />
+                Gestionar sala
+              </button>
             </div>
           </div>
 
@@ -1297,55 +1314,87 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-4 flex flex-col gap-3">
-                  <HeatMap
-                    students={students}
-                    evaluaciones={evaluaciones}
-                    onEvaluacion={handleEvaluacion}
-                    onClearEvaluacion={handleClearEvaluacion}
-                    onClearAllEvaluaciones={handleClearAllEvaluaciones}
+              {/* Mensajes pendientes de la directora */}
+              {mensajesDirectora.filter(m => !m.leido).map(msg => (
+                <div
+                  key={msg.id}
+                  className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3"
+                >
+                  <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-blue-700 mb-0.5">Mensaje de Direccion</p>
+                    <p className="text-sm text-slate-700 leading-relaxed">{msg.mensaje}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {new Date(msg.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => marcarLeido(msg.id)}
+                    disabled={marcandoLeido === msg.id}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity"
+                    style={{ backgroundColor: "#1e3a5f" }}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    {marcandoLeido === msg.id ? "..." : "Leido"}
+                  </button>
+                </div>
+              ))}
 
-                    actividadSugeridaALBA={actividadSugeridaALBA}
-                    ejeDeALBA={ejeActual}
-                    sala={salaActual}
-                    isLoading={isLoading}
-                  />
-                </div>
-                <div className="lg:col-span-8">
-                  <DayPlanning 
-                    ref={dayPlanningRef}
-                    evaluaciones={evaluaciones as Record<string, "green" | "yellow" | "red" | "blue">}
-                    ejeActual={ejeActual as "CF" | "CT" | "O"}
-                    actividadActual={actividadActual}
-                    totalAlumnos={students.length}
-                    sala={salaActual}
-                    onActividadALBA={setActividadSugeridaALBA}
-                    onEjeALBA={setEjeActual}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MicroTraining 
-                  ejeDelDia={ejeActual as "CF" | "CT" | "O"} 
-                  actividadDelDia={actividadSugeridaALBA || actividadActual} 
+              {/* Fila 1: Cronograma Semanal inline — 5 dias con titulos y boton Abrir */}
+              <CronogramaInlinePreview
+                sala={salaActual}
+                onAbrirCompleto={() => setShowCronograma(true)}
+                mensajesPendientes={mensajesDirectora.filter(m => !m.leido).length}
+              />
+
+              {/* Fila 2: Proyecto (izq) + Sugerencia ALBA (der) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DayPlanning
+                  ref={dayPlanningRef}
+                  section="proyecto"
+                  sala={salaActual}
+                  onActividadALBA={setActividadSugeridaALBA}
+                  onEjeALBA={setEjeActual}
                 />
-<AlertsPanel
-                  students={students}
-                  evaluaciones={evaluaciones}
-                />
-                <QuickRegister 
-                  actividadDelDia={actividadSugeridaALBA || actividadActual}
-                  evaluados={Object.keys(evaluaciones).length}
-                  totalAlumnos={students.length}
-                  // Los sin marcar se asumen logrado al finalizar, por eso se suman a verdes
-                  statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
-                  statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
-                  statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
-                  statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
-                  onGuardar={handleRegistroCierre}
+                <DayPlanning
+                  section="sugerencia"
+                  sala={salaActual}
+                  onActividadALBA={setActividadSugeridaALBA}
+                  onEjeALBA={setEjeActual}
                 />
               </div>
+
+              {/* Fila 3: Registro del Aula — ancho completo */}
+              <HeatMap
+                students={students}
+                evaluaciones={evaluaciones}
+                onEvaluacion={handleEvaluacion}
+                onClearEvaluacion={handleClearEvaluacion}
+                onClearAllEvaluaciones={handleClearAllEvaluaciones}
+                actividadSugeridaALBA={actividadSugeridaALBA}
+                ejeDeALBA={ejeActual}
+                sala={salaActual}
+                isLoading={isLoading}
+              />
+
+              {/* Fila 4: Finalizar Jornada */}
+              <QuickRegister
+                actividadDelDia={actividadSugeridaALBA || actividadActual}
+                evaluados={Object.keys(evaluaciones).length}
+                totalAlumnos={students.length}
+                statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
+                statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
+                statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
+                statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
+                onGuardar={handleRegistroCierre}
+              />
+
+              {/* Fila 5: Micro capacitacion */}
+              <MicroTraining
+                ejeDelDia={ejeActual as "CF" | "CT" | "O"}
+                actividadDelDia={actividadSugeridaALBA || actividadActual}
+              />
             </>
           )}
         </div>
@@ -1370,13 +1419,13 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Modal de Configuracion de Sala - Carga masiva */}
+      {/* Modal de Configuracion de Sala */}
       {showConfigSala && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
           onClick={() => setShowConfigSala(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1384,11 +1433,11 @@ useEffect(() => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold" style={{ color: "#1e3a5f" }}>
-                    Cargar Alumnos
+                    Gestionar Sala
                   </h2>
-                  <p className="text-sm text-slate-500">Sala {salaActual}</p>
+                  <p className="text-sm text-slate-500">Sala {salaActual} — {students.length} alumnos</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowConfigSala(false)}
                   type="button"
                   className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200"
@@ -1398,42 +1447,57 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div>
+            <div className="p-5 space-y-3">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowConfigSala(false); setShowEditList(true) }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  <Pencil className="w-4 h-4" />
+                  Editar Lista
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowConfigSala(false); setShowAddStudent(true) }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm text-white rounded-lg hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: "#1e3a5f" }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  + Alumno
+                </button>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Nombres de los alumnos
+                  Cargar lista completa (un nombre por linea)
                 </label>
                 <textarea
                   value={bulkNames}
                   onChange={(e) => setBulkNames(e.target.value)}
-                  placeholder={"Escribi un nombre por linea:\n\nSofia Garcia\nMartin Lopez\nLucia Fernandez\nBenjamin Rodriguez"}
-                  className="w-full h-48 p-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none"
+                  placeholder={"Sofia Garcia\nMartin Lopez\nLucia Fernandez"}
+                  className="w-full h-36 p-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none"
                 />
-                <p className="text-xs text-slate-400 mt-2">
-                  Escribe un nombre por linea. Se guardaran todos al hacer clic en &quot;Cargar Alumnos&quot;.
-                </p>
+                <button
+                  type="button"
+                  onClick={handleBulkAddStudents}
+                  disabled={addingBulk || !bulkNames.trim()}
+                  className="w-full mt-2 py-2.5 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                  style={{ backgroundColor: "#1e3a5f" }}
+                >
+                  {addingBulk ? "Guardando..." : (
+                    <>
+                      <Users className="w-4 h-4" />
+                      Cargar Alumnos ({bulkNames.split('\n').filter(n => n.trim()).length})
+                    </>
+                  )}
+                </button>
               </div>
-              
-              <button
-                type="button"
-                onClick={handleBulkAddStudents}
-                disabled={addingBulk || !bulkNames.trim()}
-                className="w-full py-3 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#1e3a5f" }}
-              >
-                {addingBulk ? (
-                  <>Guardando...</>
-                ) : (
-                  <>
-                    <UserPlus className="w-5 h-5" />
-                    Cargar Alumnos ({bulkNames.split('\n').filter(n => n.trim()).length})
-                  </>
-                )}
-              </button>
-              
+
               {!isSupabaseConfigured() && (
                 <p className="text-xs text-amber-600 text-center p-2 bg-amber-50 rounded-lg">
-                  Modo Demo: Los alumnos se guardaran solo en esta sesion. Conecta Supabase para persistir los datos.
+                  Modo Demo: Los alumnos se guardaran solo en esta sesion.
                 </p>
               )}
             </div>
@@ -1593,7 +1657,8 @@ useEffect(() => {
           onClose={() => setShowAlertas(false)} 
         />
       )}
+      {/* Cronograma Semanal Modal */}
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} students={students} />
     </div>
   )
 }
-// force rebuild 1780161830

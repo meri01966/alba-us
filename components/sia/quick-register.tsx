@@ -30,7 +30,7 @@ export function QuickRegister({
   onGuardar,
 }: QuickRegisterProps) {
   const [mostrarModal, setMostrarModal]       = useState(false)
-  const [evaluacion, setEvaluacion]           = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | null>(null)
+  const [evaluacion, setEvaluacion]           = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | "no_realizada" | null>(null)
   const [observaciones, setObservaciones]     = useState("")
   const [sugerencia, setSugerencia]           = useState("")
   const [guardado, setGuardado]               = useState(false)
@@ -41,7 +41,7 @@ export function QuickRegister({
     if (prevActividad.current !== actividadDelDia) {
       prevActividad.current = actividadDelDia
       setGuardado(false)
-      setEvaluacion("")
+      setEvaluacion(null)
       setObservaciones("")
       setSugerencia("")
     }
@@ -189,6 +189,18 @@ export function QuickRegister({
                     </button>
                   ))}
                 </div>
+                {/* No realizada — ocupa fila completa, separado visualmente */}
+                <button
+                  onClick={() => setEvaluacion("no_realizada")}
+                  className="w-full px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all"
+                  style={
+                    evaluacion === "no_realizada"
+                      ? { backgroundColor: "#64748b", color: "#fff", borderColor: "#64748b" }
+                      : { backgroundColor: "#fff", color: "#64748b", borderColor: "#64748b50" }
+                  }
+                >
+                  No realizada — ALBA la volvera a sugerir
+                </button>
               </div>
 
               {/* Observaciones */}
