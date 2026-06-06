@@ -18,6 +18,12 @@ import {
   Volume2,
   ArrowRight,
   Globe,
+  BrainCircuit,
+  Printer,
+  Eye,
+  RefreshCw,
+  Lightbulb,
+  Network,
 } from "lucide-react"
 
 // ── datos ficticios solo para el mockup ─────────────────────────────────────
@@ -103,6 +109,35 @@ const EJE_LABEL: Record<string, string> = {
   O:  "Oralidad",
 }
 
+// ── datos MicroTraining mock ──────────────────────────────────────────────────
+const MICRO_TIPS = [
+  "Hola! Las rimas con nombres son geniales porque cada nene se siente protagonista. Maria-sandia, Juan-pan. Busca las rimas antes para tener opciones.",
+  "Si un nombre es dificil de rimar, inventalo! Los nenes se rien mucho con rimas graciosas como 'Valentina-mandarina'.",
+  "Hace una ronda: cada nene dice su nombre y entre todos buscamos algo que rime. Lo importante es el sonido.",
+  "Un tip: usa una pelota. El que la tiene dice su nombre, la tira a otro que tiene que decir la rima. Movimiento + sonido.",
+  "Arma un cartel con los nombres y sus rimas. Lo pueden decorar y queda para el aula toda la semana.",
+]
+const QUE_APRENDEN = [
+  "Reconocer palabras que terminan con el mismo sonido",
+  "Producir palabras que riman",
+  "Disfrutar del juego con los sonidos del lenguaje",
+]
+const FUNDAMENTO = {
+  teoria: "Conciencia Fonemica — Nivel de Rima",
+  autor: "Adams (1990) · Phonemic Awareness in Young Children",
+  descripcion: "La sensibilidad a las rimas es el primer peldano de la conciencia fonemica. Los ninos que reconocen y producen rimas muestran mejor desempeno lector posterior. El juego con nombres propios maximiza la motivacion.",
+}
+
+// ── materiales por actividad mock ─────────────────────────────────────────────
+const MATERIALES_ACT: Record<string, string[]> = {
+  "Juego con el lenguaje: canciones y rimas": ["Letras de 3 canciones impresas", "Parlante o reproductor", "Carteles con las palabras que riman"],
+  "Identificacion de fonema inicial": ["Tarjetas con imagenes de objetos", "Caja decorada 'caja de sonidos'", "Marcadores"],
+  "Ronda de cuentos: La tortuga y la liebre": ["Libro o cuento impreso", "Tarjetas de secuencia narrativa"],
+  "Escritura del nombre propio": ["Tarjetas nombre de cada nino", "Hojas rayadas", "Lapices"],
+  "Conteo de silabas con palmas": ["Lista de palabras del proyecto", "Dados numericos"],
+  "Dictado al docente: texto colectivo": ["Pizarron o afiche grande", "Marcadores gruesos"],
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PreviewLayout() {
   const [proyectoAbierto, setProyectoAbierto]     = useState(false)
@@ -111,6 +146,9 @@ export default function PreviewLayout() {
   const [albIdx, setAlbIdx]                       = useState(0)
   const [jornadaFinalizada, setJornadaFinalizada] = useState(false)
   const [audioPlaying, setAudioPlaying]           = useState(false)
+  const [tipIdx, setTipIdx]                       = useState(0)
+  const [showAprendizajes, setShowAprendizajes]   = useState(false)
+  const [showFundamento, setShowFundamento]       = useState(false)
 
   const actividadAlba = SECUENCIA_ALBA[albIdx]
 
@@ -370,49 +408,81 @@ export default function PreviewLayout() {
             )}
           </div>
 
-          {/* ACTIVIDAD DE ALBA — la actividad actual de la secuencia */}
-          <div className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-violet-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-violet-600" />
-                <span className="text-sm font-bold text-violet-700">Actividad de hoy · ALBA</span>
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${EJE_COLOR[actividadAlba.eje]}`}>
-                {EJE_LABEL[actividadAlba.eje]}
-              </span>
-            </div>
-
-            <div className="px-4 py-4 flex-1 space-y-3">
-              {/* Numero en secuencia */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-violet-100 rounded-full h-1.5">
-                  <div
-                    className="bg-violet-500 h-1.5 rounded-full transition-all"
-                    style={{ width: `${((albIdx) / (SECUENCIA_ALBA.length - 1)) * 100}%` }}
-                  />
+          {/* ACTIVIDAD SUGERIDA POR ALBA — igual a BrainColumn */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-100">
+              {/* Header identico a BrainColumn */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#eff6ff" }}>
+                  <BrainCircuit className="w-4 h-4" style={{ color: "#1e3a5f" }} />
                 </div>
-                <span className="text-[10px] text-violet-600 font-semibold flex-shrink-0">
-                  {albIdx + 1} / {SECUENCIA_ALBA.length} en secuencia
+                <p className="text-sm font-semibold" style={{ color: "#1e3a5f" }}>Sugerencia de ALBA</p>
+                <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                  Semana {albIdx + 3}/25
                 </span>
               </div>
+              {/* Badges: clase#, estimulo X/3, eje */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600 font-medium">
+                  Clase #{albIdx + 4}
+                </span>
+                <span className="text-xs px-2 py-1 rounded-lg bg-purple-100 text-purple-700 font-medium">
+                  Estimulo {(albIdx % 3) + 1}/3
+                </span>
+                <span
+                  className="text-xs px-2 py-1 rounded-lg font-bold text-white"
+                  style={{
+                    backgroundColor: actividadAlba.eje === "CF" ? "#3b82f6"
+                      : actividadAlba.eje === "CT" ? "#10b981"
+                      : actividadAlba.eje === "EA" ? "#6366f1"
+                      : "#f59e0b"
+                  }}
+                >
+                  {actividadAlba.eje}: {EJE_LABEL[actividadAlba.eje]}
+                </span>
+              </div>
+            </div>
 
-              {/* Titulo de la actividad */}
-              <div>
-                <p className="text-base font-bold text-slate-800 leading-snug">{actividadAlba.titulo}</p>
+            <div className="px-4 py-3 flex-1 space-y-3">
+              {/* Titulo */}
+              <p className="text-base font-semibold text-slate-800 leading-snug">{actividadAlba.titulo}</p>
+
+              {/* Descripcion — igual a BrainColumn "Desarrollo de la actividad" */}
+              <div className="bg-blue-50/60 rounded-lg p-3">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Desarrollo de la actividad</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{actividadAlba.descripcion}</p>
               </div>
 
               {/* Objetivo */}
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Objetivo</p>
-                <p className="text-xs text-slate-600 leading-relaxed">{actividadAlba.objetivo}</p>
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">Objetivo</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{actividadAlba.objetivo}</p>
               </div>
 
-              {/* Descripcion */}
-              <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Descripcion</p>
-                <p className="text-xs text-slate-600 leading-relaxed">{actividadAlba.descripcion}</p>
+              {/* Materiales */}
+              {(MATERIALES_ACT[actividadAlba.titulo] ?? []).length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-[10px] font-medium text-amber-700 uppercase tracking-wide mb-2">Materiales</p>
+                  <ul className="text-sm text-amber-800 space-y-1">
+                    {(MATERIALES_ACT[actividadAlba.titulo] ?? []).map((m, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-amber-500 mt-0.5">•</span>
+                        <span>{m}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Proyecto activo contextualizado */}
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <FolderOpen className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="text-xs text-emerald-800">
+                  <span className="font-semibold">Proyecto activo:</span> Batido de Cuentos. La actividad esta contextualizada a este tema.
+                </span>
               </div>
 
+              {/* Proxima actividad */}
               {albIdx < SECUENCIA_ALBA.length - 1 && (
                 <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
                   <p className="text-[10px] text-violet-600">
@@ -420,6 +490,18 @@ export default function PreviewLayout() {
                   </p>
                 </div>
               )}
+
+              {/* Botones — igual a BrainColumn */}
+              <div className="flex gap-2 pt-1">
+                <button type="button" className="flex-1 h-9 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5" />
+                  Imprimir fichas
+                </button>
+                <button type="button" className="flex-1 h-9 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
+                  Ver secuencia
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -522,50 +604,118 @@ export default function PreviewLayout() {
             </div>
           </div>
 
-          {/* CAPACITACION — igual a la de 4/5 actual: texto + audio */}
-          <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-bold text-blue-700">Capacitacion</span>
+          {/* CAPACITACION — igual a MicroTraining del 4/5 real */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-500" />
+                <p className="text-sm font-semibold" style={{ color: "#1e3a5f" }}>Micro capacitacion just in time</p>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 truncate">
+                Actividad: <span className="font-medium text-slate-700">{actividadAlba.titulo}</span>
+              </p>
             </div>
 
-            <p className="text-xs font-semibold text-slate-700 mb-1">
-              DC CABA 2025 — Conciencia Fonologica
-            </p>
-            <p className="text-xs text-slate-600 leading-relaxed mb-3">
-              La conciencia fonologica es la capacidad de identificar y manipular los sonidos del habla.
-              Se desarrolla progresivamente: primero rimas, luego silabas y finalmente fonemas.
-              El juego y la cancion son los vehiculos principales en el nivel inicial.
-            </p>
-
-            {/* Reproductor de audio — igual al actual */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-              <button
-                onClick={() => setAudioPlaying(!audioPlaying)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                  audioPlaying
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-blue-300 text-blue-600 hover:bg-blue-100"
-                }`}
-              >
-                {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-blue-800 truncate">
-                  Conciencia Fonologica en el aula
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 bg-blue-200 rounded-full h-1">
-                    <div
-                      className={`bg-blue-500 h-1 rounded-full transition-all duration-700 ${
-                        audioPlaying ? "w-1/3" : "w-0"
-                      }`}
-                    />
+            <div className="flex-1 p-4 space-y-3">
+              {/* Imagen ALBA + burbuja de tip — fondo azul marino igual al real */}
+              <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#1e3a5f" }}>
+                <div className="p-4">
+                  <div className="flex gap-3">
+                    {/* Avatar ALBA */}
+                    <div className="flex-shrink-0">
+                      <div
+                        className="w-16 h-16 rounded-full overflow-hidden"
+                        style={{ border: "3px solid #fbbf24" }}
+                      >
+                        <div className="w-full h-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold text-xl">
+                          A
+                        </div>
+                      </div>
+                    </div>
+                    {/* Burbuja de tip */}
+                    <div className="flex-1 relative">
+                      <div
+                        className="bg-white rounded-xl rounded-tl-none p-3 text-sm text-slate-700 leading-relaxed"
+                        style={{ minHeight: "80px" }}
+                      >
+                        {MICRO_TIPS[tipIdx]}
+                      </div>
+                      <div
+                        className="absolute top-3 -left-2 w-0 h-0"
+                        style={{
+                          borderTop: "8px solid transparent",
+                          borderBottom: "8px solid transparent",
+                          borderRight: "8px solid white",
+                        }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-[10px] text-blue-500 flex-shrink-0">4:32</span>
+                </div>
+
+                {/* Barra inferior: Otro tip + Play + contador */}
+                <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setTipIdx((tipIdx + 1) % MICRO_TIPS.length)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-amber-500 text-white hover:bg-amber-600 transition-all"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Otro tip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAudioPlaying(!audioPlaying)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm bg-white/20 text-white hover:bg-white/30 transition-all"
+                  >
+                    {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    {audioPlaying ? "Pausar" : "Escuchar"}
+                  </button>
+                  <span className="text-xs text-white/60">{tipIdx + 1} / {MICRO_TIPS.length}</span>
                 </div>
               </div>
-              <Volume2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
+
+              {/* Que deben aprender los ninos — desplegable */}
+              <div className="bg-slate-50 rounded-lg px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAprendizajes(!showAprendizajes)}
+                  className="w-full text-left flex items-center justify-between text-xs font-semibold"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  <span>Que deben aprender los ninos</span>
+                  <span className="text-slate-400 text-base leading-none">{showAprendizajes ? "−" : "+"}</span>
+                </button>
+                {showAprendizajes && (
+                  <ul className="mt-2 text-xs text-slate-600 space-y-1.5">
+                    {QUE_APRENDEN.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 bg-amber-500" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Fundamento pedagogico — desplegable */}
+              <div className="bg-blue-50 rounded-lg px-4 py-3 border border-blue-100">
+                <button
+                  type="button"
+                  onClick={() => setShowFundamento(!showFundamento)}
+                  className="w-full text-left flex items-center justify-between text-xs font-semibold"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  <span>Fundamento pedagogico</span>
+                  <span className="text-slate-400 text-base leading-none">{showFundamento ? "−" : "+"}</span>
+                </button>
+                {showFundamento && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-bold text-blue-700">{FUNDAMENTO.teoria}</p>
+                    <p className="text-xs text-blue-600 italic">{FUNDAMENTO.autor}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed">{FUNDAMENTO.descripcion}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
