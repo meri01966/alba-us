@@ -1,6 +1,7 @@
 // ALBA Brain API v10.3 - Marco Curricular DC Inicial Buenos Aires 2025 + evidencia internacional
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { generateText } from "ai"
 
 const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
@@ -1590,248 +1591,152 @@ export async function POST(req: NextRequest) {
     const { action, proyecto, sala, dias, actividadesYaSugeridas = [] } = body
     
     if (action === "sugerir_actividades_semana" && proyecto && dias) {
-      // ALBA genera SOLO actividades de alfabetizacion (CF / CT+O / Escritura)
-      // a partir de mitad de año. Rota los 3 ejes entre los 3 dias (Lun/Mar/Vie).
-      // Si una actividad fue marcada como no_realizada, se puede volver a sugerir.
+      // ALBA usa IA real para generar actividades de alfabetizacion ricas, variadas y siempre nuevas.
+      // Lee el historial de cierres para no repetir actividades ya realizadas.
+      // Prioriza actividades marcadas como no_realizada para volver a sugerirlas.
+
       const supabase = getSupabase()
 
-      // Determinar semana del año para saber si estamos en segunda mitad (semana >= 20 ~ mayo)
+      // Semana del año para determinar segunda mitad (semana >= 20 = desde mayo)
       const hoy = new Date()
       const inicioAnio = new Date(hoy.getFullYear(), 0, 1)
       const semanaAnio = Math.ceil(((hoy.getTime() - inicioAnio.getTime()) / 86400000 + inicioAnio.getDay() + 1) / 7)
-      const segundaMitad = semanaAnio >= 20
 
-      // Leer cierres anteriores para saber que actividades de alfa se realizaron
-      // y cuales fueron marcadas como no_realizada (para poder repetirlas)
-      let actividadesRealizadas: string[] = []
+      // Leer historial de cierres para contexto
+      let historialResumen = ""
       let actividadesNoRealizadas: string[] = []
       try {
         const { data: cierres } = await supabase
           .from("registro_cierre")
-          .select("actividad_alba, evaluacion_general, eje")
+          .select("actividad_alba, evaluacion_general, eje, fecha")
           .eq("sala", sala || "Girasoles")
           .order("fecha", { ascending: false })
-          .limit(30)
-        if (cierres) {
-          actividadesRealizadas = cierres
-            .filter(c => c.evaluacion_general !== "no_realizada")
-            .map(c => c.actividad_alba)
-            .filter(Boolean)
+          .limit(20)
+        if (cierres && cierres.length > 0) {
+          const realizadas = cierres.filter(c => c.evaluacion_general !== "no_realizada")
           actividadesNoRealizadas = cierres
             .filter(c => c.evaluacion_general === "no_realizada")
-            .map(c => c.actividad_alba)
-            .filter(Boolean)
+            .map(c => c.actividad_alba).filter(Boolean)
+          historialResumen = realizadas.slice(0, 10).map(c =>
+            `- ${c.actividad_alba || "sin nombre"} (${c.eje}, ${c.evaluacion_general}, ${c.fecha})`
+          ).join("\n")
         }
       } catch (e) {
-        // silencioso — seguir con banco local
+        // silencioso
       }
 
-      // Los 3 ejes rotan: dia 0 = CF, dia 1 = CT+O, dia 2 = Escritura
-      const EJES_ALFA = ["CF", "CT", "Escritura"] as const
-      type EjeAlfa = typeof EJES_ALFA[number]
+      // Los 3 dias de alfabetizacion rotan eje: dia[0]=CF, dia[1]=CT+O, dia[2]=Escritura
+      const EJES = ["CF", "CT", "Escritura"]
+      const diasArray = dias as string[]
 
-      const BANCO_ALFABETIZACION: Record<EjeAlfa, Array<{
-        nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string
-      }>> = {
-        CF: [
-          {
-            nombre: "Juego de rimas con nombres propios",
-            capacidades: "Conciencia fonemica — nivel de rima",
-            contenidos: "Reconocimiento y produccion de palabras que riman",
-            objetivo: "Identificar y producir palabras que riman con nombres de los companeros",
-            desarrollo: "En ronda, cada nino dice su nombre y entre todos buscan algo que rime (Maria-sandia, Juan-pan). Registrar en afiche grupal.",
-            materiales: "Afiche, marcadores, lista de nombres de la sala"
-          },
-          {
-            nombre: "Conteo de silabas con palmadas",
-            capacidades: "Conciencia silabica",
-            contenidos: "Segmentacion de palabras en silabas",
-            objetivo: "Segmentar palabras del proyecto en silabas usando el cuerpo",
-            desarrollo: "Decir palabras del proyecto, dar palmadas por cada silaba, contar en voz alta. Variar: palmadas, saltitos, golpes en rodillas.",
-            materiales: "Lista de palabras del proyecto, dados numericos"
-          },
-          {
-            nombre: "Identificacion del sonido inicial",
-            capacidades: "Conciencia fonemica — fonema inicial",
-            contenidos: "Fonema inicial de consonantes frecuentes m, p, s, l, t",
-            objetivo: "Identificar el sonido inicial de palabras cotidianas",
-            desarrollo: "Mostrar imagenes, decir el nombre, exagerar el sonido inicial. Agrupar imagenes por sonido inicial en cajas etiquetadas.",
-            materiales: "Tarjetas con imagenes, cajas con letra inicial, marcadores"
-          },
-          {
-            nombre: "Trabalenguas y cancion de fonemas",
-            capacidades: "Conciencia fonemica — manipulacion",
-            contenidos: "Juego con sonidos del lenguaje: sustitucion de fonemas",
-            objetivo: "Explorar variantes de palabras cambiando un sonido",
-            desarrollo: "Cantar una cancion reemplazando vocales (la-le-li-lo-lu). Decir trabalenguas, repetir acelerando. Inventar uno nuevo.",
-            materiales: "Letra de cancion impresa, parlante"
-          },
-          {
-            nombre: "Caja de los sonidos",
-            capacidades: "Conciencia fonemica — discriminacion",
-            contenidos: "Discriminacion auditiva de fonemas iniciales",
-            objetivo: "Distinguir si dos palabras empiezan con el mismo sonido",
-            desarrollo: "Mostrar dos imagenes, preguntar 'empiezan igual?'. Luego clasificar tarjetas en la caja del sonido correcto.",
-            materiales: "Cajas etiquetadas con letras, tarjetas de imagenes"
-          },
-          {
-            nombre: "Cancion con letras del nombre",
-            capacidades: "Conciencia fonemica — relacion sonido-letra",
-            contenidos: "Letras del propio nombre",
-            objetivo: "Reconocer las letras del nombre propio en contexto",
-            desarrollo: "Cantar 'Como se escribe tu nombre' mientras se senalan las letras en el cartel. Cada nino identifica SUS letras en el abecedario.",
-            materiales: "Carteles con nombres, abecedario visible, lapices"
-          },
-        ],
-        CT: [
-          {
-            nombre: "Lectura dialogica: el cuento del proyecto",
-            capacidades: "Comprension lectora — nivel literal e inferencial",
-            contenidos: "Comprension de textos narrativos leidos en voz alta",
-            objetivo: "Comprender personajes, situacion y desenlace del cuento",
-            desarrollo: "Leer en voz alta con pausas. Preguntar: quien, que paso, como termino. Luego: por que crees que... como te sentiste cuando...",
-            materiales: "Cuento seleccionado, tarjetas de personajes"
-          },
-          {
-            nombre: "Secuencia narrativa con imagenes",
-            capacidades: "Comprension de estructura narrativa",
-            contenidos: "Inicio-desarrollo-final de un cuento",
-            objetivo: "Ordenar imagenes del cuento y narrar la secuencia",
-            desarrollo: "Repartir 3-4 imagenes desordenadas del cuento. En grupo ordenar y contar la historia. Pegar en afiche con flechas.",
-            materiales: "Imagenes del cuento, afiche, pegamento, flechas"
-          },
-          {
-            nombre: "Texto informativo: leemos juntos",
-            capacidades: "Comprension de texto informativo",
-            contenidos: "Intencion comunicativa de textos no narrativos",
-            objetivo: "Diferenciar texto informativo de cuento; extraer informacion",
-            desarrollo: "Leer un texto corto informativo (receta, noticia de animales). Preguntar: es un cuento? De que informa? Que aprendimos?",
-            materiales: "Texto informativo impreso, imagenes ilustrativas"
-          },
-          {
-            nombre: "Vocabulario en contexto",
-            capacidades: "Ampliacion lexical",
-            contenidos: "Inferencia de significado por contexto",
-            objetivo: "Inferir el significado de palabras nuevas usando el contexto",
-            desarrollo: "Leer oración con palabra desconocida. Preguntar: que crees que significa? Buscar pistas en la oracion. Confirmar.",
-            materiales: "Tarjetas con oraciones, diccionario ilustrado"
-          },
-          {
-            nombre: "Ronda de predicciones",
-            capacidades: "Comprension lectora — anticipacion",
-            contenidos: "Prediccion a partir de portada e ilustraciones",
-            objetivo: "Formular hipotesis sobre el contenido antes de leer",
-            desarrollo: "Mostrar tapa del libro. Preguntar: de que crees que trata? quienes apareceran? Leer y confirmar predicciones.",
-            materiales: "Libro seleccionado, afiche para registrar predicciones"
-          },
-          {
-            nombre: "Reconstruccion oral del cuento",
-            capacidades: "Produccion oral de textos narrativos",
-            contenidos: "Narracion en voz alta con estructura",
-            objetivo: "Narrar un cuento conocido usando principio, nudo y final",
-            desarrollo: "En parejas, uno narra mientras el otro escucha. Luego intercambian. El docente modela con lenguaje narrativo formal.",
-            materiales: "Cuento conocido, tarjetas de estructura narrativa"
-          },
-        ],
-        Escritura: [
-          {
-            nombre: "Escritura del nombre propio",
-            capacidades: "Sistema de escritura — nombre propio como modelo estable",
-            contenidos: "Correspondencia sonido-letra en el nombre propio",
-            objetivo: "Escribir el nombre propio de memoria con las letras correctas",
-            desarrollo: "Cada nino escribe su nombre en tarjeta. Comparar con modelo. Identificar cuantas letras tiene. Buscar letras iguales entre companeros.",
-            materiales: "Tarjetas nombre, lapices, cartel referente"
-          },
-          {
-            nombre: "Dictado al docente: texto colectivo",
-            capacidades: "Escritura por dictado — reflexion sobre el sistema",
-            contenidos: "La escritura como representacion del lenguaje oral",
-            objetivo: "Dictar un texto al docente observando como se escribe",
-            desarrollo: "El docente escribe en pizarron lo que dictan los ninos (frase del proyecto). Pensar en voz alta: cuantas letras necesito? empieza con que sonido?",
-            materiales: "Pizarron, tizas o marcadores gruesos"
-          },
-          {
-            nombre: "Lista de palabras del proyecto",
-            capacidades: "Escritura de palabras conocidas",
-            contenidos: "Escritura espontanea con intento de correspondencia",
-            objetivo: "Escribir palabras del proyecto usando el nombre como referencia",
-            desarrollo: "Cada nino escribe 3 palabras del proyecto como puede (escritura espontanea). Luego comparar con modelo escrito por docente.",
-            materiales: "Hojas rayadas, lapices, modelo de palabras del proyecto"
-          },
-          {
-            nombre: "Juego de letras moviles",
-            capacidades: "Sistema de escritura — analisis de palabras",
-            contenidos: "Composicion y descomposicion de palabras",
-            objetivo: "Armar palabras conocidas con letras moviles",
-            desarrollo: "Con letras imantadas o tarjetas, armar el nombre propio y palabras del proyecto. Desordenar y volver a armar. Comparar con modelo.",
-            materiales: "Letras moviles o imantadas, modelo de palabras"
-          },
-          {
-            nombre: "Escritura con apoyo de imagen",
-            capacidades: "Escritura con referentes visuales",
-            contenidos: "Relacion imagen-texto",
-            objetivo: "Producir texto escrito breve a partir de una imagen",
-            desarrollo: "Cada nino recibe imagen del proyecto. Escribe (como puede) el nombre o una frase. El docente circula y pregunta: como lo escribiste? que dice?",
-            materiales: "Imagenes del proyecto, hojas, lapices"
-          },
-          {
-            nombre: "Lectura de palabras conocidas",
-            capacidades: "Lectura inicial — palabras de uso frecuente",
-            contenidos: "Reconocimiento global de palabras significativas",
-            objetivo: "Leer palabras conocidas del entorno del aula",
-            desarrollo: "Mostrar tarjetas con nombres de objetos del aula o del proyecto. Los ninos las leen, buscan el objeto, lo etiquetan. Armar 'banco de palabras'.",
-            materiales: "Tarjetas con palabras, objetos del aula, cinta adhesiva"
-          },
-        ]
-      }
+      const prompt = `Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos) de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
 
-      // Rotar ejes: dia 0=CF, 1=CT, 2=Escritura. Si hay actividades no-realizadas, priorizarlas.
-      const sugerencias = (dias as string[]).map((dia: string, idx: number) => {
-        const eje = EJES_ALFA[idx % 3]
-        const banco = BANCO_ALFABETIZACION[eje]
+CONTEXTO DE LA SALA:
+- Sala: ${sala}
+- Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
+- Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
+- Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
 
-        // Priorizar actividades no-realizadas de ese eje
-        const noRealizadasDeEste = actividadesNoRealizadas.filter(
-          nombre => banco.some(a => a.nombre === nombre)
-        )
+MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
+Ejes: CF (Conciencia Fonologica), CT (Comprension Textual), Escritura inicial.
 
-        let candidatas = banco.filter(a => {
-          // Excluir ya sugeridas esta semana (actividadesYaSugeridas)
-          const yaEstaSemana = (actividadesYaSugeridas || []).includes(a.nombre)
-          // Excluir ya realizadas (a menos que sea no-realizada que queremos repetir)
-          const yaRealizada = actividadesRealizadas.includes(a.nombre) && !noRealizadasDeEste.includes(a.nombre)
-          return !yaEstaSemana && !yaRealizada
+HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
+${historialResumen || "Sin historial previo — esta es la primera semana."}
+
+${actividadesNoRealizadas.length > 0 ? `ACTIVIDADES NO REALIZADAS (volver a sugerir si son pertinentes):\n${actividadesNoRealizadas.join(", ")}` : ""}
+
+ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
+${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
+
+TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia indicado.
+Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica)
+Dia 2 (${diasArray[1]}): eje CT (Comprension Textual)  
+Dia 3 (${diasArray[2]}): eje Escritura inicial
+
+REQUISITOS DE CADA ACTIVIDAD:
+1. Novedosa, original, no repetida respecto al historial
+2. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
+3. Rica en recursos: puede incluir juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, etc.)
+4. Practicable por una sola maestra con 20-25 ninos de jardin
+5. Tiempo de ejecucion: 20-30 minutos
+6. Materiales accesibles en un jardin de infantes comun de Argentina
+
+FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JSON:
+[
+  {
+    "dia": "${diasArray[0]}",
+    "eje": "CF",
+    "nombre": "nombre corto y atractivo",
+    "capacidades": "una linea con las capacidades que desarrolla",
+    "contenidos": "contenidos curriculares especificos del DC CABA 2025",
+    "objetivo": "objetivo especifico de la actividad en una oracion",
+    "desarrollo": "descripcion paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave",
+    "materiales": "lista de materiales necesarios"
+  },
+  {
+    "dia": "${diasArray[1]}",
+    "eje": "CT",
+    ...
+  },
+  {
+    "dia": "${diasArray[2]}",
+    "eje": "Escritura",
+    ...
+  }
+]
+
+Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que ya estan en el historial. Responde SOLO con el JSON, sin ningun texto adicional.`
+
+      try {
+        const result = await generateText({
+          model: "openai/gpt-4o-mini",
+          prompt,
+          maxOutputTokens: 2000,
+          temperature: 0.85,
         })
 
-        // Si no quedan candidatas (ciclo completo), usar todas del eje excepto las de esta semana
-        if (candidatas.length === 0) {
-          candidatas = banco.filter(a => !(actividadesYaSugeridas || []).includes(a.nombre))
-        }
-        if (candidatas.length === 0) candidatas = banco
+        // Parsear JSON
+        const texto = result.text.trim()
+        const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
+        const sugerenciasIA = JSON.parse(jsonStr)
 
-        // Priorizar no-realizadas
-        const priorizadas = candidatas.filter(a => noRealizadasDeEste.includes(a.nombre))
-        const elegida = priorizadas.length > 0
-          ? priorizadas[0]
-          : candidatas[Math.floor(Math.random() * candidatas.length)]
-
-        return {
-          dia,
+        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
+          dia: s.dia,
           actividad: {
-            ...elegida,
+            nombre: s.nombre,
+            capacidades: s.capacidades,
+            contenidos: s.contenidos,
+            objetivo: s.objetivo,
+            desarrollo: s.desarrollo,
+            materiales: s.materiales,
+            eje: s.eje,
             alfabetizacion: true,
             origen: "alba" as const,
-            eje,
-            // Contextualizar con el proyecto si hay uno
-            nombre: proyecto?.titulo && proyecto.titulo !== "Alfabetizacion inicial"
-              ? `${elegida.nombre} — Proyecto: ${proyecto.titulo}`
-              : elegida.nombre,
           }
-        }
-      })
+        }))
 
-      return NextResponse.json({ ok: true, sugerencias })
+        return NextResponse.json({ ok: true, sugerencias })
+      } catch (iaError) {
+        console.error("[v0] Error en IA para sugerencias:", iaError)
+        // Fallback con actividades ricas predefinidas si la IA falla
+        const FALLBACK = diasArray.map((dia, idx) => ({
+          dia,
+          actividad: {
+            nombre: idx === 0 ? "Juego de sonidos con los nombres del grupo" : idx === 1 ? "Lectura dialogica: anticipacion por imagenes" : "Escritura del nombre propio con modelo",
+            capacidades: idx === 0 ? "Conciencia silabica y fonemica" : idx === 1 ? "Comprension lectora predictiva" : "Sistema de escritura — nombre como modelo estable",
+            contenidos: idx === 0 ? "Segmentacion silabica, identificacion de sonido inicial" : idx === 1 ? "Anticipacion a partir de portada e ilustraciones, comprension literal" : "Correspondencia sonido-letra, escritura espontanea con referente",
+            objetivo: idx === 0 ? "Segmentar nombres de companeros en silabas y reconocer el sonido inicial" : idx === 1 ? "Formular hipotesis sobre el contenido antes de leer y verificarlas" : "Escribir el nombre propio de memoria usando el cartel como referencia",
+            desarrollo: idx === 0 ? "En ronda, cada nino dice su nombre palmeando las silabas. Luego todos repiten. Enfatizar el primer sonido. Armar lista en afiche con los nombres y sus silabas." : idx === 1 ? "Mostrar tapa del libro. Preguntar: de que crees que trata? Por que? Registrar predicciones. Leer el cuento. Volver a las predicciones: acertaron?" : "Entregar tarjeta con nombre de cada nino. Observar, trazar con el dedo, copiar en papel. Comparar con companeros: cuales son mas largos?",
+            materiales: idx === 0 ? "Afiche, marcadores, lista de nombres de la sala" : idx === 1 ? "Cuento seleccionado, pizarron o afiche para registrar predicciones" : "Tarjetas plastificadas con nombres, hojas, lapices",
+            eje: EJES[idx],
+            alfabetizacion: true,
+            origen: "alba" as const,
+          }
+        }))
+        return NextResponse.json({ ok: true, sugerencias: FALLBACK })
+      }
     }
+
     
     return NextResponse.json({ ok: false, error: "Accion no reconocida" }, { status: 400 })
   } catch (err) {
