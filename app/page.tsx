@@ -1661,7 +1661,12 @@ useEffect(() => {
         />
       )}
       {/* Cronograma Semanal Modal */}
-      <CronogramaSemanal isOpen={showCronograma} onClose={() => { setShowCronograma(false); setCronogramaRefreshKey(k => k + 1) }} sala={salaActual} students={students} />
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => {
+        setShowCronograma(false)
+        setCronogramaRefreshKey(k => k + 1)
+        // Invalidar SWR del cronograma y del brain para que ambos refetcheen automaticamente
+        globalMutate((key: string) => typeof key === "string" && (key.includes("/api/cronograma-maternal") || key.includes("/api/brain")), undefined, { revalidate: true })
+      }} sala={salaActual} students={students} />
     </div>
   )
 }
