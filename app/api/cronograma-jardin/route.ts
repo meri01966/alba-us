@@ -223,15 +223,30 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ ok: true })
 }
 
-// PUT - Finalizar semana completa
+// PUT - Finalizar semana completa (marca todos los días como dia_finalizado: true)
 export async function PUT(req: Request) {
   const body = await req.json()
   const { sala } = body
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
+  const salaKey = normSala(sala)
   const lunes = getLunesSemana(new Date())
   const lunesStr = lunes.toISOString().split("T")[0]
 
-  await supabase.from(TABLA).update({ finalizado: true }).eq("sala", sala).eq("semana_inicio", lunesStr)
+  // Buscar todos los registros de esta semana
+  const { data: registros } = await supabase
+    .from(TABLA)
+    .select("id, sala")
+    .eq("semana_inicio", lunesStr)
+
+  // Filtrar por sala normalizada y actualizar todos
+  const registrosDeSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+  for (const r of registrosDeSala) {
+    await supabase
+      .from(TABLA)
+      .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
+      .eq("id", r.id)
+  }
+
   return NextResponse.json({ ok: true })
 }

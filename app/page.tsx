@@ -458,7 +458,30 @@ export default function ALBADashboard() {
     localStorage.removeItem(STORAGE_KEY)
   }, [])
   
-  // Finalizar jornada: 
+  // Finalizar semana completa (solo sala de prueba, sin confirmación)
+  const handleFinalizarSemana = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cronograma-jardin", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setJornadaToast({ tipo: "ok", mensaje: "Semana finalizada. Próxima semana lista para editar." })
+        setTimeout(() => setJornadaToast(null), 3000)
+        
+        // Refrescar brain y cronograma
+        fetchHistorialMes()
+        globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain()
+        }, 1000)
+      }
+    } catch (e) {
+      console.error("[v0] Error finalizando semana:", e)
+    }
+  }, [salaActual]) 
   // 1. Alumnos sin marcar → se guardan como verde (logrado) en Supabase
   // 2. Se actualiza el progreso acumulado por eje en el mapa
   // 3. Se guarda el registro de cierre que alimenta a ALBA para la proxima sugerencia
@@ -1415,6 +1438,18 @@ useEffect(() => {
                 statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
                 onGuardar={handleRegistroCierre}
               />
+
+              {/* Botón Finalizar Semana Completa (solo sala de prueba) */}
+              {salaActual.toLowerCase().includes("prueba") && (
+                <div className="px-4 py-3 border-t border-border">
+                  <button
+                    onClick={handleFinalizarSemana}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Finalizar Semana Completa
+                  </button>
+                </div>
+              )}
 
               {/* Fila 5: Micro capacitacion */}
               <MicroTraining
