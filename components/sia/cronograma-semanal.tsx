@@ -838,7 +838,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                       })}
                     </div>
                   </div>
-                  )} {/* fin abierto */}
+                  )}
                 </div>
               )
             })}
