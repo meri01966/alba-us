@@ -298,7 +298,7 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "", sala = "
   const [isTalking, setIsTalking] = useState(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
-  // Cargar primer tip con IA cuando cambia la actividad
+  // Cargar primer tip con IA cuando cambia la actividad (solo si hay actividad real)
   useEffect(() => {
     window.speechSynthesis.cancel()
     setIsPlaying(false)
@@ -306,7 +306,8 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "", sala = "
     setTipsIA([])
     setTipIndex(0)
     setTipsVistos([])
-    if (!actividadDelDia) return
+    // No disparar si no hay actividad
+    if (!actividadDelDia || actividadDelDia.trim() === "") return
 
     const cargarTip = async () => {
       setLoadingTip(true)
@@ -448,8 +449,12 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "", sala = "
                       <span className="w-3 h-3 border border-slate-300 border-t-slate-500 rounded-full animate-spin inline-block" />
                       ALBA esta pensando...
                     </span>
-                  ) : (
+                  ) : consejoActual ? (
                     consejoActual
+                  ) : (
+                    <span className="text-slate-400 text-xs italic">
+                      Cargando actividad del dia...
+                    </span>
                   )}
                 </div>
                 <div 

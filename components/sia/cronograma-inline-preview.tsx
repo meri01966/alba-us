@@ -79,12 +79,15 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
   const [hayDatos, setHayDatos] = useState(false)
 
   const cargar = useCallback(async () => {
+    if (!sala) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    const base = typeof window !== "undefined" ? window.location.origin : ""
     try {
       const [resCron, resClases] = await Promise.all([
-        fetch(`${base}/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
-        fetch(`${base}/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
+        fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
+        fetch(`/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
       ])
 
       if (resCron.ok) {
