@@ -8,7 +8,6 @@ import { Header } from "@/components/sia/header"
 import { HeatMap } from "@/components/sia/heat-map"
 import { DayPlanning, type DayPlanningHandle } from "@/components/sia/day-planning"
 import { MicroTraining } from "@/components/sia/micro-training"
-import { QuickRegister } from "@/components/sia/quick-register"
 import { CronogramaSemanal } from "@/components/sia/cronograma-semanal"
 import { CronogramaInlinePreview } from "@/components/sia/cronograma-inline-preview"
 import ClassEvaluation from "@/components/alba/class-evaluation"
@@ -459,35 +458,36 @@ export default function ALBADashboard() {
   }, [])
   
   // Finalizar semana completa (solo sala de prueba, sin confirmación)
-  const handleFinalizarSemana = useCallback(async () => {
-    try {
-      const res = await fetch("/api/cronograma-jardin", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: salaActual }),
-      })
-      const data = await res.json()
-      if (data.ok) {
-        setJornadaToast({ tipo: "ok", mensaje: "Semana finalizada. Próxima semana lista para editar." })
-        setTimeout(() => setJornadaToast(null), 3000)
-        
-        // Refrescar brain y cronograma
-        fetchHistorialMes()
-        globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-        setTimeout(() => {
-          dayPlanningRef.current?.fetchBrain()
-        }, 1000)
-      }
-    } catch (e) {
-      console.error("[v0] Error finalizando semana:", e)
+  // SIMPLE: Finalizar jornada = marcar día como completado + cargar siguiente actividad
+  const handleFinalizarJornada = useCallback(async () => {
+    const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
+    const diasValidos = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+    const hoy = new Date()
+    let diaHoyNombre = diasNombres[hoy.getDay()]
+    
+    const esSalaPrueba = salaActual.toLowerCase().includes("prueba")
+    if (!esSalaPrueba && !diasValidos.includes(diaHoyNombre)) {
+      diaHoyNombre = "Viernes"
     }
-  }, [salaActual]) 
-  // 1. Alumnos sin marcar → se guardan como verde (logrado) en Supabase
-  // 2. Se actualiza el progreso acumulado por eje en el mapa
-  // 3. Se guarda el registro de cierre que alimenta a ALBA para la proxima sugerencia
-  // 4. ALBA re-calcula la actividad sugerida para la proxima clase
-  // 5. Las evaluaciones del dia se limpian para la nueva clase
-  const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
+
+    try {
+      await fetch("/api/cronograma-jardin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
+      })
+    } catch (e) {
+      console.error("Error:", e)
+    }
+
+    setTimeout(() => {
+      globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+      dayPlanningRef.current?.fetchBrain()
+    }, 300)
+    
+    setJornadaToast({ tipo: "ok", mensaje: "Jornada finalizada. Siguiente actividad cargada." })
+    setTimeout(() => setJornadaToast(null), 2000)
+  }, [salaActual])
     const ejeDelDia = ejeActual
     const actividadDelDia = actividadSugeridaALBA || actividadActual
 
@@ -1427,29 +1427,16 @@ useEffect(() => {
                 isLoading={isLoading}
               />
 
-              {/* Fila 4: Finalizar Jornada */}
-              <QuickRegister
-                actividadDelDia={actividadSugeridaALBA || actividadActual}
-                evaluados={Object.keys(evaluaciones).length}
-                totalAlumnos={students.length}
-                statsVerdes={students.filter(s => evaluaciones[s.id] === "green" || !evaluaciones[s.id]).length}
-                statsAmarillos={students.filter(s => evaluaciones[s.id] === "yellow").length}
-                statsRojos={students.filter(s => evaluaciones[s.id] === "red").length}
-                statsAusentes={students.filter(s => evaluaciones[s.id] === "blue").length}
-                onGuardar={handleRegistroCierre}
-              />
-
-              {/* Botón Finalizar Semana Completa (solo sala de prueba) */}
-              {salaActual.toLowerCase().includes("prueba") && (
-                <div className="px-4 py-3 border-t border-border">
-                  <button
-                    onClick={handleFinalizarSemana}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                  >
-                    Finalizar Semana Completa
-                  </button>
-                </div>
-              )}
+              {/* Fila 4: Botón Finalizar Jornada - SIMPLE */}
+              <div className="px-4 py-4 border-t border-border bg-gradient-to-r from-blue-50 to-blue-50">
+                <button
+                  onClick={handleFinalizarJornada}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors text-lg"
+                >
+                  Finalizar Jornada
+                </button>
+                <p className="text-xs text-slate-500 mt-2 text-center">Marca el día como completado y carga la siguiente actividad</p>
+              </div>
 
               {/* Fila 5: Micro capacitacion */}
               <MicroTraining
