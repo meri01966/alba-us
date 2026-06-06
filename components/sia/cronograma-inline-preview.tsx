@@ -91,11 +91,13 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
         const data = await resCron.json()
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
           setCronograma(data.cronograma)
+          // hay datos si al menos 1 dia tiene actividad con nombre
           const tieneActividades = Object.values(data.cronograma as Record<string, DiaData>).some(
-            d => d.actividades?.some(a => a.nombre?.trim())
+            d => (d.actividades || []).some(a => (a.nombre || "").trim().length > 0)
           )
           setHayDatos(tieneActividades)
         } else {
+          // Sin cronograma guardado — generar estructura vacía con fechas de la semana actual
           const lunes = getLunesSemana()
           const nuevo: Record<string, DiaData> = {}
           DIAS.forEach((dia, idx) => {

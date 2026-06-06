@@ -279,49 +279,59 @@ function buscarPorActividad<T>(actividad: string | undefined, mapa: Record<strin
 interface MicroTrainingProps {
   ejeDelDia?: "CF" | "CT" | "O"
   actividadDelDia?: string
+  sala?: string
 }
 
-// Buscar consejos por actividad o usar genericos
-function obtenerConsejos(actividad: string | undefined, eje: string): string[] {
-  if (actividad) {
-    const actividadLower = actividad.toLowerCase()
-    for (const [titulo, consejos] of Object.entries(CONSEJOS_POR_ACTIVIDAD)) {
-      if (actividadLower.includes(titulo.toLowerCase()) || titulo.toLowerCase().includes(actividadLower)) {
-        return consejos
-      }
-    }
-    const palabrasClave = actividadLower.split(" ")
-    for (const [titulo, consejos] of Object.entries(CONSEJOS_POR_ACTIVIDAD)) {
-      const tituloLower = titulo.toLowerCase()
-      if (palabrasClave.some(p => p.length > 3 && tituloLower.includes(p))) {
-        return consejos
-      }
-    }
-  }
-  return CONSEJOS_GENERICOS[eje] || CONSEJOS_GENERICOS.CF
-}
-
-export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroTrainingProps) {
-  const consejos   = obtenerConsejos(actividadDelDia, ejeDelDia)
+export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "", sala = "" }: MicroTrainingProps) {
   const aprendizajes = buscarPorActividad(actividadDelDia, QUE_DEBEN_APRENDER_ACT, QUE_DEBEN_APRENDER_EJE[ejeDelDia] || QUE_DEBEN_APRENDER_EJE.CF)
   const fundamento   = buscarPorActividad(actividadDelDia, FUNDAMENTO_ACT, FUNDAMENTO_EJE[ejeDelDia] || FUNDAMENTO_EJE.CF)
-  
-  const [consejoIndex, setConsejoIndex] = useState(0)
+
+  // Estado para tips generados por IA
+  const [tipsIA, setTipsIA] = useState<string[]>([])
+  const [tipIndex, setTipIndex] = useState(0)
+  const [loadingTip, setLoadingTip] = useState(false)
+  const [tipsVistos, setTipsVistos] = useState<string[]>([])
+
   const [showAprendizajes, setShowAprendizajes] = useState(false)
   const [showFundamento, setShowFundamento] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isTalking, setIsTalking] = useState(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
 
-  // Resetear indice Y cancelar audio cuando cambia la actividad
+  // Cargar primer tip con IA cuando cambia la actividad
   useEffect(() => {
     window.speechSynthesis.cancel()
     setIsPlaying(false)
     setIsTalking(false)
-    setConsejoIndex(0)
-  }, [actividadDelDia])
+    setTipsIA([])
+    setTipIndex(0)
+    setTipsVistos([])
+    if (!actividadDelDia) return
 
-  const consejoActual = consejos[consejoIndex]
+    const cargarTip = async () => {
+      setLoadingTip(true)
+      try {
+        const res = await fetch("/api/micro-training-tip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eje: ejeDelDia, actividad: actividadDelDia, sala, yaVisto: [] }),
+        })
+        const data = await res.json()
+        if (data.ok && data.tip) {
+          setTipsIA([data.tip])
+          setTipsVistos([data.tip])
+        }
+      } catch (e) {
+        // Fallback del banco estatico
+        const fallback = CONSEJOS_GENERICOS[ejeDelDia] || CONSEJOS_GENERICOS.CF
+        setTipsIA(fallback)
+        setTipsVistos([fallback[0]])
+      } finally {
+        setLoadingTip(false)
+      }
+    }
+    cargarTip()
+  }, [actividadDelDia, ejeDelDia, sala])
 
   // Cargar voces del navegador
   useEffect(() => {
@@ -335,53 +345,62 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroT
     window.speechSynthesis.cancel()
     setIsPlaying(false)
     setIsTalking(false)
-  }, [consejoIndex])
+  }, [tipIndex])
 
-  const handleOtroTip = () => {
+  const consejoActual = tipsIA[tipIndex] || (loadingTip ? "Cargando consejo de ALBA..." : "")
+  const totalTips = Math.max(tipsIA.length, 5) // Mostrar 5 como maximo esperado
+
+  const handleOtroTip = async () => {
     window.speechSynthesis.cancel()
-    const nextIndex = (consejoIndex + 1) % consejos.length
-    setConsejoIndex(nextIndex)
-    
-    setTimeout(() => {
-      const nuevoConsejo = consejos[nextIndex]
-      const utterance = new SpeechSynthesisUtterance(nuevoConsejo)
-      
-      utterance.rate = 1.0
-      utterance.pitch = 1.0
-      utterance.volume = 1
-      
-      const voices = window.speechSynthesis.getVoices()
-      const vozNatural = 
-        voices.find(v => v.name.includes("Google español")) ||
-        voices.find(v => v.name.includes("Google Spanish")) ||
-        voices.find(v => v.name === "Paulina") ||
-        voices.find(v => v.name === "Monica") ||
-        voices.find(v => v.name.includes("Microsoft") && v.lang.includes("es")) ||
-        voices.find(v => v.lang === "es-MX") ||
-        voices.find(v => v.lang === "es-AR") ||
-        voices.find(v => v.lang.startsWith("es"))
-      
-      if (vozNatural) {
-        utterance.voice = vozNatural
-        utterance.lang = vozNatural.lang
-      } else {
-        utterance.lang = "es-MX"
+    setLoadingTip(true)
+    try {
+      const res = await fetch("/api/micro-training-tip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eje: ejeDelDia, actividad: actividadDelDia, sala, yaVisto: tipsVistos }),
+      })
+      const data = await res.json()
+      if (data.ok && data.tip) {
+        const nuevoTip = data.tip
+        const nuevosTips = [...tipsIA, nuevoTip]
+        setTipsIA(nuevosTips)
+        setTipIndex(nuevosTips.length - 1)
+        setTipsVistos(prev => [...prev, nuevoTip])
+
+        // Auto-reproducir el nuevo tip
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(nuevoTip)
+          utterance.rate = 1.0
+          utterance.pitch = 1.0
+          utterance.volume = 1
+          const voices = window.speechSynthesis.getVoices()
+          const voz =
+            voices.find(v => v.name.includes("Google español")) ||
+            voices.find(v => v.name.includes("Google Spanish")) ||
+            voices.find(v => v.name === "Paulina") ||
+            voices.find(v => v.name === "Monica") ||
+            voices.find(v => v.name.includes("Microsoft") && v.lang.includes("es")) ||
+            voices.find(v => v.lang === "es-MX") ||
+            voices.find(v => v.lang === "es-AR") ||
+            voices.find(v => v.lang.startsWith("es"))
+          if (voz) { utterance.voice = voz; utterance.lang = voz.lang } else { utterance.lang = "es-MX" }
+          utterance.onstart = () => setIsTalking(true)
+          utterance.onend = () => { setIsPlaying(false); setIsTalking(false) }
+          utterance.onerror = () => { setIsPlaying(false); setIsTalking(false) }
+          speechRef.current = utterance
+          window.speechSynthesis.speak(utterance)
+          setIsPlaying(true)
+        }, 100)
       }
-      
-      utterance.onstart = () => setIsTalking(true)
-      utterance.onend = () => {
-        setIsPlaying(false)
-        setIsTalking(false)
-      }
-      utterance.onerror = () => {
-        setIsPlaying(false)
-        setIsTalking(false)
-      }
-      
-      speechRef.current = utterance
-      window.speechSynthesis.speak(utterance)
-      setIsPlaying(true)
-    }, 100)
+    } catch (e) {
+      // Rotar por el banco estatico si falla
+      const fallback = CONSEJOS_GENERICOS[ejeDelDia] || CONSEJOS_GENERICOS.CF
+      const next = fallback[tipIndex % fallback.length]
+      setTipsIA(prev => [...prev, next])
+      setTipIndex(tipsIA.length)
+    } finally {
+      setLoadingTip(false)
+    }
   }
   
   return (
@@ -424,7 +443,14 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroT
                   className="bg-white rounded-xl rounded-tl-none p-3 text-sm text-slate-700 leading-relaxed"
                   style={{ minHeight: "80px" }}
                 >
-                  {consejoActual}
+                  {loadingTip ? (
+                    <span className="flex items-center gap-2 text-slate-400 text-xs">
+                      <span className="w-3 h-3 border border-slate-300 border-t-slate-500 rounded-full animate-spin inline-block" />
+                      ALBA esta pensando...
+                    </span>
+                  ) : (
+                    consejoActual
+                  )}
                 </div>
                 <div 
                   className="absolute top-3 -left-2 w-0 h-0"
@@ -442,13 +468,14 @@ export function MicroTraining({ ejeDelDia = "CF", actividadDelDia = "" }: MicroT
             <button 
               type="button"
               onClick={handleOtroTip}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-amber-500 text-white hover:bg-amber-600 transition-all"
+              disabled={loadingTip}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-amber-500 text-white hover:bg-amber-600 transition-all disabled:opacity-60"
             >
-              <RefreshCw className={`w-4 h-4 ${isTalking ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${loadingTip ? "animate-spin" : ""}`} />
               Otro tip
             </button>
             <span className="text-xs text-white/60">
-              {consejoIndex + 1} / {consejos.length}
+              {tipIndex + 1} / {totalTips}
             </span>
           </div>
         </div>
