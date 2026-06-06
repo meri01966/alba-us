@@ -114,6 +114,16 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   const [editandoClases, setEditandoClases] = useState(false)
   const [draggingClase, setDraggingClase] = useState<TipoClase | null>(null)
 
+  // Accordion: solo el dia de hoy abierto por defecto
+  const diaHoyNombre = (() => {
+    const n = new Date().getDay()
+    return n === 0 || n === 6 ? "Lunes" : ["", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes"][n]
+  })()
+  const [diasAbiertos, setDiasAbiertos] = useState<Record<string, boolean>>(
+    Object.fromEntries(DIAS.map((d) => [d, d === diaHoyNombre]))
+  )
+  const toggleDia = (dia: string) => setDiasAbiertos((prev) => ({ ...prev, [dia]: !prev[dia] }))
+
   // Sugerencias de ALBA para alfabetizacion (Lun/Mar/Vie)
   const [sugerenciasAlba, setSugerenciasAlba] = useState<SugerenciaAlba[]>([])
   const [generandoSugerencias, setGenerandoSugerencias] = useState(false)
@@ -567,26 +577,50 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
             <div className="w-8 h-8 border-3 border-slate-300 border-t-[#1e3a5f] rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 overflow-y-auto flex-1">
+          <div className="p-4 space-y-2 overflow-y-auto flex-1">
             {DIAS.map((dia) => {
               const sugerencia = sugerenciasAlba.find((s) => s.dia === dia)
               const clasesDelDia = clasesEspeciales.filter((c) => c.dia === dia)
+              const abierto = diasAbiertos[dia]
+              const actividadesConNombre = cronograma[dia]?.actividades?.filter(a => (a.nombre || "").trim()) || []
+              const esHoyDia = cronograma[dia]?.fecha === new Date().toISOString().split("T")[0]
               return (
                 <div
                   key={dia}
-                  className={`bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}
+                  className={`bg-slate-50 rounded-xl border overflow-hidden ${esHoyDia ? "border-blue-300 ring-1 ring-blue-200" : "border-slate-200"} ${editandoClases && draggingClase ? "ring-2 ring-blue-300 ring-dashed" : ""}`}
                   onDragOver={editandoClases ? (e) => e.preventDefault() : undefined}
                   onDrop={editandoClases ? () => {
                     if (draggingClase) { agregarClaseADia(draggingClase, dia); setDraggingClase(null) }
                   } : undefined}
                 >
-                  {/* Header del dia */}
-                  <div className="text-white px-3 py-2 text-center" style={{ background: "#1e3a5f" }}>
-                    <div className="font-bold text-sm">{dia}</div>
-                    <div className="text-[10px] opacity-80">{cronograma[dia]?.fecha && formatearFecha(cronograma[dia].fecha)}</div>
-                  </div>
+                  {/* Header del dia — clickeable para expandir/colapsar */}
+                  <button
+                    type="button"
+                    onClick={() => toggleDia(dia)}
+                    className="w-full flex items-center justify-between text-white px-4 py-3"
+                    style={{ background: esHoyDia ? "#1e3a5f" : "#334155" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-sm">{dia}</span>
+                      <span className="text-[11px] opacity-70">{cronograma[dia]?.fecha && formatearFecha(cronograma[dia].fecha)}</span>
+                      {clasesDelDia.length > 0 && (
+                        <div className="flex gap-1">
+                          {clasesDelDia.map(c => {
+                            const cfg = CONFIG_CLASES[c.tipo]; const Icon = cfg.icon
+                            return <span key={c.tipo} className={`flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${colorBadge(c.tipo, "dia")}`}><Icon className="w-2.5 h-2.5"/>{cfg.label}</span>
+                          })}
+                        </div>
+                      )}
+                      {actividadesConNombre.length > 0 && !abierto && (
+                        <span className="text-[10px] opacity-60 italic">{actividadesConNombre.map(a => a.nombre).join(" · ")}</span>
+                      )}
+                    </div>
+                    <span className="text-white/70 text-lg leading-none">{abierto ? "▲" : "▼"}</span>
+                  </button>
 
-                  <div className="p-2.5 space-y-2 flex-1">
+                  {/* Contenido expandible */}
+                  {abierto && (
+                  <div className="p-2.5 space-y-2">
 
                     {/* Clases especiales del dia — badges compactos */}
                     {(clasesDelDia.length > 0 || editandoClases) && (
@@ -804,6 +838,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                       })}
                     </div>
                   </div>
+                  )} {/* fin abierto */}
                 </div>
               )
             })}
