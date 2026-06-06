@@ -186,6 +186,7 @@ export async function PATCH(req: Request) {
   if (!sala || !dia) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
   const salaKey = normSala(sala)
+  console.log("[PATCH] Buscando:", { sala, salaKey, dia, semana_inicio })
 
   // Buscar el registro buscando por sala normalizada en memoria
   // Buscar en las ultimas 2 semanas para tolerar desfase
@@ -195,22 +196,35 @@ export async function PATCH(req: Request) {
     ? [semana_inicio]
     : [lunes.toISOString().split("T")[0], lunesAnt.toISOString().split("T")[0]]
 
+  console.log("[PATCH] Semanas a buscar:", semanasABuscar)
+
   const { data: registros } = await supabase
     .from(TABLA)
     .select("id, sala, semana_inicio")
     .in("semana_inicio", semanasABuscar)
     .eq("dia", dia)
 
+  console.log("[PATCH] Registros encontrados:", registros?.length, registros?.map(r => ({ sala: r.sala, salaKey: normSala(r.sala) })))
+
   // Filtrar por sala normalizada
   const registro = (registros || []).find((r: any) => normSala(r.sala || "") === salaKey)
-  if (!registro) return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
+  if (!registro) {
+    console.log("[PATCH] NO encontrado registro para sala normalizada", salaKey)
+    return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
+  }
 
+  console.log("[PATCH] Actualizando registro ID:", registro.id)
   const { error } = await supabase
     .from(TABLA)
     .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
     .eq("id", registro.id)
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+  if (error) {
+    console.log("[PATCH] Error al actualizar:", error)
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+  }
+  
+  console.log("[PATCH] Actualizado exitosamente")
   return NextResponse.json({ ok: true })
 }
 

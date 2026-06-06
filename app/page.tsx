@@ -554,29 +554,37 @@ export default function ALBADashboard() {
         const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
         const hoy = new Date()
         const diaHoyNombre = diasNombres[hoy.getDay()]
-        const lunesHoy = new Date(hoy)
-        const diffLunes = hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)
-        lunesHoy.setDate(diffLunes)
-        const semanaStr = lunesHoy.toISOString().split("T")[0]
 
-        fetch("/api/cronograma-jardin", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          // NO se manda semana_inicio — el endpoint busca en las ultimas 2 semanas por sala+dia normalizado
-          body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
-        }).catch(() => {/* silencioso */})
+        console.log("[v0] Finalizando jornada:", { sala: salaActual, dia: diaHoyNombre })
 
-        // --- Paso 5: ALBA recalcula la proxima sugerencia ---
+        // PRIMERO: hacer el PATCH y esperar respuesta antes de invalidar cache
+        try {
+          const patchRes = await fetch("/api/cronograma-jardin", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
+          })
+          const patchData = await patchRes.json()
+          console.log("[v0] PATCH response:", patchData)
+          
+          if (!patchData.ok) {
+            console.error("[v0] PATCH error:", patchData.error)
+          }
+        } catch (err) {
+          console.error("[v0] PATCH fetch error:", err)
+        }
+
+        // DESPUES: invalidar SWR del brain para que busque nuevamente
+        console.log("[v0] Invalidando brain SWR...")
         fetchHistorialMes()
         globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        
+        // Reintentar después de 2 segundos para asegurar que Supabase confirmó
         setTimeout(() => {
+          console.log("[v0] Refetching brain después de 2s...")
           dayPlanningRef.current?.fetchBrain()
           globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-        }, 1500)
-        setTimeout(() => {
-          dayPlanningRef.current?.fetchBrain()
-          globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-        }, 4000)
+        }, 2000)
         
         // --- Paso 5: indexar actividad evaluada a la red de ALBA (para redistribucion) ---
         if (actividadDelDia) {
