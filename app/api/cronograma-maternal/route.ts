@@ -67,7 +67,12 @@ export async function GET(req: Request) {
     }
   })
   
-  return NextResponse.json({ ok: true, cronograma, semanaInicio: lunesStr })
+  // hayRegistros = true si al menos un dia tiene actividad real guardada
+  const hayRegistros = (data?.length ?? 0) > 0 && (data ?? []).some(
+    (r: any) => Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
+  )
+
+  return NextResponse.json({ ok: true, cronograma, semanaInicio: lunesStr, hayRegistros })
 }
 
 // POST - Guardar cronograma
