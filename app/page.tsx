@@ -370,11 +370,25 @@ export default function ALBADashboard() {
   const [salaActual, setSalaActual] = useState("Manzanos")
   const [salaHydrated, setSalaHydrated] = useState(false)
   
-  // Cargar sala desde localStorage despues de hydration
+  // Cargar sala: el parametro ?sala=X de la URL tiene prioridad (links directos
+  // para cada maestra). Si no hay, se usa la ultima sala guardada en localStorage.
   useEffect(() => {
-    const savedSala = localStorage.getItem("sia-sala-activa")
-    if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
-      setSalaActual(savedSala)
+    const params = new URLSearchParams(window.location.search)
+    const salaParam = params.get("sala")
+    // Buscar coincidencia sin distinguir mayusculas/acentos para ser tolerante
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const salaFromUrl = salaParam
+      ? SALAS_DISPONIBLES.find((s) => norm(s) === norm(salaParam))
+      : undefined
+
+    if (salaFromUrl) {
+      setSalaActual(salaFromUrl)
+      localStorage.setItem("sia-sala-activa", salaFromUrl)
+    } else {
+      const savedSala = localStorage.getItem("sia-sala-activa")
+      if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
+        setSalaActual(savedSala)
+      }
     }
     setSalaHydrated(true)
   }, [])
