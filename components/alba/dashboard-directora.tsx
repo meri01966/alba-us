@@ -125,6 +125,7 @@ export default function DashboardDirectora() {
   const [loadingModal, setLoadingModal] = useState(false)
   const [sintesisData, setSintesisData] = useState<any>(null)
   const [planificacionData, setPlanificacionData] = useState<any>(null)
+  const [cronogramaActivoData, setCronogramaActivoData] = useState<any>(null)
   const [ejeSeleccionado, setEjeSeleccionado] = useState<Eje | null>(null)
   const [proyectosData, setProyectosData] = useState<any>(null)
   
@@ -280,6 +281,7 @@ export default function DashboardDirectora() {
     setLoadingModal(true)
     setSintesisData(null)
     setPlanificacionData(null)
+    setCronogramaActivoData(null)
     
     const base = typeof window !== "undefined" ? window.location.origin : ""
     
@@ -299,6 +301,16 @@ export default function DashboardDirectora() {
         if (res.ok) {
           const data = await res.json()
           setPlanificacionData(data)
+        }
+      } catch {}
+      // Tambien traer el cronograma activo de la semana (el que ve la maestra)
+      try {
+        const resCrono = await fetch(`${base}/api/cronograma-jardin?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        if (resCrono.ok) {
+          const dataCrono = await resCrono.json()
+          if (dataCrono.ok && dataCrono.hayRegistros) {
+            setCronogramaActivoData(dataCrono)
+          }
         }
       } catch {}
     }
@@ -517,12 +529,45 @@ export default function DashboardDirectora() {
                   {/* Planificacion */}
                   {modalTipo === "planificacion" && (
                     <div className="space-y-4">
+                      {/* Cronograma activo de la semana (el que ve la maestra ahora) */}
+                      {cronogramaActivoData?.cronograma && (
+                        <div className="border border-primary/30 rounded-lg overflow-hidden">
+                          <div className="bg-primary/15 px-4 py-2 border-b border-primary/20 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-foreground">Cronograma de la semana</p>
+                            <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activo</span>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"].map((dia) => {
+                              const d = cronogramaActivoData.cronograma[dia]
+                              const acts = (d?.actividades || []).filter((a: any) => (a?.nombre || "").trim())
+                              return (
+                                <div key={dia} className="px-4 py-2.5 flex items-start gap-3">
+                                  <span className="text-xs font-semibold text-foreground w-20 flex-shrink-0 mt-0.5">{dia}</span>
+                                  <div className="flex-1 min-w-0">
+                                    {acts.length === 0 ? (
+                                      <span className="text-xs text-muted-foreground italic">Sin actividad</span>
+                                    ) : (
+                                      acts.map((a: any, i: number) => (
+                                        <p key={i} className="text-sm text-foreground">{a.nombre}</p>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Historial de dias finalizados */}
                       {!planificacionData || planificacionData.totalActividades === 0 ? (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
                           <p className="text-sm text-amber-800">No hay actividades registradas en esta sala todavia.</p>
                         </div>
                       ) : (
                         <>
+                          {/* Historial */}
+                          <p className="text-sm font-semibold text-foreground pt-2">Historial de jornadas finalizadas</p>
                           {/* Resumen */}
                           <div className="flex items-center justify-between bg-muted rounded-lg p-3">
                             <div className="text-sm">
