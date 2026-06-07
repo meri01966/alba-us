@@ -398,9 +398,6 @@ export default function ALBADashboard() {
   // Actividad actual que esta evaluando el docente
   const [actividadActual, setActividadActual] = useState<string>("Reconocimiento de Sonido Inicial /M/")
   
-  // Actividad sugerida por ALBA (para comparar en el cierre)
-  const [actividadSugeridaALBA, setActividadSugeridaALBA] = useState<string>("")
-  
   // Historial del mes para el calendario completo
   const [historialMes, setHistorialMes] = useState<Array<{
     fecha: string
@@ -458,7 +455,7 @@ export default function ALBADashboard() {
   }, [])
   
   // Finalizar semana completa (solo sala de prueba, sin confirmación)
-  // SIMPLE: Finalizar jornada = marcar día como completado + cargar siguiente actividad
+  // SIMPLE: Finalizar jornada = marcar día como completado en cronograma
   const handleFinalizarJornada = useCallback(async () => {
     const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
     const diasValidos = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
@@ -470,6 +467,7 @@ export default function ALBADashboard() {
       diaHoyNombre = "Viernes"
     }
 
+    // Marcar día como completado
     try {
       await fetch("/api/cronograma-jardin", {
         method: "PATCH",
@@ -480,12 +478,13 @@ export default function ALBADashboard() {
       console.error("Error:", e)
     }
 
+    // Refrescar cronograma para mostrar siguiente día
     setTimeout(() => {
-      globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-      dayPlanningRef.current?.fetchBrain()
+      globalMutate((key: string) => typeof key === "string" && key.includes("/api/cronograma"), undefined, { revalidate: true })
+      dayPlanningRef.current?.fetchBrain?.()
     }, 300)
     
-    setJornadaToast({ tipo: "ok", mensaje: "Jornada finalizada. Siguiente actividad cargada." })
+    setJornadaToast({ tipo: "ok", mensaje: "Día completado. Siguiente día en el cronograma." })
     setTimeout(() => setJornadaToast(null), 2000)
   }, [salaActual])
 
@@ -1220,17 +1219,11 @@ useEffect(() => {
                 mensajesPendientes={mensajesDirectora.filter(m => !m.leido).length}
               />
 
-              {/* Fila 2: Proyecto (izq) + Sugerencia ALBA (der) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Fila 2: Solo Proyecto (cronograma es la única fuente de verdad) */}
+              <div className="grid grid-cols-1">
                 <DayPlanning
                   ref={dayPlanningRef}
                   section="proyecto"
-                  sala={salaActual}
-                  onActividadALBA={setActividadSugeridaALBA}
-                  onEjeALBA={setEjeActual}
-                />
-                <DayPlanning
-                  section="sugerencia"
                   sala={salaActual}
                   onActividadALBA={setActividadSugeridaALBA}
                   onEjeALBA={setEjeActual}
@@ -1244,8 +1237,6 @@ useEffect(() => {
                 onEvaluacion={handleEvaluacion}
                 onClearEvaluacion={handleClearEvaluacion}
                 onClearAllEvaluaciones={handleClearAllEvaluaciones}
-                actividadSugeridaALBA={actividadSugeridaALBA}
-                ejeDeALBA={ejeActual}
                 sala={salaActual}
                 isLoading={isLoading}
               />
