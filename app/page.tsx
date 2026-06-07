@@ -1225,7 +1225,6 @@ useEffect(() => {
                   ref={dayPlanningRef}
                   section="proyecto"
                   sala={salaActual}
-                  onActividadALBA={setActividadSugeridaALBA}
                   onEjeALBA={setEjeActual}
                 />
               </div>
