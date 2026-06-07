@@ -1254,7 +1254,7 @@ useEffect(() => {
               {/* Fila 5: Micro capacitacion */}
               <MicroTraining
                 ejeDelDia={ejeActual as "CF" | "CT" | "O"}
-                actividadDelDia={actividadSugeridaALBA || actividadActual}
+                actividadDelDia={actividadActual}
               />
             </>
           )}
