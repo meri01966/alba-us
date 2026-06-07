@@ -539,22 +539,14 @@ export default function ALBADashboard() {
       const data = await response.json()
 
       if (data.success) {
-        // Marcar el dia como finalizado en cronograma_jardin
-        const diasNombres = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
-        const diasValidos = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
-        const hoy = new Date()
-        let diaHoyNombre = diasNombres[hoy.getDay()]
-
-        const esSalaPrueba = salaActual.toLowerCase().includes("prueba")
-        if (!esSalaPrueba && !diasValidos.includes(diaHoyNombre)) {
-          diaHoyNombre = "Viernes"
-        }
-
+        // Finalizar la jornada: el backend marca el DÍA ACTIVO del cronograma
+        // (el primer día pendiente con actividad de ALBA), garantizando que
+        // avanza en la misma secuencia que se muestra en el dashboard.
         try {
           const patchRes = await fetch("/api/cronograma-jardin", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sala: salaActual, dia: diaHoyNombre }),
+            body: JSON.stringify({ sala: salaActual }),
           })
           await patchRes.json()
         } catch (err) {
