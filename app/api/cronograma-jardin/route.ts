@@ -188,32 +188,57 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true })
 }
 
-// PATCH - Marcar un dia especifico como finalizado (se llama al Finalizar Jornada)
+// PATCH - Finalizar Jornada: marca el DÍA ACTIVO (el primer día NO finalizado que
+// tiene una actividad de ALBA). Esto garantiza que la jornada avanza en la misma
+// secuencia que ALBA sugiere en el dashboard (Lunes → Martes → ... → Viernes),
+// sin depender del día real del calendario.
 export async function PATCH(req: Request) {
   const body = await req.json()
-  const { sala, dia } = body
-  if (!sala || !dia) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
+  const { sala } = body
+  if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
   const salaKey = normSala(sala)
+  const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
 
-  // Buscar ANY registro con esta sala + dia (sin importar semana)
+  // Traer TODOS los registros de esta sala (cualquier semana)
   const { data: registros } = await supabase
     .from(TABLA)
-    .select("id, sala")
-    .eq("dia", dia)
+    .select("id, sala, dia, semana_inicio, actividades, dia_finalizado")
 
-  // Filtrar por sala normalizada
-  const registro = (registros || []).find((r: any) => normSala(r.sala || "") === salaKey)
-  if (!registro) return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
+  const deSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+  if (deSala.length === 0) return NextResponse.json({ ok: false, error: "Sin cronograma" }, { status: 404 })
 
-  // Marcar como finalizado
+  // Filtrar solo los NO finalizados que tengan una actividad de ALBA con nombre
+  const pendientes = deSala.filter(
+    (r: any) =>
+      r.dia_finalizado !== true &&
+      Array.isArray(r.actividades) &&
+      r.actividades.some(
+        (a: any) =>
+          (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
+      )
+  )
+
+  if (pendientes.length === 0) {
+    return NextResponse.json({ ok: true, sinPendientes: true })
+  }
+
+  // Ordenar por semana + día y tomar el PRIMERO (el día activo que ve la maestra)
+  pendientes.sort((a: any, b: any) => {
+    const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
+    if (semanaCmp !== 0) return semanaCmp
+    return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+  })
+
+  const diaActivo = pendientes[0]
+
   const { error } = await supabase
     .from(TABLA)
     .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
-    .eq("id", registro.id)
+    .eq("id", diaActivo.id)
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, diaFinalizado: diaActivo.dia })
 }
 
 // PUT - Finalizar semana completa (marca todos los días como dia_finalizado: true)
