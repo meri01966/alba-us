@@ -45,6 +45,7 @@ interface BrainActivity {
   materiales?: string[]
   source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
+  ejeNombre?: string
   razon?: string
   claseNumero?: number
   claseDeLaSemana?: number
@@ -443,7 +444,7 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
                                    activity.ejeRecomendado === "CT" ? "#10b981" : "#f59e0b"
                 }}
               >
-                {activity.ejeRecomendado}: {activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+                {activity.ejeNombre === "Escritura" ? "EA" : activity.ejeRecomendado}: {activity.ejeNombre || (activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad")}
               </span>
             )}
           </div>
@@ -912,6 +913,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
         razon: sugerencia.razon,
         source: "secuencia",
         ejeRecomendado: sugerencia.eje,
+  ejeNombre: sugerencia.ejeNombre,
         aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
         salaRed: sugerencia.salaRed || null,
         temaProyecto: sugerencia.temaProyecto || null,

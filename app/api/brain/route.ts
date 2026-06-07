@@ -1111,6 +1111,13 @@ export async function GET(req: Request) {
     if (resultadoCronograma) {
       const { actAlfa, dia: diaActividad } = resultadoCronograma
       const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+      // Etiqueta legible: si la actividad es de Escritura, mostrar "Escritura" (EA)
+      // aunque internamente el eje se mapee a "O" para el resto del sistema.
+      const ejeNombreActividad =
+        actAlfa.eje === "CT" ? "Conocimiento del Texto"
+        : actAlfa.eje === "Escritura" ? "Escritura"
+        : actAlfa.eje === "Oralidad" || actAlfa.eje === "O" ? "Oralidad"
+        : "Conciencia Fonologica"
       const materialesArr: string[] = Array.isArray(actAlfa.materiales)
         ? actAlfa.materiales.filter((m: string) => (m || "").trim())
         : typeof actAlfa.materiales === "string" && actAlfa.materiales.trim()
@@ -1119,6 +1126,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         sugerencia: {
           eje: ejeActividad,
+          ejeNombre: ejeNombreActividad,
           actividad: actAlfa.nombre,
           descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
           objetivo: actAlfa.objetivo || "",
