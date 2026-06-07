@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { CronogramaVerModal } from "@/components/sia/cronograma-ver-modal"
 
 type Eje = "CF" | "CT" | "O"
 type Estado = "green" | "yellow" | "red"
@@ -126,6 +127,10 @@ export default function DashboardDirectora() {
   const [sintesisData, setSintesisData] = useState<any>(null)
   const [planificacionData, setPlanificacionData] = useState<any>(null)
   const [cronogramaActivoData, setCronogramaActivoData] = useState<any>(null)
+  // Modal de cronograma completo (5 columnas) para la directora
+  const [cronogramaModalOpen, setCronogramaModalOpen] = useState(false)
+  const [vistoLoading, setVistoLoading] = useState(false)
+  const [vistoConfirmado, setVistoConfirmado] = useState(false)
   const [ejeSeleccionado, setEjeSeleccionado] = useState<Eje | null>(null)
   const [proyectosData, setProyectosData] = useState<any>(null)
   
@@ -282,6 +287,8 @@ export default function DashboardDirectora() {
     setSintesisData(null)
     setPlanificacionData(null)
     setCronogramaActivoData(null)
+    setCronogramaModalOpen(false)
+    setVistoConfirmado(false)
     
     const base = typeof window !== "undefined" ? window.location.origin : ""
     
@@ -336,6 +343,61 @@ export default function DashboardDirectora() {
     setPlanificacionData(null)
     setEjeSeleccionado(null)
     setProyectosData(null)
+    setCronogramaActivoData(null)
+    setCronogramaModalOpen(false)
+    setVistoConfirmado(false)
+  }
+
+  // Rango legible de la semana del cronograma activo (ej: "del 1 al 5 de jun")
+  function rangoSemanaActivo(): string {
+    const crono = cronogramaActivoData?.cronograma
+    if (!crono) return ""
+    const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
+    const fLunes = crono["Lunes"]?.fecha
+    const fViernes = crono["Viernes"]?.fecha
+    if (!fLunes || !fViernes) return ""
+    const [, , dL] = fLunes.split("-")
+    const [, mV, dV] = fViernes.split("-")
+    return `del ${parseInt(dL)} al ${parseInt(dV)} de ${meses[parseInt(mV) - 1]}`
+  }
+
+  // Construye el array de clases especiales (musica/ingles/edFisica) desde el cronograma
+  function clasesEspecialesActivo(): { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] {
+    const crono = cronogramaActivoData?.cronograma
+    if (!crono) return []
+    const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+    const out: { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] = []
+    for (const dia of dias) {
+      const d = crono[dia]
+      if (!d) continue
+      if ((d.musica || "").toString().trim()) out.push({ tipo: "musica", dia })
+      if ((d.ingles || "").toString().trim()) out.push({ tipo: "ingles", dia })
+      if ((d.edFisica || "").toString().trim()) out.push({ tipo: "edFisica", dia })
+    }
+    return out
+  }
+
+  // Botón "Visto": guarda el visto enviando un mensaje a la sala (la maestra lo ve)
+  async function enviarVisto() {
+    if (!modalSala) return
+    setVistoLoading(true)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      const rango = rangoSemanaActivo()
+      const mensaje = `La dirección revisó el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
+      const res = await fetch(`${base}/api/mensajes-directora`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: modalSala, mensaje }),
+      })
+      if (res.ok) {
+        setVistoConfirmado(true)
+      }
+    } catch (err) {
+      console.error("[v0] Error enviando visto:", err)
+    } finally {
+      setVistoLoading(false)
+    }
   }
 
   if (loading) {
@@ -529,34 +591,23 @@ export default function DashboardDirectora() {
                   {/* Planificacion */}
                   {modalTipo === "planificacion" && (
                     <div className="space-y-4">
-                      {/* Cronograma activo de la semana (el que ve la maestra ahora) */}
+                      {/* Cronograma activo de la semana: abre la vista completa de 5 columnas */}
                       {cronogramaActivoData?.cronograma && (
-                        <div className="border border-primary/30 rounded-lg overflow-hidden">
-                          <div className="bg-primary/15 px-4 py-2 border-b border-primary/20 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-foreground">Cronograma de la semana</p>
-                            <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activo</span>
+                        <button
+                          type="button"
+                          onClick={() => setCronogramaModalOpen(true)}
+                          className="w-full text-left border border-primary/30 rounded-lg overflow-hidden hover:border-primary/60 transition-colors"
+                        >
+                          <div className="bg-primary/15 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activo</span>
+                              <p className="text-sm font-semibold text-foreground">
+                                Cronograma semana {rangoSemanaActivo()}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-primary">Ver completo →</span>
                           </div>
-                          <div className="divide-y divide-border">
-                            {["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"].map((dia) => {
-                              const d = cronogramaActivoData.cronograma[dia]
-                              const acts = (d?.actividades || []).filter((a: any) => (a?.nombre || "").trim())
-                              return (
-                                <div key={dia} className="px-4 py-2.5 flex items-start gap-3">
-                                  <span className="text-xs font-semibold text-foreground w-20 flex-shrink-0 mt-0.5">{dia}</span>
-                                  <div className="flex-1 min-w-0">
-                                    {acts.length === 0 ? (
-                                      <span className="text-xs text-muted-foreground italic">Sin actividad</span>
-                                    ) : (
-                                      acts.map((a: any, i: number) => (
-                                        <p key={i} className="text-sm text-foreground">{a.nombre}</p>
-                                      ))
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
+                        </button>
                       )}
 
                       {/* Historial de dias finalizados */}
@@ -1086,6 +1137,22 @@ export default function DashboardDirectora() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Cronograma completo (5 columnas) para la directora, con boton Visto */}
+      {cronogramaModalOpen && cronogramaActivoData?.cronograma && modalSala && (
+        <CronogramaVerModal
+          open={cronogramaModalOpen}
+          onClose={() => setCronogramaModalOpen(false)}
+          sala={modalSala}
+          cronograma={cronogramaActivoData.cronograma}
+          clasesEspeciales={clasesEspecialesActivo()}
+          rangoSemana={rangoSemanaActivo()}
+          onVisto={enviarVisto}
+          vistoLabel="Marcar como visto"
+          vistoLoading={vistoLoading}
+          vistoConfirmado={vistoConfirmado}
+        />
       )}
     </div>
   )

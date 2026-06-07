@@ -60,6 +60,12 @@ interface Props {
   sala: string
   cronograma: Record<string, DiaData>
   clasesEspeciales: ClaseEspecial[]
+  // Opcional: si se provee, muestra un boton "Visto" en el header (uso de la directora)
+  onVisto?: () => void
+  vistoLabel?: string
+  vistoLoading?: boolean
+  vistoConfirmado?: boolean
+  rangoSemana?: string
 }
 
 function SeccionDetalle({ label, texto }: { label: string; texto: string }) {
@@ -115,7 +121,7 @@ function CardActividad({ act, origen }: { act: Actividad; origen: "alba" | "doce
   )
 }
 
-export function CronogramaVerModal({ open, onClose, sala, cronograma, clasesEspeciales }: Props) {
+export function CronogramaVerModal({ open, onClose, sala, cronograma, clasesEspeciales, onVisto, vistoLabel, vistoLoading, vistoConfirmado, rangoSemana }: Props) {
   if (!open) return null
 
   return (
@@ -135,16 +141,34 @@ export function CronogramaVerModal({ open, onClose, sala, cronograma, clasesEspe
             <Calendar className="w-5 h-5 text-white" />
             <div>
               <p className="text-white font-bold text-base leading-none">Cronograma Semanal</p>
-              <p className="text-white/60 text-xs mt-0.5">Sala {sala} — solo lectura</p>
+              <p className="text-white/60 text-xs mt-0.5">
+                Sala {sala}{rangoSemana ? ` — ${rangoSemana}` : " — solo lectura"}
+              </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onVisto && (
+              <button
+                type="button"
+                onClick={onVisto}
+                disabled={vistoLoading || vistoConfirmado}
+                className={`h-9 px-4 flex items-center gap-2 rounded-xl text-sm font-semibold transition-colors ${
+                  vistoConfirmado
+                    ? "bg-emerald-500 text-white cursor-default"
+                    : "bg-white text-[#1e3a5f] hover:bg-white/90"
+                } disabled:opacity-70`}
+              >
+                {vistoConfirmado ? "Visto ✓" : vistoLoading ? "Enviando..." : (vistoLabel || "Marcar como visto")}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Leyenda ejes */}
