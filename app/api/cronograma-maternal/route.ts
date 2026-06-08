@@ -155,9 +155,29 @@ export async function POST(req: Request) {
   if (!sala || !cronograma) {
     return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
   }
-  
-  const lunesSemana = getLunesSemana(new Date())
-  const lunesStr = lunesSemana.toISOString().split("T")[0]
+
+  // Determinar la semana ACTIVA de la sala (desacoplado del calendario):
+  // se guarda en la primera semana cargada que aún no esté finalizada. Si no hay
+  // ninguna pendiente, se crea una semana nueva a partir del próximo lunes.
+  const salaKey = normSala(sala)
+  const { data: todosSala } = await supabase.from("cronograma_maternal").select("semana_inicio, finalizado, sala")
+  const deSala = (todosSala || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+  const pendientes = Array.from(
+    new Set(deSala.filter((r: any) => r.finalizado !== true).map((r: any) => r.semana_inicio as string))
+  ).sort((a, b) => a.localeCompare(b))
+
+  let lunesStr: string
+  let lunesSemana: Date
+  if (pendientes.length > 0) {
+    lunesStr = pendientes[0]
+    lunesSemana = new Date(lunesStr + "T00:00:00")
+  } else {
+    const lunesSig = getLunesSemana(new Date())
+    lunesSig.setDate(lunesSig.getDate() + 7)
+    lunesSemana = lunesSig
+    lunesStr = lunesSig.toISOString().split("T")[0]
+  }
+
   const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
   
   // Guardar cada dia
@@ -211,16 +231,30 @@ export async function PUT(req: Request) {
   if (!sala) {
     return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
   }
-  
-  const lunesSemana = getLunesSemana(new Date())
-  const lunesStr = lunesSemana.toISOString().split("T")[0]
-  
-  // Marcar como finalizado
+
+  // Finalizar la semana ACTIVA de la sala (la primera sin finalizar), no la de hoy.
+  const salaKey = normSala(sala)
+  const { data: todosSala } = await supabase.from("cronograma_maternal").select("semana_inicio, finalizado, sala")
+  const deSala = (todosSala || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+  const pendientes = Array.from(
+    new Set(deSala.filter((r: any) => r.finalizado !== true).map((r: any) => r.semana_inicio as string))
+  ).sort((a, b) => a.localeCompare(b))
+
+  if (pendientes.length === 0) {
+    return NextResponse.json({ ok: true, sinSemanaActiva: true })
+  }
+
+  const semanaActiva = pendientes[0]
+
+  // Marcar como finalizado (queda en el historial) por sala normalizada
+  const idsAFinalizar = (todosSala || [])
+    .filter((r: any) => normSala(r.sala || "") === salaKey && r.semana_inicio === semanaActiva)
+
   await supabase
     .from("cronograma_maternal")
     .update({ finalizado: true })
-    .eq("sala", sala)
-    .eq("semana_inicio", lunesStr)
+    .eq("semana_inicio", semanaActiva)
+    .in("sala", Array.from(new Set(idsAFinalizar.map((r: any) => r.sala))))
   
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, semanaFinalizada: semanaActiva })
 }

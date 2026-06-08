@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle } from "lucide-react"
+import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle, FolderClock, ChevronRight } from "lucide-react"
 
 // Salas de maternal disponibles (2 y 3 años)
 const SALAS_MATERNAL = [
@@ -96,6 +96,12 @@ export function DashboardMaternal() {
   // Vistas de lectura (sin edicion)
   const [showCronogramaLectura, setShowCronogramaLectura] = useState(false)
   const [showProyectoLectura, setShowProyectoLectura] = useState(false)
+
+  // Mi Planificacion: historial completo (proyectos + semanas con actividades)
+  const [showPlanificacion, setShowPlanificacion] = useState(false)
+  const [planificacion, setPlanificacion] = useState<{ proyectos: any[]; semanas: any[] } | null>(null)
+  const [loadingPlanificacion, setLoadingPlanificacion] = useState(false)
+  const [semanaAbierta, setSemanaAbierta] = useState<string | null>(null)
   
   // Calificacion de actividades al finalizar semana
   const [showCalificacionModal, setShowCalificacionModal] = useState(false)
@@ -612,6 +618,26 @@ export function DashboardMaternal() {
     setShowProyectoModal(false)
   }
   
+  // Abrir Mi Planificacion: carga el historial completo de la sala
+  async function abrirPlanificacion() {
+    setShowPlanificacion(true)
+    setLoadingPlanificacion(true)
+    setSemanaAbierta(null)
+    const base = typeof window !== "undefined" ? window.location.origin : ""
+    try {
+      const res = await fetch(`${base}/api/planificacion-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok) {
+          setPlanificacion({ proyectos: data.proyectos || [], semanas: data.semanas || [] })
+        }
+      }
+    } catch (e) {
+      console.error("[v0] Error cargando planificacion:", e)
+    }
+    setLoadingPlanificacion(false)
+  }
+
   // Actualizar campo del cronograma
   function actualizarCampo(dia: string, campo: keyof DiaData, valor: string) {
     setCronograma(prev => ({
@@ -675,35 +701,46 @@ export function DashboardMaternal() {
             </div>
           </div>
           
-          {/* Selector de Sala */}
-          <div className="relative">
+          {/* Acciones del header */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+              onClick={abrirPlanificacion}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
             >
-              <span className="text-sm font-medium">{salaActual}</span>
-              <ChevronDown className="w-4 h-4" />
+              <FolderClock className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Mi Planificación</span>
             </button>
-            
-            {showSalaDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                {SALAS_MATERNAL.map((sala) => (
-                  <button
-                    key={sala}
-                    onClick={() => {
-                      setSalaActual(sala)
-                      localStorage.setItem("maternal-sala-activa", sala)
-                      setShowSalaDropdown(false)
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors ${
-                      sala === salaActual ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700"
-                    }`}
-                  >
-                    {sala}
-                  </button>
-                ))}
-              </div>
-            )}
+
+            {/* Selector de Sala */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+              >
+                <span className="text-sm font-medium">{salaActual}</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              
+              {showSalaDropdown && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
+                  {SALAS_MATERNAL.map((sala) => (
+                    <button
+                      key={sala}
+                      onClick={() => {
+                        setSalaActual(sala)
+                        localStorage.setItem("maternal-sala-activa", sala)
+                        setShowSalaDropdown(false)
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors ${
+                        sala === salaActual ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700"
+                      }`}
+                    >
+                      {sala}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1608,6 +1645,126 @@ export function DashboardMaternal() {
                 )}
                 Confirmar y Finalizar Semana
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Mi Planificacion: historial completo (proyectos + semanas) */}
+      {showPlanificacion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] overflow-hidden flex flex-col">
+            {/* Header del modal */}
+            <div className="bg-[#1e3a5f] text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                  <FolderClock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold">Mi Planificación</h2>
+                  <p className="text-xs text-white/70">{salaActual} — Historial de proyectos y actividades</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPlanificacion(false)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {loadingPlanificacion ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  {/* PROYECTOS */}
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-bold text-slate-800">Proyectos</h3>
+                      <span className="text-xs text-slate-400">({planificacion?.proyectos.length || 0})</span>
+                    </div>
+                    {(planificacion?.proyectos.length || 0) === 0 ? (
+                      <p className="text-sm text-slate-400 italic">Todavía no hay proyectos cargados.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {planificacion?.proyectos.map((p: any) => (
+                          <div key={p.id} className="border border-slate-200 rounded-xl p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-slate-800">{p.titulo || "Sin título"}</p>
+                              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${p.estado === "activo" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                                {p.estado === "activo" ? "Activo" : "Finalizado"}
+                              </span>
+                            </div>
+                            {p.objetivoGeneral && <p className="text-xs text-slate-600 mt-1">{p.objetivoGeneral}</p>}
+                            {p.duracion && <p className="text-[11px] text-slate-400 mt-1">Duración: {p.duracion}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* SEMANAS CON ACTIVIDADES */}
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-bold text-slate-800">Cronogramas y actividades realizadas</h3>
+                      <span className="text-xs text-slate-400">({planificacion?.semanas.length || 0})</span>
+                    </div>
+                    {(planificacion?.semanas.length || 0) === 0 ? (
+                      <p className="text-sm text-slate-400 italic">Todavía no hay actividades guardadas.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {planificacion?.semanas.map((sem: any) => {
+                          const abierta = semanaAbierta === sem.semana_inicio
+                          return (
+                            <div key={sem.semana_inicio} className="border border-slate-200 rounded-xl overflow-hidden">
+                              <button
+                                onClick={() => setSemanaAbierta(abierta ? null : sem.semana_inicio)}
+                                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {abierta ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                                  <span className="text-sm font-semibold text-slate-800">Semana del {formatearFecha(sem.semana_inicio)}</span>
+                                  {sem.finalizada && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">Finalizada</span>}
+                                </div>
+                                <span className="text-xs text-slate-400">{sem.totalActividades} actividad{sem.totalActividades === 1 ? "" : "es"}</span>
+                              </button>
+
+                              {abierta && (
+                                <div className="p-3 space-y-3">
+                                  {DIAS.map((dia) => {
+                                    const d = sem.dias[dia]
+                                    if (!d) return null
+                                    const acts = (d.actividades || []).filter((a: any) => (a?.nombre || "").trim().length > 0)
+                                    const tieneAlgo = acts.length > 0 || d.recibimiento || d.intercambio
+                                    if (!tieneAlgo) return null
+                                    return (
+                                      <div key={dia} className="border-l-2 border-blue-200 pl-3">
+                                        <p className="text-xs font-bold text-slate-700">{dia} <span className="font-normal text-slate-400">{formatearFecha(d.fecha)}</span></p>
+                                        {d.recibimiento && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">Recibimiento:</span> {d.recibimiento}</p>}
+                                        {d.intercambio && <p className="text-xs text-slate-600"><span className="font-medium">Intercambio:</span> {d.intercambio}</p>}
+                                        {acts.map((a: any, i: number) => (
+                                          <div key={i} className="mt-1.5 bg-slate-50 rounded-lg p-2">
+                                            <p className="text-xs font-semibold text-slate-800">{a.nombre}</p>
+                                            {a.objetivo && <p className="text-[11px] text-slate-600 mt-0.5"><span className="font-medium">Objetivo:</span> {a.objetivo}</p>}
+                                            {a.desarrollo && <p className="text-[11px] text-slate-600"><span className="font-medium">Desarrollo:</span> {a.desarrollo}</p>}
+                                            {a.materiales && <p className="text-[11px] text-slate-500"><span className="font-medium">Materiales:</span> {a.materiales}</p>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
+                </>
+              )}
             </div>
           </div>
         </div>
