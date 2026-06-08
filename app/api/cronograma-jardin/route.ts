@@ -33,22 +33,24 @@ export async function GET(req: Request) {
 
   const salaKey = normSala(sala)
 
-  // HISTORIAL: semanas con finalizado = true ordenadas por fecha desc
+  // HISTORIAL: semanas YA COMPLETADAS de la sala (todos sus dias finalizados).
+  // No dependemos del flag "finalizado" (que solo se marca al usar "Finalizar Semana"):
+  // una semana cuenta como historial si todos sus dias estan finalizados dia por dia.
   if (historial) {
     const { data: todos } = await supabase
       .from(TABLA)
-      .select("id, sala, dia, semana_inicio, fecha, actividades, recibimiento, intercambio, finalizado")
-      .eq("finalizado", true)
+      .select("id, sala, dia, semana_inicio, fecha, actividades, recibimiento, intercambio, dia_finalizado, finalizado")
       .order("semana_inicio", { ascending: false })
-      .limit(200)
+      .limit(500)
 
     // Filtrar por sala normalizada en memoria
     const deSala = (todos || []).filter((r: any) => normSala(r.sala || "") === salaKey)
 
+    // Agrupar por semana
     const mapa: Record<string, any> = {}
     for (const r of deSala) {
       if (!mapa[r.semana_inicio]) {
-        mapa[r.semana_inicio] = { semana_inicio: r.semana_inicio, dias: {} }
+        mapa[r.semana_inicio] = { semana_inicio: r.semana_inicio, dias: {}, _filas: [] as any[] }
       }
       mapa[r.semana_inicio].dias[r.dia] = {
         fecha: r.fecha,
@@ -56,10 +58,21 @@ export async function GET(req: Request) {
         recibimiento: r.recibimiento || "",
         intercambio: r.intercambio || "",
       }
+      mapa[r.semana_inicio]._filas.push(r)
     }
-    const semanas = Object.values(mapa).sort((a: any, b: any) =>
-      b.semana_inicio.localeCompare(a.semana_inicio)
-    )
+
+    // Una semana es "historial" si TODOS sus dias estan finalizados (o el flag finalizado=true).
+    // Las semanas que aun tienen dias sin finalizar son "activas" y no van al historial.
+    const semanas = Object.values(mapa)
+      .filter((sem: any) => {
+        const filas = sem._filas as any[]
+        const todosFinalizados = filas.every((f) => f.dia_finalizado === true)
+        const algunFlagFinalizado = filas.some((f) => f.finalizado === true)
+        return todosFinalizados || algunFlagFinalizado
+      })
+      .map((sem: any) => ({ semana_inicio: sem.semana_inicio, dias: sem.dias }))
+      .sort((a: any, b: any) => b.semana_inicio.localeCompare(a.semana_inicio))
+
     return NextResponse.json({ ok: true, historial: semanas })
   }
 

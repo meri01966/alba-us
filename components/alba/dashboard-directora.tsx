@@ -25,7 +25,7 @@ interface Registro {
 interface BrainAlerta {
   tipo: string
   mensaje: string
-  urgencia: "alta" | "media" | "info"
+  urgencia: "alta" | "media" | "baja" | "info"
   alumnoNombre?: string
 }
 
@@ -127,6 +127,9 @@ export default function DashboardDirectora() {
   const [sintesisData, setSintesisData] = useState<any>(null)
   const [planificacionData, setPlanificacionData] = useState<any>(null)
   const [cronogramaActivoData, setCronogramaActivoData] = useState<any>(null)
+  // Historial de grillas de semanas finalizadas (para que la directora pueda revisarlas)
+  const [historialSemanas, setHistorialSemanas] = useState<any[]>([])
+  const [grillaHistorialActiva, setGrillaHistorialActiva] = useState<any>(null)
   // Modal de cronograma completo (5 columnas) para la directora
   const [cronogramaModalOpen, setCronogramaModalOpen] = useState(false)
   const [vistoLoading, setVistoLoading] = useState(false)
@@ -249,7 +252,7 @@ export default function DashboardDirectora() {
             tipo: a.tipo,
             urgencia: a.urgencia,
             mensaje: a.mensaje,
-            alumno: a.alumnoNombre
+            alumnoNombre: a.alumnoNombre
           }))
         }
       } catch {}
@@ -287,6 +290,8 @@ export default function DashboardDirectora() {
     setSintesisData(null)
     setPlanificacionData(null)
     setCronogramaActivoData(null)
+    setHistorialSemanas([])
+    setGrillaHistorialActiva(null)
     setCronogramaModalOpen(false)
     setVistoConfirmado(false)
     
@@ -320,6 +325,16 @@ export default function DashboardDirectora() {
           }
         }
       } catch {}
+      // Traer el historial de grillas de semanas ya finalizadas
+      try {
+        const resHist = await fetch(`${base}/api/cronograma-jardin?sala=${encodeURIComponent(sala)}&historial=true`, { cache: "no-store" })
+        if (resHist.ok) {
+          const dataHist = await resHist.json()
+          if (dataHist.ok && Array.isArray(dataHist.historial)) {
+            setHistorialSemanas(dataHist.historial)
+          }
+        }
+      } catch {}
     }
     
     // Cargar proyectos
@@ -344,13 +359,19 @@ export default function DashboardDirectora() {
     setEjeSeleccionado(null)
     setProyectosData(null)
     setCronogramaActivoData(null)
+    setHistorialSemanas([])
+    setGrillaHistorialActiva(null)
     setCronogramaModalOpen(false)
     setVistoConfirmado(false)
   }
 
   // Rango legible de la semana del cronograma activo (ej: "del 1 al 5 de jun")
   function rangoSemanaActivo(): string {
-    const crono = cronogramaActivoData?.cronograma
+    return rangoSemanaDe(cronogramaActivoData?.cronograma)
+  }
+
+  // Rango legible para cualquier grilla (activa o de historial)
+  function rangoSemanaDe(crono: any): string {
     if (!crono) return ""
     const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
     const fLunes = crono["Lunes"]?.fecha
@@ -363,7 +384,11 @@ export default function DashboardDirectora() {
 
   // Construye el array de clases especiales (musica/ingles/edFisica) desde el cronograma
   function clasesEspecialesActivo(): { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] {
-    const crono = cronogramaActivoData?.cronograma
+    return clasesEspecialesDe(cronogramaActivoData?.cronograma)
+  }
+
+  // Clases especiales para cualquier grilla (activa o de historial)
+  function clasesEspecialesDe(crono: any): { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] {
     if (!crono) return []
     const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
     const out: { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] = []
@@ -610,6 +635,34 @@ export default function DashboardDirectora() {
                         </button>
                       )}
 
+                      {/* Historial de grillas de semanas finalizadas (5 columnas) */}
+                      {historialSemanas.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-foreground pt-1">Cronogramas de semanas anteriores</p>
+                          {historialSemanas.map((sem: any) => {
+                            const rango = rangoSemanaDe(sem.dias)
+                            return (
+                              <button
+                                key={sem.semana_inicio}
+                                type="button"
+                                onClick={() => { setGrillaHistorialActiva(sem.dias); setCronogramaModalOpen(true) }}
+                                className="w-full text-left border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors"
+                              >
+                                <div className="bg-muted px-4 py-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-medium text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border">Finalizada</span>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      Cronograma semana {rango || sem.semana_inicio}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs font-semibold text-primary">Ver completo →</span>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+
                       {/* Historial de dias finalizados */}
                       {!planificacionData || planificacionData.totalActividades === 0 ? (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
@@ -792,18 +845,33 @@ export default function DashboardDirectora() {
                           <p className="text-sm text-green-800">No hay alertas pedagogicas en esta sala</p>
                         </div>
                       ) : (
-                        salasData[modalSala]?.alertas.map((alerta, i) => (
-                          <div key={i} className={`rounded-lg p-3 border ${alerta.urgencia === "alta" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
+                        salasData[modalSala]?.alertas.map((alerta, i) => {
+                          const esAlta = alerta.urgencia === "alta"
+                          const esBaja = alerta.urgencia === "baja"
+                          const titulo = esAlta
+                            ? "Necesita apoyo prioritario"
+                            : esBaja
+                            ? "Para acompañar"
+                            : "Seguir de cerca"
+                          const estilo = esAlta
+                            ? "bg-red-50 border-red-200"
+                            : esBaja
+                            ? "bg-sky-50 border-sky-200"
+                            : "bg-amber-50 border-amber-200"
+                          const punto = esAlta ? "bg-red-500" : esBaja ? "bg-sky-500" : "bg-amber-500"
+                          return (
+                          <div key={i} className={`rounded-lg p-3 border ${estilo}`}>
                             <div className="flex items-start gap-2">
-                              <span className={`w-2 h-2 rounded-full mt-1.5 ${alerta.urgencia === "alta" ? "bg-red-500" : "bg-amber-500"}`} />
+                              <span className={`w-2 h-2 rounded-full mt-1.5 ${punto}`} />
                               <div>
-                                <p className="text-xs font-semibold text-foreground">{alerta.tipo}</p>
+                                <p className="text-xs font-semibold text-foreground">{titulo}</p>
                                 <p className="text-sm text-muted-foreground">{alerta.mensaje}</p>
                                 {alerta.alumnoNombre && <p className="text-xs text-muted-foreground mt-1">Alumno: {alerta.alumnoNombre}</p>}
                               </div>
                             </div>
                           </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
                   )}
@@ -1140,15 +1208,15 @@ export default function DashboardDirectora() {
       )}
 
       {/* Cronograma completo (5 columnas) para la directora, con boton Visto */}
-      {cronogramaModalOpen && cronogramaActivoData?.cronograma && modalSala && (
+      {cronogramaModalOpen && modalSala && (grillaHistorialActiva || cronogramaActivoData?.cronograma) && (
         <CronogramaVerModal
           open={cronogramaModalOpen}
-          onClose={() => setCronogramaModalOpen(false)}
+          onClose={() => { setCronogramaModalOpen(false); setGrillaHistorialActiva(null) }}
           sala={modalSala}
-          cronograma={cronogramaActivoData.cronograma}
-          clasesEspeciales={clasesEspecialesActivo()}
-          rangoSemana={rangoSemanaActivo()}
-          onVisto={enviarVisto}
+          cronograma={grillaHistorialActiva || cronogramaActivoData.cronograma}
+          clasesEspeciales={clasesEspecialesDe(grillaHistorialActiva || cronogramaActivoData?.cronograma)}
+          rangoSemana={rangoSemanaDe(grillaHistorialActiva || cronogramaActivoData?.cronograma)}
+          onVisto={grillaHistorialActiva ? undefined : enviarVisto}
           vistoLabel="Marcar como visto"
           vistoLoading={vistoLoading}
           vistoConfirmado={vistoConfirmado}
