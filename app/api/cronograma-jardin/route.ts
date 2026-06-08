@@ -63,51 +63,48 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, historial: semanas })
   }
 
-  // SEMANA A MOSTRAR:
-  // 1. Si hay datos en la semana actual → usar semana actual
-  // 2. Si hay datos en la semana anterior (cronograma cargado la semana pasada) → usar semana anterior
-  // 3. Si no hay datos → mostrar la semana que viene (proximo lunes)
-  // En sala de prueba: no depender de fechas reales, permitir simular cualquier día
-  const lunes = getLunesSemana(new Date())
-  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
-  const lunesSig = new Date(lunes); lunesSig.setDate(lunesSig.getDate() + 7)
-  const lunesStr = lunes.toISOString().split("T")[0]
-  const lunesAntStr = lunesAnt.toISOString().split("T")[0]
-  const lunesSigStr = lunesSig.toISOString().split("T")[0]
-
-  const esSalaPrueba = salaKey.includes("prueba")
-  
-  // En sala de prueba: buscar solo semana actual + siguiente (no pasada)
-  // En otras salas: buscar pasada + actual
-  const semanasABuscar = esSalaPrueba 
-    ? [lunesStr, lunesSigStr]
-    : [lunesStr, lunesAntStr]
-
-  const { data: todos, error } = await supabase
+  // SEMANA A MOSTRAR (desacoplado del calendario):
+  // Se busca la ÚLTIMA semana cargada de la sala que todavía tenga algún día sin
+  // finalizar (dia_finalizado !== true). Esa es la semana "activa" que ve la maestra
+  // y sobre la que ALBA sugiere. Si todas las semanas están finalizadas (o no hay
+  // ninguna), se muestra una semana en blanco para que la maestra cargue el próximo
+  // cronograma. NO se calcula nada por fecha real.
+  const { data: todosSala, error } = await supabase
     .from(TABLA)
     .select("*")
-    .in("semana_inicio", semanasABuscar)
-    .or("finalizado.eq.false,finalizado.is.null")
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
 
   // Filtrar por sala normalizada en memoria
-  const data = (todos || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+  const data = (todosSala || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+
+  // Agrupar por semana_inicio y detectar cuáles tienen días pendientes
+  const semanasPendientes = Array.from(
+    new Set(
+      data
+        .filter((r: any) => r.dia_finalizado !== true)
+        .map((r: any) => r.semana_inicio as string)
+    )
+  ).sort((a, b) => a.localeCompare(b))
 
   // Determinar semana y lunes a usar
   let semanaUsada: string
   let lunesUsado: Date
-  if (data.some((r: any) => r.semana_inicio === lunesStr)) {
-    // Hay datos esta semana
-    semanaUsada = lunesStr
-    lunesUsado = lunes
-  } else if (data.some((r: any) => r.semana_inicio === lunesAntStr)) {
-    // Hay datos de la semana anterior (cronograma cargado antes)
-    semanaUsada = lunesAntStr
-    lunesUsado = lunesAnt
+  let mostrarEnBlanco = false
+
+  if (semanasPendientes.length > 0) {
+    // Tomar la PRIMERA semana pendiente (la más antigua sin finalizar). Esto coincide
+    // exactamente con el criterio del brain (buscarActividadCronograma), garantizando
+    // que la grilla que ve la maestra = la actividad que sugiere ALBA.
+    semanaUsada = semanasPendientes[0]
+    lunesUsado = new Date(semanaUsada + "T00:00:00")
   } else {
-    // Sin datos — mostrar semana que viene para que la maestra cargue el proximo cronograma
-    semanaUsada = lunesSigStr
+    // No hay semana pendiente: mostrar una semana en blanco para cargar el próximo
+    // cronograma. Usamos el próximo lunes solo para etiquetar las fechas de la grilla.
+    mostrarEnBlanco = true
+    const lunesSig = getLunesSemana(new Date())
+    lunesSig.setDate(lunesSig.getDate() + 7)
+    semanaUsada = lunesSig.toISOString().split("T")[0]
     lunesUsado = lunesSig
   }
 
@@ -115,7 +112,9 @@ export async function GET(req: Request) {
   DIAS.forEach((dia, idx) => {
     const fecha = new Date(lunesUsado)
     fecha.setDate(fecha.getDate() + idx)
-    const registro = data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
+    const registro = mostrarEnBlanco
+      ? undefined
+      : data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
     cronograma[dia] = {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
@@ -127,8 +126,9 @@ export async function GET(req: Request) {
     }
   })
 
-  const hayRegistros = data.length > 0 &&
+  const hayRegistros = !mostrarEnBlanco &&
     data.some((r: any) =>
+      r.semana_inicio === semanaUsada &&
       Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
     )
 
@@ -241,39 +241,47 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ ok: true, diaFinalizado: diaActivo.dia })
 }
 
-// PUT - Finalizar semana completa (marca todos los días como dia_finalizado: true)
+// PUT - Finalizar semana completa. Marca como finalizada la semana ACTIVA de la sala
+// (la última semana cargada que todavía tiene días sin finalizar), sin depender del
+// calendario. Al quedar todo finalizado, el GET mostrará una semana en blanco para
+// cargar el próximo cronograma.
 export async function PUT(req: Request) {
   const body = await req.json()
   const { sala } = body
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
   const salaKey = normSala(sala)
-  
-  // Buscar en las últimas 3 semanas (para encontrar cualquier semana no finalizada)
-  const lunes = getLunesSemana(new Date())
-  const lunesAnt = new Date(lunes); lunesAnt.setDate(lunesAnt.getDate() - 7)
-  const lunesSig = new Date(lunes); lunesSig.setDate(lunesSig.getDate() + 7)
-  
-  const semanasABuscar = [
-    lunesAnt.toISOString().split("T")[0],
-    lunes.toISOString().split("T")[0],
-    lunesSig.toISOString().split("T")[0],
-  ]
 
-  // Buscar todos los registros de esta sala en cualquiera de las 3 semanas
+  // Traer todos los registros de esta sala (cualquier semana)
   const { data: registros } = await supabase
     .from(TABLA)
-    .select("id, sala, semana_inicio")
-    .in("semana_inicio", semanasABuscar)
+    .select("id, sala, semana_inicio, dia_finalizado")
 
-  // Filtrar por sala normalizada y actualizar todos
   const registrosDeSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
-  for (const r of registrosDeSala) {
+
+  // Identificar la semana activa: la semana_inicio más reciente que aún tenga días
+  // pendientes. Solo finalizamos esa (no tocamos semanas históricas).
+  const semanasPendientes = Array.from(
+    new Set(
+      registrosDeSala
+        .filter((r: any) => r.dia_finalizado !== true)
+        .map((r: any) => r.semana_inicio as string)
+    )
+  ).sort((a, b) => a.localeCompare(b))
+
+  if (semanasPendientes.length === 0) {
+    return NextResponse.json({ ok: true, actualizados: 0, sinPendientes: true })
+  }
+
+  const semanaActiva = semanasPendientes[0]
+  const aFinalizar = registrosDeSala.filter((r: any) => r.semana_inicio === semanaActiva)
+
+  for (const r of aFinalizar) {
     await supabase
       .from(TABLA)
-      .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
+      .update({ dia_finalizado: true, finalizado: true, updated_at: new Date().toISOString() })
       .eq("id", r.id)
   }
 
-  return NextResponse.json({ ok: true, actualizados: registrosDeSala.length })
+  return NextResponse.json({ ok: true, actualizados: aFinalizar.length, semana: semanaActiva })
 }
