@@ -221,15 +221,10 @@ export async function PATCH(req: Request) {
   const deSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
   if (deSala.length === 0) return NextResponse.json({ ok: false, error: "Sin cronograma" }, { status: 404 })
 
-  // Filtrar los NO finalizados que tengan CUALQUIER actividad con nombre
-  // (sugerida por ALBA o cargada manualmente por la maestra). Así la jornada
-  // avanza también en días que solo tienen actividad manual, sin quedar bloqueada.
-  const pendientes = deSala.filter(
-    (r: any) =>
-      r.dia_finalizado !== true &&
-      Array.isArray(r.actividades) &&
-      r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
-  )
+  // Tomar TODOS los días NO finalizados (tengan o no actividad cargada).
+  // Si un día está vacío, igual se marca como finalizado y la jornada avanza
+  // al siguiente día, sin quedar bloqueada (comportamiento "saltear día vacío").
+  const pendientes = deSala.filter((r: any) => r.dia_finalizado !== true)
 
   if (pendientes.length === 0) {
     return NextResponse.json({ ok: true, sinPendientes: true })
