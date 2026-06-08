@@ -221,31 +221,45 @@ export async function PATCH(req: Request) {
   const deSala = (registros || []).filter((r: any) => normSala(r.sala || "") === salaKey)
   if (deSala.length === 0) return NextResponse.json({ ok: false, error: "Sin cronograma" }, { status: 404 })
 
-  // Tomar TODOS los días NO finalizados (tengan o no actividad cargada).
-  // Si un día está vacío, igual se marca como finalizado y la jornada avanza
-  // al siguiente día, sin quedar bloqueada (comportamiento "saltear día vacío").
-  const pendientes = deSala.filter((r: any) => r.dia_finalizado !== true)
+  // Tomar TODOS los días NO finalizados y ordenarlos por semana + día.
+  const pendientes = deSala
+    .filter((r: any) => r.dia_finalizado !== true)
+    .sort((a: any, b: any) => {
+      const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
+      if (semanaCmp !== 0) return semanaCmp
+      return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+    })
 
   if (pendientes.length === 0) {
     return NextResponse.json({ ok: true, sinPendientes: true })
   }
 
-  // Ordenar por semana + día y tomar el PRIMERO (el día activo que ve la maestra)
-  pendientes.sort((a: any, b: any) => {
-    const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
-    if (semanaCmp !== 0) return semanaCmp
-    return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
-  })
+  // El día que la maestra ve activo es el que sugiere ALBA: el PRIMER pendiente que
+  // tiene una actividad de ALBA con nombre (mismo criterio que el brain). Finalizamos
+  // ese día y, de paso, los días vacíos anteriores (sin actividad de ALBA), para que
+  // la jornada avance siempre y la sugerencia de ALBA pase a la siguiente actividad.
+  const tieneAlba = (r: any) =>
+    Array.isArray(r.actividades) &&
+    r.actividades.some(
+      (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
+    )
 
-  const diaActivo = pendientes[0]
+  const idxAlba = pendientes.findIndex(tieneAlba)
+
+  // Si hay un día con actividad de ALBA, finalizar hasta ese día inclusive
+  // (saltando/finalizando los vacíos anteriores). Si no hay ninguno con ALBA,
+  // finalizar solo el primer pendiente (saltear día vacío y avanzar igual).
+  const corte = idxAlba >= 0 ? idxAlba : 0
+  const aFinalizar = pendientes.slice(0, corte + 1)
+  const ids = aFinalizar.map((r: any) => r.id)
 
   const { error } = await supabase
     .from(TABLA)
     .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
-    .eq("id", diaActivo.id)
+    .in("id", ids)
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, diaFinalizado: diaActivo.dia })
+  return NextResponse.json({ ok: true, diaFinalizado: aFinalizar[aFinalizar.length - 1].dia, diasFinalizados: aFinalizar.length })
 }
 
 // PUT - Finalizar semana completa. Marca como finalizada la semana ACTIVA de la sala
