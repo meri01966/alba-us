@@ -11,8 +11,13 @@ function getLunesSemana(fecha: Date): Date {
   const d = new Date(fecha)
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(d.setDate(diff))
+  d.setDate(diff)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
+
+const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+const normSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
 
 // GET - Obtener cronograma de la semana actual, o historial de semanas finalizadas
 export async function GET(req: Request) {
@@ -60,29 +65,58 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, historial: semanas })
   }
   
-  const lunesSemana = getLunesSemana(new Date())
-  const lunesStr = lunesSemana.toISOString().split("T")[0]
-  
-  const { data, error } = await supabase
+  // SEMANA A MOSTRAR (desacoplado del calendario):
+  // Se busca la primera semana cargada de la sala que todavía NO esté finalizada.
+  // Esa es la semana "activa" que ve la maestra. Si todas están finalizadas (o no hay
+  // ninguna), se muestra una semana en blanco para cargar el próximo cronograma.
+  const salaKey = normSala(sala)
+  const { data: todosSala, error } = await supabase
     .from("cronograma_maternal")
     .select("*")
-    .eq("sala", sala)
-    .eq("semana_inicio", lunesStr)
-    .or("finalizado.eq.false,finalizado.is.null")
-  
+
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
-  
+
+  // Filtrar por sala normalizada en memoria
+  const data = (todosSala || []).filter((r: any) => normSala(r.sala || "") === salaKey)
+
+  // Semanas que aún tienen al menos un día sin finalizar
+  const semanasPendientes = Array.from(
+    new Set(
+      data
+        .filter((r: any) => r.finalizado !== true)
+        .map((r: any) => r.semana_inicio as string)
+    )
+  ).sort((a, b) => a.localeCompare(b))
+
+  let semanaUsada: string
+  let lunesUsado: Date
+  let mostrarEnBlanco = false
+
+  if (semanasPendientes.length > 0) {
+    // Primera semana pendiente (la más antigua sin finalizar)
+    semanaUsada = semanasPendientes[0]
+    lunesUsado = new Date(semanaUsada + "T00:00:00")
+  } else {
+    // No hay semana pendiente: mostrar semana en blanco para el próximo cronograma
+    mostrarEnBlanco = true
+    const lunesSig = getLunesSemana(new Date())
+    lunesSig.setDate(lunesSig.getDate() + 7)
+    semanaUsada = lunesSig.toISOString().split("T")[0]
+    lunesUsado = lunesSig
+  }
+
   // Organizar por dia
   const cronograma: Record<string, any> = {}
-  const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
-  
-  dias.forEach((dia, idx) => {
-    const fecha = new Date(lunesSemana)
+
+  DIAS.forEach((dia, idx) => {
+    const fecha = new Date(lunesUsado)
     fecha.setDate(fecha.getDate() + idx)
-    const registro = data?.find(d => d.dia === dia)
-    
+    const registro = mostrarEnBlanco
+      ? undefined
+      : data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
+
     // Actividad vacia por defecto
     const actividadVacia = {
       nombre: "",
@@ -92,7 +126,7 @@ export async function GET(req: Request) {
       desarrollo: "",
       materiales: ""
     }
-    
+
     cronograma[dia] = {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
@@ -103,13 +137,14 @@ export async function GET(req: Request) {
       ingles: registro?.ingles || ""
     }
   })
-  
+
   // hayRegistros = true si al menos un dia tiene actividad real guardada
-  const hayRegistros = (data?.length ?? 0) > 0 && (data ?? []).some(
-    (r: any) => Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
+  const hayRegistros = !mostrarEnBlanco && data.some(
+    (r: any) => r.semana_inicio === semanaUsada &&
+      Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
   )
 
-  return NextResponse.json({ ok: true, cronograma, semanaInicio: lunesStr, hayRegistros })
+  return NextResponse.json({ ok: true, cronograma, semanaInicio: semanaUsada, hayRegistros })
 }
 
 // POST - Guardar cronograma
