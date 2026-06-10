@@ -53,8 +53,8 @@ const EJES: Record<Eje, { label: string; color: string }> = {
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
-// Detectar si una sala es Maternal (termina en TM)
-const esMateral = (sala: string) => sala.toUpperCase().endsWith("TM")
+// Detectar si una sala es Maternal (termina en TM o es PINITOS TT)
+const esMateral = (sala: string) => sala.toUpperCase().endsWith("TM") || sala.toUpperCase() === "PINITOS TT"
 
 // Grafico de barras mini para los 3 ejes - clickeable
 function MiniBarChart({ 
