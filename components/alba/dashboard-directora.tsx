@@ -50,7 +50,7 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   O:  { label: "Oralidad", color: "#f59e0b" },
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TM", "PINOSTT"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
 // Detectar si una sala es Maternal (termina en TM)
@@ -412,7 +412,7 @@ export default function DashboardDirectora() {
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
       const rango = rangoSemanaActivo()
-      const mensaje = `La dirección revisó el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
+      const mensaje = `La dirección revis�� el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
       const res = await fetch(`${base}/api/mensajes-directora`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
