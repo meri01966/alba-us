@@ -116,7 +116,9 @@ function MiniBarChart({
   )
 }
 
-export default function DashboardDirectora() {
+export default function DashboardDirectora({ soloSala }: { soloSala?: string } = {}) {
+  // Modo demo: si se pasa soloSala, el tablero muestra unicamente esa sala
+  const salasVisibles = soloSala ? SALAS.filter((s) => s === soloSala) : SALAS
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [registros, setRegistros] = useState<Registro[]>([])
   const [cierres, setCierres] = useState<{ sala: string; eje: string; fecha: string }[]>([])
@@ -477,7 +479,7 @@ export default function DashboardDirectora() {
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {/* Grid de tarjetas por sala */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SALAS.map(sala => {
+          {salasVisibles.map(sala => {
             const data = salasData[sala]
             if (!data) return null
             

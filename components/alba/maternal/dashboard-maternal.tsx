@@ -62,8 +62,8 @@ function formatearFecha(fecha: string): string {
   return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" })
 }
 
-export function DashboardMaternal() {
-  const [salaActual, setSalaActual] = useState("Naranjos TM")
+export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) {
+  const [salaActual, setSalaActual] = useState(forzarSala || "Naranjos TM")
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensajeGuardado, setMensajeGuardado] = useState("")
@@ -117,6 +117,11 @@ export function DashboardMaternal() {
   
   // Cargar datos de la sala
   useEffect(() => {
+    // Modo demo: sala forzada por prop, no leer ni guardar en localStorage
+    if (forzarSala) {
+      setSalaActual(forzarSala)
+      return
+    }
     const savedSala = localStorage.getItem("maternal-sala-activa")
     if (savedSala && SALAS_MATERNAL.includes(savedSala)) {
       setSalaActual(savedSala)
@@ -711,17 +716,17 @@ export function DashboardMaternal() {
               <span className="text-sm font-medium hidden sm:inline">Mi Planificación</span>
             </button>
 
-            {/* Selector de Sala */}
+            {/* Selector de Sala (oculto en modo demo) */}
             <div className="relative">
               <button
-                onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+                onClick={() => { if (!forzarSala) setShowSalaDropdown(!showSalaDropdown) }}
                 className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
               >
                 <span className="text-sm font-medium">{salaActual}</span>
-                <ChevronDown className="w-4 h-4" />
+                {!forzarSala && <ChevronDown className="w-4 h-4" />}
               </button>
               
-              {showSalaDropdown && (
+              {showSalaDropdown && !forzarSala && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
                   {SALAS_MATERNAL.map((sala) => (
                     <button

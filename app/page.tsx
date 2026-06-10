@@ -341,7 +341,7 @@ function SintesisPedagogicaModal({
 // Salas disponibles
 const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
 
-export default function ALBADashboard() {
+export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = {}) {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
@@ -367,12 +367,18 @@ export default function ALBADashboard() {
   const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
-  const [salaActual, setSalaActual] = useState("Manzanos")
+  const [salaActual, setSalaActual] = useState(forzarSala || "Manzanos")
   const [salaHydrated, setSalaHydrated] = useState(false)
   
   // Cargar sala: el parametro ?sala=X de la URL tiene prioridad (links directos
   // para cada maestra). Si no hay, se usa la ultima sala guardada en localStorage.
   useEffect(() => {
+    // Modo demo: si la sala viene forzada por prop, fijarla y no permitir cambios
+    if (forzarSala) {
+      setSalaActual(forzarSala)
+      setSalaHydrated(true)
+      return
+    }
     const params = new URLSearchParams(window.location.search)
     const salaParam = params.get("sala")
     // Buscar coincidencia sin distinguir mayusculas/acentos para ser tolerante
@@ -1202,18 +1208,18 @@ useEffect(() => {
           {/* Barra de gestion de sala */}
           <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-3">
-              {/* Selector de sala */}
+              {/* Selector de sala (oculto en modo demo) */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+                  onClick={() => { if (!forzarSala) setShowSalaDropdown(!showSalaDropdown) }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-medium"
                   style={{ color: "#1e3a5f" }}
                 >
                   <span>Sala: {salaActual}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />
+                  {!forzarSala && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
                 </button>
-                {showSalaDropdown && (
+                {showSalaDropdown && !forzarSala && (
                   <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 min-w-[160px]">
                     {SALAS_DISPONIBLES.map((sala) => (
                       <button
