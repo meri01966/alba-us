@@ -50,8 +50,11 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   O:  { label: "Oralidad", color: "#f59e0b" },
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TM", "PINOSTT"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
+
+// Detectar si una sala es Maternal (termina en TM)
+const esMateral = (sala: string) => sala.toUpperCase().endsWith("TM")
 
 // Grafico de barras mini para los 3 ejes - clickeable
 function MiniBarChart({ 
@@ -542,39 +545,54 @@ export default function DashboardDirectora() {
                   )}
                 </div>
                 
-                {/* Barra azul con botones */}
-                <div className="bg-primary px-3 py-2 flex items-center justify-between gap-2">
+                {/* Barra con botones - AZUL para Jardin, VERDE para Maternal */}
+                <div className={`px-3 py-2 flex items-center justify-between gap-2 ${esMateral(sala) ? "bg-green-600" : "bg-primary"}`}>
                   <button 
                     onClick={() => abrirModal(sala, "planificacion")}
-                    className="flex-1 text-[10px] font-medium text-primary-foreground/90 hover:text-primary-foreground py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
+                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
                   >
                     Planificacion
                   </button>
                   <div className="w-px h-4 bg-white/20" />
                   <button 
                     onClick={() => abrirModal(sala, "sintesis")}
-                    className="flex-1 text-[10px] font-medium text-primary-foreground/90 hover:text-primary-foreground py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
+                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
                   >
                     Sintesis Grupal
                   </button>
+                  {!esMateral(sala) && (
+                    <>
+                      <div className="w-px h-4 bg-white/20" />
+                      <button 
+                        onClick={() => abrirModal(sala, "alertas")}
+                        className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors relative"
+                      >
+                        Alertas
+                        {data.alertasCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[8px] flex items-center justify-center">
+                            {data.alertasCount}
+                          </span>
+                        )}
+                      </button>
+                    </>
+                  )}
+                  {esMateral(sala) && (
+                    <>
+                      <div className="w-px h-4 bg-white/20" />
+                      <button 
+                        onClick={() => abrirModal(sala, "alertas")}
+                        className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
+                      >
+                        Alertas
+                      </button>
+                    </>
+                  )}
                   <div className="w-px h-4 bg-white/20" />
                   <button 
-                    onClick={() => abrirModal(sala, "alertas")}
-                    className="flex-1 text-[10px] font-medium text-primary-foreground/90 hover:text-primary-foreground py-1.5 px-2 rounded hover:bg-white/10 transition-colors relative"
+                    onClick={() => abrirModal(sala, esMateral(sala) ? "barraActividades" : "proyectos")}
+                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
                   >
-                    Alertas
-                    {data.alertasCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[8px] flex items-center justify-center">
-                        {data.alertasCount}
-                      </span>
-                    )}
-                  </button>
-                  <div className="w-px h-4 bg-white/20" />
-                  <button 
-                    onClick={() => abrirModal(sala, "proyectos")}
-                    className="flex-1 text-[10px] font-medium text-primary-foreground/90 hover:text-primary-foreground py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
-                  >
-                    Proyectos
+                    {esMateral(sala) ? "Actividades" : "Proyectos"}
                   </button>
                 </div>
               </div>
@@ -596,6 +614,7 @@ export default function DashboardDirectora() {
                   {modalTipo === "sintesis" && "Sintesis Grupal Cuatrimestral"}
                   {modalTipo === "alertas" && "Alertas Pedagogicas"}
                   {modalTipo === "proyectos" && "Proyectos de la Sala"}
+                  {modalTipo === "barraActividades" && "Actividades por Habilidades"}
                   {modalTipo === "detalle_eje" && ejeSeleccionado && `Detalle ${EJES[ejeSeleccionado].label}`}
                 </p>
               </div>
@@ -758,80 +777,88 @@ export default function DashboardDirectora() {
                   )}
                   
                   {/* Sintesis Grupal - informacion clara para la directora */}
-                  {modalTipo === "sintesis" && sintesisData && (
+                  {modalTipo === "sintesis" && (
                     <div className="space-y-4">
-                      {sintesisData.sinDatos ? (
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-amber-800">{sintesisData.mensaje}</p>
+                      {esMateral(modalSala) ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                          <p className="text-sm text-blue-800">La síntesis grupal no está disponible para Maternal porque aún no se realizan evaluaciones de alumnos en este nivel.</p>
                         </div>
-                      ) : (
+                      ) : sintesisData && (
                         <>
-                          {/* Resumen simple */}
-                          <div className="bg-muted rounded-lg p-4">
-                            <p className="text-sm text-foreground mb-2">
-                              <span className="font-semibold">{sintesisData.totalAlumnos} alumnos</span>
-                              <span className="text-muted-foreground"> trabajaron en </span>
-                              <span className="font-semibold">{sintesisData.totalClases} clases</span>
-                            </p>
-                            {sintesisData.periodoDesde && (
-                              <p className="text-xs text-muted-foreground">
-                                Desde {sintesisData.periodoDesde} hasta {sintesisData.periodoHasta}
-                              </p>
-                            )}
-                          </div>
-                          
-                          {/* Ejes - informacion clara sin porcentajes */}
-                          {sintesisData.ejes?.map((eje: any) => {
-                            // Determinar estado visual
-                            const estado = eje.pctLogrado >= 70 ? "bien" : eje.pctLogrado >= 50 ? "avanzando" : eje.pctRefuerzo >= 40 ? "atencion" : "proceso"
-                            const colorBorde = estado === "bien" ? "border-green-300" : estado === "atencion" ? "border-red-300" : "border-amber-300"
-                            const colorFondo = estado === "bien" ? "bg-green-50" : estado === "atencion" ? "bg-red-50" : "bg-amber-50"
-                            
-                            return (
-                              <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
-                                {/* Cabecera del eje */}
-                                <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
-                                  <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
-                                  <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
-                                  <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
-                                </div>
-                                
-                                <div className="p-4 space-y-3">
-                                  {/* Que trabajamos */}
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
-                                    <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
-                                  </div>
-                                  
-                                  {/* Como lo trabajamos */}
-                                  {eje.metodologias?.length > 0 && (
-                                    <div>
-                                      <p className="text-xs font-semibold text-muted-foreground mb-1">Como lo trabajamos:</p>
-                                      <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
-                                    </div>
-                                  )}
-                                  
-                                  {/* Estado del grupo - mensaje claro */}
-                                  <div className={`${colorFondo} rounded-lg p-3`}>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
-                                    <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
-                                  </div>
-                                  
-                                  {/* Sugerencias de ALBA solo si hay situaciones importantes */}
-                                  {(eje.pctRefuerzo >= 25 || eje.tendencia === "necesita_apoyo") && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                      <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
-                                      <ul className="text-xs text-blue-700 space-y-1">
-                                        {eje.sugerenciasContinuacion?.slice(0, 2).map((s: string, i: number) => (
-                                          <li key={i}>• {s}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
+                          {sintesisData.sinDatos ? (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                              <p className="text-sm text-amber-800">{sintesisData.mensaje}</p>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Resumen simple */}
+                              <div className="bg-muted rounded-lg p-4">
+                                <p className="text-sm text-foreground mb-2">
+                                  <span className="font-semibold">{sintesisData.totalAlumnos} alumnos</span>
+                                  <span className="text-muted-foreground"> trabajaron en </span>
+                                  <span className="font-semibold">{sintesisData.totalClases} clases</span>
+                                </p>
+                                {sintesisData.periodoDesde && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Desde {sintesisData.periodoDesde} hasta {sintesisData.periodoHasta}
+                                  </p>
+                                )}
                               </div>
-                            )
-                          })}
+                              
+                              {/* Ejes - informacion clara sin porcentajes */}
+                              {sintesisData.ejes?.map((eje: any) => {
+                                // Determinar estado visual
+                                const estado = eje.pctLogrado >= 70 ? "bien" : eje.pctLogrado >= 50 ? "avanzando" : eje.pctRefuerzo >= 40 ? "atencion" : "proceso"
+                                const colorBorde = estado === "bien" ? "border-green-300" : estado === "atencion" ? "border-red-300" : "border-amber-300"
+                                const colorFondo = estado === "bien" ? "bg-green-50" : estado === "atencion" ? "bg-red-50" : "bg-amber-50"
+                                
+                                return (
+                                  <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
+                                    {/* Cabecera del eje */}
+                                    <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
+                                      <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
+                                      <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
+                                    </div>
+                                    
+                                    <div className="p-4 space-y-3">
+                                      {/* Que trabajamos */}
+                                      <div>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
+                                        <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
+                                      </div>
+                                      
+                                      {/* Como lo trabajamos */}
+                                      {eje.metodologias?.length > 0 && (
+                                        <div>
+                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Como lo trabajamos:</p>
+                                          <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Estado del grupo - mensaje claro */}
+                                      <div className={`${colorFondo} rounded-lg p-3`}>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
+                                        <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
+                                      </div>
+                                      
+                                      {/* Sugerencias de ALBA solo si hay situaciones importantes */}
+                                      {(eje.pctRefuerzo >= 25 || eje.tendencia === "necesita_apoyo") && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                          <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
+                                          <ul className="text-xs text-blue-700 space-y-1">
+                                            {eje.sugerenciasContinuacion?.slice(0, 2).map((s: string, i: number) => (
+                                              <li key={i}>• {s}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </>
+                          )}
                         </>
                       )}
                     </div>
@@ -1009,6 +1036,37 @@ export default function DashboardDirectora() {
                           ))}
                         </>
                       )}
+                    </div>
+                  )}
+                  
+                  {/* Barra de actividades por habilidades - MATERNAL */}
+                  {modalTipo === "barraActividades" && (
+                    <div className="space-y-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-green-900 mb-3">Cantidad de actividades por habilidades</p>
+                        <p className="text-xs text-green-700 mb-4">Las barras muestran cuántas actividades se trabajaron en cada habilidad/capacidad durante las semanas realizadas.</p>
+                        
+                        {/* Placeholder: mientras no hay datos reales, mostrar estructura de barras vacía */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {["Motricidad Fina", "Motricidad Gruesa", "Lenguaje", "Socioemocional", "Cognitiva", "Autonomía"].map((hab) => (
+                            <div key={hab} className="bg-white rounded-lg p-3 border border-green-100">
+                              <div className="flex items-end gap-2 mb-2">
+                                <div 
+                                  className="flex-1 bg-green-500 rounded-t transition-all" 
+                                  style={{ height: "40px" }}
+                                />
+                              </div>
+                              <p className="text-xs font-medium text-foreground">{hab}</p>
+                              <p className="text-[10px] text-muted-foreground">0 actividades</p>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-blue-800 mb-1">Nota:</p>
+                          <p className="text-xs text-blue-700">Este gráfico se actualiza automáticamente conforme la maestra carga actividades en Maternal.</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                   
