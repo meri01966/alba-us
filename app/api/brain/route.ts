@@ -1760,7 +1760,11 @@ export async function POST(req: NextRequest) {
 
       // Leer historial de cierres para contexto
       let historialResumen = ""
-      let actividadesNoRealizadas: string[] = []
+      // Las no realizadas se separan por antiguedad:
+      // - recientes (ultima semana): NO se vuelven a sugerir, la sala sigue avanzando
+      // - antiguas: ALBA puede reconsiderarlas mas adelante si el analisis lo estima pertinente
+      let actividadesNoRealizadasRecientes: string[] = []
+      let actividadesNoRealizadasAntiguas: string[] = []
       try {
         const { data: cierres } = await supabase
           .from("registro_cierre")
@@ -1770,9 +1774,17 @@ export async function POST(req: NextRequest) {
           .limit(20)
         if (cierres && cierres.length > 0) {
           const realizadas = cierres.filter(c => c.evaluacion_general !== "no_realizada")
-          actividadesNoRealizadas = cierres
-            .filter(c => c.evaluacion_general === "no_realizada")
-            .map(c => c.actividad_alba).filter(Boolean)
+          const hoyMs = Date.now()
+          const UNA_SEMANA_MS = 7 * 86400000
+          for (const c of cierres) {
+            if (c.evaluacion_general !== "no_realizada" || !c.actividad_alba) continue
+            const fechaMs = c.fecha ? new Date(c.fecha).getTime() : 0
+            if (fechaMs && (hoyMs - fechaMs) <= UNA_SEMANA_MS) {
+              actividadesNoRealizadasRecientes.push(c.actividad_alba)
+            } else {
+              actividadesNoRealizadasAntiguas.push(c.actividad_alba)
+            }
+          }
           historialResumen = realizadas.slice(0, 10).map(c =>
             `- ${c.actividad_alba || "sin nombre"} (${c.eje}, ${c.evaluacion_general}, ${c.fecha})`
           ).join("\n")
@@ -1799,7 +1811,9 @@ Ejes: CF (Conciencia Fonologica), CT (Comprension Textual), Escritura inicial.
 HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
 ${historialResumen || "Sin historial previo — esta es la primera semana."}
 
-${actividadesNoRealizadas.length > 0 ? `ACTIVIDADES NO REALIZADAS (volver a sugerir si son pertinentes):\n${actividadesNoRealizadas.join(", ")}` : ""}
+${actividadesNoRealizadasRecientes.length > 0 ? `ACTIVIDADES NO REALIZADAS LA ULTIMA SEMANA (NO volver a sugerir ahora — la sala sigue avanzando con contenido nuevo. Podran reconsiderarse mas adelante si el progreso lo amerita):\n${actividadesNoRealizadasRecientes.join(", ")}` : ""}
+
+${actividadesNoRealizadasAntiguas.length > 0 ? `ACTIVIDADES NO REALIZADAS HACE MAS DE UNA SEMANA (solo reconsiderar si el analisis de progreso del grupo indica que ese contenido aun es necesario; de lo contrario, continuar avanzando):\n${actividadesNoRealizadasAntiguas.join(", ")}` : ""}
 
 ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
 ${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}

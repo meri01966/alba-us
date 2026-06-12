@@ -48,6 +48,22 @@ function statusToProgress(status: StatusLevel | undefined): number {
 const STORAGE_KEY = "alba_evaluaciones_dia"
 const STORAGE_PROGRESS_KEY = "alba_progreso"
 const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
+// Alertas marcadas como atendidas — se guardan por sala para que no reaparezcan al recargar
+const STORAGE_ALERTAS_ATENDIDAS_KEY = "alba_alertas_atendidas"
+const getAlertasAtendidas = (sala: string): string[] => {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_ALERTAS_ATENDIDAS_KEY}_${sala}`)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+const addAlertaAtendida = (sala: string, id: string) => {
+  try {
+    const actuales = getAlertasAtendidas(sala)
+    if (!actuales.includes(id)) {
+      localStorage.setItem(`${STORAGE_ALERTAS_ATENDIDAS_KEY}_${sala}`, JSON.stringify([...actuales, id]))
+    }
+  } catch { /* noop */ }
+}
 
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
@@ -763,7 +779,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
               // ALERTA TIPO 1: Persistencia en rojo (3+ rojos)
               if (rojosRecientes >= 3) {
                 nuevasAlertas.push({
-                  id: `${alumnoId}-${eje}-persistente-${Date.now()}`,
+                  id: `${alumnoId}-${eje}-persistente`,
                   alumnoId,
                   alumnoNombre: alumno.nombre,
                   eje: eje as "CF" | "CT" | "O",
@@ -779,7 +795,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
                 const ultima = actividades[actividades.length - 1]?.resultado
                 if ((penultima === "green" || penultima === "yellow") && ultima === "red") {
                   nuevasAlertas.push({
-                    id: `${alumnoId}-${eje}-descendente-${Date.now()}`,
+                    id: `${alumnoId}-${eje}-descendente`,
                     alumnoId,
                     alumnoNombre: alumno.nombre,
                     eje: eje as "CF" | "CT" | "O",
@@ -795,7 +811,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
                 const ultimas2 = actividades.slice(-2)
                 if (ultimas2.every(a => a.resultado === "yellow")) {
                   nuevasAlertas.push({
-                    id: `${alumnoId}-${eje}-preventiva-${Date.now()}`,
+                    id: `${alumnoId}-${eje}-preventiva`,
                     alumnoId,
                     alumnoNombre: alumno.nombre,
                     eje: eje as "CF" | "CT" | "O",
@@ -818,7 +834,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
               )
               if (!alertaGrupalExiste) {
                 nuevasAlertas.push({
-                  id: `GRUPAL-${eje}-${Date.now()}`,
+                  id: `GRUPAL-${eje}`,
                   alumnoId: "GRUPAL",
                   alumnoNombre: "ALERTA GRUPAL",
                   eje: eje as "CF" | "CT" | "O",
@@ -832,7 +848,12 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
           }
           
           if (nuevasAlertas.length > 0) {
-            setAlertasPedagogicas(prev => [...prev, ...nuevasAlertas])
+            // Filtrar las alertas que la maestra ya marco como atendidas (persistido por sala)
+            const atendidasGuardadas = getAlertasAtendidas(salaActual)
+            const alertasFiltradas = nuevasAlertas.filter(a => !atendidasGuardadas.includes(a.id))
+            if (alertasFiltradas.length > 0) {
+              setAlertasPedagogicas(prev => [...prev, ...alertasFiltradas])
+            }
           }
         }
       } else {
@@ -1122,7 +1143,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
@@ -1156,7 +1177,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
@@ -1191,7 +1212,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
