@@ -50,11 +50,14 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   O:  { label: "Oralidad", color: "#f59e0b" },
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
-// Detectar si una sala es Maternal (termina en TM o es PINITOS TT)
-const esMateral = (sala: string) => sala.toUpperCase().endsWith("TM") || sala.toUpperCase() === "PINITOS TT"
+// Detectar si una sala es Maternal (Naranjos y Pinitos son maternal en ambos turnos; ademas cualquier sala que termine en TM)
+const esMateral = (sala: string) => {
+  const s = sala.toUpperCase()
+  return s.startsWith("NARANJOS") || s.startsWith("PINITOS") || s.endsWith("TM")
+}
 
 // Grafico de barras mini para los 3 ejes - clickeable
 function MiniBarChart({ 
@@ -548,7 +551,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                 </div>
                 
                 {/* Barra con botones - AZUL para Jardin, VERDE para Maternal */}
-                <div className={`px-3 py-2 flex items-center justify-between gap-2 ${esMateral(sala) ? "bg-green-600" : "bg-primary"}`}>
+                <div className={`px-3 py-2 flex items-center justify-between gap-2 ${esMateral(sala) ? "bg-green-600" : "bg-blue-600"}`}>
                   <button 
                     onClick={() => abrirModal(sala, "planificacion")}
                     className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
