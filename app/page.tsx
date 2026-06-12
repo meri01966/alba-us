@@ -1654,7 +1654,7 @@ useEffect(() => {
       {showAlertas && (
         <AlertasPedagogicas 
           alertas={alertasPedagogicas} 
-          onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+          onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
           onClose={() => setShowAlertas(false)} 
         />
       )}
