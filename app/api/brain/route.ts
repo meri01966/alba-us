@@ -1806,7 +1806,22 @@ CONTEXTO DE LA SALA:
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
 
 MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
-Ejes: CF (Conciencia Fonologica), CT (Comprension Textual), Escritura inicial.
+Ejes de trabajo: CF (Conciencia Fonologica), Oralidad, CT (Comprension Textual), Escritura inicial.
+
+FUNDAMENTO METODOLOGICO — basate en la evidencia de los sistemas de alfabetizacion mas efectivos a nivel mundial y adaptalos al contexto argentino:
+- Science of Reading / Simple View of Reading: la lectura = decodificacion x comprension del lenguaje. Trabajar ambas vias en paralelo.
+- Conciencia fonologica sistematica (linea Heggerty / Phonological Awareness): progresion explicita de la unidad mayor a la menor.
+- Lectura dialogica y lenguaje oral enriquecido (linea Hanen / dialogic reading): preguntas abiertas, expansion del vocabulario, intercambios conversacionales.
+- Escritura emergente (Ferreiro-Teberosky): respetar y hacer avanzar las hipotesis de escritura del niño (presilabica → silabica → silabico-alfabetica → alfabetica).
+- Enfoque equilibrado (balanced literacy) anclado en proyectos con sentido real para el niño.
+
+SECUENCIAS PROGRESIVAS (clave para NO repetir y para que cada semana AVANCE de nivel):
+- CF — Conciencia Fonologica: conciencia lexica (contar palabras) → conciencia silabica (segmentar/unir silabas) → rima y aliteracion → conciencia intrasilabica → conciencia fonemica (sonido inicial → final → segmentacion de fonemas). Avanzar de nivel a medida que el grupo consolida el anterior.
+- Oralidad: escucha comprensiva → relato y descripcion → vocabulario y categorias → narracion estructurada (inicio-nudo-desenlace) → argumentacion y conversacion.
+- CT — Comprension Textual: anticipacion por paratexto → comprension literal → secuencia temporal → inferencias → reconstruccion y recontado.
+- Escritura inicial: trazos y nombre propio como modelo estable → escritura de palabras significativas → escritura de listas y rotulos → escritura de frases → produccion con sentido comunicativo.
+
+REGLA DE PROGRESION: ubica al grupo en un punto de cada secuencia segun el historial y el momento del año (semana ${semanaAnio}). Propone el SIGUIENTE paso de la secuencia, no uno ya consolidado. Nunca propongas dos veces el mismo nivel de la misma secuencia si el historial muestra que ya se trabajo.
 
 HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
 ${historialResumen || "Sin historial previo — esta es la primera semana."}
@@ -1819,23 +1834,25 @@ ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
 ${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
 
 TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia indicado.
-Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica)
-Dia 2 (${diasArray[1]}): eje CT (Comprension Textual)  
-Dia 3 (${diasArray[2]}): eje Escritura inicial
+Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica) — elegi el siguiente paso de la secuencia CF segun el nivel del grupo.
+Dia 2 (${diasArray[1]}): eje CT (Comprension Textual) integrando Oralidad — lectura dialogica + intercambio oral enriquecido.
+Dia 3 (${diasArray[2]}): eje Escritura inicial — respetando y haciendo avanzar las hipotesis de escritura del grupo.
 
 REQUISITOS DE CADA ACTIVIDAD:
-1. Novedosa, original, no repetida respecto al historial
-2. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
-3. Rica en recursos: puede incluir juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, etc.)
-4. Practicable por una sola maestra con 20-25 ninos de jardin
-5. Tiempo de ejecucion: 20-30 minutos
-6. Materiales accesibles en un jardin de infantes comun de Argentina
+1. Novedosa, original, no repetida respecto al historial NI a actividades del mismo nivel de secuencia ya trabajadas
+2. Debe representar el SIGUIENTE paso de la secuencia de su eje (progresion real, no repeticion del mismo nivel)
+3. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
+4. Rica en recursos: juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, conciencia fonologica sistematica, etc.)
+5. Practicable por una sola maestra con 20-25 ninos de jardin
+6. Tiempo de ejecucion: 20-30 minutos
+7. Materiales accesibles en un jardin de infantes comun de Argentina
 
 FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JSON:
 [
   {
     "dia": "${diasArray[0]}",
     "eje": "CF",
+    "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
     "capacidades": "una linea con las capacidades que desarrolla",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
@@ -1870,12 +1887,12 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
         const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
         const sugerenciasIA = JSON.parse(jsonStr)
 
-        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
+        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nivelSecuencia?: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
           dia: s.dia,
           actividad: {
             nombre: s.nombre,
             capacidades: s.capacidades,
-            contenidos: s.contenidos,
+            contenidos: s.nivelSecuencia ? `${s.contenidos} · Secuencia: ${s.nivelSecuencia}` : s.contenidos,
             objetivo: s.objetivo,
             desarrollo: s.desarrollo,
             materiales: s.materiales,
