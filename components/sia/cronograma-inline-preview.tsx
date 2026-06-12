@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
+import useSWR, { mutate as globalMutate } from "swr"
 import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen, Eye, Pencil, MessageSquare } from "lucide-react"
+import { CronogramaVerModal } from "./cronograma-ver-modal"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 
@@ -42,9 +44,9 @@ const CONFIG_CLASES: Record<TipoClase, { label: string; icon: React.ElementType;
 }
 
 const EJE_COLOR: Record<string, { bg: string; text: string; border: string }> = {
-  CF:       { bg: "bg-violet-50",  text: "text-violet-700", border: "border-violet-200" },
-  CT:       { bg: "bg-sky-50",     text: "text-sky-700",    border: "border-sky-200" },
-  Escritura:{ bg: "bg-emerald-50", text: "text-emerald-700",border: "border-emerald-200" },
+  CF:        { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  CT:        { bg: "bg-sky-50",     text: "text-sky-700",     border: "border-sky-200" },
+  Escritura: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
 }
 
 function getLunesSemana(): Date {
@@ -54,16 +56,15 @@ function getLunesSemana(): Date {
   return new Date(d.setDate(diff))
 }
 
-function formatearFechaCompleta(fecha: string): string {
+function formatearFechaCorta(fecha: string): string {
   if (!fecha) return ""
-  const [y, m, d] = fecha.split("-")
+  const parts = fecha.split("-")
   const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
-  return `${parseInt(d)} ${meses[parseInt(m) - 1]}`
+  return `${parseInt(parts[2])} ${meses[parseInt(parts[1]) - 1]}`
 }
 
 function esHoy(fecha: string): boolean {
-  const hoy = new Date().toISOString().split("T")[0]
-  return fecha === hoy
+  return fecha === new Date().toISOString().split("T")[0]
 }
 
 interface Props {
@@ -73,59 +74,41 @@ interface Props {
 }
 
 export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendientes = 0 }: Props) {
-  const [cronograma, setCronograma] = useState<Record<string, DiaData>>({})
-  const [clasesEspeciales, setClasesEspeciales] = useState<ClaseEspecial[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hayDatos, setHayDatos] = useState(false)
+  const [verModalOpen, setVerModalOpen] = useState(false)
 
-  const cargar = useCallback(async () => {
-    if (!sala) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    try {
-      const [resCron, resClases] = await Promise.all([
-        fetch(`/api/cronograma-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
-        fetch(`/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" }),
-      ])
+  // SWR: revalida automaticamente al volver a pestaña y al reconectar
+  const cronKey = sala ? `/api/cronograma-jardin?sala=${encodeURIComponent(sala)}` : null
+  const clasesKey = sala ? `/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}` : null
+  const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
 
-      if (resCron.ok) {
-        const data = await resCron.json()
-        if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
-          setCronograma(data.cronograma)
-          // hay datos si al menos 1 dia tiene actividad con nombre
-          const tieneActividades = Object.values(data.cronograma as Record<string, DiaData>).some(
-            d => (d.actividades || []).some(a => (a.nombre || "").trim().length > 0)
-          )
-          setHayDatos(tieneActividades)
-        } else {
-          // Sin cronograma guardado — generar estructura vacía con fechas de la semana actual
-          const lunes = getLunesSemana()
-          const nuevo: Record<string, DiaData> = {}
-          DIAS.forEach((dia, idx) => {
-            const fecha = new Date(lunes)
-            fecha.setDate(fecha.getDate() + idx)
-            nuevo[dia] = { fecha: fecha.toISOString().split("T")[0], recibimiento: "", intercambio: "", actividades: [] }
-          })
-          setCronograma(nuevo)
-        }
-      }
+  const { data: cronData, isLoading: cronLoading } = useSWR(cronKey, fetcher, { revalidateOnFocus: true, revalidateOnReconnect: true })
+  const { data: clasesData } = useSWR(clasesKey, fetcher, { revalidateOnFocus: true })
 
-      if (resClases.ok) {
-        const dataC = await resClases.json()
-        if (dataC.ok && Array.isArray(dataC.clases)) {
-          setClasesEspeciales(dataC.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia })))
-        }
-      }
-    } catch (e) {
-      console.error("[v0] Error cargando cronograma inline:", e)
-    } finally {
-      setLoading(false)
-    }
-  }, [sala])
+  // Derivar datos del SWR
+  const lunes = getLunesSemana()
+  const cronogramaVacio: Record<string, DiaData> = Object.fromEntries(
+    DIAS.map((dia, idx) => {
+      const fecha = new Date(lunes); fecha.setDate(fecha.getDate() + idx)
+      return [dia, { fecha: fecha.toISOString().split("T")[0], recibimiento: "", intercambio: "", actividades: [] }]
+    })
+  )
 
-  useEffect(() => { cargar() }, [cargar])
+  const cronograma: Record<string, DiaData> =
+    cronData?.ok && cronData?.cronograma && Object.keys(cronData.cronograma).length > 0
+      ? cronData.cronograma
+      : cronogramaVacio
+
+  const hayDatos: boolean =
+    typeof cronData?.hayRegistros === "boolean"
+      ? cronData.hayRegistros
+      : Object.values(cronograma).some(d => (d.actividades || []).some(a => (a.nombre || "").trim().length > 0))
+
+  const clasesEspeciales: ClaseEspecial[] =
+    clasesData?.ok && Array.isArray(clasesData.clases)
+      ? clasesData.clases.map((c: { tipo: TipoClase; dia: string }) => ({ tipo: c.tipo, dia: c.dia }))
+      : []
+
+  const loading = cronLoading
 
   if (loading) {
     return (
@@ -137,193 +120,178 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ backgroundColor: "#1e3a5f" }}
-      >
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-white" />
-          <span className="text-sm font-bold text-white">Cronograma Semanal</span>
-          <span className="text-xs text-white/60 ml-1">— Sala {sala}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {mensajesPendientes > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400 text-white text-xs font-bold">
-              <MessageSquare className="w-3.5 h-3.5" />
-              {mensajesPendientes}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={onAbrirCompleto}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 hover:bg-white/30 text-white transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            {hayDatos ? "Editar semana" : "Planificar semana"}
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
+    <>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-      {/* 5 dias en columnas — TODO visible sin tocar nada */}
-      <div className="grid grid-cols-5 divide-x divide-slate-100">
-        {DIAS.map((dia) => {
-          const data = cronograma[dia]
-          const fecha = data?.fecha || ""
-          const hoy = esHoy(fecha)
-          const clasesDelDia = clasesEspeciales.filter(c => c.dia === dia)
-          const actividades = data?.actividades?.filter(a => a.nombre?.trim()) || []
-          const actAlba = actividades.find(a => a.origen === "alba" || a.alfabetizacion)
-          const actDocente = actividades.filter(a => a.origen !== "alba" && !a.alfabetizacion)
-
-          const ejeColor = actAlba?.eje ? (EJE_COLOR[actAlba.eje] || EJE_COLOR.CF) : EJE_COLOR.CF
-
-          return (
-            <div
-              key={dia}
-              className={`flex flex-col transition-colors ${hoy ? "bg-blue-50/50" : "bg-white"}`}
-            >
-              {/* Cabecera del dia */}
-              <div
-                className={`px-2 py-2 text-center border-b ${
-                  hoy ? "border-blue-300" : "border-slate-100"
-                }`}
-                style={hoy ? { backgroundColor: "#1e3a5f" } : { backgroundColor: "#f8fafc" }}
-              >
-                <p className={`text-[11px] font-bold tracking-wide ${hoy ? "text-white" : "text-slate-600"}`}>
-                  {dia.substring(0, 3).toUpperCase()}
-                </p>
-                <p className={`text-[10px] mt-0.5 ${hoy ? "text-blue-200" : "text-slate-400"}`}>
-                  {formatearFechaCompleta(fecha)}
-                </p>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: "#1e3a5f" }}>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-white" />
+            <span className="text-sm font-bold text-white">Cronograma Semanal</span>
+            <span className="text-xs text-white/60 ml-1">— Sala {sala}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {mensajesPendientes > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400 text-white text-xs font-bold">
+                <MessageSquare className="w-3.5 h-3.5" />
+                {mensajesPendientes}
               </div>
+            )}
+            {/* Boton VER — aparece solo cuando hay actividades guardadas */}
+            {hayDatos && (
+              <button
+                type="button"
+                onClick={() => setVerModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+                title="Ver planificacion completa de la semana"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Ver
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onAbrirCompleto}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 hover:bg-white/30 text-white transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {hayDatos ? "Editar semana" : "Planificar semana"}
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
 
-              {/* Clases especiales */}
-              {clasesDelDia.length > 0 && (
-                <div className="flex flex-wrap gap-1 px-2 pt-2">
-                  {clasesDelDia.map((c) => {
-                    const cfg = CONFIG_CLASES[c.tipo]
-                    const Icon = cfg.icon
-                    return (
-                      <div key={c.tipo} className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${cfg.bg}`}>
-                        <Icon className={`w-2.5 h-2.5 ${cfg.color}`} />
-                        <span className={`text-[9px] font-semibold ${cfg.color}`}>{cfg.label}</span>
-                      </div>
-                    )
-                  })}
+        {/* 5 dias — SOLO TITULO de cada actividad */}
+        {/* El detalle completo (desarrollo, materiales, objetivo, etc.) se ve solo al apretar "Ver" */}
+        <div className="grid grid-cols-5 divide-x divide-slate-100">
+          {DIAS.map((dia) => {
+            const data = cronograma[dia]
+            const fecha = data?.fecha || ""
+            const hoy = esHoy(fecha)
+            const clasesDelDia = clasesEspeciales.filter((c) => c.dia === dia)
+            const actividades = (data?.actividades || []).filter((a) => (a.nombre || "").trim())
+            const actAlba = actividades.find((a) => a.origen === "alba" || a.alfabetizacion)
+            const actDocente = actividades.filter((a) => !(a.origen === "alba" || a.alfabetizacion))
+            const ejeColor = actAlba?.eje ? (EJE_COLOR[actAlba.eje] ?? EJE_COLOR.CF) : EJE_COLOR.CF
+
+            return (
+              <div key={dia} className={`flex flex-col ${hoy ? "bg-blue-50/40" : "bg-white"}`}>
+                {/* Cabecera del dia */}
+                <div
+                  className={`px-2 py-2 text-center border-b ${hoy ? "border-blue-300" : "border-slate-100"}`}
+                  style={hoy ? { backgroundColor: "#1e3a5f" } : { backgroundColor: "#f8fafc" }}
+                >
+                  <p className={`text-[11px] font-bold tracking-wide ${hoy ? "text-white" : "text-slate-600"}`}>
+                    {dia.substring(0, 3).toUpperCase()}
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${hoy ? "text-blue-200" : "text-slate-400"}`}>
+                    {formatearFechaCorta(fecha)}
+                  </p>
                 </div>
-              )}
 
-              {/* Contenido principal — TODO visible */}
-              <div className="flex-1 px-2 py-2 space-y-2">
+                {/* Clases especiales — iconos compactos */}
+                {clasesDelDia.length > 0 && (
+                  <div className="flex flex-wrap gap-1 px-2 pt-1.5">
+                    {clasesDelDia.map((c) => {
+                      const cfg = CONFIG_CLASES[c.tipo]
+                      const Icon = cfg.icon
+                      return (
+                        <div key={c.tipo} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${cfg.bg}`}>
+                          <Icon className={`w-2.5 h-2.5 ${cfg.color}`} />
+                          <span className={`text-[9px] font-semibold ${cfg.color}`}>{cfg.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
 
-                {/* Actividad ALBA — completa, siempre visible */}
-                {actAlba ? (
-                  <div className={`rounded-xl border ${ejeColor.border} overflow-hidden`}>
-                    {/* Tag ALBA + eje */}
-                    <div className={`flex items-center justify-between gap-1 px-2 py-1.5 ${ejeColor.bg}`}>
-                      <div className="flex items-center gap-1">
-                        <Sparkles className={`w-3 h-3 flex-shrink-0 ${ejeColor.text}`} />
+                {/* Actividades — SOLO EL TITULO, sin ningun otro dato */}
+                <div className="flex-1 px-2 py-2 space-y-1.5">
+                  {/* Actividad de ALBA / alfabetizacion */}
+                  {actAlba ? (
+                    <button
+                      type="button"
+                      onClick={() => setVerModalOpen(true)}
+                      className={`w-full text-left rounded-xl border ${ejeColor.border} ${ejeColor.bg} px-2 py-2 hover:opacity-80 transition-opacity`}
+                    >
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Sparkles className={`w-2.5 h-2.5 flex-shrink-0 ${ejeColor.text}`} />
                         <span className={`text-[9px] font-bold uppercase tracking-wide ${ejeColor.text}`}>
-                          ALBA {actAlba.eje ? `— ${actAlba.eje}` : "— Alfabetizacion"}
+                          {actAlba.eje ? actAlba.eje : "ALBA"}
                         </span>
                       </div>
-                    </div>
-                    {/* Nombre */}
-                    <div className="px-2 pt-1.5 pb-1">
-                      <p className="text-[11px] font-bold text-slate-800 leading-snug">
+                      {/* Solo nombre */}
+                      <p className="text-[11px] font-semibold text-slate-800 leading-snug line-clamp-2">
                         {actAlba.nombre}
                       </p>
-                    </div>
-                    {/* Capacidades */}
-                    {actAlba.capacidades && (
-                      <div className="px-2 pb-1">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Capacidades</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{actAlba.capacidades}</p>
-                      </div>
-                    )}
-                    {/* Objetivo */}
-                    {actAlba.objetivo && (
-                      <div className="px-2 pb-1">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Objetivo</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{actAlba.objetivo}</p>
-                      </div>
-                    )}
-                    {/* Desarrollo */}
-                    {actAlba.desarrollo && (
-                      <div className="px-2 pb-1">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Desarrollo</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{actAlba.desarrollo}</p>
-                      </div>
-                    )}
-                    {/* Materiales */}
-                    {actAlba.materiales && (
-                      <div className="px-2 pb-2">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Materiales</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{actAlba.materiales}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onAbrirCompleto}
-                    className="w-full rounded-xl border border-dashed border-violet-200 px-2 py-3 text-center hover:border-violet-300 hover:bg-violet-50 transition-colors"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-violet-300 mx-auto mb-0.5" />
-                    <p className="text-[9px] text-violet-400 font-medium">Planificar con ALBA</p>
-                  </button>
-                )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onAbrirCompleto}
+                      className="w-full rounded-xl border border-dashed border-violet-200 px-2 py-2.5 text-center hover:border-violet-300 hover:bg-violet-50/50 transition-colors"
+                    >
+                      <Sparkles className="w-3 h-3 text-violet-300 mx-auto mb-0.5" />
+                      <p className="text-[9px] text-violet-400 font-medium">Sin actividad ALBA</p>
+                    </button>
+                  )}
 
-                {/* Actividades del docente — completas, siempre visibles */}
-                {actDocente.map((act, i) => (
-                  <div key={i} className="rounded-xl border border-slate-200 overflow-hidden">
-                    <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-50">
-                      <BookOpen className="w-3 h-3 text-slate-500 flex-shrink-0" />
-                      <span className="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Docente</span>
-                    </div>
-                    <div className="px-2 pt-1.5 pb-1">
-                      <p className="text-[11px] font-bold text-slate-800 leading-snug">{act.nombre}</p>
-                    </div>
-                    {act.objetivo && (
-                      <div className="px-2 pb-1">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Objetivo</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{act.objetivo}</p>
+                  {/* Actividades de la docente — solo titulo */}
+                  {actDocente.map((act, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setVerModalOpen(true)}
+                      className="w-full text-left rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 hover:opacity-80 transition-opacity"
+                    >
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <BookOpen className="w-2.5 h-2.5 flex-shrink-0 text-slate-400" />
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Docente</span>
                       </div>
-                    )}
-                    {act.desarrollo && (
-                      <div className="px-2 pb-1">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Desarrollo</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{act.desarrollo}</p>
-                      </div>
-                    )}
-                    {act.materiales && (
-                      <div className="px-2 pb-2">
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Materiales</p>
-                        <p className="text-[10px] text-slate-600 leading-snug">{act.materiales}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {/* Solo nombre */}
+                      <p className="text-[11px] font-semibold text-slate-700 leading-snug line-clamp-2">
+                        {act.nombre}
+                      </p>
+                    </button>
+                  ))}
 
-                {/* Sin nada cargado */}
-                {!actAlba && actDocente.length === 0 && clasesDelDia.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={onAbrirCompleto}
-                    className="w-full rounded-xl border border-dashed border-slate-200 px-2 py-4 text-center hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                  >
-                    <p className="text-[9px] text-slate-400">Sin actividad</p>
-                    <p className="text-[9px] text-slate-300">Toca para planificar</p>
-                  </button>
-                )}
+                  {/* Sin nada planificado */}
+                  {!actAlba && actDocente.length === 0 && clasesDelDia.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={onAbrirCompleto}
+                      className="w-full rounded-xl border border-dashed border-slate-200 px-2 py-4 text-center hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                    >
+                      <p className="text-[9px] text-slate-400">Sin actividad</p>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
+
+        {/* Sin datos aun — invitacion a planificar */}
+        {!hayDatos && (
+          <div className="px-4 py-3 text-center border-t border-slate-100">
+            <p className="text-xs text-slate-400">
+              No hay actividades planificadas para esta semana.{" "}
+              <button type="button" onClick={onAbrirCompleto} className="text-[#1e3a5f] font-semibold hover:underline">
+                Planificar ahora
+              </button>
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* Modal Ver — abre con todo el detalle completo, se cierra con X */}
+      <CronogramaVerModal
+        open={verModalOpen}
+        onClose={() => setVerModalOpen(false)}
+        sala={sala}
+        cronograma={cronograma}
+        clasesEspeciales={clasesEspeciales}
+      />
+    </>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react"
+import useSWR, { mutate as globalMutate } from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,9 +40,12 @@ interface BrainActivity {
   titulo:      string
   descripcion: string
   objetivo:    string
+  capacidades?: string
+  contenidos?: string
   materiales?: string[]
   source:      "secuencia" | "alba-ia" | "demo"
   ejeRecomendado?: string
+  ejeNombre?: string
   razon?: string
   claseNumero?: number
   claseDeLaSemana?: number
@@ -210,6 +214,32 @@ const SECUENCIA_ANUAL: Record<string, EjeSecuencia> = {
       { semana: 25, titulo: "Evaluacion O: Ciclo ECO completo",        objetivo: "Evaluar Escuchar-Comprender-Oralizar en actividad integrada",            descripcion: "Actividad integradora: la docente lee un texto, los ninos escuchan, responden preguntas de comprension y finalmente narran oralmente lo que entendieron.", metodologia: "Evaluacion ECO" },
     ],
   },
+  EA: {
+    nombre: "Escritura - Secuencia de Escritura Convencional",
+    color: "#8b5cf6",
+    bgColor: "#f5f3ff",
+    metodologia: "Secuencia de Escritura (Ferreiro & Teberosky + DC CABA 2025)",
+    actividades: [
+      // BLOQUE 1: Escritura emergente - Sala 4 y primeros meses sala 5 (Semanas 1-8)
+      { semana: 1,  titulo: "Escritura del nombre propio", objetivo: "Reconocer y reproducir el propio nombre escrito como primera referencia estable", descripcion: "Cada nino tiene una tarjeta con su nombre. Lo observa, lo traza con el dedo y luego lo copia. La docente muestra que el nombre tiene letras fijas y en orden. Se expone en el panel de la sala." },
+      { semana: 2,  titulo: "Escritura espontanea: que quiero decir?", objetivo: "Producir escrituras propias con intencion comunicativa real", descripcion: "Cada nino elige un mensaje para escribir (regalo, dedicatoria, aviso). Escribe como pueda. La docente no corrige — registra el nivel de conceptualizacion. Se lee en voz alta lo que cada uno quiso escribir." },
+      { semana: 3,  titulo: "Escritura con apoyo: abecedario visible", objetivo: "Usar el abecedario de la sala como herramienta de escritura", descripcion: "Los ninos escriben una palabra del proyecto usando el abecedario colgado en la pared. La docente modela como se busca una letra. Se trabaja en la correspondencia sonido-letra con apoyo visual." },
+      { semana: 4,  titulo: "Listas de palabras: lo que sabemos del proyecto", objetivo: "Escribir palabras relacionadas con el proyecto con apoyo del docente", descripcion: "En grupo se construye una lista de palabras del proyecto (animales, objetos, personajes). La docente escribe lo que los ninos dictan y luego cada nino copia una palabra elegida." },
+      { semana: 5,  titulo: "Escritura con apoyo: sonido a letra", objetivo: "Establecer correspondencia grafofonetica en situacion de escritura real", descripcion: "La docente dicta una palabra del proyecto. Los ninos 'escuchan' cada sonido y buscan la letra correspondiente. Se escribe en el cuaderno letra por letra. No se exige ortografia correcta — si correspondencia sonido-letra." },
+      { semana: 6,  titulo: "El nombre de los companeros", objetivo: "Leer y escribir nombres del grupo como palabras significativas", descripcion: "Se trabaja con las tarjetas de nombres de todos. Los ninos las leen, las ordenan por letra inicial, eligen una para copiar. Se juega a 'de quien es este nombre?' con tarjetas mezcladas." },
+      { semana: 7,  titulo: "Escritura de palabras del proyecto", objetivo: "Escribir palabras conocidas de forma autonoma usando referencias de la sala", descripcion: "Cada nino escribe 3 palabras del proyecto de forma autonoma. Puede consultar el abecedario y los carteles de la sala. La docente registra si usa referencias o escribe de memoria." },
+      { semana: 8,  titulo: "Evaluacion EA primer bloque", objetivo: "Registrar el nivel de conceptualizacion de escritura de cada nino", descripcion: "Produccion individual: el nombre + una palabra del proyecto + un dibujo. La docente registra el nivel (presilabico / silabico / silabico-alfabetico / alfabetico). Va al portfolio." },
+      // BLOQUE 2: Escritura convencional - Sala 5 segunda mitad (Semanas 9-16, se trabaja desde la mitad del año)
+      { semana: 9,  titulo: "Escritura de oracion: sujeto + accion", objetivo: "Producir una oracion escrita simple con sujeto y verbo de forma autonoma", descripcion: "La docente modela en el pizarron: El gato duerme. Cada nino elige un personaje del proyecto y escribe su propia oracion. Tres pasos: 1) Decir la oracion en voz alta. 2) Contar las palabras con los dedos. 3) Escribir cada palabra separada. El objetivo es la separacion entre palabras, no la ortografia." },
+      { semana: 10, titulo: "Escritura compartida: construimos un texto juntos", objetivo: "Participar en la produccion colectiva de un texto breve con estructura", descripcion: "Docente y ninos escriben juntos 3-4 oraciones. La docente escribe en el pizarron mientras los ninos dictan y toman decisiones: que ponemos primero? como empieza? Los ninos copian el texto en el cuaderno y lo ilustran." },
+      { semana: 11, titulo: "Escritura de descripcion: como es mi personaje?", objetivo: "Escribir una descripcion de dos o tres atributos de un personaje conocido", descripcion: "Cada nino elige un personaje del proyecto y escribe 2-3 oraciones: como se ve, que hace, como es. Se usa el organizador CUERPO / ACCIONES / SENTIMIENTOS como andamio. Al terminar cada nino lee y el grupo adivina de quien se trata." },
+      { semana: 12, titulo: "Dictado al docente: produccion con revision", objetivo: "Dictar un texto al docente y participar en su revision colectiva", descripcion: "Los ninos dictan un texto colectivo sobre el proyecto. La docente escribe exactamente lo que dicen. Luego rele y entre todos deciden si se entiende, si falta algo, si hay que cambiar algo. Primera aproximacion a la revision de texto." },
+      { semana: 13, titulo: "Escritura de cuento: inicio, conflicto y final", objetivo: "Producir un cuento breve con estructura narrativa completa", descripcion: "Cada nino escribe un cuento de tres partes en hojas dobladas: INICIO (Habia una vez...), CONFLICTO (Pero un dia...) y FINAL (Al final...). La docente muestra la estructura en cartel. Los cuentos quedan en la biblioteca de la sala." },
+      { semana: 14, titulo: "Revision por pares: el escritor y el lector", objetivo: "Revisar la escritura propia con apoyo de un par para mejorar la comunicacion", descripcion: "En parejas un nino lee su texto al otro. El lector dice: entendi... / no entendi... / me gustaria saber mas de... El escritor hace una sola mejora. La docente modela primero con un texto anonimo en el pizarron." },
+      { semana: 15, titulo: "Escritura para publicar: preparar el texto final", objetivo: "Reescribir un texto incorporando mejoras para publicarlo en la sala", descripcion: "Cada nino elige un texto producido en semanas anteriores, incorpora las revisiones y lo pasa en limpio para publicar. Se hace una muestra de escritura para las familias." },
+      { semana: 16, titulo: "Evaluacion EA sala 5: texto autonomo + portfolio", objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma", descripcion: "Produccion totalmente autonoma: nombre + oracion sobre el proyecto + dibujo. La docente registra: nivel de escritura, separacion entre palabras, correspondencia sonido-letra, uso de mayuscula. Va al portfolio como evidencia del segundo trimestre." },
+    ],
+  },
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -232,7 +262,7 @@ function SecuenciaModal({
   onClose: () => void;
 }) {
   const [ejeExpandido, setEjeExpandido] = useState<string | null>(null)
-  const [tabActivo, setTabActivo] = useState<"CF" | "CT" | "O">("CF")
+  const [tabActivo, setTabActivo] = useState<"CF" | "CT" | "O" | "EA">("CF")
 
   if (!isOpen) return null
 
@@ -414,7 +444,7 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
                                    activity.ejeRecomendado === "CT" ? "#10b981" : "#f59e0b"
                 }}
               >
-                {activity.ejeRecomendado}: {activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad"}
+                {activity.ejeNombre === "Escritura" ? "EA" : activity.ejeRecomendado}: {activity.ejeNombre || (activity.ejeRecomendado === "CF" ? "Conciencia Fonologica" : activity.ejeRecomendado === "CT" ? "Conocimiento del Texto" : "Oralidad")}
               </span>
             )}
           </div>
@@ -461,6 +491,18 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
             <div className="bg-primary/5 rounded-lg p-3">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Desarrollo de la actividad</p>
               <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
+            </div>
+          )}
+          {activity.capacidades && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Capacidades</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.capacidades}</p>
+            </div>
+          )}
+          {activity.contenidos && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Contenidos</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.contenidos}</p>
             </div>
           )}
           {activity.objetivo && (
@@ -843,42 +885,51 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
     }
   }, [evaluaciones, totalAlumnos])
 
-  // Fetch Cerebro Central - usa GET mapeando data.sugerencia
-  const fetchBrain = useCallback(async () => {
-    setIsBrainLoading(true)
-    try {
-      const res = await fetch(`/api/brain?sala=${encodeURIComponent(sala)}&t=${Date.now()}`, { cache: "no-store" })
-      const data = await res.json()
-      const sugerencia = data.sugerencia ?? null
-      if (sugerencia) {
-        const activity: BrainActivity = {
-          id: `${sugerencia.eje}-${Date.now()}`,
-          dia: 1,
-          titulo: sugerencia.actividad,
-          descripcion: sugerencia.descripcion || "",
-          objetivo: sugerencia.objetivo,
-          materiales: sugerencia.materiales || [],
-          razon: sugerencia.razon,
-          source: "secuencia",
-          ejeRecomendado: sugerencia.eje,
-          aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
-          salaRed: sugerencia.salaRed || null,
-          temaProyecto: sugerencia.temaProyecto || null,
-          sugerenciaPedagogica: sugerencia.sugerenciaPedagogica || null,
-        }
-        setBrain(activity)
-        setMicroCapacitacion(data.microCapacitacion || null)
-        if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
-        if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
-      } else {
-        setBrain(null)
+  // SWR: Cerebro Central — se revalida automaticamente al volver a la pestaña,
+  // al reconectar y cuando el padre llama globalMutate(brainKey)
+  const brainKey = sala ? `/api/brain?sala=${encodeURIComponent(sala)}` : null
+  const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
+  const { data: brainData, isLoading: isBrainLoadingSWR, mutate: mutateBrain } = useSWR(
+    brainKey,
+    fetcher,
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 0 }
+  )
+
+  // Sincronizar los datos del SWR con el estado local existente
+  useEffect(() => {
+    if (!brainData) return
+    setIsBrainLoading(isBrainLoadingSWR)
+    const sugerencia = brainData.sugerencia ?? null
+    if (sugerencia) {
+      const activity: BrainActivity = {
+        id: `${sugerencia.eje}-brain`,
+        dia: 1,
+        titulo: sugerencia.actividad,
+        descripcion: sugerencia.descripcion || "",
+        objetivo: sugerencia.objetivo,
+        capacidades: sugerencia.capacidades || "",
+        contenidos: sugerencia.contenidos || "",
+        materiales: sugerencia.materiales || [],
+        razon: sugerencia.razon,
+        source: "secuencia",
+        ejeRecomendado: sugerencia.eje,
+  ejeNombre: sugerencia.ejeNombre,
+        aprendidoDeLaRed: sugerencia.aprendidoDeLaRed || false,
+        salaRed: sugerencia.salaRed || null,
+        temaProyecto: sugerencia.temaProyecto || null,
+        sugerenciaPedagogica: sugerencia.sugerenciaPedagogica || null,
       }
-    } catch {
-      // Si falla la API no pisar la actividad anterior
-    } finally {
-      setIsBrainLoading(false)
+      setBrain(activity)
+      setMicroCapacitacion(brainData.microCapacitacion || null)
+      if (onActividadRef.current) onActividadRef.current(sugerencia.actividad)
+      if (onEjeRef.current)       onEjeRef.current(sugerencia.eje)
+    } else {
+      setBrain(null)
     }
-  }, [sala]) // solo sala como dependencia - los callbacks van por ref
+  }, [brainData, isBrainLoadingSWR])
+
+  // fetchBrain ahora es un alias de mutateBrain para compatibilidad con el resto del componente
+  const fetchBrain = useCallback(() => mutateBrain(), [mutateBrain])
 
   // Exponer fetchBrain al padre para llamarlo con timing correcto tras guardar cierre
   useImperativeHandle(ref, () => ({ fetchBrain }), [fetchBrain])

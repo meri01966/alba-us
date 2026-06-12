@@ -900,12 +900,52 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
       sala: "5"
     },
     {
-      titulo: "Evaluacion EA: muestra de producciones escritas",
-      objetivo: "Evaluar el nivel de escritura individual mediante la produccion autonoma de un texto breve",
-      descripcion: "Cada nino produce de forma autonoma una escritura corta: su nombre + una palabra que elija + un dibujo que la represente. La docente registra el nivel de escritura: presilabico, silabico, silabico-alfabetico, alfabetico. No se corrige ni se pide reescritura. La muestra va al portfolio del nino como evidencia de su nivel al finalizar el primer semestre.",
-      materiales: ["Hoja blanca A4", "Lapices y marcadores", "Portfolio individual", "Rubrica de niveles de escritura"],
-      dccaba: "DC CABA 2025 - EA: Evaluacion formativa de escritura. El DC propone registrar el nivel de conceptualizacion, no calificar la produccion.",
-      sala: "ambas"
+      titulo: "Escritura de oracion: sujeto + accion",
+      objetivo: "Producir una oracion escrita simple con sujeto y verbo de forma autonoma",
+      descripcion: "La docente modela en el pizarron: El gato duerme. Luego cada nino elige un personaje del proyecto y escribe su propia oracion. Se trabaja en tres pasos: 1) Decir la oracion en voz alta. 2) Contar las palabras con los dedos. 3) Escribir cada palabra separada. La docente circula y pregunta: cuantas palabras tiene tu oracion? Ambas son palabras o una sola? El objetivo es la separacion entre palabras, no la ortografia.",
+      materiales: ["Cuaderno personal", "Lapiz", "Diccionario de imagenes del proyecto", "Abecedario de pared"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones simples. La separacion entre palabras es el hito clave del nivel alfabetico inicial (Ferreiro & Teberosky, 1979). Sala 5 accede a la escritura de oraciones en la segunda mitad del año.",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura compartida: construimos un texto juntos",
+      objetivo: "Participar en la produccion colectiva de un texto breve con estructura",
+      descripcion: "Docente y ninos escriben juntos un texto de 3-4 oraciones. La docente escribe en el pizarron mientras los ninos dictan. Se detiene en cada decision: que ponemos primero? como empieza? con que termina? Los ninos copian el texto en su cuaderno y lo ilustran. Al releerlo se pregunta: tiene inicio, desarrollo y fin? La escritura compartida es el puente entre el dictado al docente y la escritura autonoma.",
+      materiales: ["Pizarron", "Marcadores gruesos", "Cuadernos", "Hojas para ilustrar"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura compartida como andamiaje para la escritura autonoma. Chambers (1993): el adulto como copiloto del proceso escritor. Gradual Release of Responsibility (Pearson & Gallagher, 1983).",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura de descripcion: como es mi personaje?",
+      objetivo: "Escribir una descripcion de dos o tres atributos de un personaje conocido",
+      descripcion: "Cada nino elige un personaje del proyecto o de un cuento trabajado y escribe 2-3 oraciones descriptivas: Como se ve. Que hace. Como es su personalidad. Se usa el organizador grafico CUERPO / ACCIONES / SENTIMIENTOS como andamio. La docente modela primero con un personaje colectivo. Al terminar cada nino lee su descripcion al grupo y el resto adivina de quien se trata.",
+      materiales: ["Organizador grafico impreso", "Cuaderno", "Lapices y marcadores", "Imagenes de personajes del proyecto"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos descriptivos. La descripcion escrita requiere manejo del adjetivo y la oracion nominal, que aparece consolidado en sala 5 (DC CABA 2025).",
+      sala: "5"
+    },
+    {
+      titulo: "Escritura de cuento: inicio, conflicto y final",
+      objetivo: "Producir un cuento breve con estructura narrativa completa de forma autonoma",
+      descripcion: "Cada nino escribe un cuento de tres partes en hojas dobladas: INICIO (Habia una vez...), CONFLICTO (Pero un dia...) y FINAL (Al final...). La docente muestra la estructura en cartel y modela con un cuento de 3 oraciones. Los ninos escriben y luego se comparten en circulo. Se festeja que son autores reales. Los cuentos quedan en la biblioteca de la sala.",
+      materiales: ["Hojas A4 dobladas en tres partes", "Lapices y marcadores", "Cartel de estructura narrativa", "Cinta para armar biblioteca"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos narrativos con estructura. La escritura con estructura narrativa en sala 5 es el antecedente directo de la escritura de cuentos en primero y segundo grado (DC CABA Primaria).",
+      sala: "5"
+    },
+    {
+      titulo: "Revision por pares: el escritor y el lector",
+      objetivo: "Revisar la escritura propia con apoyo de un par para mejorar la comunicacion",
+      descripcion: "En parejas un nino lee su texto al otro. El lector dice: entendi... / no entendi... / me gustaria saber mas de... El escritor anota o recuerda una sola mejora para hacer. Se hace la mejora y se relee. La docente modela primero con un texto anonimo en el pizarron. El objetivo es que descubran que escribir es para que otro lo entienda.",
+      materiales: ["Textos producidos en clases anteriores", "Lapiz de color para las revisiones", "Ficha de rol escritor/lector"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Revision y correccion como parte del proceso escritor. Reading-Writing Workshop (Calkins, 2001): la revision por pares instala la conciencia del lector desde el nivel inicial.",
+      sala: "5"
+    },
+    {
+      titulo: "Evaluacion EA sala 5: texto autonomo + portfolio",
+      objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma de un texto breve",
+      descripcion: "Cada nino produce de forma totalmente autonoma: su nombre + una oracion sobre algo del proyecto + un dibujo. La docente registra: nivel de escritura (silabico / silabico-alfabetico / alfabetico), separacion entre palabras, correspondencia sonido-letra, uso de mayuscula al inicio. No se corrige ni se pide reescritura. La produccion va al portfolio como evidencia del nivel al finalizar el segundo trimestre.",
+      materiales: ["Hoja blanca A4", "Lapiz y goma", "Portfolio individual", "Rubrica de niveles Ferreiro"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Evaluacion formativa del nivel de escritura. La rubrica de niveles (Ferreiro & Teberosky) es el instrumento de evaluacion recomendado por el DC CABA para el nivel inicial.",
+      sala: "5"
     },
   ],
 
@@ -952,8 +992,12 @@ function calcularActividadDelDia(
   const limite = limites4[eje] ?? fullSeq.length
   const seq = esde4Anios(sala) ? fullSeq.slice(0, limite) : fullSeq
   if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
+  // Offset de mitad de año: si la sala no tiene cierres en este eje, arrancar en la actividad 9
+  // Esto evita mostrar actividades del primer semestre en Junio
+  const OFFSET_MITAD_ANIO = 8
+  const clasesBase = clasesCompletadasEnEje === 0 ? OFFSET_MITAD_ANIO : clasesCompletadasEnEje
   // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
-  let indice = clasesCompletadasEnEje % seq.length
+  let indice = clasesBase % seq.length
   let esRepeticion = false
   let esAvanzado = false
 
@@ -994,7 +1038,115 @@ export async function GET(req: Request) {
   )
 
   try {
-    // ── 0. Proyecto activo de la sala (tema para contextualizar) ────────────
+    const hoy = new Date()
+    const diaHoy = hoy.getDay() // 0=Dom, 1=Lun...5=Vie
+
+    // ── 0a. Buscar actividad del cronograma guardado para mostrar en el dashboard ──
+    // Lógica: buscar el próximo día lectivo que tiene actividades aceptadas.
+    // Si hoy es lectivo y hay actividad → usar hoy.
+    // Si hoy es Viernes/Finde/no hay actividad → buscar siguiente semana Lunes.
+    // Esto garantiza que la sugerencia de ALBA siempre coincide con el cronograma.
+    const diasNombresArray = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"]
+
+    // Calcular semana actual (lunes)
+    const getLunes = (fecha: Date) => {
+      const d = new Date(fecha)
+      const day = d.getDay()
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      d.setDate(diff)
+      d.setHours(0,0,0,0)
+      return d
+    }
+
+    // Buscar actividad del cronograma: hoy → resto de semana → semana siguiente
+    // Normaliza nombre de sala para tolerar variantes (SALADEPRUEBA vs Sala de prueba)
+    const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+    const salaKey = normalizarSala(sala)
+    const esSalaPrueba = salaKey.includes("prueba")
+
+    const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
+      // LÓGICA SIMPLE: 
+      // 1. Traer TODOS los registros de esta sala
+      // 2. Filtrar solo los no finalizados (dia_finalizado: false)
+      // 3. Devolver el PRIMERO en orden semana + día
+      
+      const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
+      const salaKey = normalizarSala(sala)
+
+      // Buscar SIN restricción de semana — traer todo
+      const { data: registros } = await supabase
+        .from("cronograma_jardin")
+        .select("sala, dia, semana_inicio, actividades, dia_finalizado")
+
+      if (!registros || registros.length === 0) return null
+
+      // Filtrar por sala normalizada
+      const deSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey)
+      if (deSala.length === 0) return null
+
+      // Filtrar solo los NO finalizados
+      const pendientes = deSala.filter((r: any) => r.dia_finalizado !== true)
+      if (pendientes.length === 0) return null
+
+      // Ordenar por semana + día (semana anterior primero)
+      const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+      pendientes.sort((a: any, b: any) => {
+        const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
+        if (semanaCmp !== 0) return semanaCmp
+        return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
+      })
+
+      // Devolver el PRIMERO que tenga actividad alfabetización
+      for (const reg of pendientes) {
+        if (!Array.isArray(reg.actividades)) continue
+        const actAlfa = reg.actividades.find(
+          (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
+        )
+        if (actAlfa) return { actAlfa, dia: reg.dia }
+      }
+      return null
+    }
+
+    const resultadoCronograma = await buscarActividadCronograma()
+    if (resultadoCronograma) {
+      const { actAlfa, dia: diaActividad } = resultadoCronograma
+      const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+      // Etiqueta legible: si la actividad es de Escritura, mostrar "Escritura" (EA)
+      // aunque internamente el eje se mapee a "O" para el resto del sistema.
+      const ejeNombreActividad =
+        actAlfa.eje === "CT" ? "Conocimiento del Texto"
+        : actAlfa.eje === "Escritura" ? "Escritura"
+        : actAlfa.eje === "Oralidad" || actAlfa.eje === "O" ? "Oralidad"
+        : "Conciencia Fonologica"
+      const materialesArr: string[] = Array.isArray(actAlfa.materiales)
+        ? actAlfa.materiales.filter((m: string) => (m || "").trim())
+        : typeof actAlfa.materiales === "string" && actAlfa.materiales.trim()
+          ? actAlfa.materiales.split(",").map((m: string) => m.trim()).filter(Boolean)
+          : []
+      return NextResponse.json({
+        sugerencia: {
+          eje: ejeActividad,
+          ejeNombre: ejeNombreActividad,
+          actividad: actAlfa.nombre,
+          descripcion: actAlfa.desarrollo || actAlfa.descripcion || "",
+          objetivo: actAlfa.objetivo || "",
+          capacidades: actAlfa.capacidades || "",
+          contenidos: actAlfa.contenidos || "",
+          materiales: materialesArr,
+          razon: `Actividad del cronograma del ${diaActividad} — aceptada por la docente`,
+          alumnosEnRiesgo: 0,
+          totalAlumnos: 0,
+          tendencia: "progreso",
+          aprendidoDeLaRed: false,
+          salaRed: null,
+          desdeCronograma: true,
+        },
+        microCapacitacion: getMicroCapacitacion(actAlfa.nombre),
+        alertas: [],
+        historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
+        progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+      })
+    }
     const { data: proyectoActivo } = await supabase
       .from("proyectos")
       .select("id, titulo, objetivo_general, actividades")
@@ -1035,7 +1187,11 @@ export async function GET(req: Request) {
         ? SECUENCIA[ejeElegido].slice(0, ({ CF: 12, CT: 8, O: 10 })[ejeElegido])
         : SECUENCIA[ejeElegido]
       const cierresDeEje = ejeElegido === "CF" ? cierresCF : ejeElegido === "CT" ? cierresCT : cierresO
-      const indiceActividad = cierresDeEje % secuenciaEje.length
+      // Estamos a mitad de año: si la sala no tiene cierres, arrancar desde la actividad 9
+      // OFFSET_MITAD_ANIO = 8 (actividades 1-8 corresponden a primer semestre)
+      const OFFSET_MITAD_ANIO = 8
+      const indiceBase = cierresDeEje === 0 ? OFFSET_MITAD_ANIO : cierresDeEje
+      const indiceActividad = indiceBase % secuenciaEje.length
       console.log("[v0] FALLBACK rotacion - totalCierres:", totalCierres, "ejeElegido:", ejeElegido, "cierresDeEje:", cierresDeEje, "indice:", indiceActividad)
       const actividadInicial = secuenciaEje[indiceActividad]
 
@@ -1604,7 +1760,11 @@ export async function POST(req: NextRequest) {
 
       // Leer historial de cierres para contexto
       let historialResumen = ""
-      let actividadesNoRealizadas: string[] = []
+      // Las no realizadas se separan por antiguedad:
+      // - recientes (ultima semana): NO se vuelven a sugerir, la sala sigue avanzando
+      // - antiguas: ALBA puede reconsiderarlas mas adelante si el analisis lo estima pertinente
+      let actividadesNoRealizadasRecientes: string[] = []
+      let actividadesNoRealizadasAntiguas: string[] = []
       try {
         const { data: cierres } = await supabase
           .from("registro_cierre")
@@ -1614,9 +1774,17 @@ export async function POST(req: NextRequest) {
           .limit(20)
         if (cierres && cierres.length > 0) {
           const realizadas = cierres.filter(c => c.evaluacion_general !== "no_realizada")
-          actividadesNoRealizadas = cierres
-            .filter(c => c.evaluacion_general === "no_realizada")
-            .map(c => c.actividad_alba).filter(Boolean)
+          const hoyMs = Date.now()
+          const UNA_SEMANA_MS = 7 * 86400000
+          for (const c of cierres) {
+            if (c.evaluacion_general !== "no_realizada" || !c.actividad_alba) continue
+            const fechaMs = c.fecha ? new Date(c.fecha).getTime() : 0
+            if (fechaMs && (hoyMs - fechaMs) <= UNA_SEMANA_MS) {
+              actividadesNoRealizadasRecientes.push(c.actividad_alba)
+            } else {
+              actividadesNoRealizadasAntiguas.push(c.actividad_alba)
+            }
+          }
           historialResumen = realizadas.slice(0, 10).map(c =>
             `- ${c.actividad_alba || "sin nombre"} (${c.eje}, ${c.evaluacion_general}, ${c.fecha})`
           ).join("\n")
@@ -1638,34 +1806,53 @@ CONTEXTO DE LA SALA:
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
 
 MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
-Ejes: CF (Conciencia Fonologica), CT (Comprension Textual), Escritura inicial.
+Ejes de trabajo: CF (Conciencia Fonologica), Oralidad, CT (Comprension Textual), Escritura inicial.
+
+FUNDAMENTO METODOLOGICO — basate en la evidencia de los sistemas de alfabetizacion mas efectivos a nivel mundial y adaptalos al contexto argentino:
+- Science of Reading / Simple View of Reading: la lectura = decodificacion x comprension del lenguaje. Trabajar ambas vias en paralelo.
+- Conciencia fonologica sistematica (linea Heggerty / Phonological Awareness): progresion explicita de la unidad mayor a la menor.
+- Lectura dialogica y lenguaje oral enriquecido (linea Hanen / dialogic reading): preguntas abiertas, expansion del vocabulario, intercambios conversacionales.
+- Escritura emergente (Ferreiro-Teberosky): respetar y hacer avanzar las hipotesis de escritura del niño (presilabica → silabica → silabico-alfabetica → alfabetica).
+- Enfoque equilibrado (balanced literacy) anclado en proyectos con sentido real para el niño.
+
+SECUENCIAS PROGRESIVAS (clave para NO repetir y para que cada semana AVANCE de nivel):
+- CF — Conciencia Fonologica: conciencia lexica (contar palabras) → conciencia silabica (segmentar/unir silabas) → rima y aliteracion → conciencia intrasilabica → conciencia fonemica (sonido inicial → final → segmentacion de fonemas). Avanzar de nivel a medida que el grupo consolida el anterior.
+- Oralidad: escucha comprensiva → relato y descripcion → vocabulario y categorias → narracion estructurada (inicio-nudo-desenlace) → argumentacion y conversacion.
+- CT — Comprension Textual: anticipacion por paratexto → comprension literal → secuencia temporal → inferencias → reconstruccion y recontado.
+- Escritura inicial: trazos y nombre propio como modelo estable → escritura de palabras significativas → escritura de listas y rotulos → escritura de frases → produccion con sentido comunicativo.
+
+REGLA DE PROGRESION: ubica al grupo en un punto de cada secuencia segun el historial y el momento del año (semana ${semanaAnio}). Propone el SIGUIENTE paso de la secuencia, no uno ya consolidado. Nunca propongas dos veces el mismo nivel de la misma secuencia si el historial muestra que ya se trabajo.
 
 HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
 ${historialResumen || "Sin historial previo — esta es la primera semana."}
 
-${actividadesNoRealizadas.length > 0 ? `ACTIVIDADES NO REALIZADAS (volver a sugerir si son pertinentes):\n${actividadesNoRealizadas.join(", ")}` : ""}
+${actividadesNoRealizadasRecientes.length > 0 ? `ACTIVIDADES NO REALIZADAS LA ULTIMA SEMANA (NO volver a sugerir ahora — la sala sigue avanzando con contenido nuevo. Podran reconsiderarse mas adelante si el progreso lo amerita):\n${actividadesNoRealizadasRecientes.join(", ")}` : ""}
+
+${actividadesNoRealizadasAntiguas.length > 0 ? `ACTIVIDADES NO REALIZADAS HACE MAS DE UNA SEMANA (solo reconsiderar si el analisis de progreso del grupo indica que ese contenido aun es necesario; de lo contrario, continuar avanzando):\n${actividadesNoRealizadasAntiguas.join(", ")}` : ""}
 
 ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
 ${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
 
 TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia indicado.
-Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica)
-Dia 2 (${diasArray[1]}): eje CT (Comprension Textual)  
-Dia 3 (${diasArray[2]}): eje Escritura inicial
+Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica) — elegi el siguiente paso de la secuencia CF segun el nivel del grupo.
+Dia 2 (${diasArray[1]}): eje CT (Comprension Textual) integrando Oralidad — lectura dialogica + intercambio oral enriquecido.
+Dia 3 (${diasArray[2]}): eje Escritura inicial — respetando y haciendo avanzar las hipotesis de escritura del grupo.
 
 REQUISITOS DE CADA ACTIVIDAD:
-1. Novedosa, original, no repetida respecto al historial
-2. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
-3. Rica en recursos: puede incluir juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, etc.)
-4. Practicable por una sola maestra con 20-25 ninos de jardin
-5. Tiempo de ejecucion: 20-30 minutos
-6. Materiales accesibles en un jardin de infantes comun de Argentina
+1. Novedosa, original, no repetida respecto al historial NI a actividades del mismo nivel de secuencia ya trabajadas
+2. Debe representar el SIGUIENTE paso de la secuencia de su eje (progresion real, no repeticion del mismo nivel)
+3. Anclada al proyecto "${proyecto?.titulo || "actual"}" cuando sea posible
+4. Rica en recursos: juegos corporales, canciones, cuentos, materiales no convencionales, tecnologia simple, metodologias (Montessori, Reggio, Vigotsky, lectura dialogica, conciencia fonologica sistematica, etc.)
+5. Practicable por una sola maestra con 20-25 ninos de jardin
+6. Tiempo de ejecucion: 20-30 minutos
+7. Materiales accesibles en un jardin de infantes comun de Argentina
 
 FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JSON:
 [
   {
     "dia": "${diasArray[0]}",
     "eje": "CF",
+    "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
     "capacidades": "una linea con las capacidades que desarrolla",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
@@ -1700,12 +1887,12 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
         const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
         const sugerenciasIA = JSON.parse(jsonStr)
 
-        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
+        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nivelSecuencia?: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
           dia: s.dia,
           actividad: {
             nombre: s.nombre,
             capacidades: s.capacidades,
-            contenidos: s.contenidos,
+            contenidos: s.nivelSecuencia ? `${s.contenidos} · Secuencia: ${s.nivelSecuencia}` : s.contenidos,
             objetivo: s.objetivo,
             desarrollo: s.desarrollo,
             materiales: s.materiales,

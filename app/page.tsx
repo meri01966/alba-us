@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import useSWR, { mutate as globalMutate } from "swr"
 import { FileText, X, UserPlus, ChevronDown, Users, Sparkles, Pencil, Trash2, Check, CalendarDays, MessageSquare, Settings } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { Header } from "@/components/sia/header"
@@ -47,6 +48,22 @@ function statusToProgress(status: StatusLevel | undefined): number {
 const STORAGE_KEY = "alba_evaluaciones_dia"
 const STORAGE_PROGRESS_KEY = "alba_progreso"
 const STORAGE_STUDENTS_KEY = "alba_students" // Para modo demo sin Supabase
+// Alertas marcadas como atendidas — se guardan por sala para que no reaparezcan al recargar
+const STORAGE_ALERTAS_ATENDIDAS_KEY = "alba_alertas_atendidas"
+const getAlertasAtendidas = (sala: string): string[] => {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_ALERTAS_ATENDIDAS_KEY}_${sala}`)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+const addAlertaAtendida = (sala: string, id: string) => {
+  try {
+    const actuales = getAlertasAtendidas(sala)
+    if (!actuales.includes(id)) {
+      localStorage.setItem(`${STORAGE_ALERTAS_ATENDIDAS_KEY}_${sala}`, JSON.stringify([...actuales, id]))
+    }
+  } catch { /* noop */ }
+}
 
 // Actividad del dia para el reporte
 const ACTIVIDAD_DEL_DIA = "Reconocimiento de Sonido Inicial /M/"
@@ -340,7 +357,7 @@ function SintesisPedagogicaModal({
 // Salas disponibles
 const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
 
-export default function ALBADashboard() {
+export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = {}) {
   const [activeView, setActiveView] = useState<ViewType>("clase")
   const [students, setStudents] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, EjeProgress>>({})
@@ -358,6 +375,7 @@ export default function ALBADashboard() {
   const [showPlanificacion, setShowPlanificacion] = useState(false)
   const [showAlertas, setShowAlertas] = useState(false)
   const [showCronograma, setShowCronograma] = useState(false)
+  const [cronogramaRefreshKey, setCronogramaRefreshKey] = useState(0)
   const [alertasPedagogicas, setAlertasPedagogicas] = useState<AlertaPedagogica[]>([])
   // sugerenciaAlba ya no se usa para texto - la actividad viene via onActividadALBA
   const [_sugerenciaAlba, _setSugerenciaAlba] = useState("")
@@ -365,14 +383,34 @@ export default function ALBADashboard() {
   const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
-  const [salaActual, setSalaActual] = useState("Manzanos")
+  const [salaActual, setSalaActual] = useState(forzarSala || "Manzanos")
   const [salaHydrated, setSalaHydrated] = useState(false)
   
-  // Cargar sala desde localStorage despues de hydration
+  // Cargar sala: el parametro ?sala=X de la URL tiene prioridad (links directos
+  // para cada maestra). Si no hay, se usa la ultima sala guardada en localStorage.
   useEffect(() => {
-    const savedSala = localStorage.getItem("sia-sala-activa")
-    if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
-      setSalaActual(savedSala)
+    // Modo demo: si la sala viene forzada por prop, fijarla y no permitir cambios
+    if (forzarSala) {
+      setSalaActual(forzarSala)
+      setSalaHydrated(true)
+      return
+    }
+    const params = new URLSearchParams(window.location.search)
+    const salaParam = params.get("sala")
+    // Buscar coincidencia sin distinguir mayusculas/acentos para ser tolerante
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const salaFromUrl = salaParam
+      ? SALAS_DISPONIBLES.find((s) => norm(s) === norm(salaParam))
+      : undefined
+
+    if (salaFromUrl) {
+      setSalaActual(salaFromUrl)
+      localStorage.setItem("sia-sala-activa", salaFromUrl)
+    } else {
+      const savedSala = localStorage.getItem("sia-sala-activa")
+      if (savedSala && SALAS_DISPONIBLES.includes(savedSala)) {
+        setSalaActual(savedSala)
+      }
     }
     setSalaHydrated(true)
   }, [])
@@ -410,9 +448,6 @@ export default function ALBADashboard() {
   }>>([])
 
   // Mensajes de la directora hacia la maestra
-  const [mensajesDirectora, setMensajesDirectora] = useState<Array<{
-    id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string
-  }>>([])
   const [marcandoLeido, setMarcandoLeido] = useState<string | null>(null)  // Cargar evaluaciones de hoy desde Supabase para la sala actual
   // Los botones del Registro de Clase arrancan siempre vacios al cargar la pagina.
   // Son el "pizarron del dia" — se usan solo durante la clase en curso.
@@ -459,18 +494,13 @@ export default function ALBADashboard() {
     localStorage.removeItem(STORAGE_KEY)
   }, [])
   
-  // Finalizar jornada: 
-  // 1. Alumnos sin marcar → se guardan como verde (logrado) en Supabase
-  // 2. Se actualiza el progreso acumulado por eje en el mapa
-  // 3. Se guarda el registro de cierre que alimenta a ALBA para la proxima sugerencia
-  // 4. ALBA re-calcula la actividad sugerida para la proxima clase
-  // 5. Las evaluaciones del dia se limpian para la nueva clase
+  // Finalizar semana completa (solo sala de prueba, sin confirmación)
+  // Finalizar jornada: guarda evaluaciones y avanza a siguiente día
   const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
     const ejeDelDia = ejeActual
     const actividadDelDia = actividadSugeridaALBA || actividadActual
 
-    // Si la actividad no se realizo, solo registrar el cierre con flag no_realizada
-    // sin blanquear alumnos ni limpiar evaluaciones
+    // Si la actividad no se realizo, solo registrar el cierre
     if (datos.evaluacion === "no_realizada") {
       try {
         await fetch("/api/registro-cierre", {
@@ -495,20 +525,18 @@ export default function ALBADashboard() {
       return
     }
 
-    // --- Paso 1: marcar como verde a todos los alumnos sin evaluacion explicita ---
+    // Marcar como verde a todos los sin evaluacion explicita
     const sinEvaluar = students.filter(s => !evaluaciones[s.id])
     const evaluacionesFinales = { ...evaluaciones }
     const nuevoProgress = { ...progress }
 
     for (const s of sinEvaluar) {
       evaluacionesFinales[s.id] = "green"
-      // Actualizar progreso local
       const anterior = nuevoProgress[s.id]?.[ejeDelDia as "CF" | "CT" | "O"] ?? null
       nuevoProgress[s.id] = {
         ...(nuevoProgress[s.id] || initProgress(s.id)),
         [ejeDelDia]: anterior !== null ? Math.round((anterior + 100) / 2) : 100,
       }
-      // Guardar en Supabase
       try {
         await fetch("/api/seguimiento", {
           method: "POST",
@@ -521,17 +549,14 @@ export default function ALBADashboard() {
     }
 
     setEvaluaciones(evaluacionesFinales)
-    // NO pisar el progress con valores RAM — fetchProgreso recargara el historial real de Supabase
-    // setProgress(nuevoProgress) -- ELIMINADO: causaba que los promedios correctos calculados
-    //   por handleStatusChange fueran pisados por un calculo local simplificado
 
-    // --- Paso 2: calcular stats para el registro de cierre ---
+    // Calcular stats
     const statsVerdes  = Object.values(evaluacionesFinales).filter(e => e === "green").length
     const statsAmarillos = Object.values(evaluacionesFinales).filter(e => e === "yellow").length
     const statsRojos   = Object.values(evaluacionesFinales).filter(e => e === "red").length
     const statsAusentes = Object.values(evaluacionesFinales).filter(e => e === "blue").length
 
-    // --- Paso 3: guardar registro de cierre ---
+    // Guardar registro de cierre
     try {
       const response = await fetch("/api/registro-cierre", {
         method: "POST",
@@ -550,94 +575,61 @@ export default function ALBADashboard() {
       const data = await response.json()
 
       if (data.success) {
-        // --- Paso 4: ALBA recalcula la proxima sugerencia ---
-        fetchHistorialMes()
-        // Tres intentos para asegurar que Supabase ya confirmo el insert antes de releer
-        setTimeout(() => {
-          fetchProgreso()
-          dayPlanningRef.current?.fetchBrain()
-        }, 1500)
-        setTimeout(() => {
-          dayPlanningRef.current?.fetchBrain()
-        }, 3500)
-        setTimeout(() => {
-          dayPlanningRef.current?.fetchBrain()
-        }, 7000)
-        
-        // --- Paso 5: indexar actividad evaluada a la red de ALBA (para redistribucion) ---
-        if (actividadDelDia) {
-          fetch("/api/actividad-planificada", {
-            method: "POST",
+        // Finalizar la jornada: el backend marca el DÍA ACTIVO del cronograma
+        // (el primer día pendiente con actividad de ALBA), garantizando que
+        // avanza en la misma secuencia que se muestra en el dashboard.
+        try {
+          const patchRes = await fetch("/api/cronograma-jardin", {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              fecha: new Date().toISOString().split("T")[0],
-              actividad: actividadDelDia,
-              eje: ejeDelDia,
-              sala: salaActual,
-              evaluacion: datos.evaluacion,
-              origen: "cierre_jornada",
-            }),
-          }).catch(() => {/* silencioso */})
+            body: JSON.stringify({ sala: salaActual }),
+          })
+          await patchRes.json()
+        } catch (err) {
+          console.error("[v0] Error en PATCH:", err)
         }
 
-        // --- Paso 6: limpiar evaluaciones para la nueva clase ---
+        // Refrescar brain para obtener siguiente actividad
+        fetchHistorialMes()
+        globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        
+        setTimeout(() => {
+          dayPlanningRef.current?.fetchBrain?.()
+          globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+        }, 2000)
+
+        // Limpiar evaluaciones para la nueva clase
         setEvaluaciones({})
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(STORAGE_PROGRESS_KEY)
 
-        // Mostrar toast de confirmacion
-        setJornadaToast({ tipo: "ok", mensaje: "Jornada guardada. ALBA actualizara la sugerencia para la proxima clase." })
-        setTimeout(() => setJornadaToast(null), 5000)
-      } else {
-        setJornadaToast({ tipo: "error", mensaje: "Error al guardar. Intenta de nuevo." })
-        setTimeout(() => setJornadaToast(null), 4000)
+        setJornadaToast({ tipo: "ok", mensaje: "Jornada finalizada. Proxima actividad sugerida por ALBA." })
+        setTimeout(() => setJornadaToast(null), 3000)
       }
-    } catch (err) {
-      console.error("[v0] Error guardando registro de cierre:", err)
-      setJornadaToast({ tipo: "error", mensaje: "Error de conexion. Intenta de nuevo." })
-      setTimeout(() => setJornadaToast(null), 4000)
+    } catch (e) {
+      console.error("[v0] Error guardando registro de cierre:", e)
+      setJornadaToast({ tipo: "error", mensaje: "Error al guardar. Intenta nuevamente." })
+      setTimeout(() => setJornadaToast(null), 3000)
     }
-  }, [fetchHistorialMes, students, evaluaciones, progress, ejeActual, salaActual, actividadActual, actividadSugeridaALBA])
+  }, [salaActual, ejeActual, actividadActual, actividadSugeridaALBA, students, evaluaciones, progress])
 
-  // Cargar evaluaciones de Supabase al iniciar y cuando cambie la sala
-  useEffect(() => {
-    // Al cambiar de sala, limpiar alertas de la sala anterior para no mezclar
-    setAlertasPedagogicas([])
-    cargarEvaluacionesDeSala(salaActual)
-  }, [salaActual, cargarEvaluacionesDeSala])
-    
-  // El progreso se carga desde Supabase en fetchProgreso().
-  // localStorage es solo un cache secundario cuando no hay Supabase configurado.
-
-// Guardar evaluaciones en localStorage cuando cambien
-  useEffect(() => {
-    if (Object.keys(evaluaciones).length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        fecha: new Date().toDateString(),
-        evaluaciones,
-      }))
-    } else {
-      // Si no hay evaluaciones, limpiar localStorage
-      localStorage.removeItem(STORAGE_KEY)
-    }
-  }, [evaluaciones])
-
-  // Guardar progreso en localStorage cuando cambie
+  // Guardar evaluaciones en localStorage cuando cambie
   useEffect(() => {
     if (Object.keys(progress).length > 0) {
       localStorage.setItem(STORAGE_PROGRESS_KEY, JSON.stringify(progress))
     }
   }, [progress])
 
-  const fetchMensajes = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}`)
-      const data = await res.json()
-      if (data.ok) setMensajesDirectora(data.mensajes || [])
-    } catch (e) {
-      console.error("[v0] Error cargando mensajes directora:", e)
-    }
-  }, [salaActual])
+  // SWR para mensajes: se revalida al volver al tab y cada 30 segundos automaticamente
+  // Los mensajes NO leidos persisten hasta que la docente los marca leidos en Supabase
+  const mensajesKey = salaActual ? `/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}` : null
+  const { data: mensajesData, mutate: mutateMensajes } = useSWR(
+    mensajesKey,
+    (url: string) => fetch(url).then(r => r.json()),
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
+  )
+  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string }> =
+    mensajesData?.ok ? (mensajesData.mensajes || []) : []
 
   const marcarLeido = async (id: string) => {
     setMarcandoLeido(id)
@@ -649,7 +641,11 @@ export default function ALBADashboard() {
       })
       const data = await res.json()
       if (data.ok) {
-        setMensajesDirectora(prev => prev.map(m => m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m))
+        // Actualizar SWR optimistamente para que el badge se actualice al instante
+        mutateMensajes(
+          (prev: any) => prev ? { ...prev, mensajes: prev.mensajes.map((m: any) => m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m) } : prev,
+          { revalidate: false }
+        )
       }
     } catch (e) {
       console.error("[v0] Error marcando leido:", e)
@@ -783,7 +779,7 @@ export default function ALBADashboard() {
               // ALERTA TIPO 1: Persistencia en rojo (3+ rojos)
               if (rojosRecientes >= 3) {
                 nuevasAlertas.push({
-                  id: `${alumnoId}-${eje}-persistente-${Date.now()}`,
+                  id: `${alumnoId}-${eje}-persistente`,
                   alumnoId,
                   alumnoNombre: alumno.nombre,
                   eje: eje as "CF" | "CT" | "O",
@@ -799,7 +795,7 @@ export default function ALBADashboard() {
                 const ultima = actividades[actividades.length - 1]?.resultado
                 if ((penultima === "green" || penultima === "yellow") && ultima === "red") {
                   nuevasAlertas.push({
-                    id: `${alumnoId}-${eje}-descendente-${Date.now()}`,
+                    id: `${alumnoId}-${eje}-descendente`,
                     alumnoId,
                     alumnoNombre: alumno.nombre,
                     eje: eje as "CF" | "CT" | "O",
@@ -815,7 +811,7 @@ export default function ALBADashboard() {
                 const ultimas2 = actividades.slice(-2)
                 if (ultimas2.every(a => a.resultado === "yellow")) {
                   nuevasAlertas.push({
-                    id: `${alumnoId}-${eje}-preventiva-${Date.now()}`,
+                    id: `${alumnoId}-${eje}-preventiva`,
                     alumnoId,
                     alumnoNombre: alumno.nombre,
                     eje: eje as "CF" | "CT" | "O",
@@ -838,7 +834,7 @@ export default function ALBADashboard() {
               )
               if (!alertaGrupalExiste) {
                 nuevasAlertas.push({
-                  id: `GRUPAL-${eje}-${Date.now()}`,
+                  id: `GRUPAL-${eje}`,
                   alumnoId: "GRUPAL",
                   alumnoNombre: "ALERTA GRUPAL",
                   eje: eje as "CF" | "CT" | "O",
@@ -852,7 +848,12 @@ export default function ALBADashboard() {
           }
           
           if (nuevasAlertas.length > 0) {
-            setAlertasPedagogicas(prev => [...prev, ...nuevasAlertas])
+            // Filtrar las alertas que la maestra ya marco como atendidas (persistido por sala)
+            const atendidasGuardadas = getAlertasAtendidas(salaActual)
+            const alertasFiltradas = nuevasAlertas.filter(a => !atendidasGuardadas.includes(a.id))
+            if (alertasFiltradas.length > 0) {
+              setAlertasPedagogicas(prev => [...prev, ...alertasFiltradas])
+            }
           }
         }
       } else {
@@ -871,8 +872,7 @@ export default function ALBADashboard() {
 useEffect(() => {
   fetchProgreso()
   fetchHistorialMes()
-  fetchMensajes()
-  }, [fetchProgreso, fetchHistorialMes, fetchMensajes])
+  }, [fetchProgreso, fetchHistorialMes])
 
   const handleNavigate = (view: ViewType) => {
     setActiveView(view)
@@ -1143,7 +1143,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
@@ -1177,7 +1177,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
@@ -1212,7 +1212,7 @@ useEffect(() => {
         {showAlertas && (
           <AlertasPedagogicas 
             alertas={alertasPedagogicas} 
-            onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+            onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
             onClose={() => setShowAlertas(false)} 
           />
         )}
@@ -1229,18 +1229,18 @@ useEffect(() => {
           {/* Barra de gestion de sala */}
           <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-3">
-              {/* Selector de sala */}
+              {/* Selector de sala (oculto en modo demo) */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setShowSalaDropdown(!showSalaDropdown)}
+                  onClick={() => { if (!forzarSala) setShowSalaDropdown(!showSalaDropdown) }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-medium"
                   style={{ color: "#1e3a5f" }}
                 >
                   <span>Sala: {salaActual}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />
+                  {!forzarSala && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
                 </button>
-                {showSalaDropdown && (
+                {showSalaDropdown && !forzarSala && (
                   <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 min-w-[160px]">
                     {SALAS_DISPONIBLES.map((sala) => (
                       <button
@@ -1343,6 +1343,7 @@ useEffect(() => {
 
               {/* Fila 1: Cronograma Semanal inline — 5 dias con titulos y boton Abrir */}
               <CronogramaInlinePreview
+                key={cronogramaRefreshKey}
                 sala={salaActual}
                 onAbrirCompleto={() => setShowCronograma(true)}
                 mensajesPendientes={mensajesDirectora.filter(m => !m.leido).length}
@@ -1653,12 +1654,17 @@ useEffect(() => {
       {showAlertas && (
         <AlertasPedagogicas 
           alertas={alertasPedagogicas} 
-          onMarcarAtendida={(id) => setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a))}
+          onMarcarAtendida={(id) => { addAlertaAtendida(salaActual, id); setAlertasPedagogicas(prev => prev.map(a => a.id === id ? {...a, atendida: true} : a)) }}
           onClose={() => setShowAlertas(false)} 
         />
       )}
       {/* Cronograma Semanal Modal */}
-      <CronogramaSemanal isOpen={showCronograma} onClose={() => setShowCronograma(false)} sala={salaActual} students={students} />
+      <CronogramaSemanal isOpen={showCronograma} onClose={() => {
+        setShowCronograma(false)
+        setCronogramaRefreshKey(k => k + 1)
+        // Invalidar SWR del cronograma y del brain para que ambos refetcheen automaticamente
+        globalMutate((key: string) => typeof key === "string" && (key.includes("/api/cronograma-maternal") || key.includes("/api/brain")), undefined, { revalidate: true })
+      }} sala={salaActual} students={students} />
     </div>
   )
 }

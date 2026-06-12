@@ -143,6 +143,15 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabase()
 
   try {
+    // 0. Traer los alumnos ACTUALES de la sala. Solo contamos seguimiento de alumnos
+    // que todavia existen (evita registros huerfanos de alumnos reimportados/borrados
+    // que inflarian los numeros y no reflejarian la realidad de la sala).
+    const { data: alumnosSala } = await supabase
+      .from("alumnos")
+      .select("id")
+      .eq("sala", sala)
+    const idsActuales = new Set((alumnosSala || []).map((a: { id: string }) => a.id))
+
     // 1. Traer todos los registros de seguimiento de la sala
     const { data: seguimientosRaw, error: errSeg } = await supabase
       .from("seguimiento")
@@ -151,7 +160,10 @@ export async function GET(req: NextRequest) {
       .order("fecha", { ascending: true })
 
     if (errSeg) console.error("[v0] Error seguimiento:", errSeg.message)
-    const seguimientos = seguimientosRaw || []
+    // Filtrar huerfanos: solo seguimiento de alumnos actuales de la sala
+    const seguimientos = (seguimientosRaw || []).filter(
+      (s: { alumno_id: string }) => idsActuales.size === 0 || idsActuales.has(s.alumno_id)
+    )
 
     // 2. Traer registros de cierre (actividades_docente, observaciones, eje)
     const { data: cierresRaw, error: errCierres } = await supabase

@@ -10,7 +10,7 @@ const supabase = createClient(
 )
 
 interface Alerta {
-  tipo: "rojo_consecutivo" | "mayoria_rojo" | "sin_evaluaciones"
+  tipo: "rojo_consecutivo" | "rojo_acumulado" | "mayoria_rojo" | "amarillo_sostenido" | "sin_evaluaciones"
   urgencia: "alta" | "media" | "baja"
   mensaje: string
   alumnoId?: string
@@ -21,6 +21,7 @@ interface Alerta {
     rojosConsecutivos?: number
     totalRojos?: number
     porcentajeRojo?: number
+    amarillos?: number
   }
 }
 
@@ -60,12 +61,23 @@ export async function GET(request: Request) {
 
     const alertas: Alerta[] = []
 
+    const EJE_NOMBRE: Record<string, string> = {
+      CF: "Conciencia Fonologica",
+      CT: "Comprension de Textos",
+      O: "Oralidad",
+      EA: "Escritura",
+    }
+
     // Agrupar por alumno
     const porAlumno: Record<string, { eje: string, estado: string, fecha: string }[]> = {}
     for (const s of seguimiento || []) {
       if (!porAlumno[s.alumno_id]) porAlumno[s.alumno_id] = []
       porAlumno[s.alumno_id].push({ eje: s.eje, estado: s.estado, fecha: s.fecha })
     }
+
+    const esRojo = (e: string) => e === "red" || e === "refuerzo"
+    const esAmarillo = (e: string) => e === "yellow" || e === "proceso"
+    const esVerde = (e: string) => e === "green" || e === "logrado"
 
     // Analizar cada alumno
     for (const alumnoId of alumnosIds) {
@@ -75,77 +87,93 @@ export async function GET(request: Request) {
       // Si no tiene evaluaciones, no hay alerta (puede ser nuevo)
       if (registros.length === 0) continue
 
-      // Contar rojos totales
-      const totalRojos = registros.filter(r => r.estado === "red" || r.estado === "refuerzo").length
+      const totalRojos = registros.filter(r => esRojo(r.estado)).length
       const porcentajeRojo = Math.round((totalRojos / registros.length) * 100)
 
-      // Verificar rojos consecutivos recientes (contando rojos en las ultimas evaluaciones)
-      // Contamos cuantos rojos hay en las ultimas 5 evaluaciones
-      const ultimas = registros.slice(-5)
-      const rojosRecientes = ultimas.filter(r => r.estado === "red" || r.estado === "refuerzo").length
-      
-      // Tambien verificamos las ultimas 3 para patron de rojos consecutivos reales
+      // Rojos consecutivos recientes (las ultimas 3 evaluaciones, en cualquier eje)
       const ultimas3 = registros.slice(-3)
-      const rojos3 = ultimas3.filter(r => r.estado === "red" || r.estado === "refuerzo").length
-      
-      // Determinamos la severidad
-      const rojosConsecutivos = rojos3 >= 2 ? rojos3 : (rojosRecientes >= 3 ? rojosRecientes : 0)
+      const rojosConsecutivos = ultimas3.filter(r => esRojo(r.estado)).length
 
-      // ALERTA ALTA: 3+ rojos consecutivos
+      // Analisis POR EJE: para detectar rojos acumulados y amarillos sostenidos
+      const porEje: Record<string, string[]> = {}
+      for (const r of registros) {
+        if (!porEje[r.eje]) porEje[r.eje] = []
+        porEje[r.eje].push(r.estado)
+      }
+
+      // Encontrar el eje con mas rojos acumulados y el eje con mas amarillos sin avanzar
+      let ejeMasRojos = ""; let maxRojosEje = 0
+      let ejeMasAmarillos = ""; let maxAmarillosEje = 0
+      for (const [eje, estados] of Object.entries(porEje)) {
+        const rojosEje = estados.filter(esRojo).length
+        if (rojosEje > maxRojosEje) { maxRojosEje = rojosEje; ejeMasRojos = eje }
+        // Amarillos sostenidos: cuenta amarillos solo si el alumno NO logro verde despues
+        const amarillosEje = estados.filter(esAmarillo).length
+        const tieneVerde = estados.some(esVerde)
+        if (amarillosEje > maxAmarillosEje && !tieneVerde) { maxAmarillosEje = amarillosEje; ejeMasAmarillos = eje }
+      }
+
+      // --- PRIORIDAD DE ALERTAS (una por alumno, la mas urgente) ---
+
+      // ALERTA ALTA: 3 rojos consecutivos recientes
       if (rojosConsecutivos >= 3) {
         alertas.push({
-          tipo: "rojo_consecutivo",
-          urgencia: "alta",
-          mensaje: `${nombre} tiene ${rojosConsecutivos} evaluaciones en rojo consecutivas`,
-          alumnoId,
-          alumnoNombre: nombre,
-          datos: {
-            totalEvaluaciones: registros.length,
-            rojosConsecutivos,
-            totalRojos,
-            porcentajeRojo
-          }
+          tipo: "rojo_consecutivo", urgencia: "alta",
+          mensaje: `${nombre} tiene ${rojosConsecutivos} evaluaciones en rojo seguidas. Necesita apoyo prioritario.`,
+          alumnoId, alumnoNombre: nombre,
+          datos: { totalEvaluaciones: registros.length, rojosConsecutivos, totalRojos, porcentajeRojo }
         })
       }
-      // ALERTA MEDIA: 2 rojos consecutivos
+      // ALERTA ALTA: 3+ rojos acumulados en un mismo eje (aunque no sean seguidos)
+      else if (maxRojosEje >= 3) {
+        alertas.push({
+          tipo: "rojo_acumulado", urgencia: "alta",
+          mensaje: `${nombre} acumula ${maxRojosEje} evaluaciones en rojo en ${EJE_NOMBRE[ejeMasRojos] || ejeMasRojos}. Conviene reforzar ese eje.`,
+          alumnoId, alumnoNombre: nombre, eje: ejeMasRojos,
+          datos: { totalEvaluaciones: registros.length, totalRojos, porcentajeRojo }
+        })
+      }
+      // ALERTA MEDIA: 2 rojos consecutivos recientes
       else if (rojosConsecutivos === 2) {
         alertas.push({
-          tipo: "rojo_consecutivo",
-          urgencia: "media",
-          mensaje: `${nombre} tiene 2 evaluaciones en rojo consecutivas`,
-          alumnoId,
-          alumnoNombre: nombre,
-          datos: {
-            totalEvaluaciones: registros.length,
-            rojosConsecutivos,
-            totalRojos,
-            porcentajeRojo
-          }
+          tipo: "rojo_consecutivo", urgencia: "media",
+          mensaje: `${nombre} tiene 2 evaluaciones en rojo seguidas. Conviene seguir de cerca.`,
+          alumnoId, alumnoNombre: nombre,
+          datos: { totalEvaluaciones: registros.length, rojosConsecutivos, totalRojos, porcentajeRojo }
         })
       }
-      // ALERTA MEDIA: Mayoria de evaluaciones en rojo (>50% con al menos 4 evaluaciones)
+      // ALERTA MEDIA: mayoria de evaluaciones en rojo
       else if (registros.length >= 4 && porcentajeRojo > 50) {
         alertas.push({
-          tipo: "mayoria_rojo",
-          urgencia: "media",
-          mensaje: `${nombre} tiene ${porcentajeRojo}% de evaluaciones en rojo (${totalRojos} de ${registros.length})`,
-          alumnoId,
-          alumnoNombre: nombre,
-          datos: {
-            totalEvaluaciones: registros.length,
-            totalRojos,
-            porcentajeRojo
-          }
+          tipo: "mayoria_rojo", urgencia: "media",
+          mensaje: `${nombre} tiene ${porcentajeRojo}% de evaluaciones en rojo (${totalRojos} de ${registros.length}).`,
+          alumnoId, alumnoNombre: nombre,
+          datos: { totalEvaluaciones: registros.length, totalRojos, porcentajeRojo }
+        })
+      }
+      // ALERTA MEDIA: 2+ rojos acumulados en un eje
+      else if (maxRojosEje >= 2) {
+        alertas.push({
+          tipo: "rojo_acumulado", urgencia: "media",
+          mensaje: `${nombre} tiene ${maxRojosEje} rojos en ${EJE_NOMBRE[ejeMasRojos] || ejeMasRojos}. Conviene reforzar.`,
+          alumnoId, alumnoNombre: nombre, eje: ejeMasRojos,
+          datos: { totalEvaluaciones: registros.length, totalRojos, porcentajeRojo }
+        })
+      }
+      // ALERTA BAJA: amarillo sostenido (3+ amarillos en un eje sin llegar a verde)
+      else if (maxAmarillosEje >= 3) {
+        alertas.push({
+          tipo: "amarillo_sostenido", urgencia: "baja",
+          mensaje: `${nombre} sigue en amarillo en ${EJE_NOMBRE[ejeMasAmarillos] || ejeMasAmarillos} (${maxAmarillosEje} veces en proceso sin consolidar). Conviene darle un empujon.`,
+          alumnoId, alumnoNombre: nombre, eje: ejeMasAmarillos,
+          datos: { totalEvaluaciones: registros.length, totalRojos, porcentajeRojo, amarillos: maxAmarillosEje }
         })
       }
     }
 
-    // Ordenar: alta primero, luego media
-    alertas.sort((a, b) => {
-      if (a.urgencia === "alta" && b.urgencia !== "alta") return -1
-      if (a.urgencia !== "alta" && b.urgencia === "alta") return 1
-      return 0
-    })
+    // Ordenar: alta > media > baja
+    const pesoUrg: Record<string, number> = { alta: 0, media: 1, baja: 2 }
+    alertas.sort((a, b) => (pesoUrg[a.urgencia] ?? 9) - (pesoUrg[b.urgencia] ?? 9))
 
     return NextResponse.json({
       ok: true,
