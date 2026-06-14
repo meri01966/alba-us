@@ -534,6 +534,55 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
       dccaba: "DC CABA 2025 - CF Sala 5: Manipulacion de fonemas (omision y adicion). BPAL Canada: nivel avanzado de conciencia fonemica.",
       sala: "5"
     },
+    // ── ACTIVIDADES NUEVAS CF: del sonido a la sílaba (correspondencias) ──
+    {
+      titulo: "Presentacion de la letra: mayuscula y minuscula",
+      objetivo: "Asociar una letra (en sus dos formas) con su sonido a partir de imagenes",
+      descripcion: "La docente pega en el pizarron la letra en mayuscula y minuscula juntas (por ejemplo S y s) y alrededor coloca varios dibujos cuyos nombres empiezan con ese sonido: semaforo, sirena, sapo, serrucho, sol. Nombra cada dibujo prolongando el sonido inicial e invita a los ninos a hacerlo igual. Explicita que todos empiezan con sssss, que es como suena la letra. Luego buscan otros dibujos con la misma letra para consolidar.",
+      materiales: ["Letra en mayuscula y minuscula grande", "Dibujos con el sonido inicial trabajado", "Cinta o iman"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Relacion sonido-letra. Presentar ambas formas (mayuscula/minuscula) junto al sonido facilita el reconocimiento en distintos portadores.",
+      sala: "5"
+    },
+    {
+      titulo: "La caja de las letras",
+      objetivo: "Asociar el sonido inicial de un objeto real con la letra que lo representa",
+      descripcion: "Se presenta una caja con objetos familiares (manzana, taza, regla). Un nino saca uno, lo nombra en voz alta y el grupo escucha el sonido inicial: que sonido escuchamos al principio de manzana? Se prolonga el sonido mmm y se muestra la letra correspondiente. Se repite con otros objetos. Para complejizar, agrupan objetos que empiezan con el mismo sonido o buscan en la sala palabras con ese sonido inicial.",
+      materiales: ["Caja con objetos familiares", "Tarjetas con letras moviles o carteles de letras"],
+      dccaba: "DC CABA 2025 - CF Sala 4 y 5: Asociar sonido inicial con su representacion escrita. El objeto real refuerza el vinculo entre oralidad y sistema de escritura.",
+      sala: "ambas"
+    },
+    {
+      titulo: "Letras en movimiento: correr al sonido inicial",
+      objetivo: "Asociar el sonido inicial de una palabra con su letra mediante el juego corporal",
+      descripcion: "Se distribuyen tarjetas con letras en imprenta minuscula en distintos rincones del aula o el patio. La docente dice una palabra en voz alta (por ejemplo sol) y los ninos caminan o corren hacia la letra que representa el sonido inicial (la s). Al llegar dicen en voz alta el sonido y una palabra que empiece igual: sss, sol, serpiente, silla. Variante: correr a la letra con la que NO empieza la palabra.",
+      materiales: ["Tarjetas con letras grandes", "Espacio libre en aula o patio"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Asociacion sonido-letra desde el movimiento. La kinestesia integra lo corporal con lo linguistico y favorece la escucha activa.",
+      sala: "5"
+    },
+    {
+      titulo: "Pescando letras: combinar consonante y vocal",
+      objetivo: "Combinar dos letras para formar y leer una silaba",
+      descripcion: "Se usan tarjetas con vocales y consonantes ya trabajadas, mezcladas en dos bolsas separadas. La docente pesca una letra de cada bolsa y las acerca lentamente: que pasa si la s (ssss) se encuentra con la a? Las une y lee la silaba sssaaa, sa. Indica con el dedo para que el grupo haga sonar las letras juntas. Luego los ninos por turnos pescan dos letras, las unen y el grupo dice que silaba formaron y que palabra empieza asi.",
+      materiales: ["Tarjetas de vocales y consonantes", "Dos bolsas"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Combinacion de correspondencias en unidades mayores (silabas). Paso clave hacia la lectura y escritura de palabras.",
+      sala: "5"
+    },
+    {
+      titulo: "La expendedora de letras: armar silabas",
+      objetivo: "Formar silabas combinando consonante y vocal en orden",
+      descripcion: "Una maquina expendedora de carton (o caja) arroja un par de letras, siempre en orden consonante-vocal, por ejemplo n y a. Se pregunta: como suenan estas letras? nnnn y aaaa. Y juntas? nnnaaaa. Que palabra empieza con naaa? Naranja. Entre todos enumeran palabras que empiezan con esa silaba. Variante en grupos: gana el que nombra mas palabras con la silaba.",
+      materiales: ["Caja-expendedora de carton", "Tarjetas con vocales y consonantes en dos pilas"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Combinacion de correspondencias en silabas con apoyo visual del orden consonante-vocal.",
+      sala: "5"
+    },
+    {
+      titulo: "La varita magica: unir sonidos",
+      objetivo: "Hacer sonar juntas dos letras para leer la silaba",
+      descripcion: "La docente toca con una varita magica una letra y los ninos dicen como suena: esta suena mmmm. Y si se encuentra con la e? Acerca las tarjetas m y e hasta juntarlas: meee. Se vuelven a tocar con la varita para que los ninos lean la silaba en voz alta. La docente va tocando distintos pares y los ninos los hacen sonar juntos. Luego pasa la varita a los ninos por turnos.",
+      materiales: ["Varita magica", "Tarjetas de consonantes y vocales trabajadas"],
+      dccaba: "DC CABA 2025 - CF Sala 5: Sintesis de correspondencias en silabas, de caracter ludico. Antesala de la lectura de palabras.",
+      sala: "5"
+    },
     {
       titulo: "Evaluacion CF: estaciones de fonologia",
       objetivo: "Evaluar el dominio de la conciencia fonologica por nivel",
