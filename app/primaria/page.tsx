@@ -228,22 +228,8 @@ async function sbGet(table: string, params: string): Promise<any[]> {
   }
 }
 
-async function sbInsert(table: string, body: Record<string, unknown>) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    })
-  } catch {
-    /* sin conexión: el registro local sigue válido para la sesión */
-  }
-}
+// (Las escrituras se hacen vía las APIs internas /api/students y /api/seguimiento,
+//  que ya están probadas en jardín y comparten la misma Supabase.)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Motor de análisis — produce RELATO, nunca números
@@ -596,10 +582,32 @@ export default function PrimariaDashboard() {
   // Secuencia anual
   const [showSecuencia, setShowSecuencia] = useState(false)
 
+  // Diagnóstico (mensaje visible si algo falla al cargar/guardar)
+  const [diag, setDiag] = useState<string | null>(null)
+
   // ── Carga inicial / por sala
   const cargar = useCallback(async () => {
     setLoading(true)
-    const als: Alumno[] = await sbGet("alumnos", `sala=eq.${encodeURIComponent(sala)}&order=nombre`)
+    setDiag(null)
+    // Alumnos: usar la API interna de jardín (ya probada y funcionando)
+    let als: Alumno[] = []
+    try {
+      const res = await fetch(`/api/students?sala=${encodeURIComponent(sala)}`)
+      const data = await res.json()
+      // Aceptar cualquier formato de respuesta conocido
+      const lista: any[] = Array.isArray(data)
+        ? data
+        : data.students || data.alumnos || data.data || []
+      als = lista.map((a: any) => ({
+        id: a.id,
+        nombre: a.nombre ?? a.name ?? "",
+        sala: a.sala ?? sala,
+      }))
+      if (data.error) setDiag(`La base respondió: ${data.error}`)
+    } catch (e: any) {
+      setDiag(`No se pudo leer la lista de alumnos: ${e?.message || "error de red"}`)
+      als = []
+    }
     setAlumnos(als)
     if (als.length > 0) {
       const ids = als.map((a) => a.id).join(",")
@@ -660,17 +668,17 @@ export default function PrimariaDashboard() {
   async function guardarRegistro() {
     if (alumnos.length === 0) return
     setGuardando(true)
-    const fecha = new Date().toISOString()
     for (const al of alumnos) {
       const estado: Estado = excepciones[al.id] || "green"
-      await sbInsert("seguimiento", {
-        alumno_id: al.id,
-        eje: ejeActivo,
-        estado,
-        actividad: actividadActiva,
-        fecha,
-        sala,
-      })
+      try {
+        await fetch("/api/seguimiento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alumno_id: al.id, eje: ejeActivo, estado, sala, actividad: actividadActiva }),
+        })
+      } catch {
+        /* sin conexión: continúa */
+      }
     }
     setExcepciones({})
     setToast("Clase registrada. ALBA ya actualizó su lectura del grupo.")
@@ -772,7 +780,7 @@ export default function PrimariaDashboard() {
 
   const proyectoActivo = proyectos.find((p) => p.estado === "activo") || null
 
-  // ── Alta de alumnos
+  // ── Alta de alumnos (vía API interna de jardín, ya probada)
   async function guardarAlumnos() {
     const nombres = bulkNombres
       .split("\n")
@@ -780,12 +788,31 @@ export default function PrimariaDashboard() {
       .filter(Boolean)
     if (nombres.length === 0) return
     setGuardandoBulk(true)
+    let errorMsg: string | null = null
+    let ok = 0
     for (const nombre of nombres) {
-      await sbInsert("alumnos", { nombre, sala })
+      try {
+        const res = await fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, sala }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || data.error) {
+          errorMsg = data.error || `La base rechazó "${nombre}" (HTTP ${res.status})`
+        } else {
+          ok++
+        }
+      } catch (e: any) {
+        errorMsg = e?.message || "error de red al guardar"
+      }
     }
     setBulkNombres("")
     setShowGestion(false)
     setGuardandoBulk(false)
+    if (errorMsg && ok === 0) {
+      setDiag(`No se pudieron guardar los alumnos. ${errorMsg}`)
+    }
     await cargar()
   }
 
@@ -853,6 +880,18 @@ export default function PrimariaDashboard() {
       </header>
 
       <main style={{ maxWidth: 880, margin: "0 auto", padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Banner de diagnóstico (solo aparece si algo falla) */}
+        {diag && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "#b91c1c", marginBottom: 2 }}>Aviso técnico</div>
+              <div style={{ fontSize: 12, color: "#7f1d1d", lineHeight: 1.5 }}>{diag}</div>
+            </div>
+            <button onClick={() => setDiag(null)} style={{ background: "transparent", border: "none", color: "#b91c1c", fontSize: 16, cursor: "pointer" }}>×</button>
+          </div>
+        )}
 
         {alumnos.length === 0 ? (
           // ── Estado vacío
