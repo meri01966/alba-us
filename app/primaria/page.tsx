@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 /**
  * ALBA · Primaria — Primer Grado
@@ -22,9 +23,6 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 // Configuración
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-
 const NAVY = "#1e3a5f"
 const ORANGE = "#D4870E"
 
@@ -44,43 +42,307 @@ const EJES: { key: EjeKey; nombre: string; corto: string; color: string; bg: str
 
 const EJE = (k: string) => EJES.find((e) => e.key === k) || EJES[0]
 
-// Actividades por eje — segundo cuatrimestre de primer grado (DC CABA)
-const ACTIVIDADES: Record<EjeKey, string[]> = {
+// ─────────────────────────────────────────────────────────────────────────────
+// BIBLIOTECA DIDÁCTICA — clases ricas por eje (segundo cuatrimestre, 1er grado)
+// Cada actividad es una clase completa: no un título, sino el desarrollo, los
+// recursos, los materiales y qué aprenden los chicos. ALBA como fuente de didáctica.
+// Basado en el DC CABA (Lengua, primer ciclo) y buenas prácticas de alfabetización.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ClaseDidactica = {
+  titulo: string
+  objetivo: string          // qué se busca lograr
+  aprenden: string          // qué aprenden los chicos (foco)
+  desarrollo: string[]      // pasos concretos de la clase
+  recursos: string[]        // materiales y recursos estimulantes
+  duracion: string          // tiempo estimado
+}
+
+const BIBLIOTECA: Record<EjeKey, ClaseDidactica[]> = {
   SE: [
-    "Escritura de palabras con sílabas complejas (tr, pl, gr)",
-    "Dictado de oraciones cortas con mayúscula y punto final",
-    "Separación de palabras dentro de una oración",
-    "Correspondencia sonido-letra con dígrafos (ch, ll, rr)",
-    "Escritura de palabras a partir de su sonido inicial y final",
+    {
+      titulo: "Detectives de sílabas trabadas (tr, pl, gr)",
+      objetivo: "Escribir palabras con grupos consonánticos sin omitir la segunda consonante.",
+      aprenden: "Que en 'tren' o 'plato' hay dos sonidos pegados que no se pueden saltear.",
+      desarrollo: [
+        "Mostrá tarjetas con imágenes: tren, plato, globo, grúa, plaza. Los chicos nombran cada una en voz alta.",
+        "Palmean la palabra en sílabas y estiran el sonido trabado: 'trrr-en'. El cuerpo marca el grupo.",
+        "En parejas, escriben tres palabras en el cuaderno. Vos pasás y señalás con el dedo si falta una letra, sin corregir vos.",
+        "Cierre: cada pareja lee una palabra suya y la comparten con el grupo.",
+      ],
+      recursos: ["Tarjetas con imágenes de palabras trabadas", "Cuaderno y lápiz", "Pizarrón para el modelo"],
+      duracion: "40 min",
+    },
+    {
+      titulo: "El dictado del cartero",
+      objetivo: "Escribir oraciones cortas respetando mayúscula inicial, separación y punto final.",
+      aprenden: "Que una oración empieza con mayúscula, las palabras van separadas y termina con punto.",
+      desarrollo: [
+        "Contales que son carteros y tienen que escribir mensajes cortos. Cada mensaje es una oración.",
+        "Dictá una oración simple y conocida: 'El gato duerme.' Despacio, marcando el punto al final con la voz.",
+        "Mientras escriben, recordá en voz alta: arrancamos con mayúscula, separamos las palabras, cerramos con punto.",
+        "Repetí con dos o tres oraciones más. Al final, releen sus mensajes señalando con el dedo dónde están las mayúsculas y los puntos.",
+      ],
+      recursos: ["Sobres o tarjetas de 'mensajes'", "Cuaderno", "Cartelito modelo de oración con sus partes señaladas"],
+      duracion: "35 min",
+    },
+    {
+      titulo: "La tijera de palabras",
+      objetivo: "Separar correctamente las palabras dentro de una oración escrita de corrido.",
+      aprenden: "Dónde termina una palabra y empieza otra; que las palabras no van pegadas.",
+      desarrollo: [
+        "Escribí en el pizarrón una oración con todas las palabras pegadas: 'elperrocorreenelpatio'.",
+        "Los chicos vienen de a uno y marcan con una rayita dónde cortarían cada palabra.",
+        "Reescriben la oración separada en su cuaderno y la leen en voz alta para verificar que tiene sentido.",
+        "Variante con tarjetas: cada chico recibe palabras sueltas y arma su propia oración acomodándolas con espacios.",
+      ],
+      recursos: ["Pizarrón", "Tarjetas con palabras sueltas", "Cuaderno"],
+      duracion: "30 min",
+    },
+    {
+      titulo: "Sonidos gemelos: ch, ll, rr",
+      objetivo: "Asociar los dígrafos a su sonido y usarlos al escribir.",
+      aprenden: "Que dos letras juntas pueden sonar como un solo sonido (chico, lluvia, perro).",
+      desarrollo: [
+        "Presentá un dígrafo por vez con palabras-imagen: 'ch' con chico, chancho, leche.",
+        "Los chicos buscan en el aula o en su cabeza otras palabras con ese sonido y las dicen en voz alta.",
+        "Escriben tres palabras con el dígrafo del día. Trabajá un solo dígrafo por clase para no mezclar.",
+        "Juego de cierre: decís una palabra y levantan la mano si tiene el sonido del día.",
+      ],
+      recursos: ["Tarjetas-imagen por dígrafo", "Cuaderno", "Lista de palabras de ejemplo"],
+      duracion: "35 min",
+    },
   ],
   LE: [
-    "Lectura en voz alta de un texto breve (fluidez)",
-    "Comprensión de un cuento: preguntas literales e inferenciales",
-    "Lectura compartida de una fábula y su enseñanza",
-    "Anticipación a partir de la portada y las imágenes",
-    "Vocabulario nuevo en contexto de lectura",
+    {
+      titulo: "Lectura en voz alta: el cuento de cada día",
+      objetivo: "Ganar fluidez leyendo un texto breve y conocido en voz alta.",
+      aprenden: "A leer con ritmo, respetando el punto, sin trabarse en cada palabra.",
+      desarrollo: [
+        "Elegí un cuento corto (una página). Leelo vos primero, completo, con buena entonación: sos el modelo.",
+        "Lo vuelven a leer todos juntos en voz alta, siguiendo con el dedo.",
+        "Después, de a turnos, cada chico lee una oración. La relectura del mismo texto es lo que da fluidez.",
+        "Cerrá preguntando qué fue lo que más les gustó y por qué.",
+      ],
+      recursos: ["Un cuento breve (copia para cada chico o proyectado)", "Señalador o el dedo para seguir el renglón"],
+      duracion: "40 min",
+    },
+    {
+      titulo: "El detective del cuento (comprensión)",
+      objetivo: "Responder preguntas literales e inferenciales sobre un texto leído.",
+      aprenden: "A buscar información que está en el texto y a deducir lo que no está dicho pero se entiende.",
+      desarrollo: [
+        "Leé un cuento corto en voz alta. Antes de leer, mostrá la tapa y preguntá de qué creen que va a tratar.",
+        "Preguntas literales (la respuesta está en el texto): ¿quién es el personaje?, ¿dónde pasa?, ¿qué hizo?",
+        "Preguntas inferenciales (hay que deducir): ¿por qué se habrá puesto triste?, ¿qué creen que pasó después?",
+        "Cada chico dibuja la parte que más le gustó y la cuenta en una oración.",
+      ],
+      recursos: ["Un cuento con conflicto claro", "Hoja para dibujar", "Lista de preguntas preparada"],
+      duracion: "45 min",
+    },
+    {
+      titulo: "Anticipar con la tapa",
+      objetivo: "Formular hipótesis sobre un texto a partir de su portada e imágenes.",
+      aprenden: "Que se puede anticipar de qué trata un texto antes de leerlo, usando pistas visuales.",
+      desarrollo: [
+        "Mostrá solo la tapa de un libro (título e imagen). No leas todavía.",
+        "Preguntá: ¿de qué creen que trata?, ¿quién será el personaje?, ¿dónde pasará? Anotá sus hipótesis en el pizarrón.",
+        "Leé el cuento. Al terminar, volvé a las hipótesis: ¿cuáles acertaron?, ¿cuáles no?",
+        "Conversen sobre qué pistas de la tapa los ayudaron a adivinar bien.",
+      ],
+      recursos: ["Un libro con tapa atractiva", "Pizarrón para anotar hipótesis"],
+      duracion: "35 min",
+    },
+    {
+      titulo: "Palabras nuevas, tesoro nuevo",
+      objetivo: "Incorporar vocabulario nuevo a partir de la lectura.",
+      aprenden: "El significado de palabras nuevas usándolas en contexto, no de memoria.",
+      desarrollo: [
+        "Durante la lectura de un cuento, frená en dos o tres palabras que probablemente no conozcan.",
+        "Preguntá qué creen que significan según cómo viene la frase. Después explicá con un ejemplo cotidiano.",
+        "Cada palabra nueva va a un 'cofre del tesoro' (un afiche en el aula).",
+        "Cierre: usan una de las palabras nuevas en una oración propia, oral o escrita.",
+      ],
+      recursos: ["Un cuento con vocabulario variado", "Afiche 'cofre de palabras'", "Marcadores"],
+      duracion: "40 min",
+    },
   ],
   PE: [
-    "Dictado al docente de una historia colectiva",
-    "Escritura autónoma de una oración descriptiva",
-    "Reescritura del final de un cuento conocido",
-    "Texto breve de 3 o 4 oraciones con plan previo",
-    "Lista de palabras de un mismo campo semántico",
+    {
+      titulo: "Dictado al maestro: la historia de todos",
+      objetivo: "Producir un texto colectivo donde los chicos piensan y el docente escribe.",
+      aprenden: "Que escribir es poner ideas en palabras; producen textos más ricos de los que aún pueden escribir solos.",
+      desarrollo: [
+        "Proponé escribir entre todos una historia corta. Vos sos la mano que escribe en el pizarrón.",
+        "Preguntá: ¿cómo empieza?, ¿quién es el personaje?, ¿qué le pasa? Ellos dictan, vos escribís tal cual dicen.",
+        "Releé en voz alta lo que va quedando y preguntá si quieren cambiar o agregar algo. Así aprenden a revisar.",
+        "Al final, copian en su cuaderno la historia que crearon juntos.",
+      ],
+      recursos: ["Pizarrón grande", "Cuaderno para copiar", "Opcional: afiche para dejar la historia en el aula"],
+      duracion: "45 min",
+    },
+    {
+      titulo: "Mi oración, mi dibujo",
+      objetivo: "Escribir de forma autónoma una oración con sentido completo.",
+      aprenden: "A producir una oración propia, completa, de principio a fin.",
+      desarrollo: [
+        "Cada chico hace un dibujo libre de algo que le guste.",
+        "Después escribe una oración que cuente qué dibujó: 'Mi perro juega en la plaza.'",
+        "Recordales el plan mínimo: mayúscula al empezar, palabras separadas, punto al final.",
+        "Comparten: muestran el dibujo y leen su oración al grupo.",
+      ],
+      recursos: ["Hoja para dibujar", "Cuaderno", "Lápices de colores"],
+      duracion: "40 min",
+    },
+    {
+      titulo: "Otro final para el cuento",
+      objetivo: "Reescribir el final de un cuento conocido.",
+      aprenden: "Que un texto se puede transformar; a producir manteniendo coherencia con la historia.",
+      desarrollo: [
+        "Releé un cuento que ya conocen, hasta justo antes del final.",
+        "Preguntá: ¿y si terminara distinto? ¿Qué otro final se les ocurre?",
+        "Cada uno (o en parejas) escribe un final nuevo, de dos o tres oraciones.",
+        "Leen sus finales y votan cuál los sorprendió más. Festejen la variedad.",
+      ],
+      recursos: ["Un cuento conocido por el grupo", "Cuaderno"],
+      duracion: "45 min",
+    },
+    {
+      titulo: "Texto con plan: primero pienso, después escribo",
+      objetivo: "Escribir un texto breve (3-4 oraciones) habiendo planificado antes.",
+      aprenden: "Que antes de escribir conviene pensar qué y para quién; reduce la frustración.",
+      desarrollo: [
+        "Elegí un tema cercano: mi mascota, mi juego favorito, mi familia.",
+        "Plan oral entre todos: ¿qué tres cosas podríamos contar de eso? Anotalas como ayuda-memoria en el pizarrón.",
+        "Cada chico escribe su texto breve siguiendo ese plan.",
+        "Releen su texto y marcan con el dedo dónde pusieron cada punto.",
+      ],
+      recursos: ["Pizarrón para el plan", "Cuaderno"],
+      duracion: "45 min",
+    },
   ],
   OR: [
-    "Renarración de un cuento siguiendo la secuencia",
-    "Descripción oral organizada de una imagen",
-    "Dar y seguir instrucciones de varios pasos",
-    "Ronda de opiniones sobre una lectura compartida",
-    "Escucha activa: esperar el turno y retomar lo dicho",
+    {
+      titulo: "Te cuento el cuento (renarración)",
+      objetivo: "Volver a contar un cuento siguiendo el orden de los hechos.",
+      aprenden: "A organizar un relato con inicio, desarrollo y final; muestra qué comprendieron.",
+      desarrollo: [
+        "Leé un cuento corto con secuencia clara.",
+        "Mostrá tres o cuatro imágenes del cuento desordenadas. Entre todos las ordenan.",
+        "Cada chico, con las imágenes como apoyo, vuelve a contar una parte del cuento.",
+        "Si se traban, señalá la imagen que sigue, no les des la respuesta.",
+      ],
+      recursos: ["Un cuento con secuencia clara", "Imágenes de las escenas para ordenar"],
+      duracion: "40 min",
+    },
+    {
+      titulo: "Veo, veo y describo",
+      objetivo: "Describir oralmente una imagen de forma organizada.",
+      aprenden: "A observar con detalle y a poner en palabras lo que ven, con orden.",
+      desarrollo: [
+        "Mostrá una lámina con muchos detalles (una plaza, un mercado, una fiesta).",
+        "Empezá vos modelando: 'En esta imagen veo… arriba hay… abajo hay…'",
+        "Cada chico aporta algo que ve. Guialos a ir de lo general a lo particular.",
+        "Cierre: entre todos arman una descripción completa de la lámina.",
+      ],
+      recursos: ["Una lámina rica en detalles", "Espacio para que todos la vean"],
+      duracion: "35 min",
+    },
+    {
+      titulo: "Instrucciones para un robot",
+      objetivo: "Dar y seguir instrucciones orales de varios pasos.",
+      aprenden: "A ordenar instrucciones en secuencia y a escuchar con atención para ejecutarlas.",
+      desarrollo: [
+        "Un chico es el 'robot' y otro le da instrucciones para llegar a un objeto: 'Dos pasos al frente, giro, un paso.'",
+        "El robot ejecuta exactamente lo que escucha (ni más ni menos): así descubren si la instrucción fue clara.",
+        "Rotan los roles. Conversen qué instrucciones funcionaron mejor y por qué.",
+        "Variante: dar los pasos de una receta o de un juego conocido.",
+      ],
+      recursos: ["Un objeto-meta", "Espacio para moverse"],
+      duracion: "30 min",
+    },
+    {
+      titulo: "Ronda de opiniones",
+      objetivo: "Expresar y fundamentar una opinión sobre una lectura, escuchando a los demás.",
+      aprenden: "A dar su parecer con un porqué y a respetar el turno y la palabra del otro.",
+      desarrollo: [
+        "Después de leer un cuento, sentate con el grupo en ronda.",
+        "Preguntá algo opinable: ¿el personaje hizo bien?, ¿qué hubieran hecho ustedes?",
+        "Cada chico opina cuando tiene la palabra (podés usar un objeto que se pasa). Pedí siempre el 'porqué'.",
+        "Modelá la escucha: retomá lo que dijo un compañero antes de pasar al siguiente.",
+      ],
+      recursos: ["Un cuento con dilema", "Un objeto para marcar el turno de habla"],
+      duracion: "35 min",
+    },
   ],
   CL: [
-    "Familias de palabras y palabras derivadas",
-    "Sinónimos y antónimos en contexto",
-    "Identificar sustantivos en una oración",
-    "Adjetivos: describir objetos y personajes",
-    "Verbos: las acciones dentro de un relato",
+    {
+      titulo: "Familias de palabras",
+      objetivo: "Reconocer palabras que vienen de una misma raíz.",
+      aprenden: "Que las palabras tienen 'parientes' (pan, panadero, panadería) y eso ayuda a escribir y entender.",
+      desarrollo: [
+        "Partí de una palabra que apareció en una lectura: por ejemplo 'flor'.",
+        "Entre todos buscan parientes: florero, florería, florecita, florecer.",
+        "Arman un 'árbol de familia' en un afiche, con la palabra raíz en el tronco y los parientes en las ramas.",
+        "Cierre: cada chico elige una palabra de la familia y la usa en una oración.",
+      ],
+      recursos: ["Afiche con forma de árbol", "Marcadores", "Una palabra tomada de la lectura"],
+      duracion: "35 min",
+    },
+    {
+      titulo: "Lo mismo pero distinto: sinónimos y antónimos",
+      objetivo: "Reconocer palabras de significado parecido y opuesto en contexto.",
+      aprenden: "Que hay palabras que significan casi lo mismo (lindo/bonito) y otras lo contrario (grande/chico).",
+      desarrollo: [
+        "Tomá una oración de un cuento: 'El gigante era enorme.' Preguntá: ¿qué otra palabra significa parecido a enorme?",
+        "Juego de los opuestos: decís una palabra (alto) y ellos dicen el contrario (bajo), con el cuerpo si quieren.",
+        "Arman dos columnas en el cuaderno: parecidas / contrarias, con ejemplos que vayan saliendo.",
+        "Siempre partí de palabras que aparecieron en lo que leyeron, nunca en abstracto.",
+      ],
+      recursos: ["Una lectura previa", "Cuaderno", "Pizarrón con dos columnas"],
+      duracion: "35 min",
+    },
+    {
+      titulo: "Cazadores de nombres (sustantivos)",
+      objetivo: "Identificar sustantivos dentro de una oración.",
+      aprenden: "Que hay palabras que nombran cosas, personas, animales y lugares.",
+      desarrollo: [
+        "Sin dar la definición técnica, decí: vamos a buscar las palabras que nombran cosas o personas.",
+        "Leé una oración y entre todos señalan los 'nombres': 'El perro corre en la plaza' → perro, plaza.",
+        "Cada chico escribe una oración y subraya los nombres que encuentra.",
+        "A esta edad alcanza con que reconozcan y usen, no con que definan.",
+      ],
+      recursos: ["Oraciones de ejemplo", "Cuaderno", "Lápiz para subrayar"],
+      duracion: "30 min",
+    },
+    {
+      titulo: "Palabras que pintan (adjetivos)",
+      objetivo: "Usar adjetivos para describir objetos y personajes.",
+      aprenden: "Que hay palabras que dicen cómo es algo (grande, suave, colorido) y enriquecen lo que contamos.",
+      desarrollo: [
+        "Mostrá un objeto (una pelota, un peluche). Preguntá: ¿cómo es? Van diciendo cualidades: redonda, roja, blanda.",
+        "Tomá un personaje de un cuento y entre todos lo describen con tres o cuatro 'palabras que pintan'.",
+        "Cada chico elige un objeto del aula y escribe una oración describiéndolo con al menos un adjetivo.",
+        "Comparten y adivinan qué objeto describió cada uno por las pistas.",
+      ],
+      recursos: ["Objetos del aula", "Un personaje conocido", "Cuaderno"],
+      duracion: "35 min",
+    },
   ],
+}
+
+// Lista de títulos por eje (para selectores y compatibilidad con el resto del código)
+const ACTIVIDADES: Record<EjeKey, string[]> = {
+  SE: BIBLIOTECA.SE.map((c) => c.titulo),
+  LE: BIBLIOTECA.LE.map((c) => c.titulo),
+  PE: BIBLIOTECA.PE.map((c) => c.titulo),
+  OR: BIBLIOTECA.OR.map((c) => c.titulo),
+  CL: BIBLIOTECA.CL.map((c) => c.titulo),
+}
+
+// Buscar la clase completa por su título
+function claseporTitulo(eje: EjeKey, titulo: string): ClaseDidactica | undefined {
+  return BIBLIOTECA[eje].find((c) => c.titulo === titulo)
 }
 
 // Tips pedagógicos just-in-time por eje
@@ -212,21 +474,12 @@ type ActividadCronograma = { nombre: string; eje?: EjeKey; origen: "alba" | "doc
 type Cronograma = Record<Dia, ActividadCronograma[]>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Acceso a datos (Supabase REST) — sólo lectura/escritura de `seguimiento` y `alumnos`
+// Acceso a datos
+//  - Alumnos: vía API interna /api/students (la misma que usa jardín)
+//  - Guardar evaluación: vía API interna /api/seguimiento (la misma que jardín)
+//  - Leer evaluaciones: vía el cliente `supabase` de @/lib/supabase (igual que jardín)
+//  No se toca ningún archivo de jardín; sólo se reutiliza su plomería ya probada.
 // ─────────────────────────────────────────────────────────────────────────────
-
-async function sbGet(table: string, params: string): Promise<any[]> {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return []
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-      cache: "no-store",
-    })
-    return res.ok ? res.json() : []
-  } catch {
-    return []
-  }
-}
 
 // (Las escrituras se hacen vía las APIs internas /api/students y /api/seguimiento,
 //  que ya están probadas en jardín y comparten la misma Supabase.)
@@ -610,11 +863,33 @@ export default function PrimariaDashboard() {
     }
     setAlumnos(als)
     if (als.length > 0) {
-      const ids = als.map((a) => a.id).join(",")
-      const regs: Registro[] = await sbGet(
-        "seguimiento",
-        `alumno_id=in.(${ids})&eje=in.(SE,LE,PE,OR,CL)&order=fecha.asc`,
-      )
+      // Leer evaluaciones con el mismo cliente supabase que usa jardín
+      const ids = als.map((a) => a.id)
+      let regs: Registro[] = []
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from("seguimiento")
+            .select("id, alumno_id, eje, estado, actividad, fecha")
+            .in("alumno_id", ids)
+            .in("eje", ["SE", "LE", "PE", "OR", "CL"])
+            .order("fecha", { ascending: true })
+          if (error) {
+            setDiag(`No se pudieron leer las evaluaciones: ${error.message}`)
+          } else {
+            regs = (data || []).map((r: any) => ({
+              id: r.id,
+              alumno_id: r.alumno_id,
+              eje: r.eje,
+              estado: r.estado,
+              actividad: r.actividad ?? "",
+              fecha: r.fecha,
+            }))
+          }
+        } catch (e: any) {
+          setDiag(`Error leyendo evaluaciones: ${e?.message || "desconocido"}`)
+        }
+      }
       setRegistros(regs)
     } else {
       setRegistros([])
@@ -641,29 +916,17 @@ export default function PrimariaDashboard() {
     return { eje, actividad: lista[sugerenciaIdx % lista.length] }
   }, [analisis.ejeRecomendado, sugerenciaIdx])
 
+  // Clase completa (de la biblioteca) que corresponde a la sugerencia
+  const claseSugerida = useMemo(
+    () => claseporTitulo(sugerencia.eje, sugerencia.actividad),
+    [sugerencia.eje, sugerencia.actividad],
+  )
+
   // Al cambiar de eje en el registro, ajustar la actividad
   useEffect(() => {
     setActividadActiva(ACTIVIDADES[ejeActivo][0])
   }, [ejeActivo])
 
-  // ── Último estado por alumno en el eje activo (cualitativo, sin números)
-  function ultimoEstado(alumnoId: string, eje: EjeKey): Estado | null {
-    const delAlumno = registros.filter((r) => r.alumno_id === alumnoId && r.eje === eje)
-    return delAlumno.length ? delAlumno[delAlumno.length - 1].estado : null
-  }
-
-  function ciclarExcepcion(alumnoId: string) {
-    setExcepciones((prev) => {
-      const actual = prev[alumnoId]
-      const next = { ...prev }
-      // ciclo: (sin marca = logrado) → amarillo → rojo → ausente → sin marca
-      if (!actual) next[alumnoId] = "yellow"
-      else if (actual === "yellow") next[alumnoId] = "red"
-      else if (actual === "red") next[alumnoId] = "blue"
-      else delete next[alumnoId]
-      return next
-    })
-  }
 
   async function guardarRegistro() {
     if (alumnos.length === 0) return
@@ -906,61 +1169,6 @@ export default function PrimariaDashboard() {
           </section>
         ) : (
           <>
-            {/* ── Relato de ALBA (lo que ve, en palabras) */}
-            <section style={{ background: "#fff", borderRadius: 16, border: `1px solid ${ORANGE}33`, overflow: "hidden" }}>
-              <div style={{ padding: "10px 18px", background: "#fffaf2", borderBottom: `1px solid ${ORANGE}22`, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: ORANGE, letterSpacing: 1.5 }}>ALBA · LO QUE VEO HOY</span>
-              </div>
-              <div style={{ padding: 18 }}>
-                <p style={{ fontSize: 15, lineHeight: 1.6, color: "#1e293b", marginBottom: analisis.observaciones.length ? 14 : 0 }}>
-                  {analisis.relato}
-                </p>
-                {analisis.observaciones.length > 1 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {analisis.observaciones.slice(1).map((o, i) => (
-                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: ORANGE, marginTop: 7, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.55 }}>{o}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* ── Sugerencia de ALBA: aceptar / otra / manual */}
-            <section style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>ALBA propone para seguir la secuencia</h3>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b" }}>
-                  <span>Cargar en:</span>
-                  <select value={diaParaCargar} onChange={(e) => setDiaParaCargar(e.target.value as Dia)} style={{ padding: "4px 8px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: NAVY }}>
-                    {DIAS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ background: EJE(sugerencia.eje).bg, border: `1px solid ${EJE(sugerencia.eje).color}33`, borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: EJE(sugerencia.eje).color, letterSpacing: 1, marginBottom: 6 }}>
-                  {EJE(sugerencia.eje).nombre.toUpperCase()}
-                </div>
-                <p style={{ fontSize: 15, fontWeight: 600, color: "#1e293b", marginBottom: 8 }}>{sugerencia.actividad}</p>
-                <p style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5 }}>{analisis.motivoRecomendacion}</p>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button onClick={aceptarSugerencia} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: NAVY, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                  Aceptar y sumar
-                </button>
-                <button onClick={otraSugerencia} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: "#fff", color: NAVY, border: `1.5px solid ${NAVY}`, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                  Proponer otra
-                </button>
-                <button onClick={() => { setActManualEje(ejeActivo); setShowCargarManual(true) }} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: "#fff", color: "#64748b", border: "1px solid #e2e8f0", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                  Cargar la mía
-                </button>
-              </div>
-            </section>
-
             {/* ── Cronograma semanal */}
             <section style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden" }}>
               <div style={{ padding: "10px 18px", background: NAVY, color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -1025,6 +1233,97 @@ export default function PrimariaDashboard() {
               </div>
             </section>
 
+            {/* ── Relato de ALBA (lo que ve, en palabras) */}
+            <section style={{ background: "#fff", borderRadius: 16, border: `1px solid ${ORANGE}33`, overflow: "hidden" }}>
+              <div style={{ padding: "10px 18px", background: "#fffaf2", borderBottom: `1px solid ${ORANGE}22`, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: ORANGE, letterSpacing: 1.5 }}>ALBA · LO QUE VEO HOY</span>
+              </div>
+              <div style={{ padding: 18 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.6, color: "#1e293b", marginBottom: analisis.observaciones.length ? 14 : 0 }}>
+                  {analisis.relato}
+                </p>
+                {analisis.observaciones.length > 1 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {analisis.observaciones.slice(1).map((o, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: ORANGE, marginTop: 7, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.55 }}>{o}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ── Sugerencia de ALBA: aceptar / otra / manual */}
+            <section style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>La clase que ALBA propone para hoy</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b" }}>
+                  <span>Cargar en:</span>
+                  <select value={diaParaCargar} onChange={(e) => setDiaParaCargar(e.target.value as Dia)} style={{ padding: "4px 8px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12, color: NAVY }}>
+                    {DIAS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ background: EJE(sugerencia.eje).bg, border: `1px solid ${EJE(sugerencia.eje).color}33`, borderRadius: 12, padding: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: EJE(sugerencia.eje).color, letterSpacing: 1, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>{EJE(sugerencia.eje).nombre.toUpperCase()}</span>
+                  {claseSugerida && <span style={{ fontWeight: 600, opacity: 0.8 }}>⏱ {claseSugerida.duracion}</span>}
+                </div>
+                <p style={{ fontSize: 16, fontWeight: 700, color: "#1e293b", marginBottom: 6 }}>{sugerencia.actividad}</p>
+                <p style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5, marginBottom: claseSugerida ? 14 : 0 }}>{analisis.motivoRecomendacion}</p>
+
+                {claseSugerida && (
+                  <>
+                    {/* Qué aprenden los chicos */}
+                    <div style={{ background: "#fff", borderRadius: 10, padding: 12, marginBottom: 10, border: `1px solid ${EJE(sugerencia.eje).color}22` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: EJE(sugerencia.eje).color, letterSpacing: 0.5, marginBottom: 4 }}>QUÉ APRENDEN LOS CHICOS</div>
+                      <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 8 }}>{claseSugerida.aprenden}</p>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: 0.5, marginBottom: 2 }}>OBJETIVO</div>
+                      <p style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5 }}>{claseSugerida.objetivo}</p>
+                    </div>
+
+                    {/* Desarrollo de la clase */}
+                    <div style={{ background: "#fff", borderRadius: 10, padding: 12, marginBottom: 10, border: `1px solid ${EJE(sugerencia.eje).color}22` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: EJE(sugerencia.eje).color, letterSpacing: 0.5, marginBottom: 8 }}>CÓMO DARLA, PASO A PASO</div>
+                      <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                        {claseSugerida.desarrollo.map((paso, i) => (
+                          <li key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                            <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: EJE(sugerencia.eje).color, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                            <span style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.5 }}>{paso}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    {/* Recursos */}
+                    <div style={{ background: "#fff", borderRadius: 10, padding: 12, border: `1px solid ${EJE(sugerencia.eje).color}22` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: EJE(sugerencia.eje).color, letterSpacing: 0.5, marginBottom: 6 }}>RECURSOS Y MATERIALES</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {claseSugerida.recursos.map((r, i) => (
+                          <span key={i} style={{ fontSize: 11.5, color: "#475569", background: EJE(sugerencia.eje).bg, border: `1px solid ${EJE(sugerencia.eje).color}33`, borderRadius: 999, padding: "4px 12px" }}>{r}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                <button onClick={aceptarSugerencia} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: NAVY, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  Aceptar y sumar
+                </button>
+                <button onClick={otraSugerencia} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: "#fff", color: NAVY, border: `1.5px solid ${NAVY}`, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                  Proponer otra
+                </button>
+                <button onClick={() => { setActManualEje(ejeActivo); setShowCargarManual(true) }} style={{ flex: 1, minWidth: 130, padding: "11px", borderRadius: 10, background: "#fff", color: "#64748b", border: "1px solid #e2e8f0", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                  Cargar la mía
+                </button>
+              </div>
+            </section>
+
             {/* ── Proyectos */}
             <section style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 18 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -1074,9 +1373,16 @@ export default function PrimariaDashboard() {
               )}
             </section>
 
-            {/* ── Registro del aula (lógica invertida, sin números) */}
+            {/* ── Registro del aula (formato jardín: botones de color visibles) */}
             <section style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 18 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Registro de la clase</h3>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Registro del aula</h3>
+                {Object.keys(excepciones).length > 0 && (
+                  <button onClick={() => setExcepciones({})} style={{ fontSize: 11, color: "#64748b", background: "#f1f5f9", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>
+                    ↺ Reiniciar
+                  </button>
+                )}
+              </div>
 
               {/* Selector de eje */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
@@ -1090,31 +1396,69 @@ export default function PrimariaDashboard() {
                 })}
               </div>
 
-              {/* Actividad */}
-              <select value={actividadActiva} onChange={(e) => setActividadActiva(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${EJE(ejeActivo).color}40`, fontSize: 13, color: "#334155", marginBottom: 14 }}>
-                {ACTIVIDADES[ejeActivo].map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
+              {/* Banner actividad del día */}
+              <div style={{ borderRadius: 12, padding: 14, marginBottom: 12, background: EJE(ejeActivo).color, color: "#fff" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, opacity: 0.85, marginBottom: 4 }}>ACTIVIDAD QUE SE REGISTRA</div>
+                <select value={actividadActiva} onChange={(e) => setActividadActiva(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 600, color: "#1e293b", background: "rgba(255,255,255,0.95)" }}>
+                  {ACTIVIDADES[ejeActivo].map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
 
-              <p style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 10 }}>
-                Tocá solo a quienes <strong>necesitan acompañamiento</strong>. El resto queda como logrado. (Un toque: en proceso · dos: refuerzo · tres: ausente)
-              </p>
+              {/* Instrucción */}
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                <p style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.5 }}>
+                  Marcá solo a los que están <strong>en proceso, en refuerzo o ausentes</strong>. Al registrar, los que no marcaste quedan como <strong style={{ color: "#16a34a" }}>logrado</strong>.
+                </p>
+              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+              {/* Filas de alumnos — botones de color visibles (formato jardín) */}
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                 {alumnos.map((al) => {
-                  const exc = excepciones[al.id]
-                  const prev = ultimoEstado(al.id, ejeActivo)
-                  const borde = exc ? COLOR_ESTADO[exc] : prev ? COLOR_ESTADO[prev] + "55" : "#e2e8f0"
-                  const fondo = exc ? COLOR_ESTADO[exc] + "12" : "#fff"
-                  const etiqueta = exc === "yellow" ? "En proceso" : exc === "red" ? "Refuerzo" : exc === "blue" ? "Ausente" : null
+                  const estado = excepciones[al.id] || null
+                  const colorActual = estado ? COLOR_ESTADO[estado] : "#94a3b8"
+                  const bgFila = estado ? COLOR_ESTADO[estado] + "12" : "#f8fafc"
                   return (
-                    <button key={al.id} onClick={() => ciclarExcepcion(al.id)} style={{ padding: "10px 8px", borderRadius: 10, border: `2px solid ${borde}`, background: fondo, cursor: "pointer", textAlign: "center", transition: "all 0.12s" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: prev ? COLOR_ESTADO[prev] : "#e2e8f0", margin: "0 auto 5px" }} />
-                      <div style={{ fontSize: 12, fontWeight: 500, color: "#334155" }}>{al.nombre.split(" ")[0]}</div>
-                      {etiqueta && <div style={{ fontSize: 9, fontWeight: 700, color: COLOR_ESTADO[exc], marginTop: 3 }}>{etiqueta}</div>}
-                    </button>
+                    <li key={al.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: bgFila, border: `2px solid ${colorActual}30` }}>
+                      <div style={{ width: 12, height: 12, borderRadius: "50%", background: colorActual, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{al.nombre}</span>
+
+                      {estado && estado !== "green" && (
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: colorActual, color: "#fff", marginRight: 2 }}>
+                          {estado === "yellow" ? "En proceso" : estado === "red" ? "Refuerzo" : "Ausente"}
+                        </span>
+                      )}
+
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        {([
+                          { v: "yellow" as Estado, label: "En proceso", on: "#fbbf24", off: "#fef3c7", offText: "#d97706" },
+                          { v: "red" as Estado, label: "Refuerzo", on: "#ef4444", off: "#fee2e2", offText: "#ef4444" },
+                          { v: "blue" as Estado, label: "Ausente", on: "#6366f1", off: "#e0e7ff", offText: "#6366f1" },
+                        ]).map((opt) => {
+                          const elegido = estado === opt.v
+                          return (
+                            <button
+                              key={opt.v}
+                              onClick={() => setExcepciones((prev) => {
+                                const next = { ...prev }
+                                if (prev[al.id] === opt.v) delete next[al.id]
+                                else next[al.id] = opt.v
+                                return next
+                              })}
+                              title={opt.label}
+                              style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${elegido ? opt.on : opt.off}`, background: elegido ? opt.on : opt.off, color: elegido ? "#fff" : opt.offText, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                            >
+                              {opt.v === "yellow" ? "◐" : opt.v === "red" ? "!" : "✕"}
+                            </button>
+                          )
+                        })}
+                        {estado && (
+                          <button onClick={() => setExcepciones((prev) => { const n = { ...prev }; delete n[al.id]; return n })} title="Volver a logrado" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #bbf7d0", background: "#dcfce7", color: "#16a34a", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>✓</button>
+                        )}
+                      </div>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
 
               <button onClick={guardarRegistro} disabled={guardando} style={{ width: "100%", marginTop: 14, padding: "13px", borderRadius: 12, background: guardando ? "#94a3b8" : NAVY, color: "#fff", border: "none", fontWeight: 700, fontSize: 14, cursor: guardando ? "default" : "pointer" }}>
                 {guardando ? "Guardando…" : "Registrar clase"}
