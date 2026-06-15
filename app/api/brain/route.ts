@@ -729,6 +729,143 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
       dccaba: "DC CABA 2025 - CT: Ciclo completo Antes-Durante-Despues liderado por los ninos. Modelo de maxima evidencia (Lectura Dialogica + Cruz MINEDUC).",
       sala: "5"
     },
+    // ── ACTIVIDADES NUEVAS CT: leer palabras, frases y oraciones ──
+    {
+      titulo: "La ventanita: leer palabras letra por letra",
+      objetivo: "Decodificar una palabra revelando una letra por vez y sintetizando los sonidos",
+      descripcion: "Se escriben palabras breves en imprenta minuscula en tiras de papel. Se cubren con una cartulina o regla y se deslizan poco a poco, revelando una letra por vez. Con cada letra los ninos pronuncian el sonido y lo mantienen hasta que aparece la siguiente, prolongando: ssssoooollll. Al completar se pregunta: que palabra se formo? Empezar con palabras breves de silabas directas (sol, mar, mesa, pato) e ir complejizando.",
+      materiales: ["Tiras de papel con palabras en imprenta minuscula", "Cartulina o regla para cubrir"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Decodificacion y sintesis de sonidos. La ventanita favorece la recodificacion fonologica, habilidad clave para leer.",
+      sala: "5"
+    },
+    {
+      titulo: "Dedo lector: decodificar en el pizarron",
+      objetivo: "Leer palabras de forma colectiva destapando letra por letra en el pizarron",
+      descripcion: "Se escribe en el pizarron una palabra breve y se tapa con la mano, una regla o cartulina. Se destapa una letra por vez mientras se la senala con el dedo. Los ninos dicen el sonido de cada letra y van uniendo los sonidos a medida que se descubren. Al completar: que palabra se formo? Se repite con otra palabra y se invita a un nino a pasar a senalar con el dedo lector.",
+      materiales: ["Pizarron", "Tiza o fibron", "Mano, regla o cartulina"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Decodificacion colectiva con modelado docente. Variante de la ventanita para grupo total.",
+      sala: "5"
+    },
+    {
+      titulo: "Parecidas, no iguales: leer con precision",
+      objetivo: "Leer palabras con precision discriminando entre opciones similares",
+      descripcion: "Tarjetas con un dibujo y dos o tres palabras parecidas entre si (por ejemplo saco / sapo / sano). La docente nombra el dibujo para que quede claro de que palabra se trata. Luego leen a grupo completo las palabras y marcan con una cruz cual representa el dibujo. Se enfatiza la atencion: son similares pero no iguales. Variante: unir cada palabra de una serie desordenada (lana / luna / lupa) con su dibujo.",
+      materiales: ["Tarjetas con un dibujo y palabras similares"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura precisa sin errores. La discriminacion entre palabras similares afina la decodificacion.",
+      sala: "5"
+    },
+    {
+      titulo: "La verduleria: leer con fluidez y velocidad",
+      objetivo: "Leer listas de palabras con precision y mayor velocidad en contexto de juego",
+      descripcion: "En pequenos grupos, cada equipo recibe una lista de compras de frutas y verduras. Los dibujos de frutas y verduras estan en el centro. La docente modela leyendo las primeras palabras de una lista y tomando el producto indicado. Los equipos hacen lo mismo: el que junta todos los productos de su lista gana. Al final se revisa entre todos que los productos sean los correctos. Variante: supermercado, libreria, vivero.",
+      materiales: ["Listas de compras con palabras", "Tarjetas de dibujos de frutas y verduras"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora (precision + velocidad). La lectura con proposito real motiva y consolida la decodificacion.",
+      sala: "5"
+    },
+    {
+      titulo: "Busqueda del tesoro: leer para encontrar",
+      objetivo: "Leer palabras con precision y velocidad para localizar objetos reales",
+      descripcion: "En pequenos grupos, cada equipo recibe una lista de objetos que estan dentro del aula (goma, lapiz, zapatilla, regla, cuaderno). Se ponen de acuerdo para leer cada palabra y recolectar lo que indica. El equipo que junta primero todos los objetos de su lista gana. Se adapta segun los objetos disponibles en la sala.",
+      materiales: ["Listas de palabras con objetos del aula"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora con proposito. Leer para actuar refuerza la comprension de palabras.",
+      sala: "5"
+    },
+    {
+      titulo: "Bingo de palabras con opacidades ortograficas",
+      objetivo: "Reconocer palabras con ca/co/cu, ga/go/gu, ce/ci, ge/gi",
+      descripcion: "Cada estudiante recibe un carton con palabras que contienen opacidades ortograficas (ca/co/cu, ga/go/gu, ce/ci, ge/gi). La docente lee una palabra en voz alta de una tarjeta y los ninos buscan en su carton la palabra que escucharon. Si la encuentran, colocan una ficha encima. Gana quien complete primero una fila, columna o el carton entero.",
+      materiales: ["Cartones con palabras de opacidades ortograficas", "Fichas para tapar", "Tarjetas con palabras para leer"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con ortografia menos transparente. El juego y la repeticion consolidan las opacidades.",
+      sala: "5"
+    },
+    {
+      titulo: "Arriba las manos: opacidades en juego",
+      objetivo: "Reconocer y diferenciar palabras con opacidades (b-v, s-c-z, g-j, c-k-qu)",
+      descripcion: "La docente reparte tarjetas con palabras a varios ninos y se queda con tarjetas de dibujos. Levanta un dibujo en alto (por ejemplo vaca): habra dos ninos que tienen esa palabra escrita. El primero que levante el cartel correcto bien alto gana el punto. Se continua con otros dibujos. Puede jugarse en equipos. Palabras: burro/vaca, celeste/circo/zapato, genio/jirafa/girasol, kiwi/quince/queso.",
+      materiales: ["Tarjetas con dibujos de palabras con opacidades", "Tarjetas con esas palabras (dos de cada una)"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Reconocimiento de opacidades ortograficas a traves del juego de asociacion dibujo-palabra.",
+      sala: "5"
+    },
+    {
+      titulo: "Domino con sinonimos",
+      objetivo: "Leer palabras y unir las que significan lo mismo",
+      descripcion: "Fichas de domino divididas por la mitad, con una palabra en cada extremo, distribuidas de modo que los sinonimos queden en fichas separadas (anteojos-lentes, rapido-veloz, pelo-cabello, grande-enorme, pequeno-chico). Se reparten 5 fichas por equipo y se coloca una en el centro. Por turnos leen sus fichas y unen alguna que contenga un sinonimo de las del centro. Gana el primero que se queda sin fichas. Variante: con antonimos.",
+      materiales: ["Fichas de domino con pares de sinonimos"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras y reconocimiento de sinonimos. Integra decodificacion con vocabulario y significado.",
+      sala: "5"
+    },
+    {
+      titulo: "Uni con flechas: imagen y palabra",
+      objetivo: "Leer palabras con opacidades y unirlas con su imagen",
+      descripcion: "Cada estudiante recibe una hoja con imagenes y palabras (gusano, gelatina, girasol, cama, maceta, cielo). La docente modela la lectura de cada palabra haciendo hincapie en las silabas con opacidades. Los ninos leen al unisono y luego unen con flechas cada imagen con su palabra, en parejas o de forma individual. Al terminar, correccion grupal leyendo en voz alta y comparando con las imagenes.",
+      materiales: ["Hojas con imagenes y palabras", "Lapiz o marcador"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con opacidades ortograficas unida a la comprension (imagen-palabra).",
+      sala: "5"
+    },
+    {
+      titulo: "La incorrecta: leer y categorizar",
+      objetivo: "Leer palabras e identificar cual no pertenece a la categoria",
+      descripcion: "Renglones con palabras de una misma categoria, excepto una intrusa (por ejemplo: mono - cocodrilo - cebra - botella - tiburon). La docente modela: leemos las palabras de este renglon... todas son animales menos una. Cual es? Botella. Luego los ninos identifican la palabra incorrecta en cada renglon y se hace una puesta en comun. Variante: categorias mas complejas (animales marinos / terrestres).",
+      materiales: ["Renglones de palabras por categoria con una intrusa"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura con precision e identificacion de categoria semantica. Integra decodificacion y comprension.",
+      sala: "5"
+    },
+    {
+      titulo: "Completa la oracion: elegir la palabra correcta",
+      objetivo: "Leer una oracion y completarla eligiendo entre palabras parecidas",
+      descripcion: "Hojas con oraciones en imprenta minuscula a las que les falta una palabra, con opciones similares entre si. Por ejemplo: El ___ come una banana, opciones el mono o la mano. Si la lectura es vacilante, la docente lee la oracion y los ninos solo las palabras faltantes. Los ninos eligen la correcta y la marcan con un circulo. Luego releen la oracion completa para verificar que tenga sentido.",
+      materiales: ["Hojas con oraciones incompletas y opciones de palabras similares"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con precision y distincion semantica. El sentido de la oracion guia la eleccion correcta.",
+      sala: "5"
+    },
+    {
+      titulo: "Armamos frases: articulos y sustantivos",
+      objetivo: "Leer y unir articulos con sustantivos reconociendo la concordancia",
+      descripcion: "Se escriben en el pizarron dos columnas: una con articulos (el, la, los, las, un, una, unos, unas) y otra con sustantivos (munecas, nenes, manzana, arbol, luna). La docente modela: voy a elegir unas y nenes. Se puede decir unas nenes? No. Buscamos otra: unas munecas? Si. Entre todos unen los articulos con los sustantivos que concuerdan, leyendo en voz alta.",
+      materiales: ["Pizarron y marcador"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de frases simples. Reconocer la relacion del articulo con el sustantivo inicia el procesamiento sintactico.",
+      sala: "5"
+    },
+    {
+      titulo: "Junto lo que va junto: frases en oraciones",
+      objetivo: "Leer frases y unirlas para formar oraciones con sentido",
+      descripcion: "Tarjetas con frases que pueden unirse para formar oraciones (el mono / come bananas en el arbol / la casa / tiene cuatro habitaciones / la abuela / cocina con sus nietos). Se ubican sobre las mesas o el piso. La docente modela: en esta dice el mono, cual frase puede unirse? Tiene cuatro habitaciones? No tiene sentido. Come bananas en el arbol? Si. Luego los ninos arman oraciones. Variante: en equipos que compiten.",
+      materiales: ["Tarjetas con frases para combinar"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de frases y comprension para formar oraciones correctas. Procesamiento sintactico y semantico.",
+      sala: "5"
+    },
+    {
+      titulo: "Que dinosaurio es: comprender oraciones",
+      objetivo: "Leer oraciones descriptivas y relacionarlas con la imagen correcta",
+      descripcion: "Una hoja con 4 dibujos de dinosaurios y, a un lado, oraciones desordenadas que los describen en imprenta minuscula (Tiene cuernos en la cabeza y patas cortas; Es muy grande, camina en dos patas y tiene dientes afilados; etc.). La docente modela leyendo una oracion y preguntando a que dibujo corresponde, uniendo con una flecha. Luego se hace en parejas o de forma individual y se cierra con una puesta en comun. Variante: otros animales u objetos.",
+      materiales: ["Hojas con dibujos y oraciones descriptivas desordenadas"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Lectura y comprension de oraciones. Relacionar texto con imagen consolida la comprension literal.",
+      sala: "5"
+    },
+    {
+      titulo: "Los artistas: leer y dibujar la oracion",
+      objetivo: "Leer oraciones, comprenderlas y representarlas con un dibujo",
+      descripcion: "La docente propone convertirse en artistas. Modela: vamos a leer las oraciones y pensar como representarlas. Por ejemplo El cocinero prepara una torta de cumpleanos: que deberiamos dibujar? Una peluqueria? No. Una cocina, un cocinero y una torta. Luego cada nino (solo o en parejas) elige una oracion y realiza el dibujo correspondiente. Oraciones: Los ninos juegan en el parque; Los autos circulan por la ruta; El perro tiene manchas marrones y negras.",
+      materiales: ["Tarjetas con oraciones representables", "Hojas y crayones"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de oraciones. Representar graficamente lo leido evidencia la comprension del sentido.",
+      sala: "5"
+    },
+    {
+      titulo: "Como estoy: leer con prosodia",
+      objetivo: "Leer oraciones en voz alta con la entonacion que indica la emocion",
+      descripcion: "Lista de oraciones con signos de puntuacion variados (preguntas, exclamaciones) y tarjetas con emojis de emociones (contento, sorprendido, enojado, cansado, triste, preocupado). Cada nino lee una oracion en voz alta segun el emoji que le toca, en secreto, y los demas adivinan con que emocion la leyo. La docente modela primero leyendo una oracion con tono preocupado, bien acentuado.",
+      materiales: ["Lista de oraciones con signos de puntuacion", "Tarjetas con emojis de emociones"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez y prosodia. La lectura expresiva integra decodificacion, comprension y entonacion.",
+      sala: "5"
+    },
+    {
+      titulo: "Correcto o incorrecto: leer respetando la puntuacion",
+      objetivo: "Leer oraciones respetando las pausas e identificar si la puntuacion es correcta",
+      descripcion: "Tarjetas con oraciones: algunas con puntuacion correcta y otras incorrecta (Los chicos, comen huevos, fritos / La vaca, el pato y el cerdo viven en la granja). Se leen en voz alta por turnos respetando la puntuacion, haciendo una pausa en cada coma. Si al leerla no se entiende el significado, el grupo dice Incorrecto. La docente modela: si leo Los chicos, comen huevos, fritos, se entiende? No. Por que? Las comas estan mal usadas.",
+      materiales: ["Tarjetas con oraciones de puntuacion correcta e incorrecta"],
+      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora y uso de pausas. Respetar la puntuacion es parte de la comprension del texto.",
+      sala: "5"
+    },
     {
       titulo: "Evaluacion CT: texto nuevo y rubrica",
       objetivo: "Evaluar comprension con texto no trabajado previamente",
