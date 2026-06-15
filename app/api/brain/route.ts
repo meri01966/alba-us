@@ -1125,6 +1125,111 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
       dccaba: "DC CABA 2025 - EA Sala 5: Revision y correccion como parte del proceso escritor. Reading-Writing Workshop (Calkins, 2001): la revision por pares instala la conciencia del lector desde el nivel inicial.",
       sala: "5"
     },
+    // ── ACTIVIDADES NUEVAS EA: escribir palabras, frases y oraciones ──
+    {
+      titulo: "Palabras con letras moviles",
+      objetivo: "Componer palabras buscando la letra que corresponde a cada sonido",
+      descripcion: "Se presenta la imagen de la palabra a formar, por ejemplo un sol. Se nombra y se estiran sus sonidos: ssoooolll. Los ninos buscan las letras moviles que correspondan a cada sonido y forman la palabra sobre la mesa o el pizarron. La primera vez se modela mostrando solo las letras necesarias. A medida que ganan autonomia, buscan las letras en una bandeja donde estan todas mezcladas mientras se autodictan la palabra.",
+      materiales: ["Letras moviles", "Tarjetas con imagenes de palabras", "Bandeja"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Composicion de palabras por correspondencia sonido-letra sin el proceso de trazado. Ideal para los primeros momentos de la escritura.",
+      sala: "5"
+    },
+    {
+      titulo: "Sopa de letras: formar palabras",
+      objetivo: "Tomar las letras necesarias para formar la palabra de una imagen",
+      descripcion: "La docente ubica letras moviles mezcladas en el piso o la mesa formando una sopa de letras. Muestra un dibujo (por ejemplo sol) y explica: junten con su cuchara (la mano) las letras que necesiten para formar esa palabra. Entre todos explicitan que letras se necesitan, las juntan y la leen. Luego cada nino forma la palabra del dibujo que le toca. Se complejiza segun la estructura silabica (sol, pato, panal, plato).",
+      materiales: ["Letras moviles", "Tarjetas con dibujos de distinta complejidad silabica", "Cucharas opcionales"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por correspondencia. La manipulacion de letras consolida la relacion sonido-grafia.",
+      sala: "5"
+    },
+    {
+      titulo: "Crucipalabras: una letra por sonido",
+      objetivo: "Escribir palabras colocando una letra en cada casillero segun sus sonidos",
+      descripcion: "Tarjetas con dibujos y, al lado, tablas con tantos recuadros como letras tiene la palabra. La docente explica: para escribir mano necesitamos 4 letras porque son 4 sonidos. Modela seleccionando un dibujo, prolongando los sonidos y mostrando que letra va en cada recuadro. Luego los ninos completan con letras moviles. Se complejiza segun la estructura silabica.",
+      materiales: ["Letras moviles", "Tarjetas con dibujos y tablas de recuadros"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras con apoyo visual de la cantidad de sonidos. El casillero ayuda a no omitir letras.",
+      sala: "5"
+    },
+    {
+      titulo: "Palabras que se transforman",
+      objetivo: "Cambiar una letra de una palabra para formar una palabra nueva",
+      descripcion: "Se propone una palabra sencilla con letras moviles sobre una superficie plana (por ejemplo sol). Se reconocen sus sonidos. La docente invita a cambiar una letra para formar una palabra nueva: si a sol le cambiamos la o por la a, que queda? Sal. Se sigue la cadena: sol, sal, mal, mil. Se modela verbalizando los sonidos y mostrando el reemplazo de la letra.",
+      materiales: ["Letras moviles", "Superficie plana o pizarron magnetico"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Conciencia fonemica y escritura inicial. La transformacion de palabras hace visible como cada sonido importa.",
+      sala: "5"
+    },
+    {
+      titulo: "La Tortuga: escribir palabras al dictado lento",
+      objetivo: "Escribir palabras a partir del reconocimiento de sonidos prolongados",
+      descripcion: "Se presenta una tortuga (titere o juguete) que habla muy, muy lento. Los ninos escriben en sus cuadernos las palabras que la tortuga va pronunciando despacio, segun lo trabajado previamente. Cuando la tortuga se retira, se evalua entre todos quien escribio mas palabras y quien omitio menos sonidos, y se revisan juntos los errores. Se complejiza la estructura silabica (CV, luego CVC, CCV).",
+      materiales: ["Titere o juguete de tortuga", "Lista de palabras segun el nivel", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por correspondencia sonido-letra. El ritmo lento facilita la segmentacion y el trazado.",
+      sala: "5"
+    },
+    {
+      titulo: "Dictado de palabras estirando los sonidos",
+      objetivo: "Escribir palabras letra por letra a partir de los sonidos prolongados",
+      descripcion: "La docente elige una palabra sencilla, por ejemplo luna, y la repite estirando cada sonido: llllluuunnnaaa. Invita a escribirla letra por letra con apoyo verbal: que sonido escuchan primero? Con que letra lo escribimos? Se repite con otras palabras variando la dificultad. Para complejizar: silabas mas complejas (mar, panal, pluma) o que los ninos dicten palabras al grupo estirando ellos los sonidos.",
+      materiales: ["Lista de palabras segun el nivel", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura por correspondencia con modelado del estiramiento de sonidos. Fortalece conciencia fonologica y trazado.",
+      sala: "5"
+    },
+    {
+      titulo: "Etiquetadora: escribir nombres de cosas",
+      objetivo: "Escribir palabras de categorias semanticas para crear carteles",
+      descripcion: "La docente cuenta que se le rompio la etiquetadora, la maquina que hace carteles con los nombres de las cosas, y necesita ayuda. Muestra una imagen (por ejemplo una cocina): a esta tarjeta se le perdio el cartel, vamos a escribirlo. Escribe cocina en el pizarron, luego lo borra y los ninos lo escriben en la tarjeta. Despues escriben el resto de los carteles, incluso de objetos de cada imagen (tenedor, plato, cuchara).",
+      materiales: ["Tarjetas con imagenes de lugares y objetos", "Tarjetas en blanco para carteles"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por categorias semanticas con proposito funcional (rotular, nombrar el mundo).",
+      sala: "5"
+    },
+    {
+      titulo: "La oracion que crece",
+      objetivo: "Escribir una oracion que se amplia agregando nombre, accion y lugar",
+      descripcion: "Se parte de una imagen disparadora (por ejemplo una vaca comiendo pasto en el campo). Se pregunta que ven: una vaca. Se escribe la frase. Luego se agregan componentes con preguntas: como es la vaca? Negra. Que hace? Come pasto. Queda La vaca negra come pasto. Por ultimo: donde esta? En el campo. La vaca negra come pasto en el campo. Cada vez se borra y los ninos la escriben en sus cuadernos. Se comparan versiones de distintos dias.",
+      materiales: ["Imagenes disparadoras simples", "Pizarron", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones que crecen en complejidad (nombre, accion, lugar). Enriquece la escritura progresivamente.",
+      sala: "5"
+    },
+    {
+      titulo: "El dado de las oraciones",
+      objetivo: "Escribir oraciones combinando personaje, accion y lugar al azar",
+      descripcion: "Tres dados tematicos: uno de personajes (gato, nina, vaca), uno de acciones (correr, comer, dibujar) y uno de lugares (parque, casa, campo). Tres ninos lanzan un dado cada uno. La docente escribe la oracion modelo verbalizando: salio rana, salta y jardin. Primero quien: La rana. Que hace: salta. Donde: en el jardin. La rana salta en el jardin. Luego cada nino la escribe en su cuaderno. Para complejizar: dado de momentos del dia (sol/luna) para el cuando.",
+      materiales: ["Tres dados tematicos (personajes, acciones, lugares)", "Pizarron", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones completas con estructura quien-que hace-donde, de manera ludica.",
+      sala: "5"
+    },
+    {
+      titulo: "Vamos a escribir frases: articulo y sustantivo",
+      objetivo: "Escribir frases simples reconociendo la concordancia articulo-sustantivo",
+      descripcion: "La docente muestra una imagen (por ejemplo un oso) y pregunta que ven. Explicita que se pueden usar dos articulos: el oso y un oso, escribiendolos. Luego se dividen en grupos pequenos con tarjetas de articulos (el, la, los, las, un, una, unos, unas) e imagenes. Forman frases combinando las tarjetas y las escriben en una hoja. Gana el grupo que mas frases correctas arma. Para complejizar: agregar una caracteristica (el oso marron).",
+      materiales: ["Tarjetas con imagenes", "Tarjetas con articulos", "Hojas"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de frases simples con articulos definidos e indefinidos. Reconocimiento de la concordancia.",
+      sala: "5"
+    },
+    {
+      titulo: "De que color es: sumar adjetivos a la frase",
+      objetivo: "Extender una frase simple agregando un adjetivo",
+      descripcion: "Se parte de una imagen (por ejemplo un oso) y se escribe la frase con articulo: el oso. La docente selecciona una tarjeta de color y propone sumar una caracteristica: puede ser marron el oso? Se agrega: El oso marron. Se borra y los ninos la escriben en sus cuadernos. Luego en grupos combinan tarjetas de articulos, imagenes y colores para formar y escribir frases. Variante: tarjetas de tamanos o formas.",
+      materiales: ["Tarjetas con imagenes", "Tarjetas con articulos", "Tarjetas con colores", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Extension de la frase simple sumando adjetivos. El uso del adjetivo enriquece la produccion escrita.",
+      sala: "5"
+    },
+    {
+      titulo: "Que le pasa: escribir oraciones con emociones",
+      objetivo: "Escribir oraciones sencillas a partir de la emocion de un personaje",
+      descripcion: "Imagenes de personajes con expresiones faciales (un oso alegre, un perro triste, un nino sorprendido). La docente muestra una y pregunta que ven: hay un oso. Que le pasa, como se siente? Esta contento. Se escribe El oso esta contento. Se borra y los ninos la escriben en sus cuadernos. Luego en grupos pequenos cada uno forma una oracion con la imagen que le toco. Para complejizar: sumar una caracteristica (el oso marron).",
+      materiales: ["Imagenes de personajes con emociones", "Pizarron", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones sencillas a partir de la lectura de emociones. Integra comprension y escritura.",
+      sala: "5"
+    },
+    {
+      titulo: "Distintos tipos de oraciones",
+      objetivo: "Escribir oraciones exclamativas, interrogativas, afirmativas y negativas",
+      descripcion: "Un cuadro con el dibujo de una palabra, el tipo de oracion a formular y un espacio para completar. La docente presenta una imagen (por ejemplo un helado): pensemos una oracion exclamativa. Para que sirven? Para expresar emociones. Se les ocurre alguna con helado? Por ejemplo Me encanta el helado, atentos a los signos de exclamacion. Se escribe en el pizarron, se borra y los ninos la escriben en el cuadro. Se sigue con otros tipos. Para complejizar: escribir un dialogo de preguntas y respuestas.",
+      materiales: ["Cuadro con dibujo, tipo de oracion y espacio para completar", "Cuadernos"],
+      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de distintos tipos de oraciones segun los signos de puntuacion trabajados (exclamacion, interrogacion).",
+      sala: "5"
+    },
     {
       titulo: "Evaluacion EA sala 5: texto autonomo + portfolio",
       objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma de un texto breve",
