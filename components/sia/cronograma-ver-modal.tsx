@@ -222,6 +222,13 @@ export function CronogramaVerModal({ open, onClose, sala, cronograma, clasesEspe
                     </div>
                   )}
 
+                  {/* Recibimiento e Intercambio del dia */}
+                  {(data?.recibimiento?.trim() || data?.intercambio?.trim()) && (
+                    <div className="px-3 pt-3 pb-3 space-y-1 border-b border-slate-100">
+                      <SeccionDetalle label="Recibimiento" texto={data?.recibimiento || ""} />
+                      <SeccionDetalle label="Intercambio" texto={data?.intercambio || ""} />
+                    </div>
+                  )}
                   {/* Actividades — con todos los detalles */}
                   <div className="flex-1 px-3 py-3 space-y-3">
                     {actAlba && <CardActividad act={actAlba} origen="alba" />}
