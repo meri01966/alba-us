@@ -56,7 +56,7 @@ const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", r
 // Detectar si una sala es Maternal (Naranjos y Pinitos son maternal en ambos turnos; ademas cualquier sala que termine en TM)
 const esMateral = (sala: string) => {
   const s = sala.toUpperCase()
-  return s.startsWith("NARANJOS") || s.startsWith("PINITOS") || s.endsWith("TM")
+  return s.startsWith("NARANJOS") || s.startsWith("PINITOS")
 }
 
 // Grafico de barras mini para los 3 ejes - clickeable
