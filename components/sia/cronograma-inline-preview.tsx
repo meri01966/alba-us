@@ -86,6 +86,7 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
 
   // Derivar datos del SWR
   const lunes = getLunesSemana()
+  const esViernes = new Date().getDay() === 5
   const cronogramaVacio: Record<string, DiaData> = Object.fromEntries(
     DIAS.map((dia, idx) => {
       const fecha = new Date(lunes); fecha.setDate(fecha.getDate() + idx)
@@ -135,6 +136,12 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400 text-white text-xs font-bold">
                 <MessageSquare className="w-3.5 h-3.5" />
                 {mensajesPendientes}
+              </div>
+            )}
+            {esViernes && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400 text-white text-xs font-bold">
+                <span className="animate-pulse">⭐️</span>
+                Viernes: no olvides finalizar semana
               </div>
             )}
             {/* Boton VER — aparece solo cuando hay actividades guardadas */}
