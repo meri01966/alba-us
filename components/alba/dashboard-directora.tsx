@@ -417,7 +417,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
       const rango = rangoSemanaActivo()
-      const mensaje = `La dirección revis�� el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
+      const mensaje = `La dirección revisó el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
       const res = await fetch(`${base}/api/mensajes-directora`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
