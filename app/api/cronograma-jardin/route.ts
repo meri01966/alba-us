@@ -154,6 +154,22 @@ export async function POST(req: Request) {
   const { sala, cronograma, semana_inicio } = body
   if (!sala || !cronograma) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
+  // PROTECCIÓN 1 — Si el cronograma entero llega SIN contenido, rechazar.
+  // Evita que un guardado vacío borre el contenido existente de toda la semana.
+  const tieneContenido = DIAS.some((dia) => {
+    const d = cronograma[dia]
+    if (!d) return false
+    const acts = Array.isArray(d.actividades) ? d.actividades : []
+    const hayActividad = acts.some((a: any) => (a?.nombre || "").trim().length > 0)
+    return hayActividad || (d.recibimiento || "").trim() || (d.intercambio || "").trim()
+  })
+  if (!tieneContenido) {
+    return NextResponse.json(
+      { ok: false, error: "El cronograma está vacío. No se guardó para no borrar el contenido existente." },
+      { status: 400 }
+    )
+  }
+
   // Usar la semana que manda el cliente (la que tiene en pantalla)
   // Si no la manda, calcular el proximo lunes
   const lunes = semana_inicio ? new Date(semana_inicio + "T00:00:00") : getLunesSemana(new Date())
@@ -167,13 +183,27 @@ export async function POST(req: Request) {
     const fecha = new Date(lunes)
     fecha.setDate(fecha.getDate() + idx)
 
+    // Traemos tambien el contenido del dia existente para poder compararlo (PROTECCION 3)
     const { data: existente } = await supabase
       .from(TABLA)
-      .select("id")
+      .select("id, actividades, recibimiento, intercambio")
       .eq("sala", sala)
       .eq("semana_inicio", lunesStr)
       .eq("dia", dia)
       .maybeSingle()
+
+    // PROTECCIÓN 3 — no pisar un día con contenido con uno vacío
+    const actsNuevas = Array.isArray(datosDia.actividades) ? datosDia.actividades : []
+    const nuevoTieneContenido =
+      actsNuevas.some((a: any) => (a?.nombre || "").trim().length > 0) ||
+      (datosDia.recibimiento || "").trim() || (datosDia.intercambio || "").trim()
+    const actsViejas = Array.isArray(existente?.actividades) ? existente.actividades : []
+    const viejoTeniaContenido =
+      actsViejas.some((a: any) => (a?.nombre || "").trim().length > 0) ||
+      (existente?.recibimiento || "").trim() || (existente?.intercambio || "").trim()
+    if (!nuevoTieneContenido && viejoTeniaContenido) {
+      continue // no tocar este día: lo nuevo está vacío y lo viejo tenía contenido
+    }
 
     const registro = {
       sala,
