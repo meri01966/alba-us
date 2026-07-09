@@ -1356,13 +1356,20 @@ export async function GET(req: Request) {
     const esSalaPrueba = salaKey.includes("prueba")
 
     const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
-      // LÓGICA SIMPLE: 
-      // 1. Traer TODOS los registros de esta sala
-      // 2. Filtrar solo los no finalizados (dia_finalizado: false)
-      // 3. Devolver el PRIMERO en orden semana + día
+      // LA SEMANA LA DECIDE EL CALENDARIO — misma regla que el GET de cronograma-jardin.
+      // Lunes a viernes: semana actual. Sabado y domingo: semana siguiente.
+      // Dentro de esa semana se toma el primer dia sin finalizar con actividad de ALBA.
       
       const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
       const salaKey = normalizarSala(sala)
+
+      // Hoy en horario de Buenos Aires (el servidor corre en UTC)
+      const ahoraSrv = new Date()
+      const hoyBA = new Date(ahoraSrv.getTime() + ahoraSrv.getTimezoneOffset() * 60000 - 3 * 60 * 60 * 1000)
+      const lunesSemana = getLunes(hoyBA)
+      const diaBA = hoyBA.getDay() // 0=Domingo, 6=Sabado
+      if (diaBA === 0 || diaBA === 6) lunesSemana.setDate(lunesSemana.getDate() + 7)
+      const semanaObjetivo = lunesSemana.toISOString().split("T")[0]
 
       // Buscar SIN restricción de semana — traer todo
       const { data: registros } = await supabase
@@ -1375,17 +1382,15 @@ export async function GET(req: Request) {
       const deSala = registros.filter((r: any) => normalizarSala(r.sala || "") === salaKey)
       if (deSala.length === 0) return null
 
-      // Filtrar solo los NO finalizados
-      const pendientes = deSala.filter((r: any) => r.dia_finalizado !== true)
+      // Solo la semana que corresponde al calendario, y solo los dias NO finalizados
+      const pendientes = deSala.filter(
+        (r: any) => r.semana_inicio === semanaObjetivo && r.dia_finalizado !== true
+      )
       if (pendientes.length === 0) return null
 
-      // Ordenar por semana + día (semana anterior primero)
+      // Ordenar por dia (Lunes primero)
       const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
-      pendientes.sort((a: any, b: any) => {
-        const semanaCmp = (a.semana_inicio || "").localeCompare(b.semana_inicio || "")
-        if (semanaCmp !== 0) return semanaCmp
-        return ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia)
-      })
+      pendientes.sort((a: any, b: any) => ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia))
 
       // Devolver el PRIMERO que tenga actividad alfabetización
       for (const reg of pendientes) {
