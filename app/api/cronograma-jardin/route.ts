@@ -21,6 +21,24 @@ function getLunesSemana(fecha: Date): Date {
   return d
 }
 
+// El servidor de Vercel corre en UTC; el jardin vive en Buenos Aires (UTC-3).
+// Sin esto, un domingo a las 21hs de Argentina el servidor ya cree que es lunes.
+function hoyEnBuenosAires(): Date {
+  const ahora = new Date()
+  const utcMs = ahora.getTime() + ahora.getTimezoneOffset() * 60000
+  return new Date(utcMs - 3 * 60 * 60 * 1000)
+}
+
+// LA SEMANA LA DECIDE EL CALENDARIO, no los botones ni los dias pendientes.
+// Lunes a viernes -> semana actual. Sabado y domingo -> semana siguiente.
+function lunesDeLaSemanaAMostrar(): Date {
+  const hoy = hoyEnBuenosAires()
+  const lunes = getLunesSemana(hoy)
+  const dia = hoy.getDay() // 0=Domingo, 6=Sabado
+  if (dia === 0 || dia === 6) lunes.setDate(lunes.getDate() + 7)
+  return lunes
+}
+
 const normSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
 
 // GET - Obtener cronograma de la semana actual, o historial de semanas finalizadas
@@ -32,13 +50,16 @@ export async function GET(req: Request) {
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
   const salaKey = normSala(sala)
+
+  // Semana que corresponde mostrar segun el calendario (se usa en todo el GET)
+  const lunesObjetivo = lunesDeLaSemanaAMostrar()
+  const semanaObjetivo = lunesObjetivo.toISOString().split("T")[0]
+
   // ── CIERRE AUTOMATICO DE SEMANAS VENCIDAS ──────────────────────────
-  // Dias sin finalizar de semanas ANTERIORES a la actual se cierran solos.
+  // Dias sin finalizar de semanas ANTERIORES a la que toca mostrar se cierran solos.
   // Las actividades de ALBA no evaluadas quedan como "no_realizada" para que
   // el brain las pueda reofrecer. Solo desde el 03/08/2026 en adelante.
   const FECHA_CORTE = "2026-08-03"
-  const lunesActual = getLunesSemana(new Date())
-  const lunesActualStr = lunesActual.toISOString().split("T")[0]
 
   const { data: todosParaCierre } = await supabase
     .from(TABLA)
@@ -47,7 +68,7 @@ export async function GET(req: Request) {
   const vencidos = (todosParaCierre || []).filter((r: any) =>
     normSala(r.sala || "") === salaKey &&
     r.dia_finalizado !== true &&
-    (r.semana_inicio || "") < lunesActualStr
+    (r.semana_inicio || "") < semanaObjetivo
   )
 
   for (const reg of vencidos) {
@@ -129,12 +150,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, historial: semanas })
   }
 
-  // SEMANA A MOSTRAR (desacoplado del calendario):
-  // Se busca la ÚLTIMA semana cargada de la sala que todavía tenga algún día sin
-  // finalizar (dia_finalizado !== true). Esa es la semana "activa" que ve la maestra
-  // y sobre la que ALBA sugiere. Si todas las semanas están finalizadas (o no hay
-  // ninguna), se muestra una semana en blanco para que la maestra cargue el próximo
-  // cronograma. NO se calcula nada por fecha real.
+  // SEMANA A MOSTRAR: la decide EL CALENDARIO.
+  // Lunes a viernes -> semana actual. Sabado y domingo -> semana siguiente.
+  // Las semanas ya no tienen estado: si estan cargadas se muestran, si no,
+  // la grilla aparece en blanco lista para planificar. Lo unico que queda
+  // pendiente son las ACTIVIDADES no realizadas (en registro_cierre).
   const { data: todosSala, error } = await supabase
     .from(TABLA)
     .select("*")
@@ -144,43 +164,14 @@ export async function GET(req: Request) {
   // Filtrar por sala normalizada en memoria
   const data = (todosSala || []).filter((r: any) => normSala(r.sala || "") === salaKey)
 
-  // Agrupar por semana_inicio y detectar cuáles tienen días pendientes
-  const semanasPendientes = Array.from(
-    new Set(
-      data
-        .filter((r: any) => r.dia_finalizado !== true)
-        .map((r: any) => r.semana_inicio as string)
-    )
-  ).sort((a, b) => a.localeCompare(b))
-
-  // Determinar semana y lunes a usar
-  let semanaUsada: string
-  let lunesUsado: Date
-  let mostrarEnBlanco = false
-
-  if (semanasPendientes.length > 0) {
-    // Tomar la PRIMERA semana pendiente (la más antigua sin finalizar). Esto coincide
-    // exactamente con el criterio del brain (buscarActividadCronograma), garantizando
-    // que la grilla que ve la maestra = la actividad que sugiere ALBA.
-    semanaUsada = semanasPendientes[0]
-    lunesUsado = new Date(semanaUsada + "T00:00:00")
-  } else {
-    // No hay semana pendiente: mostrar una semana en blanco para cargar el próximo
-    // cronograma. Usamos el próximo lunes solo para etiquetar las fechas de la grilla.
-    mostrarEnBlanco = true
-    const lunesSig = getLunesSemana(new Date())
-    lunesSig.setDate(lunesSig.getDate() + 7)
-    semanaUsada = lunesSig.toISOString().split("T")[0]
-    lunesUsado = lunesSig
-  }
+  const semanaUsada = semanaObjetivo
+  const lunesUsado = lunesObjetivo
 
   const cronograma: Record<string, any> = {}
   DIAS.forEach((dia, idx) => {
     const fecha = new Date(lunesUsado)
     fecha.setDate(fecha.getDate() + idx)
-    const registro = mostrarEnBlanco
-      ? undefined
-      : data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
+    const registro = data.find((d: any) => d.semana_inicio === semanaUsada && d.dia === dia)
     cronograma[dia] = {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
@@ -192,7 +183,7 @@ export async function GET(req: Request) {
     }
   })
 
-  const hayRegistros = !mostrarEnBlanco &&
+  const hayRegistros =
     data.some((r: any) =>
       r.semana_inicio === semanaUsada &&
       Array.isArray(r.actividades) && r.actividades.some((a: any) => (a.nombre || "").trim().length > 0)
@@ -225,7 +216,7 @@ export async function POST(req: Request) {
 
   // Usar la semana que manda el cliente (la que tiene en pantalla)
   // Si no la manda, calcular el proximo lunes
-  const lunes = semana_inicio ? new Date(semana_inicio + "T00:00:00") : getLunesSemana(new Date())
+  const lunes = semana_inicio ? new Date(semana_inicio + "T00:00:00") : lunesDeLaSemanaAMostrar()
   const lunesStr = semana_inicio || lunes.toISOString().split("T")[0]
 
   for (let idx = 0; idx < DIAS.length; idx++) {
