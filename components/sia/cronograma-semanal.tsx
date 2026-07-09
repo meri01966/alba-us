@@ -359,7 +359,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       await fetch(`/api/cronograma-jardin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala, cronograma: nuevo }),
+        body: JSON.stringify({ sala, cronograma: nuevo, semana_inicio: semanaInicioActual || undefined }),
       })
     } catch (e) {
       console.error("[v0] Error guardando sugerencia aceptada:", e)
