@@ -1612,7 +1612,7 @@ export async function GET(req: Request) {
     // Contar TOTAL de clases completadas desde registro_cierre (cada cierre = 1 clase)
     const { data: cierresData, error: cierresError } = await supabase
       .from("registro_cierre")
-      .select("id, fecha, eje")
+      .select("id, fecha, eje, evaluacion_general")
       .eq("sala", sala)
       .order("fecha", { ascending: true })
     
@@ -1621,8 +1621,12 @@ export async function GET(req: Request) {
     }
     
     const cierres = cierresData || []
-    const totalClasesCompletadasGlobal = cierres.length
-    console.log("[v0] BRAIN sala:", sala, "cierres:", cierres.length, "alumnos:", alumnos.length)
+    // Solo cuentan como CLASE DADA los cierres con evidencia real.
+    // Las "no_realizada" quedan registradas (para que ALBA las reofrezca)
+    // pero NO hacen avanzar la secuencia ni la rotacion de ejes.
+    const cierresConEvidencia = cierres.filter((c: any) => c.evaluacion_general !== "no_realizada")
+    const totalClasesCompletadasGlobal = cierresConEvidencia.length
+    console.log("[v0] BRAIN sala:", sala, "cierres:", cierres.length, "conEvidencia:", cierresConEvidencia.length, "alumnos:", alumnos.length)
     
     const ejes = ["CF", "CT", "O"] as const
     const analisis: Record<string, {
@@ -1650,12 +1654,13 @@ export async function GET(req: Request) {
       // para que el brain no retroceda al indice 0 por falta de datos
       const promedio = total > 0 ? Math.round((verdes * 100 + amarillos * 50 + rojos * 10) / total) : 50
 
-      // Clases completadas para ESTE eje = cierres con ese eje especifico
-      const cierresDeEje = cierres.filter((c: { eje: string }) => c.eje === eje)
+      // Clases completadas para ESTE eje = cierres CON EVIDENCIA de ese eje especifico
+      const cierresDeEje = cierresConEvidencia.filter((c: any) => c.eje === eje)
       const clasesCompletadas = cierresDeEje.length
 
       // Ultimas 2 clases en rojo (para bajar nivel en secuencia)
-      const ultimos2Cierres = cierres.slice(-2)
+      // Solo miramos clases realmente dadas: una "no_realizada" no es una clase.
+      const ultimos2Cierres = cierresConEvidencia.slice(-2)
       let ultimasClasesEnRojo = 0
       for (const c of ultimos2Cierres) {
         const f = c.fecha?.split("T")[0]
