@@ -45,7 +45,6 @@ export async function POST(request: Request) {
       observaciones,
       sugerencia_ia: sugerenciaParaIA,
       stats: safeStats,
-      no_realizada: noRealizada,      // flag para que ALBA la vuelva a sugerir
     }
 
     const supabase = getSupabase()
