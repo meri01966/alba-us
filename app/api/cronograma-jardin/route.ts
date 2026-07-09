@@ -32,6 +32,59 @@ export async function GET(req: Request) {
   if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
   const salaKey = normSala(sala)
+  // ── CIERRE AUTOMATICO DE SEMANAS VENCIDAS ──────────────────────────
+  // Dias sin finalizar de semanas ANTERIORES a la actual se cierran solos.
+  // Las actividades de ALBA no evaluadas quedan como "no_realizada" para que
+  // el brain las pueda reofrecer. Solo desde el 03/08/2026 en adelante.
+  const FECHA_CORTE = "2026-08-03"
+  const lunesActual = getLunesSemana(new Date())
+  const lunesActualStr = lunesActual.toISOString().split("T")[0]
+
+  const { data: todosParaCierre } = await supabase
+    .from(TABLA)
+    .select("id, sala, dia, fecha, semana_inicio, actividades, dia_finalizado")
+
+  const vencidos = (todosParaCierre || []).filter((r: any) =>
+    normSala(r.sala || "") === salaKey &&
+    r.dia_finalizado !== true &&
+    (r.semana_inicio || "") < lunesActualStr
+  )
+
+  for (const reg of vencidos) {
+    if ((reg.semana_inicio || "") >= FECHA_CORTE) {
+      const acts = Array.isArray(reg.actividades) ? reg.actividades : []
+      const actAlba = acts.find(
+        (a: any) => (a?.alfabetizacion === true || a?.origen === "alba") && (a?.nombre || "").trim().length > 0
+      )
+      if (actAlba) {
+        const { data: yaExiste } = await supabase
+          .from("registro_cierre")
+          .select("id")
+          .eq("sala", reg.sala)
+          .eq("actividad_alba", actAlba.nombre)
+          .eq("fecha", reg.fecha)
+          .maybeSingle()
+
+        if (!yaExiste) {
+          await supabase.from("registro_cierre").insert([{
+            fecha: reg.fecha,
+            sala: reg.sala,
+            eje: actAlba.eje || "CF",
+            actividad_alba: actAlba.nombre,
+            actividad_docente: actAlba.nombre,
+            evaluacion_general: "no_realizada",
+            observaciones: "Cierre automatico: la semana termino sin registro de la jornada.",
+            stats: { green: 0, yellow: 0, red: 0, ausentes: 0 },
+          }])
+        }
+      }
+    }
+
+    await supabase
+      .from(TABLA)
+      .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
+      .eq("id", reg.id)
+  }
 
   // HISTORIAL: semanas YA COMPLETADAS de la sala (todos sus dias finalizados).
   // No dependemos del flag "finalizado" (que solo se marca al usar "Finalizar Semana"):
