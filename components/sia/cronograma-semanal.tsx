@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, CheckCircle, ChevronDown } from "lucide-react"
+import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, ChevronDown } from "lucide-react"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 // Las 3 actividades de alfabetizacion sugeridas por ALBA van en estos dias
@@ -132,10 +132,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   const [proyectoTitulo, setProyectoTitulo] = useState("")
   const [proyectoObjetivo, setProyectoObjetivo] = useState("")
 
-  // Calificacion al finalizar semana
-  const [showCalificacionModal, setShowCalificacionModal] = useState(false)
-  const [calificaciones, setCalificaciones] = useState<Record<string, string>>({})
-
   const tiposDisponibles = clasesPorSala(sala)
 
   const inicializarCronograma = useCallback(() => {
@@ -254,7 +250,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     setGuardando(false)
   }
 
-  // ── Clases especiales ───────────────────────────────────��──────────
+  // ── Clases especiales ──────────────────────────────────────────────
   async function guardarClasesEspeciales() {
     try {
       await fetch(`/api/clases-especiales-maternal`, {
@@ -432,35 +428,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     })
   }
 
-  function actividadesAlfabetizacion(): { dia: string; idx: number; act: Actividad }[] {
-    const out: { dia: string; idx: number; act: Actividad }[] = []
-    DIAS.forEach((dia) => {
-      cronograma[dia]?.actividades?.forEach((act, idx) => {
-        if (act.alfabetizacion && (act.nombre || "").trim()) out.push({ dia, idx, act })
-      })
-    })
-    return out
-  }
-
-  async function finalizarSemana() {
-    if (!confirm("Finalizar esta semana? El cronograma se blanqueara para la semana siguiente.")) return
-    setGuardando(true)
-    try {
-      await fetch(`/api/cronograma-jardin`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala }),
-      })
-      setCronograma(inicializarCronograma())
-      setSugerenciasAlba([])
-      setCalificaciones({})
-    } catch (e) {
-      console.error("[v0] Error finalizando semana:", e)
-    }
-    setGuardando(false)
-    setShowCalificacionModal(false)
-  }
-
   // Estado para actividad expandida: "dia-idx" o null
   const [actividadAbierta, setActividadAbierta] = useState<string | null>(null)
 
@@ -513,13 +480,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                 <Dumbbell className="w-4 h-4" /> Editar clases
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowCalificacionModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium transition-colors"
-            >
-              <CheckCircle className="w-4 h-4" /> Finalizar Semana
-            </button>
             <button
               type="button"
               onClick={guardarCronograma}
@@ -742,83 +702,6 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
           </div>
         )}
       </div>
-
-      {/* Modal Calificar Actividades de Alfabetizacion al Finalizar Semana */}
-      {showCalificacionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowCalificacionModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-amber-500 to-orange-600 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-6 h-6 text-white" />
-                <h2 className="text-xl font-bold text-white">Calificar Actividades de Alfabetizacion</h2>
-              </div>
-              <button onClick={() => setShowCalificacionModal(false)} className="text-white/80 hover:text-white transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <p className="text-sm text-slate-600 mb-4">
-                Califica las actividades de alfabetizacion realizadas esta semana (sugeridas por ALBA o escritas por la maestra). Esto ayuda a ALBA a mejorar sus sugerencias.
-              </p>
-
-              {actividadesAlfabetizacion().length === 0 && (
-                <p className="text-center text-slate-500 py-8">No hay actividades de alfabetizacion cargadas esta semana.</p>
-              )}
-
-              {actividadesAlfabetizacion().map(({ dia, idx, act }) => {
-                const key = `${dia}-${idx}`
-                return (
-                  <div key={key} className="mb-4 bg-slate-50 p-4 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="w-4 h-4 text-violet-600" />
-                      <p className="font-semibold text-slate-800">{act.nombre}</p>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 ml-auto">
-                        {dia} · {act.origen === "alba" ? "ALBA" : "Maestra"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-600">Calificacion:</span>
-                      {["Excelente", "Buena", "Regular"].map((cal) => (
-                        <button
-                          key={cal}
-                          type="button"
-                          onClick={() => setCalificaciones({ ...calificaciones, [key]: cal })}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            calificaciones[key] === cal
-                              ? cal === "Excelente" ? "bg-green-500 text-white"
-                                : cal === "Buena" ? "bg-blue-500 text-white"
-                                : "bg-amber-500 text-white"
-                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                          }`}
-                        >
-                          {cal}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-              <button onClick={() => setShowCalificacionModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
-                Cancelar
-              </button>
-              <button
-                onClick={finalizarSemana}
-                disabled={guardando}
-                className="flex items-center gap-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50 shadow-md"
-              >
-                {guardando ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Check className="w-4 h-4" />
-                )}
-                Confirmar y Finalizar Semana
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
