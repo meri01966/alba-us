@@ -225,7 +225,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
           green: regs.filter(r => r.estado === "green" || r.estado === "logrado").length,
           yellow: regs.filter(r => r.estado === "yellow" || r.estado === "proceso").length,
           red: regs.filter(r => r.estado === "red" || r.estado === "refuerzo").length,
-          total: regs.length
+          total: regs.filter(r => ["green","logrado","yellow","proceso","red","refuerzo"].includes(r.estado)).length
         }
       }
       
