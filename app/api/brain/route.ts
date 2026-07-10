@@ -1530,7 +1530,7 @@ export async function GET(req: Request) {
     //   b) registro_cierre: actividades subidas por la docente con evaluacion general
     // ALBA indexa ambas fuentes y distribuye las mejores actividades a toda la red
 
-    const SALAS_RED = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "Sala de Prueba"]
+    const SALAS_RED = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM"]
 
     // a) Fuente 1: seguimiento de todas las salas de la red (excluyendo la sala actual)
     // seguimiento no tiene columna "sala", filtramos por alumno_ids de las otras salas
