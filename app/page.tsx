@@ -385,6 +385,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
   const [salaActual, setSalaActual] = useState(forzarSala || "Manzanos")
   const [salaHydrated, setSalaHydrated] = useState(false)
+  const esMaestra = typeof window !== "undefined" && localStorage.getItem("alba_sesion_rol") === "maestra"
   
   // Cargar sala: el parametro ?sala=X de la URL tiene prioridad (links directos
   // para cada maestra). Si no hay, se usa la ultima sala guardada en localStorage.
@@ -1230,17 +1231,19 @@ useEffect(() => {
           <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-3">
               {/* Selector de sala (oculto en modo demo) */}
+
+              
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => { if (!forzarSala) setShowSalaDropdown(!showSalaDropdown) }}
+                  onClick={() => { if (!forzarSala && !esMaestra) setShowSalaDropdown(!showSalaDropdown) }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-medium"
                   style={{ color: "#1e3a5f" }}
                 >
                   <span>Sala: {salaActual}</span>
-                  {!forzarSala && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
+                  {!forzarSala && !esMaestra && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
                 </button>
-                {showSalaDropdown && !forzarSala && (
+                {showSalaDropdown && !forzarSala && !esMaestra && (
                   <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 min-w-[160px]">
                     {SALAS_DISPONIBLES.map((sala) => (
                       <button
