@@ -14,7 +14,7 @@ export async function GET() {
     const [{ data: alumnos, error: errAlumnos }, { data: registros, error: errRegistros }, { data: cierres, error: errCierres }] = await Promise.all([
       supabase.from("alumnos").select("*").order("nombre"),
       supabase.from("seguimiento").select("*").order("fecha", { ascending: true }),
-      supabase.from("registro_cierre").select("sala,eje,fecha").order("fecha", { ascending: true }),
+      supabase.from("registro_cierre").select("sala,eje,fecha,actividad_alba").order("fecha", { ascending: true }),
     ])
 
     if (errAlumnos) console.error("[v0] directora-data alumnos error:", errAlumnos)
