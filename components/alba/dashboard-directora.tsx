@@ -244,11 +244,32 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
       const o = calcProm(evalO)
       const promGen = (evalCF.total + evalCT.total + evalO.total) > 0 ? Math.round((cf + ct + o) / 3) : 0
       
-      // Contar CLASES CERRADAS por eje (de registro_cierre) - esto define la altura de las barras
+       // Contar ACTIVIDADES ALBA CON EVIDENCIA COMPLETA por eje.
+      // Una actividad cuenta (verde) solo si la MISMA actividad se cerró (registro_cierre)
+      // Y tiene evaluaciones de chicos (seguimiento). Se comparan nombres normalizados.
       const cierresSala = cierres.filter(c => c.sala === sala)
-      const clasesCF = cierresSala.filter(c => c.eje === "CF").length
-      const clasesCT = cierresSala.filter(c => c.eje === "CT").length
-      const clasesO = cierresSala.filter(c => c.eje === "O").length
+      const normAct = (s: any) => {
+        if (s == null) return ""
+        return String(s).trim().toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .split(/\s+/).join(" ")
+      }
+      const actividadesCompletas = (eje: string) => {
+        const cerradas = new Set(
+          cierresSala.filter(c => c.eje === eje && (c as any).actividad_alba)
+            .map(c => normAct((c as any).actividad_alba))
+        )
+        const evaluadas = new Set(
+          regsSala.filter(r => r.eje === eje && r.actividad)
+            .map(r => normAct(r.actividad))
+        )
+        let n = 0
+        cerradas.forEach(a => { if (evaluadas.has(a)) n++ })
+        return n
+      }
+      const clasesCF = actividadesCompletas("CF")
+      const clasesCT = actividadesCompletas("CT")
+      const clasesO = actividadesCompletas("O")
       
       // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
       let alertas: BrainAlerta[] = []
