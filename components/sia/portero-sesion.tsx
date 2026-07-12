@@ -1,26 +1,45 @@
 "use client"
 
 import { useState, useEffect, isValidElement, cloneElement } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { LoginPin, leerSesion, cerrarSesion, type SesionAlba } from "@/components/sia/login-pin"
 
 // El Portero envuelve toda la app. Decide:
-//   - Sin sesion         -> muestra la pantalla de PIN
-//   - Sesion de maestra  -> muestra la app fijando su sala (forzarSala)
-//   - Sesion de direccion-> muestra la app tal cual (acceso completo)
+//   - Sin sesion  -> muestra la pantalla de PIN
+//   - Maestra     -> app fijada a su sala; NO puede entrar a /directora
+//   - Direccion   -> la lleva a su tablero institucional /directora
 // Ademas ofrece el boton "Cerrar sesion" cuando hay sesion activa.
 export function PorteroSesion({ children }: { children: React.ReactNode }) {
   const [sesion, setSesion] = useState<SesionAlba | null>(null)
   const [listo, setListo] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
 
   useEffect(() => {
     setSesion(leerSesion())
     setListo(true)
   }, [])
 
+  // Redirecciones segun rol y ruta actual
+  useEffect(() => {
+    if (!listo || !sesion) return
+    const enDireccion = pathname?.startsWith("/directora")
+
+    // Direccion fuera de su tablero -> llevarla a /directora
+    if (sesion.rol === "direccion" && !enDireccion) {
+      router.replace("/directora")
+    }
+    // Maestra intentando ver /directora -> sacarla a su dashboard
+    if (sesion.rol === "maestra" && enDireccion) {
+      router.replace("/")
+    }
+  }, [listo, sesion, pathname, router])
+
   const handleCerrar = () => {
     cerrarSesion()
     setSesion(null)
+    router.replace("/")
   }
 
   // Mientras lee la sesion (un instante), spinner para evitar parpadeo
@@ -37,11 +56,11 @@ export function PorteroSesion({ children }: { children: React.ReactNode }) {
     return <LoginPin onIngreso={(s) => setSesion(s)} />
   }
 
-  // Con sesion de maestra: inyectar forzarSala en la pagina hija.
-  // Esto fija la sala y desactiva el dropdown (el dashboard ya lo hace cuando
-  // recibe forzarSala). Para direccion no se inyecta nada: ve todo.
+  // Maestra en la pagina principal: fijar su sala (desactiva el dropdown).
+  // En /directora la maestra ya la redirige el efecto de arriba.
+  const enDireccion = pathname?.startsWith("/directora")
   let contenido = children
-  if (sesion.rol === "maestra" && sesion.sala && isValidElement(children)) {
+  if (sesion.rol === "maestra" && sesion.sala && !enDireccion && isValidElement(children)) {
     contenido = cloneElement(children as React.ReactElement, { forzarSala: sesion.sala })
   }
 
