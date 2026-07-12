@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect, isValidElement, cloneElement } from "react"
+import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { LoginPin, leerSesion, cerrarSesion, type SesionAlba } from "@/components/sia/login-pin"
 
-// El Portero envuelve toda la app. Decide:
-//   - Sin sesion  -> muestra la pantalla de PIN
-//   - Maestra     -> app fijada a su sala; NO puede entrar a /directora
-//   - Direccion   -> la lleva a su tablero institucional /directora
-// Ademas ofrece el boton "Cerrar sesion" cuando hay sesion activa.
+// El Portero envuelve toda la app. Decide segun rol:
+//   - Sin sesion  -> pantalla de PIN
+//   - Maestra     -> su sala (fijada por URL ?sala=), sin acceso a /directora
+//   - Direccion   -> tablero institucional /directora
+//   - Admin        -> acceso total: entra a las salas con dropdown libre y al tablero
+// El boton "Cerrar sesion" esta disponible con sesion activa.
 export function PorteroSesion({ children }: { children: React.ReactNode }) {
   const [sesion, setSesion] = useState<SesionAlba | null>(null)
   const [listo, setListo] = useState(false)
@@ -21,19 +22,29 @@ export function PorteroSesion({ children }: { children: React.ReactNode }) {
     setListo(true)
   }, [])
 
-  // Redirecciones segun rol y ruta actual
+  // Redirecciones segun rol y ruta
   useEffect(() => {
     if (!listo || !sesion) return
     const enDireccion = pathname?.startsWith("/directora")
 
-    // Direccion fuera de su tablero -> llevarla a /directora
+    // Direccion: siempre a su tablero
     if (sesion.rol === "direccion" && !enDireccion) {
       router.replace("/directora")
+      return
     }
-    // Maestra intentando ver /directora -> sacarla a su dashboard
+    // Maestra: no puede ver /directora
     if (sesion.rol === "maestra" && enDireccion) {
       router.replace("/")
+      return
     }
+    // Maestra: asegurar que la URL lleve su sala (fija la sala en el dashboard)
+    if (sesion.rol === "maestra" && sesion.sala && !enDireccion) {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("sala") !== sesion.sala) {
+        router.replace(`/?sala=${encodeURIComponent(sesion.sala)}`)
+      }
+    }
+    // Admin: no se redirige. Acceso libre a donde quiera.
   }, [listo, sesion, pathname, router])
 
   const handleCerrar = () => {
@@ -42,7 +53,6 @@ export function PorteroSesion({ children }: { children: React.ReactNode }) {
     router.replace("/")
   }
 
-  // Mientras lee la sesion (un instante), spinner para evitar parpadeo
   if (!listo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#1e3a5f]">
@@ -51,22 +61,13 @@ export function PorteroSesion({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Sin sesion -> pedir PIN
   if (!sesion) {
     return <LoginPin onIngreso={(s) => setSesion(s)} />
   }
 
-  // Maestra en la pagina principal: fijar su sala (desactiva el dropdown).
-  // En /directora la maestra ya la redirige el efecto de arriba.
-  const enDireccion = pathname?.startsWith("/directora")
-  let contenido = children
-  if (sesion.rol === "maestra" && sesion.sala && !enDireccion && isValidElement(children)) {
-    contenido = cloneElement(children as React.ReactElement, { forzarSala: sesion.sala })
-  }
-
   return (
     <>
-      {contenido}
+      {children}
       {/* Boton flotante de cerrar sesion */}
       <button
         type="button"
