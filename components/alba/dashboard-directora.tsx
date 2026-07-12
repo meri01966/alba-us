@@ -1165,26 +1165,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                               <p className="text-sm text-muted-foreground mt-1">{sugerencia}</p>
                             </div>
                             
-                            {/* Resumen visual simple */}
-                            {clases > 0 && (
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="bg-green-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-green-700">{eval_.green}</p>
-                                  <p className="text-[10px] text-green-600">Logrado</p>
-                                </div>
-                                <div className="bg-amber-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-amber-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-amber-700">{eval_.yellow}</p>
-                                  <p className="text-[10px] text-amber-600">En proceso</p>
-                                </div>
-                                <div className="bg-red-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-red-700">{eval_.red}</p>
-                                  <p className="text-[10px] text-red-600">Refuerzo</p>
-                                </div>
-                              </div>
-                            )}
+                            
                             
                             {/* Inferencias de ALBA si hay patrones preocupantes */}
                             {pctRed >= 30 && clases >= 2 && (
