@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { PorteroSesion } from '@/components/sia/portero-sesion'
 import './globals.css'
 
 // Forzar renderizado dinamico en toda la app — evita el prerender estatico
@@ -51,7 +52,9 @@ export default function RootLayout({
   return (
     <html lang="es" className="bg-background">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <PorteroSesion>
+          {children}
+        </PorteroSesion>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
