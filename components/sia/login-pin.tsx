@@ -13,13 +13,14 @@ const PIN_POR_SALA: Record<string, string> = {
   "2026TT": "Nogales TT",
 }
 const PIN_DIRECCION = "7788"
+const PIN_ADMIN = "0000"
 
 // Claves de sesion en el navegador
-const SESION_ROL = "alba_sesion_rol"       // "maestra" | "direccion"
+const SESION_ROL = "alba_sesion_rol"       // "maestra" | "direccion" | "admin"
 const SESION_SALA = "alba_sesion_sala"      // nombre de sala (solo maestra)
 
 export interface SesionAlba {
-  rol: "maestra" | "direccion"
+  rol: "maestra" | "direccion" | "admin"
   sala: string | null
 }
 
@@ -32,9 +33,8 @@ export function leerSesion(): SesionAlba | null {
       if (sala) return { rol: "maestra", sala }
       return null
     }
-    if (rol === "direccion") {
-      return { rol: "direccion", sala: null }
-    }
+    if (rol === "direccion") return { rol: "direccion", sala: null }
+    if (rol === "admin") return { rol: "admin", sala: null }
     return null
   } catch {
     return null
@@ -61,7 +61,17 @@ export function LoginPin({ onIngreso }: LoginPinProps) {
     setError("")
     const pinLimpio = pin.trim().toUpperCase()
 
-    // Dirección
+    // Admin (acceso total)
+    if (pinLimpio === PIN_ADMIN) {
+      try {
+        localStorage.setItem(SESION_ROL, "admin")
+        localStorage.removeItem(SESION_SALA)
+      } catch {}
+      onIngreso({ rol: "admin", sala: null })
+      return
+    }
+
+    // Direccion
     if (pinLimpio === PIN_DIRECCION) {
       try {
         localStorage.setItem(SESION_ROL, "direccion")
