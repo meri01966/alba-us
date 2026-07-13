@@ -244,11 +244,32 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
       const o = calcProm(evalO)
       const promGen = (evalCF.total + evalCT.total + evalO.total) > 0 ? Math.round((cf + ct + o) / 3) : 0
       
-      // Contar CLASES CERRADAS por eje (de registro_cierre) - esto define la altura de las barras
+       // Contar ACTIVIDADES ALBA CON EVIDENCIA COMPLETA por eje.
+      // Una actividad cuenta (verde) solo si la MISMA actividad se cerró (registro_cierre)
+      // Y tiene evaluaciones de chicos (seguimiento). Se comparan nombres normalizados.
       const cierresSala = cierres.filter(c => c.sala === sala)
-      const clasesCF = cierresSala.filter(c => c.eje === "CF").length
-      const clasesCT = cierresSala.filter(c => c.eje === "CT").length
-      const clasesO = cierresSala.filter(c => c.eje === "O").length
+      const normAct = (s: any) => {
+        if (s == null) return ""
+        return String(s).trim().toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .split(/\s+/).join(" ")
+      }
+      const actividadesCompletas = (eje: string) => {
+        const cerradas = new Set(
+          cierresSala.filter(c => c.eje === eje && (c as any).actividad_alba)
+            .map(c => normAct((c as any).actividad_alba))
+        )
+        const evaluadas = new Set(
+          regsSala.filter(r => r.eje === eje && r.actividad)
+            .map(r => normAct(r.actividad))
+        )
+        let n = 0
+        cerradas.forEach(a => { if (evaluadas.has(a)) n++ })
+        return n
+      }
+      const clasesCF = actividadesCompletas("CF")
+      const clasesCT = actividadesCompletas("CT")
+      const clasesO = actividadesCompletas("O")
       
       // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
       let alertas: BrainAlerta[] = []
@@ -1144,26 +1165,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                               <p className="text-sm text-muted-foreground mt-1">{sugerencia}</p>
                             </div>
                             
-                            {/* Resumen visual simple */}
-                            {clases > 0 && (
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="bg-green-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-green-700">{eval_.green}</p>
-                                  <p className="text-[10px] text-green-600">Logrado</p>
-                                </div>
-                                <div className="bg-amber-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-amber-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-amber-700">{eval_.yellow}</p>
-                                  <p className="text-[10px] text-amber-600">En proceso</p>
-                                </div>
-                                <div className="bg-red-50 rounded-lg p-3 text-center">
-                                  <div className="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
-                                  <p className="text-lg font-bold text-red-700">{eval_.red}</p>
-                                  <p className="text-[10px] text-red-600">Refuerzo</p>
-                                </div>
-                              </div>
-                            )}
+                            
                             
                             {/* Inferencias de ALBA si hay patrones preocupantes */}
                             {pctRed >= 30 && clases >= 2 && (
