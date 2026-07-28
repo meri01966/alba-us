@@ -7,7 +7,7 @@ import { BookOpen, Lock } from "lucide-react"
 // Cada sala tiene su propio PIN. El PIN determina a qué sala entra la maestra.
 // RAMA DEMO-YC — SOLO Sala de Prueba (datos ficticios). Sin dirección ni admin.
 const PIN_POR_SALA: Record<string, string> = {
-  "DEMO2026": "Sala de Prueba",
+  "DEMO2026": "SALADEPRUEBA",
 }
 
 // Claves de sesion en el navegador
