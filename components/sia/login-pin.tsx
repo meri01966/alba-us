@@ -5,15 +5,10 @@ import { BookOpen, Lock } from "lucide-react"
 
 // PINs del piloto (seguridad liviana — se mueven a Supabase post-piloto).
 // Cada sala tiene su propio PIN. El PIN determina a qué sala entra la maestra.
+// RAMA DEMO-YC — SOLO Sala de Prueba (datos ficticios). Sin dirección ni admin.
 const PIN_POR_SALA: Record<string, string> = {
-  "2026G":  "Girasoles",
-  "2026M":  "Manzanos",
-  "2026A":  "Alamos",
-  "2026TM": "Nogales TM",
-  "2026TT": "Nogales TT",
+  "DEMO2026": "Sala de Prueba",
 }
-const PIN_DIRECCION = "7788"
-const PIN_ADMIN = "0000"
 
 // Claves de sesion en el navegador
 const SESION_ROL = "alba_sesion_rol"       // "maestra" | "direccion" | "admin"
@@ -60,26 +55,6 @@ export function LoginPin({ onIngreso }: LoginPinProps) {
   const handleIngresar = () => {
     setError("")
     const pinLimpio = pin.trim().toUpperCase()
-
-    // Admin (acceso total)
-    if (pinLimpio === PIN_ADMIN) {
-      try {
-        localStorage.setItem(SESION_ROL, "admin")
-        localStorage.removeItem(SESION_SALA)
-      } catch {}
-      onIngreso({ rol: "admin", sala: null })
-      return
-    }
-
-    // Direccion
-    if (pinLimpio === PIN_DIRECCION) {
-      try {
-        localStorage.setItem(SESION_ROL, "direccion")
-        localStorage.removeItem(SESION_SALA)
-      } catch {}
-      onIngreso({ rol: "direccion", sala: null })
-      return
-    }
 
     // Maestra: el PIN determina la sala
     const sala = PIN_POR_SALA[pinLimpio]
