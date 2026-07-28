@@ -355,7 +355,7 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
+const SALAS_DISPONIBLES = ["SALADEPRUEBA"]
 
 export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = {}) {
   const [activeView, setActiveView] = useState<ViewType>("clase")
@@ -383,7 +383,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
   const [jornadaToast, setJornadaToast] = useState<{ tipo: "ok" | "error"; mensaje: string } | null>(null)
   
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
-  const [salaActual, setSalaActual] = useState(forzarSala || "Manzanos")
+  const [salaActual, setSalaActual] = useState(forzarSala || "SALADEPRUEBA")
   const [salaHydrated, setSalaHydrated] = useState(false)
   const esMaestra = typeof window !== "undefined" && localStorage.getItem("alba_sesion_rol") === "maestra"
   
