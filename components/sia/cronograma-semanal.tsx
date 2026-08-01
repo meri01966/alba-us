@@ -587,17 +587,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                     {/* Cuerpo del dia — scrolleable internamente */}
                     <div className="flex-1 p-2.5 space-y-2 overflow-y-auto bg-slate-50" style={{ minHeight: "420px" }}>
 
-                      {/* Recibimiento */}
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide block mb-0.5">Recibimiento</label>
-                        <textarea
-                          value={cronograma[dia]?.recibimiento || ""}
-                          onChange={(e) => actualizarCampo(dia, "recibimiento", e.target.value)}
-                          placeholder="Rutina de inicio..."
-                          className="w-full text-[11px] p-1.5 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 bg-white"
-                          rows={2}
-                        />
-                      </div>
+                     
 
                       {/* Intercambio */}
                       <div>
