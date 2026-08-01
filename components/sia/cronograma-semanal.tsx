@@ -675,7 +675,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   {[
                                     { campo: "capacidades" as keyof Actividad, label: "Capacidades" },
                                     { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
-                                    { campo: "objetivo" as keyof Actividad, label: "Objetivo" },
+                                    
                                     { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
                                     { campo: "materiales" as keyof Actividad, label: "Materiales" },
                                   ].map(({ campo, label, tall }) => (
