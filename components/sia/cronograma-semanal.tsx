@@ -662,7 +662,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                               </div>
 
                               {/* Detalle expandible */}
-                             <div className="px-2 pb-2 space-y-1.5 border-t border-slate-200/80">
+                            {abierta && ( <div className="px-2 pb-2 space-y-1.5 border-t border-slate-200/80">
                                 <input
                                   type="text"
                                   value={act.nombre}
@@ -689,6 +689,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   </div>
                                 ))}
                               </div>
+                                )}         
                             </div>
                           )
                         })}
