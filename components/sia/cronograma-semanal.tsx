@@ -662,36 +662,33 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                               </div>
 
                               {/* Detalle expandible */}
-                              {abierta && (
-                                <div className="px-2 pb-2 space-y-1.5 border-t border-slate-200/80">
-                                  <input
-                                    type="text"
-                                    value={act.nombre}
-                                    onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
-                                    onBlur={() => onBlurActividad(dia, idx)}
-                                    placeholder="Nombre de la actividad"
-                                    className="w-full mt-1.5 text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-semibold"
-                                  />
-                                  {[
-                                    { campo: "capacidades" as keyof Actividad, label: "Capacidades" },
-                                    { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
-                                    { campo: "objetivo" as keyof Actividad, label: "Objetivo" },
-                                    { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
-                                    { campo: "materiales" as keyof Actividad, label: "Materiales" },
-                                  ].map(({ campo, label, tall }) => (
-                                    <div key={campo}>
-                                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</label>
-                                      <textarea
-                                        value={(act[campo] as string) || ""}
-                                        onChange={(e) => actualizarActividad(dia, idx, campo, e.target.value)}
-                                        placeholder={label}
-                                        className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                                        rows={tall ? 3 : 2}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                             <div className="px-2 pb-2 space-y-1.5 border-t border-slate-200/80">
+                                <input
+                                  type="text"
+                                  value={act.nombre}
+                                  onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
+                                  onBlur={() => onBlurActividad(dia, idx)}
+                                  placeholder="Nombre de la actividad"
+                                  className="w-full mt-1.5 text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-semibold"
+                                />
+                                {[
+                                  { campo: "capacidades" as keyof Actividad, label: "Capacidades" },
+                                  { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
+                                  { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
+                                  { campo: "materiales" as keyof Actividad, label: "Materiales" },
+                                ].map(({ campo, label, tall }) => (
+                                  <div key={campo}>
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</label>
+                                    <textarea
+                                      value={(act[campo] as string) || ""}
+                                      onChange={(e) => actualizarActividad(dia, idx, campo, e.target.value)}
+                                      placeholder={label}
+                                      className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                                      rows={tall ? 3 : 2}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )
                         })}
