@@ -618,7 +618,19 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                             <Sparkles className="w-3 h-3 text-violet-600" />
                             <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">ALBA sugiere</span>
                           </div>
-                          <p className="text-[10px] font-semibold text-violet-800 mb-1.5 leading-tight">{sugerencia.actividad.nombre}</p>
+                          <p className="text-[11px] font-bold text-violet-900 mb-1 leading-tight">{sugerencia.actividad.nombre}</p>
+                          {sugerencia.actividad.capacidades && (
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Capacidades: </span>{sugerencia.actividad.capacidades}</p>
+                          )}
+                          {sugerencia.actividad.contenidos && (
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Contenidos: </span>{sugerencia.actividad.contenidos}</p>
+                          )}
+                          {sugerencia.actividad.desarrollo && (
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Desarrollo: </span>{sugerencia.actividad.desarrollo}</p>
+                          )}
+                          {sugerencia.actividad.materiales && (
+                            <p className="text-[9px] text-violet-800 mb-1.5 leading-snug"><span className="font-semibold">Materiales: </span>{sugerencia.actividad.materiales}</p>
+                          )}
                           <div className="flex gap-1">
                             <button type="button" onClick={() => aceptarSugerenciaAlba(dia)} className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-semibold transition-colors">Aceptar</button>
                             <button type="button" onClick={() => cambiarSugerenciaAlba(dia)} className="flex-1 text-[9px] px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded font-semibold transition-colors">Cambiar</button>
