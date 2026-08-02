@@ -21,7 +21,7 @@ interface ActividadEvaluada {
   semana: number
   titulo: string
   fecha: string
-  resultado: "green" | "yellow" | "red"
+  resultado: "green" | "yellow" | "red" | "blue"
   promedio: number
 }
 
@@ -201,105 +201,104 @@ const SUGERENCIAS: Record<string, Record<string, string>> = {
 }
 
 // Mensajes para la familia segun nivel y eje
-const MENSAJES_FAMILIA: Record<string, Record<string, { titulo: string; mensaje: string; actividades: string[] }>> = {
+const MENSAJES_DOCENTE: Record<string, Record<string, { titulo: string; mensaje: string; actividades: string[] }>> = {
   CF: {
     "Necesita Apoyo": {
-      titulo: "Conciencia Fonologica: Trabajando juntos",
-      mensaje: "Su hijo/a esta comenzando a descubrir los sonidos del lenguaje. En casa pueden ayudar con actividades simples y divertidas.",
+      titulo: "Conciencia Fonologica: requiere refuerzo",
+      mensaje: "El alumno esta iniciando el trabajo con los sonidos del lenguaje. Conviene reforzar con actividades ludicas y frecuentes en la sala.",
       actividades: [
-        "Cantar canciones con rimas (ej: 'Arroz con leche')",
-        "Jugar a encontrar cosas que empiecen con el mismo sonido",
-        "Aplaudir las silabas de los nombres de la familia",
-        "Leer cuentos rimados antes de dormir",
+        "Trabajar rimas y canciones con apoyo de palmas",
+        "Juegos de sonido inicial con objetos concretos",
+        "Segmentar silabas de nombres con aplausos",
+        "Repetir secuencias sonoras cortas de forma diaria",
       ],
     },
     "En Proceso": {
-      titulo: "Conciencia Fonologica: Avanzando bien",
-      mensaje: "Su hijo/a esta desarrollando la habilidad de reconocer sonidos. Pueden seguir practicando en casa de forma ludica.",
+      titulo: "Conciencia Fonologica: en desarrollo",
+      mensaje: "El alumno reconoce sonidos con creciente autonomia. Consolidar con practica sistematica en la sala.",
       actividades: [
-        "Jugar 'Veo veo' con sonidos iniciales (ej: 'Veo algo que empieza con /m/')",
-        "Inventar rimas tontas con nombres de la familia",
-        "Identificar palabras largas y cortas aplaudiendo silabas",
-        "Buscar objetos en casa que empiecen con una letra especifica",
+        "'Veo veo' con sonidos iniciales",
+        "Clasificar palabras largas y cortas por silabas",
+        "Identificar objetos por su sonido inicial",
+        "Juegos de memoria fonologica con material concreto",
       ],
     },
     "Avanzado": {
-      titulo: "Conciencia Fonologica: Excelente progreso",
-      mensaje: "Su hijo/a muestra muy buen dominio de los sonidos del lenguaje. Pueden desafiarlo con actividades mas complejas.",
+      titulo: "Conciencia Fonologica: buen dominio",
+      mensaje: "El alumno muestra buen dominio segun la evidencia registrada. Proponer actividades de mayor complejidad.",
       actividades: [
-        "Jugar a cambiar sonidos en palabras (ej: si a 'pato' le cambio /p/ por /g/, que queda?)",
-        "Inventar palabras nuevas combinando sonidos",
-        "Jugar a las adivinanzas con sonidos",
-        "Crear trabalenguas familiares",
+        "Manipulacion de fonemas (sustitucion y omision)",
+        "Sintesis de palabras mas largas",
+        "Adivinanzas basadas en sonidos",
+        "Creacion de trabalenguas en grupo",
       ],
     },
   },
   CT: {
     "Necesita Apoyo": {
-      titulo: "Comprension de Textos: Explorando juntos",
-      mensaje: "Su hijo/a esta aprendiendo a comprender historias. La lectura compartida en casa es fundamental.",
+      titulo: "Comprension de Textos: requiere refuerzo",
+      mensaje: "El alumno esta iniciando la comprension de historias. Priorizar lectura dialogica con preguntas literales.",
       actividades: [
-        "Leer cuentos cortos y preguntar 'Quien aparece en el cuento?'",
-        "Mirar las imagenes antes de leer y adivinar de que tratara",
-        "Hacer pausas y preguntar 'Que paso hasta ahora?'",
-        "Releer los cuentos favoritos varias veces",
+        "Lectura de cuentos cortos con preguntas Quien/Que/Donde",
+        "Anticipacion a partir de las imagenes",
+        "Pausas para recuperar lo sucedido en el relato",
+        "Relectura de textos conocidos",
       ],
     },
     "En Proceso": {
-      titulo: "Comprension de Textos: Progresando",
-      mensaje: "Su hijo/a comprende historias basicas y esta listo para profundizar. Sigan disfrutando la lectura juntos.",
+      titulo: "Comprension de Textos: en desarrollo",
+      mensaje: "El alumno comprende historias basicas y esta listo para profundizar. Incorporar preguntas inferenciales.",
       actividades: [
-        "Preguntar 'Por que crees que el personaje hizo eso?'",
-        "Conectar el cuento con experiencias propias ('Te paso algo parecido?')",
-        "Pedir que cuente el cuento a otro familiar",
-        "Imaginar finales alternativos para las historias",
+        "Preguntas de inferencia (Por que, Como)",
+        "Conexion del texto con experiencias del grupo",
+        "Renarracion del cuento por parte del alumno",
+        "Anticipacion de finales alternativos",
       ],
     },
     "Avanzado": {
-      titulo: "Comprension de Textos: Destacado",
-      mensaje: "Su hijo/a tiene excelente comprension lectora. Pueden explorar textos mas complejos y conversaciones profundas.",
+      titulo: "Comprension de Textos: destacado",
+      mensaje: "El alumno evidencia buena comprension lectora. Avanzar hacia textos mas complejos y pensamiento critico.",
       actividades: [
-        "Leer cuentos mas largos en capitulos",
-        "Discutir 'Esta bien o mal lo que hizo el personaje? Por que?'",
-        "Comparar diferentes versiones de un mismo cuento",
-        "Crear historias propias inspiradas en los cuentos leidos",
+        "Lectura de textos mas extensos por partes",
+        "Preguntas de opinion y valoracion del personaje",
+        "Comparacion de versiones de un mismo cuento",
+        "Produccion de historias propias",
       ],
     },
   },
   O: {
     "Necesita Apoyo": {
-      titulo: "Oralidad: Encontrando su voz",
-      mensaje: "Su hijo/a esta desarrollando su expresion verbal. Cada conversacion en casa es una oportunidad de aprendizaje.",
+      titulo: "Oralidad: requiere refuerzo",
+      mensaje: "El alumno esta desarrollando su expresion verbal. Generar situaciones frecuentes de intercambio oral en la sala.",
       actividades: [
-        "Hablar sobre el dia: 'Que hiciste hoy? Con quien jugaste?'",
-        "Nombrar objetos y describir sus caracteristicas",
-        "Cantar canciones y repetir rimas juntos",
-        "Escuchar con atencion cuando habla, sin interrumpir",
+        "Rondas de intercambio sobre experiencias cotidianas",
+        "Descripcion de objetos y sus caracteristicas",
+        "Canciones y rimas de repeticion",
+        "Escucha activa con consignas de un paso",
       ],
     },
     "En Proceso": {
-      titulo: "Oralidad: Creciendo en expresion",
-      mensaje: "Su hijo/a se expresa cada vez mejor. Sigan conversando y dando oportunidades para hablar.",
+      titulo: "Oralidad: en desarrollo",
+      mensaje: "El alumno se expresa cada vez mejor. Ampliar situaciones de habla estructurada.",
       actividades: [
-        "Pedir que cuente historias con inicio, desarrollo y final",
-        "Jugar a describir objetos para que otros adivinen",
-        "Hacer preguntas abiertas que requieran explicaciones",
-        "Inventar cuentos juntos, turnandose para agregar partes",
+        "Narracion con secuenciadores (primero, despues, al final)",
+        "Juegos de descripcion para adivinar",
+        "Preguntas abiertas que requieran explicacion",
+        "Construccion colectiva de relatos por turnos",
       ],
     },
     "Avanzado": {
-      titulo: "Oralidad: Comunicador nato",
-      mensaje: "Su hijo/a tiene excelentes habilidades de comunicacion oral. Pueden desafiarlo con actividades mas complejas.",
+      titulo: "Oralidad: destacado",
+      mensaje: "El alumno evidencia buenas habilidades de comunicacion oral. Proponer instancias de argumentacion y exposicion.",
       actividades: [
-        "Debatir opiniones sobre temas simples ('Que es mejor, perros o gatos? Por que?')",
-        "Pedir que explique como hacer algo (receta, juego, etc.)",
-        "Grabar audiocuentos inventados por el/ella",
-        "Practicar presentaciones sobre temas que le interesen",
+        "Argumentacion sobre temas simples con turnos de habla",
+        "Explicacion de procesos (una receta, un juego)",
+        "Produccion de audiocuentos",
+        "Breves exposiciones sobre temas de interes",
       ],
     },
   },
 }
-
 export default function StudentProfile({ alumnoId, alumnoNombre, progressData, onBack }: StudentProfileProps) {
   const [loading, setLoading] = useState(true)
   const [alumno, setAlumno] = useState<Alumno | null>(
@@ -516,6 +515,11 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
           ) : EJES.map((eje) => {
             const p = progreso[eje.key] || { porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 }
             const nivel = getNivel(p.porcentaje)
+            // Evaluaciones REALES: excluye ausentes ("blue"). Un ausente no es evidencia
+            // de desempeno. Se exige un minimo de 3 evaluaciones reales para recomendar.
+            const MIN_EVAL_REAL = 3
+            const evaluacionesReales = (p.actividades || []).filter((a: ActividadEvaluada) => a.resultado !== "blue").length
+            const hayEvidenciaEje = evaluacionesReales >= MIN_EVAL_REAL
             const { sugerencia, urgencia } = getSugerenciaInteligente(eje.key, p.actividades || [], p.porcentaje)
             const secuencia = SECUENCIA_ALBA[eje.key] || []
             const EjeIcon = eje.icon
@@ -558,7 +562,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                   <div className="bg-white border-t" style={{ borderColor: `${eje.color}20` }}>
                     {/* Evaluaciones REALES de la maestra */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({(p.actividades || []).length} clases evaluadas):</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({evaluacionesReales} evaluadas{(p.actividades || []).some((a: ActividadEvaluada) => a.resultado === "blue") ? ` + ${(p.actividades || []).filter((a: ActividadEvaluada) => a.resultado === "blue").length} ausente(s)` : ""}):</p>
                       <div className="flex flex-wrap gap-1">
                         {(p.actividades || []).length > 0 ? (
                           (p.actividades || []).map((act, idx) => {
@@ -621,7 +625,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     {/* Sugerencia inteligente de ALBA */}
                     <div className="px-4 pb-4">
                       {/* Alerta si urgencia alta */}
-                      {urgencia === "alta" && (
+                      {hayEvidenciaEje && urgencia === "alta" && (
                         <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 mb-3">
                           <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
                             <span className="text-white text-xs font-bold">!</span>
@@ -633,7 +637,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                         </div>
                       )}
                       {/* Sugerencia media (amarillo) */}
-                      {urgencia === "media" && (
+                      {hayEvidenciaEje && urgencia === "media" && (
                         <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
                           <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
                           <div>
@@ -642,8 +646,18 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                           </div>
                         </div>
                       )}
+                      {/* Aviso: sin evidencia suficiente para recomendar (ausentes no cuentan) */}
+                      {!hayEvidenciaEje && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
+                          <div>
+                            <p className="text-xs font-medium text-slate-500">Aun sin evidencia suficiente</p>
+                            <p className="text-sm text-slate-600 mt-0.5">Se necesitan al menos 3 clases evaluadas (sin contar ausentes) para una recomendacion en este eje.</p>
+                          </div>
+                        </div>
+                      )}
                       {/* Sugerencia baja (verde - avanzado) */}
-                      {urgencia === "baja" && (
+                      {hayEvidenciaEje && urgencia === "baja" && (
                         <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                           <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
                           <div>
@@ -710,54 +724,6 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 <span className="text-slate-600">Clases evaluadas:</span>
                 <span className="font-bold text-slate-700">{totalClasesEvaluadas}</span>
               </div>
-
-              {/* Resumen General */}
-              <div 
-                className="rounded-2xl p-5 text-center"
-                style={{ backgroundColor: sintesis.nivelGeneral.bg }}
-              >
-                <p className="text-sm text-gray-500 mb-2">Nivel General de Alfabetizacion</p>
-                <div 
-                  className="text-4xl font-bold mb-2"
-                  style={{ color: sintesis.nivelGeneral.color }}
-                >
-                  {Math.round(sintesis.promedioGeneral)}%
-                </div>
-                <span 
-                  className="inline-block px-4 py-1.5 rounded-full text-white font-bold"
-                  style={{ backgroundColor: sintesis.nivelGeneral.color }}
-                >
-                  {sintesis.nivelGeneral.texto}
-                </span>
-              </div>
-
-          {/* Grafico de barras por eje */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4">
-            <p className="text-sm font-medium text-gray-700 mb-4">Desempeno por Eje</p>
-            <div className="space-y-4">
-              {EJES.map((eje) => {
-                const p = progreso[eje.key]?.porcentaje || 0
-                const EjeIcon = eje.icon
-                return (
-                  <div key={eje.key}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <EjeIcon className="w-4 h-4" style={{ color: eje.color }} />
-                        <span className="text-sm text-gray-600">{eje.label}</span>
-                      </div>
-                      <span className="text-sm font-bold" style={{ color: eje.color }}>{p}%</span>
-                    </div>
-                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${p}%`, backgroundColor: eje.color }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
 
           {/* Fortalezas y Areas de mejora - solo si hay evidencia suficiente */}
           {sintesis.evidenciaSuficiente ? (
@@ -834,16 +800,16 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
             <div className="flex items-center gap-2 mb-4">
               <User className="w-5 h-5 text-blue-600" />
-              <p className="font-bold text-blue-900">Mensaje para la Familia</p>
+              <p className="font-bold text-blue-900">Sintesis para el Docente</p>
             </div>
             
             <div className="space-y-4">
               {EJES.map((eje) => {
                 const p = progreso[eje.key]?.porcentaje || 0
                 const nivel = getNivel(p)
-                const mensajeFamilia = MENSAJES_FAMILIA[eje.key]?.[nivel.texto]
+                const mensajeDocente = MENSAJES_DOCENTE[eje.key]?.[nivel.texto]
                 
-                if (!mensajeFamilia) return null
+                if (!mensajeDocente) return null
                 
                 return (
                   <div 
@@ -854,20 +820,14 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     <div className="flex items-center gap-2 mb-2">
                       <eje.icon className="w-4 h-4" style={{ color: eje.color }} />
                       <h4 className="font-semibold text-sm" style={{ color: eje.color }}>
-                        {mensajeFamilia.titulo}
+                        {mensajeDocente.titulo}
                       </h4>
-                      <span 
-                        className="ml-auto text-xs px-2 py-0.5 rounded-full text-white"
-                        style={{ backgroundColor: nivel.color }}
-                      >
-                        {p}%
-                      </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{mensajeFamilia.mensaje}</p>
+                    <p className="text-sm text-gray-600 mb-3">{mensajeDocente.mensaje}</p>
                     <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs font-medium text-slate-500 mb-2">Actividades sugeridas para hacer en casa:</p>
+                      <p className="text-xs font-medium text-slate-500 mb-2">Estrategias sugeridas para el aula:</p>
                       <ul className="space-y-1.5">
-                        {mensajeFamilia.actividades.map((act, idx) => (
+                        {mensajeDocente.actividades.map((act, idx) => (
                           <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
                             <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
                               {idx + 1}
