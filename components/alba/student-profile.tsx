@@ -375,6 +375,10 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
   }, [alumnoId, progressData])
 
   // Calcular sintesis cuatrimestral
+  // MIN_EVIDENCIA: minimo de actividades evaluadas en un eje para dar un veredicto
+  // confiable. Con menos, no se afirma fortaleza/area de mejora (evita decir
+  // "excelente" con 1 sola actividad).
+  const MIN_EVIDENCIA = 3
   const calcularSintesis = () => {
     const promedioGeneral = EJES.reduce((acc, eje) => {
       const p = progreso[eje.key]?.porcentaje || 0
@@ -382,17 +386,27 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
     }, 0) / 3
 
     const nivelGeneral = getNivel(promedioGeneral)
-    
-    // Determinar fortalezas y areas de mejora
-    const ejesOrdenados = EJES.map(e => ({
+
+    // Cada eje con su porcentaje Y su cantidad de actividades evaluadas (evidencia)
+    const ejesConDatos = EJES.map(e => ({
       ...e,
-      porcentaje: progreso[e.key]?.porcentaje || 0
-    })).sort((a, b) => b.porcentaje - a.porcentaje)
+      porcentaje: progreso[e.key]?.porcentaje || 0,
+      nEvaluadas: progreso[e.key]?.actividades?.length || 0,
+    }))
 
-    const fortaleza = ejesOrdenados[0]
-    const areaMejora = ejesOrdenados[2]
+    // Solo los ejes con evidencia suficiente pueden recibir un veredicto
+    const ejesConEvidencia = ejesConDatos.filter(e => e.nEvaluadas >= MIN_EVIDENCIA)
+    const evidenciaSuficiente = ejesConEvidencia.length > 0
 
-    return { promedioGeneral, nivelGeneral, fortaleza, areaMejora }
+    // Fortaleza/area de mejora se calculan SOLO entre los ejes con evidencia
+    const ordenados = [...ejesConEvidencia].sort((a, b) => b.porcentaje - a.porcentaje)
+    const fortaleza = ordenados[0] || null
+    const areaMejora = ordenados.length > 1 ? ordenados[ordenados.length - 1] : null
+
+    // Total de actividades evaluadas en todo el cuatrimestre (para el aviso)
+    const totalEvaluadas = ejesConDatos.reduce((acc, e) => acc + e.nEvaluadas, 0)
+
+    return { promedioGeneral, nivelGeneral, fortaleza, areaMejora, evidenciaSuficiente, totalEvaluadas, ejesConDatos }
   }
 
   if (loading) {
@@ -745,60 +759,76 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             </div>
           </div>
 
-          {/* Fortalezas y Areas de mejora */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-              <p className="text-xs font-medium text-green-700 mb-2">Fortaleza</p>
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const Icon = EJES.find(e => e.key === sintesis.fortaleza.key)?.icon || BookOpen
-                  return <Icon className="w-5 h-5 text-green-600" />
-                })()}
-                <span className="font-semibold text-green-800">{sintesis.fortaleza.label}</span>
-              </div>
-              <p className="text-lg font-bold text-green-600 mt-1">{sintesis.fortaleza.porcentaje}%</p>
+          {/* Fortalezas y Areas de mejora - solo si hay evidencia suficiente */}
+          {sintesis.evidenciaSuficiente ? (
+            <div className="grid grid-cols-2 gap-3">
+              {sintesis.fortaleza && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <p className="text-xs font-medium text-green-700 mb-2">Fortaleza</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = EJES.find(e => e.key === sintesis.fortaleza!.key)?.icon || BookOpen
+                      return <Icon className="w-5 h-5 text-green-600" />
+                    })()}
+                    <span className="font-semibold text-green-800">{sintesis.fortaleza.label}</span>
+                  </div>
+                </div>
+              )}
+              {sintesis.areaMejora && (
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                  <p className="text-xs font-medium text-amber-700 mb-2">Area de Mejora</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = EJES.find(e => e.key === sintesis.areaMejora!.key)?.icon || BookOpen
+                      return <Icon className="w-5 h-5 text-amber-600" />
+                    })()}
+                    <span className="font-semibold text-amber-800">{sintesis.areaMejora.label}</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-              <p className="text-xs font-medium text-amber-700 mb-2">Area de Mejora</p>
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const Icon = EJES.find(e => e.key === sintesis.areaMejora.key)?.icon || BookOpen
-                  return <Icon className="w-5 h-5 text-amber-600" />
-                })()}
-                <span className="font-semibold text-amber-800">{sintesis.areaMejora.label}</span>
-              </div>
-              <p className="text-lg font-bold text-amber-600 mt-1">{sintesis.areaMejora.porcentaje}%</p>
+          ) : (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p className="text-sm text-slate-600">
+                Aun no hay evidencia suficiente para una valoracion por eje. Se necesitan al menos {sintesis && (3)} actividades evaluadas en un eje (con Finalizar Jornada) para dar un veredicto confiable.
+              </p>
             </div>
-          </div>
+          )}
 
-          {/* Recomendaciones para el cuatrimestre */}
-          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className="w-5 h-5 text-amber-500" />
-              <p className="font-medium text-gray-700">Recomendaciones para el proximo cuatrimestre</p>
+          {/* Recomendaciones para el cuatrimestre - solo con evidencia suficiente */}
+          {sintesis.evidenciaSuficiente && (
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-5 h-5 text-amber-500" />
+                <p className="font-medium text-gray-700">Recomendaciones para el proximo cuatrimestre</p>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600">
+                {sintesis.fortaleza && (
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                    <span>
+                      <strong>Continuar fortaleciendo {sintesis.fortaleza.label}</strong>: el alumno muestra buen desempeno segun la evidencia registrada.
+                      Proponer actividades mas complejas en este eje.
+                    </span>
+                  </li>
+                )}
+                {sintesis.areaMejora && (
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                    <span>
+                      <strong>Priorizar {sintesis.areaMejora.label}</strong>: {SUGERENCIAS[sintesis.areaMejora.key][getNivel(sintesis.areaMejora.porcentaje).texto]}
+                    </span>
+                  </li>
+                )}
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                  <span>
+                    <strong>Integracion de ejes</strong>: proponer actividades que combinen los ejes trabajados para un abordaje mas integral.
+                  </span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
-                <span>
-                  <strong>Continuar fortaleciendo {sintesis.fortaleza.label}</strong>: El alumno muestra buen desempeno. 
-                  Avanzar hacia actividades mas complejas en este eje.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
-                <span>
-                  <strong>Priorizar {sintesis.areaMejora.label}</strong>: {SUGERENCIAS[sintesis.areaMejora.key][getNivel(sintesis.areaMejora.porcentaje).texto]}
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
-                <span>
-                  <strong>Integracion de ejes</strong>: Buscar actividades que combinen los tres ejes para un aprendizaje mas integral.
-                </span>
-              </li>
-            </ul>
-          </div>
+          )}
 
           {/* MENSAJES PARA LA FAMILIA */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
