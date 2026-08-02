@@ -305,7 +305,6 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
     alumnoNombre ? { id: alumnoId, nombre: alumnoNombre, apellido: "" } : null
   )
   const [progreso, setProgreso] = useState<Record<string, ProgresoEje>>({})
-  const [ejeExpandido, setEjeExpandido] = useState<string | null>(null)
   const [vistaActiva, setVistaActiva] = useState<"progreso" | "sintesis">("progreso")
 
   // Fetch datos del alumno desde Supabase
@@ -465,28 +464,47 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setVistaActiva("progreso")}
-          className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${
-            vistaActiva === "progreso"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
-        >
-          Progreso por Eje
-        </button>
-        <button
-          onClick={() => setVistaActiva("sintesis")}
-          className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${
-            vistaActiva === "sintesis"
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
-        >
-          Sintesis Cuatrimestral
-        </button>
+      <div className="mb-4">
+        <h2 className="text-base font-bold text-slate-800">Trayectoria</h2>
+        <p className="text-xs text-slate-400">Evidencia registrada por eje a lo largo del cuatrimestre</p>
       </div>
+
+          {/* Fortalezas y Areas de mejora - solo si hay evidencia suficiente */}
+          {sintesis.evidenciaSuficiente ? (
+            <div className="grid grid-cols-2 gap-3">
+              {sintesis.fortaleza && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <p className="text-xs font-medium text-green-700 mb-2">Fortaleza</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = EJES.find(e => e.key === sintesis.fortaleza!.key)?.icon || BookOpen
+                      return <Icon className="w-5 h-5 text-green-600" />
+                    })()}
+                    <span className="font-semibold text-green-800">{sintesis.fortaleza.label}</span>
+                  </div>
+                </div>
+              )}
+              {sintesis.areaMejora && (
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                  <p className="text-xs font-medium text-amber-700 mb-2">Area de Mejora</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const Icon = EJES.find(e => e.key === sintesis.areaMejora!.key)?.icon || BookOpen
+                      return <Icon className="w-5 h-5 text-amber-600" />
+                    })()}
+                    <span className="font-semibold text-amber-800">{sintesis.areaMejora.label}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p className="text-sm text-slate-600">
+                Aun no hay evidencia suficiente para una valoracion por eje. Se necesitan al menos {sintesis && (3)} actividades evaluadas en un eje (con Finalizar Jornada) para dar un veredicto confiable.
+              </p>
+            </div>
+          )}
+
 
       {/* Mensaje cuando no hay evaluaciones */}
       {!tieneEvaluaciones && (
@@ -505,7 +523,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         </div>
       )}
 
-      {vistaActiva === "progreso" ? (
+      {(
         /* VISTA: Progreso por Eje */
         <div className="space-y-4">
           {!tieneEvaluaciones ? (
@@ -523,7 +541,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             const { sugerencia, urgencia } = getSugerenciaInteligente(eje.key, p.actividades || [], p.porcentaje)
             const secuencia = SECUENCIA_ALBA[eje.key] || []
             const EjeIcon = eje.icon
-            const isExpanded = ejeExpandido === eje.key
+            const isExpanded = true // siempre desplegado
             
             return (
               <div 
@@ -531,10 +549,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 className="rounded-2xl overflow-hidden border"
                 style={{ borderColor: `${eje.color}40` }}
               >
-                {/* Encabezado clickeable */}
-                <button
-                  onClick={() => setEjeExpandido(isExpanded ? null : eje.key)}
-                  className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:opacity-90"
+                {/* Encabezado del eje (siempre visible) */}
+                <div
+                  className="w-full flex items-center px-4 py-3"
                   style={{ backgroundColor: eje.bgColor }}
                 >
                   <div className="flex items-center gap-3">
@@ -548,14 +565,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       <span className="font-semibold text-gray-700">{eje.label}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                </button>
+                </div>
 
                 {/* Contenido expandido */}
                 {isExpanded && (
@@ -700,8 +710,9 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             )
           })}
         </div>
-      ) : (
-        /* VISTA: Sintesis Cuatrimestral */
+      )}
+      {(
+        /* VISTA: Sintesis Cuatrimestral (continuacion) */
         <div className="space-y-4">
           {!tieneEvaluaciones ? (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
@@ -725,41 +736,6 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                 <span className="font-bold text-slate-700">{totalClasesEvaluadas}</span>
               </div>
 
-          {/* Fortalezas y Areas de mejora - solo si hay evidencia suficiente */}
-          {sintesis.evidenciaSuficiente ? (
-            <div className="grid grid-cols-2 gap-3">
-              {sintesis.fortaleza && (
-                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-                  <p className="text-xs font-medium text-green-700 mb-2">Fortaleza</p>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const Icon = EJES.find(e => e.key === sintesis.fortaleza!.key)?.icon || BookOpen
-                      return <Icon className="w-5 h-5 text-green-600" />
-                    })()}
-                    <span className="font-semibold text-green-800">{sintesis.fortaleza.label}</span>
-                  </div>
-                </div>
-              )}
-              {sintesis.areaMejora && (
-                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-                  <p className="text-xs font-medium text-amber-700 mb-2">Area de Mejora</p>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const Icon = EJES.find(e => e.key === sintesis.areaMejora!.key)?.icon || BookOpen
-                      return <Icon className="w-5 h-5 text-amber-600" />
-                    })()}
-                    <span className="font-semibold text-amber-800">{sintesis.areaMejora.label}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <p className="text-sm text-slate-600">
-                Aun no hay evidencia suficiente para una valoracion por eje. Se necesitan al menos {sintesis && (3)} actividades evaluadas en un eje (con Finalizar Jornada) para dar un veredicto confiable.
-              </p>
-            </div>
-          )}
 
           {/* Recomendaciones para el cuatrimestre - solo con evidencia suficiente */}
           {sintesis.evidenciaSuficiente && (
