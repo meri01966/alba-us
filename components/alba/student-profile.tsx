@@ -781,12 +781,14 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             
             <div className="space-y-4">
               {EJES.map((eje) => {
+                // Evidencia real del eje: clases evaluadas sin contar ausentes ("blue")
+                const actsEje = progreso[eje.key]?.actividades || []
+                const evalRealesEje = actsEje.filter((a: ActividadEvaluada) => a.resultado !== "blue").length
+                const hayEvidenciaDocente = evalRealesEje >= 3
                 const p = progreso[eje.key]?.porcentaje || 0
                 const nivel = getNivel(p)
                 const mensajeDocente = MENSAJES_DOCENTE[eje.key]?.[nivel.texto]
-                
-                if (!mensajeDocente) return null
-                
+
                 return (
                   <div 
                     key={eje.key}
@@ -796,31 +798,35 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                     <div className="flex items-center gap-2 mb-2">
                       <eje.icon className="w-4 h-4" style={{ color: eje.color }} />
                       <h4 className="font-semibold text-sm" style={{ color: eje.color }}>
-                        {mensajeDocente.titulo}
+                        {eje.label}
                       </h4>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{mensajeDocente.mensaje}</p>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs font-medium text-slate-500 mb-2">Estrategias sugeridas para el aula:</p>
-                      <ul className="space-y-1.5">
-                        {mensajeDocente.actividades.map((act, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
-                            <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
-                              {idx + 1}
-                            </span>
-                            {act}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    {hayEvidenciaDocente && mensajeDocente ? (
+                      <>
+                        <p className="text-sm text-gray-600 mb-3">{mensajeDocente.mensaje}</p>
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-2">Estrategias sugeridas para el aula:</p>
+                          <ul className="space-y-1.5">
+                            {mensajeDocente.actividades.map((act, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
+                                <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
+                                  {idx + 1}
+                                </span>
+                                {act}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">Aun sin evidencia suficiente para una sintesis en este eje (se necesitan al menos 3 clases evaluadas).</p>
+                    )}
                   </div>
                 )
               })}
             </div>
             
-<p className="text-xs text-blue-600 mt-4 text-center italic">
-              Estos mensajes pueden compartirse con las familias para acompanar el proceso de alfabetizacion en casa.
-            </p>
+
           </div>
             </>
           )}
