@@ -1443,6 +1443,20 @@ export async function GET(req: Request) {
         progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
       })
     }
+
+    // ── Sin actividad planificada en el cronograma → panel VACIO ──────────────
+    // Si la maestra no guardo una planificacion de alfabetizacion para esta
+    // semana, ALBA NO propone una actividad por defecto: el panel del dashboard
+    // queda vacio hasta que la docente planifique y guarde el cronograma. Evita
+    // la "actividad fantasma" que aparecia sin que la maestra hiciera nada.
+    return NextResponse.json({
+      sugerencia: null,
+      microCapacitacion: null,
+      alertas: [],
+      historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
+      progreso: { totalClasesCompletadas: 0, semanaActual: 1, clasesCompletadasPorEje: { CF: 0, CT: 0, O: 0 } },
+    })
+
     const { data: proyectoActivo } = await supabase
       .from("proyectos")
       .select("id, titulo, objetivo_general, actividades")
