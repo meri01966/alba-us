@@ -8,18 +8,37 @@ function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
 }
 
-// Mapeo de actividades a semanas de la secuencia ALBA
-const SECUENCIA_SEMANAS = {
-  CF: 25,
-  CT: 25,
-  O: 25,
+// Ejes que devuelve la Trayectoria. Escritura incluida (lee datos "E", "LE" y "Escritura").
+const EJES = ["CF", "CT", "O", "E"] as const
+type EjeKey = (typeof EJES)[number]
+
+// Normaliza el valor del campo "eje" de la base a una de las claves de EJES.
+// Escritura hoy puede venir como "E", "LE" o "Escritura" -> todo se unifica a "E".
+function normalizarEje(ejeRaw: string): EjeKey | null {
+  const e = (ejeRaw || "").trim().toUpperCase()
+  if (e === "CF") return "CF"
+  if (e === "CT") return "CT"
+  if (e === "O" || e === "ORALIDAD") return "O"
+  if (e === "E" || e === "LE" || e === "ESCRITURA" || e === "EA") return "E"
+  return null
+}
+
+// Estado individual: green / yellow / red son evidencia real; blue = ausente (no evidencia)
+type EstadoEval = "green" | "yellow" | "red" | "blue"
+
+function normalizarEstado(estadoRaw: string): EstadoEval {
+  const s = (estadoRaw || "").trim().toLowerCase()
+  if (s === "green" || s === "yellow" || s === "red" || s === "blue") return s as EstadoEval
+  if (s === "ausente" || s === "absent") return "blue"
+  if (!s) return "blue"
+  return "red"
 }
 
 interface ActividadEvaluada {
   semana: number
   titulo: string
   fecha: string
-  resultado: "green" | "yellow" | "red"
+  resultado: EstadoEval
   promedio: number
 }
 
@@ -29,52 +48,46 @@ interface ProgresoEje {
   actividades: ActividadEvaluada[]
   tendencia: "mejorando" | "estable" | "bajando"
   semanaActual: number
+  evaluadasReales: number
+  ausentes: number
 }
 
-// Calcular promedio ponderado: green=100, yellow=50, red=10
-function calcularPromedio(actividades: Array<{ resultado: string }>): number {
-  if (actividades.length === 0) return 0
-  const puntos = actividades.reduce((acc, a) => {
+// Promedio SOLO con evidencia real (excluye ausentes "blue"). green=100, yellow=50, red=0
+function calcularPromedio(actividades: Array<{ resultado: EstadoEval }>): number {
+  const reales = actividades.filter((a) => a.resultado !== "blue")
+  if (reales.length === 0) return 0
+  const puntos = reales.reduce((acc, a) => {
     if (a.resultado === "green") return acc + 100
     if (a.resultado === "yellow") return acc + 50
-    return acc + 10
+    return acc + 0
   }, 0)
-  return Math.round(puntos / actividades.length)
+  return Math.round(puntos / reales.length)
 }
 
-// Calcular tendencia basada en ultimas evaluaciones
-function calcularTendencia(actividades: Array<{ resultado: string; fecha: string }>): "mejorando" | "estable" | "bajando" {
-  if (actividades.length < 6) return "estable"
-  
-  const ordenadas = [...actividades].sort((a, b) => 
-    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+function calcularTendencia(
+  actividades: Array<{ resultado: EstadoEval; fecha: string }>
+): "mejorando" | "estable" | "bajando" {
+  const reales = actividades.filter((a) => a.resultado !== "blue")
+  if (reales.length < 6) return "estable"
+
+  const ordenadas = [...reales].sort(
+    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
   )
-  
   const recientes = ordenadas.slice(0, 3)
   const anteriores = ordenadas.slice(3, 6)
-  
   const promedioReciente = calcularPromedio(recientes)
   const promedioAnterior = calcularPromedio(anteriores)
-  
+
   if (promedioReciente > promedioAnterior + 10) return "mejorando"
   if (promedioReciente < promedioAnterior - 10) return "bajando"
   return "estable"
 }
 
-// Calcular semana actual basada en promedio y cantidad de evaluaciones
-function calcularSemanaActual(actividades: Array<{ resultado: string }>, promedio: number): number {
-  const diasEvaluados = actividades.length
-  
-  if (diasEvaluados === 0) return 1
-  
-  // Avance basado en promedio
-  if (promedio >= 70) {
-    return Math.min(25, Math.floor(diasEvaluados / 3) + 1)
-  } else if (promedio >= 50) {
-    return Math.min(25, Math.floor(diasEvaluados / 5) + 1)
-  } else {
-    return Math.min(25, Math.floor(diasEvaluados / 7) + 1)
-  }
+function calcularSemanaActual(evaluadasReales: number, promedio: number): number {
+  if (evaluadasReales === 0) return 1
+  if (promedio >= 70) return Math.min(25, Math.floor(evaluadasReales / 3) + 1)
+  if (promedio >= 50) return Math.min(25, Math.floor(evaluadasReales / 5) + 1)
+  return Math.min(25, Math.floor(evaluadasReales / 7) + 1)
 }
 
 export async function GET(
@@ -85,7 +98,6 @@ export async function GET(
   const supabase = getSupabase()
 
   try {
-    // Buscar datos del alumno
     const { data: alumnoData, error: alumnoError } = await supabase
       .from("alumnos")
       .select("id, nombre, apellido")
@@ -96,7 +108,6 @@ export async function GET(
       console.error("[v0] Error fetching alumno:", alumnoError)
     }
 
-    // Buscar todas las evaluaciones del alumno - usa campo "estado" no "resultado"
     const { data: evaluaciones, error: evalError } = await supabase
       .from("seguimiento")
       .select("*")
@@ -107,56 +118,61 @@ export async function GET(
       console.error("[v0] Error fetching evaluaciones:", evalError)
     }
 
-    // Organizar evaluaciones por eje
-    const evaluacionesPorEje: Record<string, Array<{
+    const evaluacionesPorEje: Record<EjeKey, Array<{
       semana: number
       titulo: string
       fecha: string
-      resultado: "green" | "yellow" | "red"
+      resultado: EstadoEval
       actividad: string
-    }>> = { CF: [], CT: [], O: [] }
+    }>> = { CF: [], CT: [], O: [], E: [] }
 
-    const contadorSemana: Record<string, number> = { CF: 1, CT: 1, O: 1 }
+    const contadorSemana: Record<EjeKey, number> = { CF: 1, CT: 1, O: 1, E: 1 }
 
     ;(evaluaciones || []).forEach((ev: any) => {
-      const eje = ev.eje as "CF" | "CT" | "O"
-      if (!evaluacionesPorEje[eje]) return
+      const eje = normalizarEje(ev.eje)
+      if (!eje) return
 
+      const n = contadorSemana[eje]++
       evaluacionesPorEje[eje].push({
-        semana: contadorSemana[eje]++,
-        titulo: ev.actividad || `Clase ${contadorSemana[eje]}`,
-        fecha: ev.created_at ? new Date(ev.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }) : "",
-        resultado: ev.estado as "green" | "yellow" | "red",  // USAR estado, NO resultado
+        semana: n,
+        titulo: ev.actividad || `Clase ${n}`,
+        fecha: ev.created_at
+          ? new Date(ev.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
+          : "",
+        resultado: normalizarEstado(ev.estado),
         actividad: ev.actividad || "",
       })
     })
 
-    // Calcular progreso por eje
     const progreso: Record<string, ProgresoEje> = {}
 
-    for (const eje of ["CF", "CT", "O"]) {
+    for (const eje of EJES) {
       const actividades = evaluacionesPorEje[eje]
+      const reales = actividades.filter((a) => a.resultado !== "blue")
+      const ausentes = actividades.length - reales.length
       const promedio = calcularPromedio(actividades)
       const tendencia = calcularTendencia(actividades)
-      const semanaActual = calcularSemanaActual(actividades, promedio)
-      
-      // Actividades logradas (green)
+      const semanaActual = calcularSemanaActual(reales.length, promedio)
+
       const logradas = actividades
-        .filter(a => a.resultado === "green")
-        .map((_, idx) => idx + 1)
+        .map((a, idx) => ({ a, idx }))
+        .filter(({ a }) => a.resultado === "green")
+        .map(({ idx }) => idx + 1)
 
       progreso[eje] = {
         logradas,
         porcentaje: promedio,
-        actividades: actividades.slice(0, 10).map(a => ({
+        actividades: actividades.map((a) => ({
           semana: a.semana,
           titulo: a.titulo,
           fecha: a.fecha,
           resultado: a.resultado,
-          promedio: a.resultado === "green" ? 100 : a.resultado === "yellow" ? 50 : 10,
+          promedio: a.resultado === "green" ? 100 : a.resultado === "yellow" ? 50 : 0,
         })),
         tendencia,
         semanaActual,
+        evaluadasReales: reales.length,
+        ausentes,
       }
     }
 
@@ -168,14 +184,13 @@ export async function GET(
     })
   } catch (error) {
     console.error("[v0] Error in progreso API:", error)
-    return NextResponse.json({ 
-      ok: false, 
+    const vacio = (): ProgresoEje => ({
+      logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1, evaluadasReales: 0, ausentes: 0,
+    })
+    return NextResponse.json({
+      ok: false,
       error: String(error),
-      progreso: {
-        CF: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-        CT: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-        O: { logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1 },
-      },
+      progreso: { CF: vacio(), CT: vacio(), O: vacio(), E: vacio() },
     }, { status: 500 })
   }
 }
