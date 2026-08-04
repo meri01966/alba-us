@@ -132,6 +132,112 @@ function getNivel(porcentaje: number): { texto: string; color: string; bg: strin
 }
 
 // Sugerencias inteligentes basadas en el patron de evaluaciones
+// ── Análisis inteligente de la trayectoria del alumno por eje ──────────────
+// Compara las últimas 4 evaluaciones reales con las 4 anteriores para leer la
+// DIRECCIÓN del aprendizaje (mejora, afloja, baja, altibajos), no una foto fija.
+// Ausentes ("blue") no cuentan. Devuelve un mensaje pedagógico para el docente.
+const VALOR_EST: Record<string, number> = { green: 100, yellow: 50, red: 0 }
+
+function promEst(arr: string[]): number {
+  if (!arr.length) return 0
+  return Math.round(arr.reduce((a, x) => a + (VALOR_EST[x] ?? 0), 0) / arr.length)
+}
+
+function variabilidadEst(arr: string[]): number {
+  if (arr.length < 2) return 0
+  const v = arr.map((x) => VALOR_EST[x] ?? 0)
+  const m = v.reduce((a, b) => a + b, 0) / v.length
+  return Math.round(Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length))
+}
+
+function cambiosDireccionEst(arr: string[]): number {
+  const v = arr.map((x) => VALOR_EST[x] ?? 0)
+  let c = 0
+  for (let i = 2; i < v.length; i++) {
+    const d1 = Math.sign(v[i - 1] - v[i - 2])
+    const d2 = Math.sign(v[i] - v[i - 1])
+    if (d1 !== 0 && d2 !== 0 && d1 !== d2) c++
+  }
+  return c
+}
+
+type EstadoAprendizaje =
+  | "sin_evidencia" | "altibajos" | "afloja" | "mejorando" | "bajando"
+  | "excelente" | "muy_bien" | "sostenido_bien" | "en_proceso" | "necesita_apoyo" | "iniciando"
+
+// Mensajes pedagógicos: fieles a la evidencia, siempre como sugerencia, para acompañar y alentar.
+const MENSAJE_APRENDIZAJE: Record<EstadoAprendizaje, string> = {
+  sin_evidencia: "Aún no hay evidencia suficiente para valorar este eje. Se sugiere registrar algunas clases más para acompañar mejor su proceso.",
+  mejorando: "Viene mostrando avances en este eje. Sería valioso reconocer su progreso y seguir proponiendo desafíos que lo estimulen.",
+  excelente: "Muestra un desempeño destacado y sostenido. Se sugiere acompañar con propuestas de mayor complejidad para seguir desafiándolo.",
+  muy_bien: "Muy buen desempeño en este eje. Continuar acompañando en la misma línea.",
+  sostenido_bien: "Viene sosteniendo un buen desempeño en este eje. Continuar acompañando en la misma línea.",
+  altibajos: "Muestra un desempeño con altibajos: los aprendizajes todavía se están afianzando. Se sugiere sostener la constancia con actividades similares para ayudar a que se fijen y fortalezcan.",
+  afloja: "Venía con muy buen desempeño y se observa un leve descenso. Sería oportuno acompañar de cerca para ayudarlo a sostener el nivel.",
+  bajando: "Se observa un descenso respecto a las clases anteriores. Se sugiere reforzar este eje con actividades de apoyo y acompañamiento más individual.",
+  en_proceso: "Está en proceso en este eje. Continuar reforzando con actividades que consoliden lo trabajado.",
+  necesita_apoyo: "Necesita apoyo sostenido en este eje. Se sugiere retomar actividades más simples y frecuentes para afianzar las bases.",
+  iniciando: "Está dando sus primeros pasos en este eje. Acompañar con propuestas lúdicas y graduales, respetando su ritmo.",
+}
+
+// Tono del cartel según el estado (color)
+function tonoAprendizaje(estado: EstadoAprendizaje): { titulo: string; clase: string } {
+  switch (estado) {
+    case "excelente":
+    case "muy_bien":
+    case "mejorando":
+    case "sostenido_bien":
+      return { titulo: "Va muy bien", clase: "emerald" }
+    case "afloja":
+    case "altibajos":
+    case "en_proceso":
+      return { titulo: "Prestar atención", clase: "amber" }
+    case "bajando":
+    case "necesita_apoyo":
+      return { titulo: "Requiere acompañamiento", clase: "red" }
+    case "iniciando":
+      return { titulo: "En sus primeros pasos", clase: "slate" }
+    default:
+      return { titulo: "Sin evidencia suficiente", clase: "slate" }
+  }
+}
+
+// Analiza las evaluaciones de un eje (en orden cronológico) y devuelve el estado.
+function analizarAprendizaje(resultados: string[]): EstadoAprendizaje {
+  const reales = resultados.filter((e) => e !== "blue")
+  if (reales.length < 3) return "sin_evidencia"
+
+  const ventana = reales.slice(-8)
+  const ultimas4 = reales.slice(-4)
+  const anteriores4 = reales.slice(-8, -4)
+  const pRec = promEst(ultimas4)
+  const pAnt = anteriores4.length >= 2 ? promEst(anteriores4) : null
+  const vari = variabilidadEst(ventana)
+  const zigzag = cambiosDireccionEst(ventana)
+
+  // Altibajos reales: alta variabilidad Y zigzag marcado
+  if (vari >= 38 && zigzag >= 3 && reales.length >= 5) return "altibajos"
+
+  if (pAnt !== null) {
+    const dif = pRec - pAnt
+    if (dif < 0 && pAnt >= 85 && pRec >= 45) return "afloja"
+    if (dif >= 15) return "mejorando"
+    if (dif <= -20) return "bajando"
+    if (dif < 0 && pAnt >= 80) return "afloja"
+  }
+
+  if (ultimas4.every((e) => e === "green") && reales.length >= 4 && pRec >= 90) return "excelente"
+
+  if (pAnt === null) {
+    if (pRec >= 85) return "muy_bien"
+    if (pRec >= 50) return "en_proceso"
+    return "iniciando"
+  }
+  if (pRec >= 80) return "sostenido_bien"
+  if (pRec >= 50) return "en_proceso"
+  return "necesita_apoyo"
+}
+
 function getSugerenciaInteligente(
   eje: string, 
   actividades: Array<{ semana: number; resultado: string }>, 
@@ -567,20 +673,20 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                   </div>
                 </div>
 
-                {/* Contenido expandido */}
+                {/* Contenido expandido: analisis inteligente de la trayectoria */}
                 {isExpanded && (
                   <div className="bg-white border-t" style={{ borderColor: `${eje.color}20` }}>
-                    {/* Evaluaciones REALES de la maestra */}
+                    {/* Evaluaciones REALES de la maestra: bolitas clase por clase */}
                     <div className="px-4 py-3">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({evaluacionesReales} evaluadas{(p.actividades || []).some((a: ActividadEvaluada) => a.resultado === "blue") ? ` + ${(p.actividades || []).filter((a: ActividadEvaluada) => a.resultado === "blue").length} ausente(s)` : ""}):</p>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Evaluacion por clase ({(p.actividades || []).filter((a: ActividadEvaluada) => a.resultado !== "blue").length} evaluadas{(p.actividades || []).some((a: ActividadEvaluada) => a.resultado === "blue") ? ` + ${(p.actividades || []).filter((a: ActividadEvaluada) => a.resultado === "blue").length} ausente(s)` : ""}):</p>
                       <div className="flex flex-wrap gap-1">
                         {(p.actividades || []).length > 0 ? (
-                          (p.actividades || []).map((act, idx) => {
+                          (p.actividades || []).map((act: ActividadEvaluada, idx: number) => {
                             let bgColor = "#e2e8f0"
                             let textColor = "#64748b"
                             let isAlert = false
                             let statusText = "Pendiente"
-                            
+
                             if (act.resultado === "green") {
                               bgColor = "#10b981"
                               textColor = "#fff"
@@ -599,11 +705,11 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                               isAlert = true
                               statusText = "Necesita refuerzo"
                             }
-                            
+
                             return (
                               <div
                                 key={idx}
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${isAlert ? "ring-2 ring-red-300 ring-offset-1" : ""}`}
                                 style={{ backgroundColor: bgColor, color: textColor }}
                                 title={`Clase ${idx + 1} - ${statusText}`}
                               >
@@ -632,78 +738,34 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       </div>
                     </div>
 
-                    {/* Sugerencia inteligente de ALBA */}
-                    <div className="px-4 pb-4">
-                      {/* Alerta si urgencia alta */}
-                      {hayEvidenciaEje && urgencia === "alta" && (
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 mb-3">
-                          <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-white text-xs font-bold">!</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-red-700">ALERTA PEDAGOGICA - REQUIERE ATENCION</p>
-                            <p className="text-sm text-red-600 mt-0.5">{sugerencia}</p>
-                          </div>
-                        </div>
-                      )}
-                      {/* Sugerencia media (amarillo) */}
-                      {hayEvidenciaEje && urgencia === "media" && (
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
-                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
-                          <div>
-                            <p className="text-xs font-medium text-amber-700">Recomendacion de ALBA:</p>
-                            <p className="text-sm text-amber-800 mt-0.5">{sugerencia}</p>
-                          </div>
-                        </div>
-                      )}
-                      {/* Aviso: sin evidencia suficiente para recomendar (ausentes no cuentan) */}
-                      {!hayEvidenciaEje && (
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
-                          <div>
-                            <p className="text-xs font-medium text-slate-500">Aun sin evidencia suficiente</p>
-                            <p className="text-sm text-slate-600 mt-0.5">Se necesitan al menos 3 clases evaluadas (sin contar ausentes) para una recomendacion en este eje.</p>
-                          </div>
-                        </div>
-                      )}
-                      {/* Sugerencia baja (verde - avanzado) */}
-                      {hayEvidenciaEje && urgencia === "baja" && (
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                          <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
-                          <div>
-                            <p className="text-xs font-medium text-emerald-700">Para seguir avanzando:</p>
-                            <p className="text-sm text-emerald-800 mt-0.5">{sugerencia}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Historial reciente */}
-                    {(p.actividades || []).length > 0 && (
-                      <div className="px-4 pb-4 border-t" style={{ borderColor: `${eje.color}10` }}>
-                        <p className="text-xs font-medium text-gray-500 mt-3 mb-2">Ultimas actividades evaluadas:</p>
-                        <div className="space-y-1">
-                          {(p.actividades || []).slice(0, 3).map((act, i) => (
-                            <div 
-                              key={i}
-                              className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span 
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ 
-                                    backgroundColor: act.resultado === "green" ? "#10b981" : 
-                                                    act.resultado === "yellow" ? "#f59e0b" : "#ef4444"
-                                  }}
-                                />
-                                <span className="text-gray-700">{act.titulo}</span>
-                              </div>
-                              <span className="text-gray-400">{act.fecha}</span>
+                    {/* Analisis inteligente de la trayectoria */}
+                    <div className="px-4 py-4">
+                      {(() => {
+                        const resultados = (p.actividades || []).map((a: ActividadEvaluada) => a.resultado)
+                        const estado = analizarAprendizaje(resultados)
+                        const tono = tonoAprendizaje(estado)
+                        const mensaje = MENSAJE_APRENDIZAJE[estado]
+                        const colores: Record<string, { bg: string; border: string; text: string; titleText: string }> = {
+                          emerald: { bg: "#ecfdf5", border: "#a7f3d0", text: "#065f46", titleText: "#047857" },
+                          amber:   { bg: "#fffbeb", border: "#fde68a", text: "#92400e", titleText: "#b45309" },
+                          red:     { bg: "#fef2f2", border: "#fecaca", text: "#991b1b", titleText: "#b91c1c" },
+                          slate:   { bg: "#f8fafc", border: "#e2e8f0", text: "#64748b", titleText: "#475569" },
+                        }
+                        const c = colores[tono.clase]
+                        return (
+                          <div
+                            className="flex items-start gap-3 p-4 rounded-xl border"
+                            style={{ backgroundColor: c.bg, borderColor: c.border }}
+                          >
+                            <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" style={{ color: c.titleText }} />
+                            <div>
+                              <p className="text-xs font-semibold" style={{ color: c.titleText }}>{tono.titulo}</p>
+                              <p className="text-sm mt-1 leading-relaxed" style={{ color: c.text }}>{mensaje}</p>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          </div>
+                        )
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
