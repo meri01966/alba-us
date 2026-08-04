@@ -629,8 +629,37 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
     (url: string) => fetch(url).then(r => r.json()),
     { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
   )
-  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string }> =
+  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; autor?: string; leido: boolean; created_at: string; leido_at?: string }> =
     mensajesData?.ok ? (mensajesData.mensajes || []) : []
+
+  // Mensajes que la MAESTRA ya envio hacia direccion (autor = nombre de su sala)
+  const mensajesEnviadosPorMaestra = mensajesDirectora.filter(m => m.autor === salaActual)
+  // Mensajes de direccion pendientes de leer (autor = "directora" o sin autor, por mensajes viejos)
+  const mensajesPendientesDeDireccion = mensajesDirectora.filter(m => !m.leido && m.autor !== salaActual)
+
+  const [nuevoMensajeMaestra, setNuevoMensajeMaestra] = useState("")
+  const [enviandoMensajeMaestra, setEnviandoMensajeMaestra] = useState(false)
+
+  const enviarMensajeADireccion = async () => {
+    if (!nuevoMensajeMaestra.trim() || !salaActual) return
+    setEnviandoMensajeMaestra(true)
+    try {
+      const res = await fetch("/api/mensajes-directora", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, mensaje: nuevoMensajeMaestra.trim(), autor: salaActual }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setNuevoMensajeMaestra("")
+        mutateMensajes()
+      }
+    } catch (e) {
+      console.error("[v0] Error enviando mensaje a direccion:", e)
+    } finally {
+      setEnviandoMensajeMaestra(false)
+    }
+  }
 
   const marcarLeido = async (id: string) => {
     setMarcandoLeido(id)
@@ -1317,32 +1346,88 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              {/* Mensajes pendientes de la directora */}
-              {mensajesDirectora.filter(m => !m.leido).map(msg => (
-                <div
-                  key={msg.id}
-                  className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3"
-                >
-                  <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-blue-700 mb-0.5">Mensaje de Direccion</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">{msg.mensaje}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      {new Date(msg.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </p>
+              {/* Chat con Direccion: mensajes pendientes + historial + responder (SIEMPRE visible, aunque no haya mensajes aun) */}
+              {(
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+                    <p className="text-xs font-semibold text-slate-600">Mensajes con Direccion</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => marcarLeido(msg.id)}
-                    disabled={marcandoLeido === msg.id}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity"
-                    style={{ backgroundColor: "#1e3a5f" }}
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {marcandoLeido === msg.id ? "..." : "Leido"}
-                  </button>
+
+                  {/* Pendientes de leer, de direccion */}
+                  {mensajesPendientesDeDireccion.map(msg => (
+                    <div
+                      key={msg.id}
+                      className="flex items-start gap-3 bg-blue-50 border-b border-blue-100 px-4 py-3"
+                    >
+                      <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-blue-700 mb-0.5">Mensaje de Direccion</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{msg.mensaje}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {new Date(msg.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => marcarLeido(msg.id)}
+                        disabled={marcandoLeido === msg.id}
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity"
+                        style={{ backgroundColor: "#1e3a5f" }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        {marcandoLeido === msg.id ? "..." : "Leido"}
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Sin mensajes todavia */}
+                  {mensajesPendientesDeDireccion.length === 0 && mensajesEnviadosPorMaestra.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3 px-4">Aun no hay mensajes con Direccion. Escribi el primero abajo.</p>
+                  )}
+
+                  {/* Historial de mensajes que la maestra ya envio */}
+                  {mensajesEnviadosPorMaestra.map(msg => (
+                    <div key={msg.id} className="px-4 py-3 border-b border-slate-100 bg-emerald-50/50">
+                      <p className="text-xs font-semibold text-emerald-700 mb-0.5">Vos (a Direccion)</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{msg.mensaje}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-slate-400">
+                          {new Date(msg.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                        {msg.leido ? (
+                          <span className="text-[10px] text-blue-500 flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Leido por Direccion
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">Enviado</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Responder a Direccion */}
+                  <div className="p-3 bg-slate-50">
+                    <textarea
+                      value={nuevoMensajeMaestra}
+                      onChange={(e) => setNuevoMensajeMaestra(e.target.value)}
+                      placeholder="Escribile a Direccion..."
+                      className="w-full p-2.5 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                      rows={2}
+                    />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={enviarMensajeADireccion}
+                        disabled={enviandoMensajeMaestra || !nuevoMensajeMaestra.trim()}
+                        className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-40 transition-opacity"
+                        style={{ backgroundColor: "#1e3a5f" }}
+                      >
+                        {enviandoMensajeMaestra ? "Enviando..." : "Enviar a Direccion"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
 
               {/* Fila 1: Cronograma Semanal inline — 5 dias con titulos y boton Abrir */}
               <CronogramaInlinePreview
