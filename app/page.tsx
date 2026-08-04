@@ -629,8 +629,38 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
     (url: string) => fetch(url).then(r => r.json()),
     { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
   )
-  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; leido: boolean; created_at: string; leido_at?: string }> =
+  const mensajesDirectora: Array<{ id: string; sala: string; mensaje: string; autor?: string; leido: boolean; created_at: string; leido_at?: string }> =
     mensajesData?.ok ? (mensajesData.mensajes || []) : []
+
+  // Mensajes que la MAESTRA ya envio hacia direccion (autor = nombre de su sala)
+  const mensajesEnviadosPorMaestra = mensajesDirectora.filter(m => m.autor === salaActual)
+  // Mensajes de direccion pendientes de leer (autor = "directora" o sin autor, por mensajes viejos)
+  const mensajesPendientesDeDireccion = mensajesDirectora.filter(m => !m.leido && m.autor !== salaActual)
+
+  const [nuevoMensajeMaestra, setNuevoMensajeMaestra] = useState("")
+  const [enviandoMensajeMaestra, setEnviandoMensajeMaestra] = useState(false)
+  const [chatMaestraAbierto, setChatMaestraAbierto] = useState(false)
+
+  const enviarMensajeADireccion = async () => {
+    if (!nuevoMensajeMaestra.trim() || !salaActual) return
+    setEnviandoMensajeMaestra(true)
+    try {
+      const res = await fetch("/api/mensajes-directora", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, mensaje: nuevoMensajeMaestra.trim(), autor: salaActual }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setNuevoMensajeMaestra("")
+        mutateMensajes()
+      }
+    } catch (e) {
+      console.error("[v0] Error enviando mensaje a direccion:", e)
+    } finally {
+      setEnviandoMensajeMaestra(false)
+    }
+  }
 
   const marcarLeido = async (id: string) => {
     setMarcandoLeido(id)
@@ -1276,8 +1306,25 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Boton unico de gestion */}
+            {/* Boton unico de gestion + chat con Direccion */}
             <div className="flex items-center gap-2">
+              {salaActual && (
+                <button
+                  type="button"
+                  onClick={() => setChatMaestraAbierto(true)}
+                  className="relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors text-green-700"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  Direccion
+                  {mensajesPendientesDeDireccion.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {mensajesPendientesDeDireccion.length}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowConfigSala(true)}
@@ -1317,33 +1364,6 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              {/* Mensajes pendientes de la directora */}
-              {mensajesDirectora.filter(m => !m.leido).map(msg => (
-                <div
-                  key={msg.id}
-                  className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3"
-                >
-                  <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-blue-700 mb-0.5">Mensaje de Direccion</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">{msg.mensaje}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      {new Date(msg.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => marcarLeido(msg.id)}
-                    disabled={marcandoLeido === msg.id}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity"
-                    style={{ backgroundColor: "#1e3a5f" }}
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {marcandoLeido === msg.id ? "..." : "Leido"}
-                  </button>
-                </div>
-              ))}
-
               {/* Fila 1: Cronograma Semanal inline — 5 dias con titulos y boton Abrir */}
               <CronogramaInlinePreview
                 key={cronogramaRefreshKey}
@@ -1668,6 +1688,103 @@ useEffect(() => {
         // Invalidar SWR del cronograma y del brain para que ambos refetcheen automaticamente
         globalMutate((key: string) => typeof key === "string" && (key.includes("/api/cronograma-maternal") || key.includes("/api/brain")), undefined, { revalidate: true })
       }} sala={salaActual} students={students} />
+
+
+
+      {/* Modal de chat con Direccion */}
+      {chatMaestraAbierto && salaActual && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="bg-green-500 text-white px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                <div>
+                  <h3 className="font-bold">Mensaje a Direccion</h3>
+                  <p className="text-xs opacity-80">Direccion lo vera en su panel</p>
+                </div>
+              </div>
+              <button onClick={() => setChatMaestraAbierto(false)} className="p-1 hover:bg-white/20 rounded">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Mensajes anteriores (de direccion y de la maestra, mezclados por fecha) */}
+            <div className="p-4 max-h-60 overflow-y-auto bg-muted/30">
+              {mensajesDirectora.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No hay mensajes anteriores</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...mensajesDirectora].reverse().map((m) => {
+                    const esMio = m.autor === salaActual
+                    return (
+                      <div key={m.id} className={`rounded-lg p-3 shadow-sm ${esMio ? "bg-emerald-100 ml-6" : "bg-white mr-6"}`}>
+                        <p className="text-[10px] font-semibold mb-0.5" style={{ color: esMio ? "#047857" : "#1e40af" }}>
+                          {esMio ? "Vos" : "Direccion"}
+                        </p>
+                        <p className="text-sm text-foreground">{m.mensaje}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(m.created_at).toLocaleDateString("es-AR")} {new Date(m.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {!esMio && !m.leido && (
+                            <button
+                              type="button"
+                              onClick={() => marcarLeido(m.id)}
+                              disabled={marcandoLeido === m.id}
+                              className="text-[10px] font-semibold text-white px-2 py-0.5 rounded disabled:opacity-50"
+                              style={{ backgroundColor: "#1e3a5f" }}
+                            >
+                              {marcandoLeido === m.id ? "..." : "Marcar leido"}
+                            </button>
+                          )}
+                          {m.leido && (
+                            <span className="text-[10px] text-blue-500 flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Leido
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Input para nuevo mensaje */}
+            <div className="p-4 border-t border-border">
+              <textarea
+                value={nuevoMensajeMaestra}
+                onChange={(e) => setNuevoMensajeMaestra(e.target.value)}
+                placeholder="Escribi tu mensaje para Direccion..."
+                className="w-full p-3 border border-border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                rows={3}
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={enviarMensajeADireccion}
+                  disabled={enviandoMensajeMaestra || !nuevoMensajeMaestra.trim()}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                >
+                  {enviandoMensajeMaestra ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  )}
+                  Enviar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
