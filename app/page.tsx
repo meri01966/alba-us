@@ -1346,8 +1346,8 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              {/* Chat con Direccion: mensajes pendientes + historial + responder */}
-              {(mensajesPendientesDeDireccion.length > 0 || mensajesEnviadosPorMaestra.length > 0) && (
+              {/* Chat con Direccion: mensajes pendientes + historial + responder (SIEMPRE visible, aunque no haya mensajes aun) */}
+              {(
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                   <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
                     <p className="text-xs font-semibold text-slate-600">Mensajes con Direccion</p>
@@ -1379,6 +1379,11 @@ useEffect(() => {
                       </button>
                     </div>
                   ))}
+
+                  {/* Sin mensajes todavia */}
+                  {mensajesPendientesDeDireccion.length === 0 && mensajesEnviadosPorMaestra.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3 px-4">Aun no hay mensajes con Direccion. Escribi el primero abajo.</p>
+                  )}
 
                   {/* Historial de mensajes que la maestra ya envio */}
                   {mensajesEnviadosPorMaestra.map(msg => (
