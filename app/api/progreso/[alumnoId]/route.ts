@@ -4,6 +4,9 @@ import { createClient } from "@supabase/supabase-js"
 const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
+// Desde esta fecha empezo el registro real con las maestras. Antes hay datos de prueba.
+const FECHA_CORTE = "2026-08-03"
+
 function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
 }
@@ -34,12 +37,40 @@ function normalizarEstado(estadoRaw: string): EstadoEval {
   return "red"
 }
 
+// Devuelve la fecha en formato YYYY-MM-DD segun hora de Argentina.
+// Si el valor ya viene como fecha sola ("2026-08-03") se usa tal cual, sin convertir:
+// pasarla por new Date() la leeria como medianoche UTC y en Argentina restaria un dia.
+function fechaISOAR(valor: any): string {
+  if (!valor) return ""
+  const s = String(valor).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return s.slice(0, 10)
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+}
+
+// "2026-08-03" -> "03/08". Sin usar Date, para no arrastrar el corrimiento de huso.
+function formatFechaCorta(iso: string): string {
+  const m = (iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ""
+  return `${m[3]}/${m[2]}`
+}
+
 interface ActividadEvaluada {
   semana: number
   titulo: string
   fecha: string
   resultado: EstadoEval
   promedio: number
+}
+
+// Actividad que ALBA propuso, la maestra planifico, y quedo sin registro de evaluacion.
+// Es un dato de SALA (registro_cierre no tiene alumno_id): aplica a todo el grupo.
+interface NoRealizada {
+  eje: EjeKey
+  titulo: string
+  fecha: string
+  fechaISO: string
 }
 
 interface ProgresoEje {
@@ -50,6 +81,7 @@ interface ProgresoEje {
   semanaActual: number
   evaluadasReales: number
   ausentes: number
+  sinRegistro: number
 }
 
 // Promedio SOLO con evidencia real (excluye ausentes "blue"). green=100, yellow=50, red=0
@@ -100,7 +132,7 @@ export async function GET(
   try {
     const { data: alumnoData, error: alumnoError } = await supabase
       .from("alumnos")
-      .select("id, nombre, apellido")
+      .select("*")
       .eq("id", alumnoId)
       .single()
 
@@ -128,9 +160,16 @@ export async function GET(
 
     const contadorSemana: Record<EjeKey, number> = { CF: 1, CT: 1, O: 1, E: 1 }
 
+    // Claves "YYYY-MM-DD|EJE" de los dias que ESTE alumno ya tiene evaluados.
+    // Sirven para no mostrar en rojo algo que para el si quedo registrado.
+    const diasConEvidencia = new Set<string>()
+
     ;(evaluaciones || []).forEach((ev: any) => {
       const eje = normalizarEje(ev.eje)
       if (!eje) return
+
+      const iso = fechaISOAR(ev.fecha || ev.created_at)
+      if (iso) diasConEvidencia.add(`${iso}|${eje}`)
 
       const n = contadorSemana[eje]++
       evaluacionesPorEje[eje].push({
@@ -143,6 +182,58 @@ export async function GET(
         actividad: ev.actividad || "",
       })
     })
+
+    // ---- Actividades sin registro de evaluacion (tabla registro_cierre) ----
+    // Bloque aislado a proposito: si algo falla aca, la ficha sigue funcionando
+    // igual que antes y simplemente no se muestran tarjetas rojas.
+    const noRealizadas: NoRealizada[] = []
+
+    try {
+      const sala = (alumnoData as any)?.sala
+
+      if (sala) {
+        const { data: cierres, error: cierreError } = await supabase
+          .from("registro_cierre")
+          .select("*")
+          .eq("sala", sala)
+          .eq("evaluacion_general", "no_realizada")
+          .gte("fecha", FECHA_CORTE)
+
+        if (cierreError) {
+          console.error("[v0] Error fetching registro_cierre:", cierreError)
+        }
+
+        const vistas = new Set<string>()
+
+        ;(cierres || []).forEach((rc: any) => {
+          const eje = normalizarEje(rc.eje)
+          if (!eje) return
+
+          const iso = fechaISOAR(rc.fecha)
+          if (!iso) return
+
+          const clave = `${iso}|${eje}`
+
+          // Si el alumno tiene evaluacion ese dia y ese eje, gana la evidencia real.
+          if (diasConEvidencia.has(clave)) return
+
+          // Evita duplicados si el cierre dejo mas de una fila para el mismo dia/eje.
+          if (vistas.has(clave)) return
+          vistas.add(clave)
+
+          noRealizadas.push({
+            eje,
+            titulo: rc.actividad_alba || rc.actividad_docente || "Actividad sin registro",
+            fecha: formatFechaCorta(iso),
+            fechaISO: iso,
+          })
+        })
+
+        noRealizadas.sort((a, b) => a.fechaISO.localeCompare(b.fechaISO))
+      }
+    } catch (errCierre) {
+      console.error("[v0] Error procesando registro_cierre:", errCierre)
+    }
 
     const progreso: Record<string, ProgresoEje> = {}
 
@@ -173,24 +264,29 @@ export async function GET(
         semanaActual,
         evaluadasReales: reales.length,
         ausentes,
+        sinRegistro: noRealizadas.filter((n) => n.eje === eje).length,
       }
     }
 
     return NextResponse.json({
       ok: true,
       source: "supabase",
-      alumno: alumnoData || { id: alumnoId, nombre: "Alumno", apellido: "" },
+      alumno: alumnoData
+        ? { ...(alumnoData as any), apellido: (alumnoData as any).apellido ?? "" }
+        : { id: alumnoId, nombre: "Alumno", apellido: "" },
       progreso,
+      noRealizadas,
     })
   } catch (error) {
     console.error("[v0] Error in progreso API:", error)
     const vacio = (): ProgresoEje => ({
-      logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1, evaluadasReales: 0, ausentes: 0,
+      logradas: [], porcentaje: 0, actividades: [], tendencia: "estable", semanaActual: 1, evaluadasReales: 0, ausentes: 0, sinRegistro: 0,
     })
     return NextResponse.json({
       ok: false,
       error: String(error),
       progreso: { CF: vacio(), CT: vacio(), O: vacio(), E: vacio() },
+      noRealizadas: [],
     }, { status: 500 })
   }
 }
