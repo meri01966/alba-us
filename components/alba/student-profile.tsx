@@ -33,6 +33,22 @@ interface ProgresoEje {
   semanaActual: number
 }
 
+// Actividad que ALBA propuso, la maestra planifico, y quedo sin registro de evaluacion.
+// Viene de registro_cierre: es un dato de SALA, aplica a todo el grupo.
+interface NoRealizada {
+  eje: string
+  titulo: string
+  fecha: string
+  fechaISO: string
+}
+
+// Ordena por fecha "D/M" o "DD/MM" -> "MMDD". Empareja formatos con y sin cero adelante.
+function claveOrdenFecha(fecha: string): string {
+  const p = (fecha || "").split("/")
+  if (p.length < 2) return "0000"
+  return `${p[1].padStart(2, "0")}${p[0].padStart(2, "0")}`
+}
+
 const EJES = [
   { key: "CF", label: "Conciencia Fonologica", icon: Music, color: "#3b82f6", bgColor: "#eff6ff" },
   { key: "CT", label: "Comprension de Textos", icon: BookOpen, color: "#10b981", bgColor: "#ecfdf5" },
@@ -431,6 +447,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
     alumnoNombre ? { id: alumnoId, nombre: alumnoNombre, apellido: "" } : null
   )
   const [progreso, setProgreso] = useState<Record<string, ProgresoEje>>({})
+  const [noRealizadas, setNoRealizadas] = useState<NoRealizada[]>([])
   const [vistaActiva, setVistaActiva] = useState<"progreso" | "sintesis">("progreso")
 
   // Fetch datos del alumno desde Supabase
@@ -443,6 +460,7 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
         
         if (data.ok && data.progreso) {
           setProgreso(data.progreso)
+          setNoRealizadas(Array.isArray(data.noRealizadas) ? data.noRealizadas : [])
           // Solo actualizar alumno si el API devuelve nombre real, sino mantener alumnoNombre del prop
           if (data.alumno && data.alumno.nombre && data.alumno.nombre !== "Alumno") {
             setAlumno(data.alumno)
@@ -790,27 +808,38 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             <>
               {/* Clases evaluadas: tarjetitas chiquitas en fila. Color = solo si se evaluo o no */}
               <div className="bg-white border border-slate-200 rounded-xl p-4">
-                <p className="text-sm font-semibold text-slate-700 mb-3">Clases evaluadas ({totalClasesEvaluadas})</p>
+                <p className="text-sm font-semibold text-slate-700 mb-3">
+                  Clases ({totalClasesEvaluadas} evaluadas{noRealizadas.length > 0 ? ` \u00b7 ${noRealizadas.length} sin registro` : ""})
+                </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {EJES.flatMap((eje) =>
-                    (progreso[eje.key]?.actividades || []).map((act: ActividadEvaluada) => ({ ...act, ejeKey: eje.key }))
-                  )
-                    .sort((a, b) => {
-                      const pa = (a.fecha || "").split("/").reverse().join("")
-                      const pb = (b.fecha || "").split("/").reverse().join("")
-                      return pa.localeCompare(pb)
-                    })
+                  {[
+                    ...EJES.flatMap((eje) =>
+                      (progreso[eje.key]?.actividades || []).map((act: ActividadEvaluada) => ({
+                        titulo: act.titulo,
+                        fecha: act.fecha,
+                        ejeKey: eje.key,
+                        tipo: act.resultado === "blue" ? "ausente" : "evaluada",
+                      }))
+                    ),
+                    ...noRealizadas.map((n: NoRealizada) => ({
+                      titulo: n.titulo,
+                      fecha: n.fecha,
+                      ejeKey: n.eje,
+                      tipo: "sin_registro",
+                    })),
+                  ]
+                    .sort((a, b) => claveOrdenFecha(a.fecha).localeCompare(claveOrdenFecha(b.fecha)))
                     .map((act, idx) => {
-                      // Color SUTIL = solo si se evaluo (no importa la nota). Fondo suave + texto y borde de color.
+                      // Color SUTIL = solo si quedo registro de evaluacion. No depende de la nota.
                       let bg = "#ecfdf5"; let bd = "#a7f3d0"; let tx = "#047857"  // verde sutil: evaluada
-                      if (act.resultado === "blue") { bg = "#eff6ff"; bd = "#bfdbfe"; tx = "#2563eb" }  // azul sutil: ausente
-                      else if (act.resultado !== "green" && act.resultado !== "yellow" && act.resultado !== "red") { bg = "#fef2f2"; bd = "#fecaca"; tx = "#b91c1c" }  // rojo sutil: no evaluada
+                      if (act.tipo === "ausente") { bg = "#eff6ff"; bd = "#bfdbfe"; tx = "#2563eb" }  // azul sutil: ausente
+                      else if (act.tipo === "sin_registro") { bg = "#fef2f2"; bd = "#fecaca"; tx = "#b91c1c" }  // rojo sutil: sin registro
                       return (
                         <div
                           key={idx}
                           className="rounded-md px-2 py-1 text-center leading-tight border"
                           style={{ backgroundColor: bg, borderColor: bd, color: tx }}
-                          title={act.titulo || ""}
+                          title={act.tipo === "sin_registro" ? `${act.titulo || "Actividad"} - sin registro de evaluacion` : (act.titulo || "")}
                         >
                           <div className="text-[10px] font-semibold truncate max-w-[90px]">{act.titulo || "Actividad"}</div>
                           <div className="text-[9px] opacity-80">{act.ejeKey}{act.fecha ? ` ${act.fecha}` : ""}</div>
