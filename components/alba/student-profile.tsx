@@ -801,19 +801,19 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                       return pa.localeCompare(pb)
                     })
                     .map((act, idx) => {
-                      // Color = solo si se evaluo (no importa la nota)
-                      let bg = "#10b981"   // verde: evaluada (green/yellow/red = se evaluo)
-                      if (act.resultado === "blue") bg = "#3b82f6"        // azul: ausente
-                      else if (act.resultado !== "green" && act.resultado !== "yellow" && act.resultado !== "red") bg = "#ef4444" // rojo: no evaluada
+                      // Color SUTIL = solo si se evaluo (no importa la nota). Fondo suave + texto y borde de color.
+                      let bg = "#ecfdf5"; let bd = "#a7f3d0"; let tx = "#047857"  // verde sutil: evaluada
+                      if (act.resultado === "blue") { bg = "#eff6ff"; bd = "#bfdbfe"; tx = "#2563eb" }  // azul sutil: ausente
+                      else if (act.resultado !== "green" && act.resultado !== "yellow" && act.resultado !== "red") { bg = "#fef2f2"; bd = "#fecaca"; tx = "#b91c1c" }  // rojo sutil: no evaluada
                       return (
                         <div
                           key={idx}
-                          className="rounded-md px-2 py-1 text-white text-center leading-tight"
-                          style={{ backgroundColor: bg }}
+                          className="rounded-md px-2 py-1 text-center leading-tight border"
+                          style={{ backgroundColor: bg, borderColor: bd, color: tx }}
                           title={act.titulo || ""}
                         >
                           <div className="text-[10px] font-semibold truncate max-w-[90px]">{act.titulo || "Actividad"}</div>
-                          <div className="text-[9px] opacity-90">{act.ejeKey}{act.fecha ? ` ${act.fecha}` : ""}</div>
+                          <div className="text-[9px] opacity-80">{act.ejeKey}{act.fecha ? ` ${act.fecha}` : ""}</div>
                         </div>
                       )
                     })}
