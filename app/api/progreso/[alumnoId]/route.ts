@@ -271,7 +271,9 @@ export async function GET(
     return NextResponse.json({
       ok: true,
       source: "supabase",
-      alumno: alumnoData || { id: alumnoId, nombre: "Alumno", apellido: "" },
+      alumno: alumnoData
+        ? { ...(alumnoData as any), apellido: (alumnoData as any).apellido ?? "" }
+        : { id: alumnoId, nombre: "Alumno", apellido: "" },
       progreso,
       noRealizadas,
     })
