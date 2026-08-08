@@ -162,13 +162,14 @@ function cambiosDireccionEst(arr: string[]): number {
 }
 
 type EstadoAprendizaje =
-  | "sin_evidencia" | "altibajos" | "afloja" | "mejorando" | "bajando"
+  | "sin_evidencia" | "altibajos" | "afloja" | "mejorando" | "bajando" | "recuperacion"
   | "excelente" | "muy_bien" | "sostenido_bien" | "en_proceso" | "necesita_apoyo" | "iniciando"
 
 // Mensajes pedagógicos: fieles a la evidencia, siempre como sugerencia, para acompañar y alentar.
 const MENSAJE_APRENDIZAJE: Record<EstadoAprendizaje, string> = {
   sin_evidencia: "Aún no hay evidencia suficiente para valorar este eje. Se sugiere registrar algunas clases más para acompañar mejor su proceso.",
   mejorando: "Viene mostrando avances en este eje. Sería valioso reconocer su progreso y seguir proponiendo desafíos que lo estimulen.",
+  recuperacion: "Tuvo un momento de menor desempeño pero muestra una buena recuperación en las últimas clases. Continuar acompañando para sostener el avance.",
   excelente: "Muestra un desempeño destacado y sostenido. Se sugiere acompañar con propuestas de mayor complejidad para seguir desafiándolo.",
   muy_bien: "Muy buen desempeño en este eje. Continuar acompañando en la misma línea.",
   sostenido_bien: "Viene sosteniendo un buen desempeño en este eje. Continuar acompañando en la misma línea.",
@@ -186,6 +187,7 @@ function tonoAprendizaje(estado: EstadoAprendizaje): { titulo: string; clase: st
     case "excelente":
     case "muy_bien":
     case "mejorando":
+    case "recuperacion":
     case "sostenido_bien":
       return { titulo: "Va muy bien", clase: "emerald" }
     case "afloja":
@@ -215,9 +217,27 @@ function analizarAprendizaje(resultados: string[]): EstadoAprendizaje {
   const vari = variabilidadEst(ventana)
   const zigzag = cambiosDireccionEst(ventana)
 
-  // Altibajos reales: alta variabilidad Y zigzag marcado
+  const ultimas2 = reales.slice(-2)
+  const repunto = ultimas2.length === 2 && ultimas2.every((e) => e === "green")
+  const huboBajonAntes = reales.slice(0, -2).some((e) => e === "yellow" || e === "red")
+  const todoVerde = reales.every((e) => e === "green")
+
+  // 1. Recuperacion: las ultimas 2 clases volvieron a verde tras un bajon previo
+  if (repunto && huboBajonAntes && !todoVerde) return "recuperacion"
+
+  // 2. Altibajos: alta variabilidad y zigzag marcado
   if (vari >= 38 && zigzag >= 3 && reales.length >= 5) return "altibajos"
 
+  // 3. Descenso reciente: venia bien y la ultima clase bajo
+  const ult = reales[reales.length - 1]
+  const penult = reales[reales.length - 2]
+  const bajoAlFinal = ult !== "green" && (penult === "green" || penult === undefined)
+  if (bajoAlFinal && reales.length >= 3) {
+    const previasBuenas = reales.slice(0, -1).filter((e) => e === "green").length >= Math.ceil((reales.length - 1) / 2)
+    if (previasBuenas) return "afloja"
+  }
+
+  // 4. Tendencia por promedios
   if (pAnt !== null) {
     const dif = pRec - pAnt
     if (dif < 0 && pAnt >= 85 && pRec >= 45) return "afloja"
