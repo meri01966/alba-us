@@ -16,6 +16,7 @@ import SalaMap from "@/components/alba/sala-map"
 import StudentProfile from "@/components/alba/student-profile"
 import { PlanificacionModal } from "@/components/alba/planificacion-modal"
 import { AlertasPedagogicas, type AlertaPedagogica } from "@/components/alba/alertas-pedagogicas"
+import { ActividadesDocentes } from "@/components/alba/actividades-docentes"
 
 type ViewType = "clase" | "evaluar" | "mapa" | "perfil"
 type StatusLevel = "green" | "yellow" | "red" | "blue"
@@ -1389,7 +1390,7 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Fila 3: Registro del Aula — ancho completo */}
+            <ActividadesDocentes sala={salaActual} />  {/* Fila 3: Registro del Aula — ancho completo */}
               <HeatMap
                 students={students}
                 evaluaciones={evaluaciones}
