@@ -706,26 +706,10 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                             let textColor = "#64748b"
                             let isAlert = false
                             let statusText = "Pendiente"
-
-                            if (act.resultado === "green") {
-                              bgColor = "#10b981"
-                              textColor = "#fff"
-                              statusText = "Logrado"
-                            } else if (act.resultado === "yellow") {
-                              bgColor = "#f59e0b"
-                              textColor = "#fff"
-                              statusText = "En proceso"
-                            } else if (act.resultado === "blue") {
-                              bgColor = "#3b82f6"
-                              textColor = "#fff"
-                              statusText = "Ausente"
-                            } else if (act.resultado === "red") {
-                              bgColor = "#ef4444"
-                              textColor = "#fff"
-                              isAlert = true
-                              statusText = "Necesita refuerzo"
-                            }
-
+                            if (act.resultado === "green") { bgColor = "#10b981"; textColor = "#fff"; statusText = "Logrado" }
+                            else if (act.resultado === "yellow") { bgColor = "#f59e0b"; textColor = "#fff"; statusText = "En proceso" }
+                            else if (act.resultado === "blue") { bgColor = "#3b82f6"; textColor = "#fff"; statusText = "Ausente" }
+                            else if (act.resultado === "red") { bgColor = "#ef4444"; textColor = "#fff"; isAlert = true; statusText = "Necesita refuerzo" }
                             return (
                               <div
                                 key={idx}
@@ -743,18 +727,10 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                         )}
                       </div>
                       <div className="flex gap-3 mt-2 text-xs flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-yellow-500"></span> En proceso
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente
-                        </span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> En proceso</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente</span>
                       </div>
                     </div>
 
@@ -812,10 +788,36 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
             </div>
           ) : (
             <>
-              {/* Info de clases evaluadas */}
-              <div className="bg-slate-100 rounded-xl p-3 flex items-center justify-between text-sm">
-                <span className="text-slate-600">Clases evaluadas:</span>
-                <span className="font-bold text-slate-700">{totalClasesEvaluadas}</span>
+              {/* Clases evaluadas: tarjetitas chiquitas en fila. Color = solo si se evaluo o no */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">Clases evaluadas ({totalClasesEvaluadas})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {EJES.flatMap((eje) =>
+                    (progreso[eje.key]?.actividades || []).map((act: ActividadEvaluada) => ({ ...act, ejeKey: eje.key }))
+                  )
+                    .sort((a, b) => {
+                      const pa = (a.fecha || "").split("/").reverse().join("")
+                      const pb = (b.fecha || "").split("/").reverse().join("")
+                      return pa.localeCompare(pb)
+                    })
+                    .map((act, idx) => {
+                      // Color = solo si se evaluo (no importa la nota)
+                      let bg = "#10b981"   // verde: evaluada (green/yellow/red = se evaluo)
+                      if (act.resultado === "blue") bg = "#3b82f6"        // azul: ausente
+                      else if (act.resultado !== "green" && act.resultado !== "yellow" && act.resultado !== "red") bg = "#ef4444" // rojo: no evaluada
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-md px-2 py-1 text-white text-center leading-tight"
+                          style={{ backgroundColor: bg }}
+                          title={act.titulo || ""}
+                        >
+                          <div className="text-[10px] font-semibold truncate max-w-[90px]">{act.titulo || "Actividad"}</div>
+                          <div className="text-[9px] opacity-90">{act.ejeKey}{act.fecha ? ` ${act.fecha}` : ""}</div>
+                        </div>
+                      )
+                    })}
+                </div>
               </div>
 
 
