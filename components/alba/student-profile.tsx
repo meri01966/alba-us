@@ -706,26 +706,10 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                             let textColor = "#64748b"
                             let isAlert = false
                             let statusText = "Pendiente"
-
-                            if (act.resultado === "green") {
-                              bgColor = "#10b981"
-                              textColor = "#fff"
-                              statusText = "Logrado"
-                            } else if (act.resultado === "yellow") {
-                              bgColor = "#f59e0b"
-                              textColor = "#fff"
-                              statusText = "En proceso"
-                            } else if (act.resultado === "blue") {
-                              bgColor = "#3b82f6"
-                              textColor = "#fff"
-                              statusText = "Ausente"
-                            } else if (act.resultado === "red") {
-                              bgColor = "#ef4444"
-                              textColor = "#fff"
-                              isAlert = true
-                              statusText = "Necesita refuerzo"
-                            }
-
+                            if (act.resultado === "green") { bgColor = "#10b981"; textColor = "#fff"; statusText = "Logrado" }
+                            else if (act.resultado === "yellow") { bgColor = "#f59e0b"; textColor = "#fff"; statusText = "En proceso" }
+                            else if (act.resultado === "blue") { bgColor = "#3b82f6"; textColor = "#fff"; statusText = "Ausente" }
+                            else if (act.resultado === "red") { bgColor = "#ef4444"; textColor = "#fff"; isAlert = true; statusText = "Necesita refuerzo" }
                             return (
                               <div
                                 key={idx}
@@ -743,20 +727,39 @@ export default function StudentProfile({ alumnoId, alumnoNombre, progressData, o
                         )}
                       </div>
                       <div className="flex gap-3 mt-2 text-xs flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-yellow-500"></span> En proceso
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente
-                        </span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> Logrado</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> En proceso</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span> Refuerzo</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Ausente</span>
                       </div>
                     </div>
+
+                    {/* Clases evaluadas: tarjetitas de color una al lado de otra (eje + fecha) */}
+                    {(p.actividades || []).length > 0 && (
+                      <div className="px-4 pb-3">
+                        <p className="text-xs font-medium text-gray-500 mb-2">Clases evaluadas:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(p.actividades || []).map((act: ActividadEvaluada, idx: number) => {
+                            let bg = "#10b981"
+                            if (act.resultado === "yellow") bg = "#f59e0b"
+                            else if (act.resultado === "red") bg = "#ef4444"
+                            else if (act.resultado === "blue") bg = "#3b82f6"
+                            else if (act.resultado !== "green") bg = "#cbd5e1"
+                            return (
+                              <div
+                                key={idx}
+                                className="rounded-md px-2 py-1 text-[10px] font-semibold text-white text-center leading-tight"
+                                style={{ backgroundColor: bg }}
+                                title={act.titulo || ""}
+                              >
+                                <div>{eje.key}</div>
+                                {act.fecha && <div className="opacity-90">{act.fecha}</div>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Analisis inteligente de la trayectoria */}
                     <div className="px-4 py-4">
