@@ -106,7 +106,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
   }
 
   async function borrar(id: string) {
-    if (!confirm("Borrar esta actividad de tu repertorio?")) return
+    
     try {
       await fetch(`/api/actividades-docentes?id=${encodeURIComponent(id)}`, { method: "DELETE" })
       setLista((prev: ActividadDocente[]) => prev.filter((a: ActividadDocente) => a.id !== id))
