@@ -2381,6 +2381,20 @@ export async function POST(req: NextRequest) {
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
+- EDAD DE LOS NIÑOS: ${esde4Anios(salaNombre) ? "4 anos" : "5 anos"}
+${esde4Anios(salaNombre) ? `
+ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
+- Duracion: 10 a 15 minutos como maximo. Los de 4 no sostienen mas.
+- Consignas de UN SOLO paso por vez. Nada de "primero, luego, despues, finalmente".
+- Todo oral, corporal y manipulativo: cantar, palmear, saltar, mover objetos. NADA de leer ni escribir de forma convencional.
+- En conciencia fonologica quedate en la unidad GRANDE: palabra, silaba, rima. NO trabajes fonemas aislados.
+- En escritura: garabato, marcas, el nombre propio como dibujo. Nunca pedir que escriban frases.
+- Grupos chicos o ronda completa, nunca trabajo individual en mesa.
+- Materiales concretos que se puedan tocar. Sin fichas ni consignas escritas.
+- Vocabulario simple y frases cortas en la consigna.
+` : `
+Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
+`}
 - Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
 - Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
