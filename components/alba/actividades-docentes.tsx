@@ -4,14 +4,14 @@ import type { ChangeEvent } from "react"
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { Plus, Sparkles, Check, X, BookOpen } from "lucide-react"
+import { Plus, Sparkles, Trash2, ChevronDown, ChevronUp, BookOpen } from "lucide-react"
 
 // Vocabulario UNICO de ejes. Mismo que usa la tabla actividades_docentes.
-const EJES: { key: string; nombre: string; color: string; bg: string }[] = [
-  { key: "CF", nombre: "Conciencia Fonologica", color: "#3b82f6", bg: "#eff6ff" },
-  { key: "CT", nombre: "Comprension de Textos", color: "#10b981", bg: "#ecfdf5" },
-  { key: "O",  nombre: "Oralidad",              color: "#f59e0b", bg: "#fffbeb" },
-  { key: "E",  nombre: "Escritura",             color: "#8b5cf6", bg: "#f5f3ff" },
+const EJES: { key: string; nombre: string; corto: string; color: string; bg: string }[] = [
+  { key: "CF", nombre: "Conciencia Fonologica", corto: "Fonologica", color: "#3b82f6", bg: "#eff6ff" },
+  { key: "CT", nombre: "Comprension de Textos", corto: "Textos",     color: "#10b981", bg: "#ecfdf5" },
+  { key: "O",  nombre: "Oralidad",              corto: "Oralidad",   color: "#f59e0b", bg: "#fffbeb" },
+  { key: "E",  nombre: "Escritura",             corto: "Escritura",  color: "#8b5cf6", bg: "#f5f3ff" },
 ]
 
 function ejeInfo(key: string | null) {
@@ -24,18 +24,12 @@ interface ActividadDocente {
   texto_original: string
   nombre: string | null
   eje: string | null
+  capacidad: string | null
   objetivo: string | null
   desarrollo: string | null
   materiales: string | null
   estado: string
-  confirmada: boolean
   created_at: string
-}
-
-const ESTADO_LABEL: Record<string, { texto: string; color: string; bg: string }> = {
-  propia:    { texto: "En mi sala",      color: "#475569", bg: "#f1f5f9" },
-  candidata: { texto: "Sumando evidencia", color: "#b45309", bg: "#fef3c7" },
-  red:       { texto: "En la red",       color: "#047857", bg: "#d1fae5" },
 }
 
 export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto?: string }) {
@@ -44,7 +38,8 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
   const [abierto, setAbierto]     = useState(false)
   const [texto, setTexto]         = useState("")
   const [guardando, setGuardando] = useState(false)
-  const [propuesta, setPropuesta] = useState<ActividadDocente | null>(null)
+  const [expandida, setExpandida] = useState<string | null>(null)
+  const [aviso, setAviso]         = useState("")
   const [error, setError]         = useState("")
 
   const cargar = useCallback(async () => {
@@ -63,11 +58,12 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
   useEffect(() => { cargar() }, [cargar])
 
   async function enviar() {
-    if (texto.trim().length < 10) {
-      setError("Contame un poco mas de la actividad para poder ordenarla.")
+    if (texto.trim().length < 15) {
+      setError("Pegá al menos una actividad para que ALBA pueda leerla.")
       return
     }
     setError("")
+    setAviso("")
     setGuardando(true)
     try {
       const r = await fetch("/api/actividades-docentes", {
@@ -77,35 +73,49 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
       })
       const d = await r.json()
       if (d?.ok) {
-        setPropuesta(d.actividad)
         setTexto("")
         setAbierto(false)
+        setAviso(
+          d.cantidad === 1
+            ? "ALBA sumó 1 actividad a tu repertorio."
+            : `ALBA sumó ${d.cantidad} actividades a tu repertorio.`
+        )
+        await cargar()
       } else {
         setError(d?.error || "No se pudo guardar. Proba de nuevo.")
       }
     } catch (e) {
-      console.error("[v0] Error guardando actividad docente:", e)
+      console.error("[v0] Error guardando actividades:", e)
       setError("No se pudo guardar. Proba de nuevo.")
     }
     setGuardando(false)
   }
 
-  async function confirmar(id: string, eje: string | null) {
-    if (!eje) { setError("Elegi un eje antes de confirmar."); return }
-    setGuardando(true)
+  async function cambiarEje(id: string, eje: string) {
+    setLista((prev: ActividadDocente[]) => prev.map((a: ActividadDocente) => (a.id === id ? { ...a, eje } : a)))
     try {
       await fetch("/api/actividades-docentes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, eje, confirmada: true }),
+        body: JSON.stringify({ id, eje }),
       })
-      setPropuesta(null)
-      await cargar()
     } catch (e) {
-      console.error("[v0] Error confirmando actividad:", e)
+      console.error("[v0] Error cambiando eje:", e)
+      await cargar()
     }
-    setGuardando(false)
   }
+
+  async function borrar(id: string) {
+    if (!confirm("Borrar esta actividad de tu repertorio?")) return
+    try {
+      await fetch(`/api/actividades-docentes?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+      setLista((prev: ActividadDocente[]) => prev.filter((a: ActividadDocente) => a.id !== id))
+    } catch (e) {
+      console.error("[v0] Error borrando actividad:", e)
+    }
+  }
+
+  const pendientes = lista.filter((a: ActividadDocente) => a.estado === "propia").length
 
   return (
     <Card className="shadow-md">
@@ -114,10 +124,15 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
           <CardTitle className="text-base font-semibold text-primary flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
             Mis actividades
+            {lista.length > 0 && (
+              <span className="text-xs font-normal text-slate-400">
+                {pendientes} sin usar de {lista.length}
+              </span>
+            )}
           </CardTitle>
-          {!abierto && !propuesta && (
+          {!abierto && (
             <button
-              onClick={() => { setAbierto(true); setError("") }}
+              onClick={() => { setAbierto(true); setError(""); setAviso("") }}
               className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white"
               style={{ backgroundColor: "#1e3a5f" }}
             >
@@ -127,7 +142,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
           )}
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          Pega o escribi una actividad tuya. ALBA la ordena y te dice a que eje corresponde.
+          Pegá tu listado de actividades. ALBA las separa, les asigna eje y capacidad, y las suma a sus sugerencias.
         </p>
       </CardHeader>
 
@@ -137,18 +152,25 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
             {error}
           </div>
         )}
+        {aviso && (
+          <div className="mb-3 text-xs text-teal-800 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
+            {aviso}
+          </div>
+        )}
 
-        {/* Carga de texto libre */}
         {abierto && (
           <div className="mb-4">
             <textarea
               value={texto}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setTexto(e.target.value)}
-              rows={5}
+              rows={7}
               autoFocus
-              placeholder="Ej: Jugamos a buscar objetos de la sala que empiecen con la misma letra que su nombre y despues los anotamos en un afiche."
+              placeholder={"Pegá acá tu listado, una actividad por parrafo. Por ejemplo:\n\nBuscamos objetos de la sala que empiecen con la misma letra que su nombre y los anotamos en un afiche.\n\nArmamos la lista de los materiales que necesitamos para la huerta.\n\nJugamos al veo veo con sonidos iniciales."}
               className="w-full text-sm rounded-lg border border-slate-300 p-3 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Hasta 8 actividades por vez. Si tenés mas, cargalas en dos tandas.
+            </p>
             <div className="flex items-center gap-2 mt-2">
               <button
                 onClick={enviar}
@@ -157,7 +179,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                 style={{ backgroundColor: "#0f766e" }}
               >
                 {guardando ? <Spinner className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                Ordenar con ALBA
+                {guardando ? "ALBA esta leyendo..." : "Ordenar con ALBA"}
               </button>
               <button
                 onClick={() => { setAbierto(false); setTexto(""); setError("") }}
@@ -169,62 +191,120 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
           </div>
         )}
 
-        {/* Propuesta de ALBA para confirmar */}
-        {propuesta && (
-          <PropuestaALBA
-            actividad={propuesta}
-            guardando={guardando}
-            onConfirmar={confirmar}
-            onDescartar={() => setPropuesta(null)}
-          />
-        )}
-
-        {/* Listado */}
         {cargando ? (
           <div className="flex items-center gap-2 py-6 justify-center">
             <Spinner className="w-4 h-4 text-primary" />
             <span className="text-sm text-slate-500">Cargando...</span>
           </div>
-        ) : lista.length === 0 && !abierto && !propuesta ? (
+        ) : lista.length === 0 && !abierto ? (
           <p className="text-sm text-slate-400 py-4 text-center">
-            Todavia no cargaste ninguna actividad propia.
+            Todavia no cargaste actividades propias.
           </p>
         ) : (
           <ul className="space-y-2">
             {lista.map((a: ActividadDocente) => {
               const info = ejeInfo(a.eje)
-              const est = ESTADO_LABEL[a.estado] || ESTADO_LABEL.propia
+              const abiertaEsta = expandida === a.id
+              const usada = a.estado !== "propia"
               return (
-                <li
-                  key={a.id}
-                  className="rounded-lg border border-slate-200 px-3 py-2 flex items-center gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">
-                      {a.nombre || a.texto_original.slice(0, 60)}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      {info && (
+                <li key={a.id} className="rounded-lg border border-slate-200 overflow-hidden">
+                  <div className="px-3 py-2 flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">
+                        {a.nombre || "Actividad sin titulo"}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span
                           className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: info.bg, color: info.color }}
+                          style={
+                            info
+                              ? { backgroundColor: info.bg, color: info.color }
+                              : { backgroundColor: "#f1f5f9", color: "#64748b" }
+                          }
                         >
-                          {info.nombre}
+                          {info ? info.corto : "Sin eje"}
                         </span>
-                      )}
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: est.bg, color: est.color }}
-                      >
-                        {est.texto}
-                      </span>
-                      {!a.confirmada && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                          Sin confirmar
-                        </span>
-                      )}
+                        {usada && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                            Ya sugerida
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      onClick={() => setExpandida(abiertaEsta ? null : a.id)}
+                      className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0"
+                    >
+                      {abiertaEsta ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      Ver
+                    </button>
+                    <button
+                      onClick={() => borrar(a.id)}
+                      title="Borrar"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:bg-red-50 hover:text-red-500 shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
+                  {abiertaEsta && (
+                    <div className="px-3 pb-3 pt-1 bg-slate-50 border-t border-slate-200 space-y-2">
+                      {a.capacidad && (
+                        <p className="text-xs text-slate-700">
+                          <span className="font-semibold">Capacidad: </span>{a.capacidad}
+                        </p>
+                      )}
+                      {a.objetivo && (
+                        <p className="text-xs text-slate-600">
+                          <span className="font-semibold">Objetivo: </span>{a.objetivo}
+                        </p>
+                      )}
+                      {a.desarrollo && (
+                        <p className="text-xs text-slate-600 whitespace-pre-line">
+                          <span className="font-semibold">Desarrollo: </span>{a.desarrollo}
+                        </p>
+                      )}
+                      {a.materiales && (
+                        <p className="text-xs text-slate-600">
+                          <span className="font-semibold">Materiales: </span>{a.materiales}
+                        </p>
+                      )}
+
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-500 mb-1">
+                          Si el eje no corresponde, tocá el correcto:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {EJES.map((e) => {
+                            const activo = a.eje === e.key
+                            return (
+                              <button
+                                key={e.key}
+                                onClick={() => cambiarEje(a.id, e.key)}
+                                className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all"
+                                style={
+                                  activo
+                                    ? { backgroundColor: e.color, color: "#fff", borderColor: e.color }
+                                    : { backgroundColor: "#fff", color: e.color, borderColor: `${e.color}55` }
+                                }
+                              >
+                                {e.corto}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <details>
+                        <summary className="text-[11px] text-slate-400 cursor-pointer">
+                          Ver lo que escribiste
+                        </summary>
+                        <p className="text-[11px] text-slate-500 mt-1 whitespace-pre-line">
+                          {a.texto_original}
+                        </p>
+                      </details>
+                    </div>
+                  )}
                 </li>
               )
             })}
@@ -232,90 +312,5 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
         )}
       </CardContent>
     </Card>
-  )
-}
-
-// ── Propuesta de ALBA: la maestra revisa el eje y confirma ──────────────────
-function PropuestaALBA({
-  actividad,
-  guardando,
-  onConfirmar,
-  onDescartar,
-}: {
-  actividad: ActividadDocente
-  guardando: boolean
-  onConfirmar: (id: string, eje: string | null) => void
-  onDescartar: () => void
-}) {
-  const [ejeElegido, setEjeElegido] = useState<string | null>(actividad.eje)
-
-  return (
-    <div className="mb-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
-      <p className="text-xs font-bold uppercase tracking-wider text-teal-700 mb-2">
-        ALBA la ordeno asi
-      </p>
-
-      <p className="text-sm font-semibold text-slate-800">
-        {actividad.nombre || "Sin titulo"}
-      </p>
-
-      {actividad.objetivo && (
-        <p className="text-xs text-slate-600 mt-1">
-          <span className="font-semibold">Objetivo: </span>{actividad.objetivo}
-        </p>
-      )}
-      {actividad.desarrollo && (
-        <p className="text-xs text-slate-600 mt-1 whitespace-pre-line">
-          <span className="font-semibold">Desarrollo: </span>{actividad.desarrollo}
-        </p>
-      )}
-      {actividad.materiales && (
-        <p className="text-xs text-slate-600 mt-1">
-          <span className="font-semibold">Materiales: </span>{actividad.materiales}
-        </p>
-      )}
-
-      <p className="text-xs font-semibold text-slate-700 mt-3 mb-1.5">
-        Eje: tocá otro si no coincide
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {EJES.map((e) => {
-          const activo = ejeElegido === e.key
-          return (
-            <button
-              key={e.key}
-              onClick={() => setEjeElegido(e.key)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
-              style={
-                activo
-                  ? { backgroundColor: e.color, color: "#fff", borderColor: e.color }
-                  : { backgroundColor: e.bg, color: e.color, borderColor: `${e.color}55` }
-              }
-            >
-              {e.nombre}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="flex items-center gap-2 mt-3">
-        <button
-          onClick={() => onConfirmar(actividad.id, ejeElegido)}
-          disabled={guardando}
-          className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-50"
-          style={{ backgroundColor: "#047857" }}
-        >
-          {guardando ? <Spinner className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-          Confirmar
-        </button>
-        <button
-          onClick={onDescartar}
-          className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
-        >
-          <X className="w-4 h-4" />
-          Despues
-        </button>
-      </div>
-    </div>
   )
 }

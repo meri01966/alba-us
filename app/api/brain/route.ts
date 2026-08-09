@@ -2217,7 +2217,8 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
           }
         }))
 
-        return NextResponse.json({ ok: true, sugerencias })
+        const conDocenteIA = await incorporarActividadDocente(sugerencias, sala)
+        return NextResponse.json({ ok: true, sugerencias: conDocenteIA })
       } catch (iaError) {
         console.error("[v0] Error en IA para sugerencias:", iaError)
         // Fallback con actividades ricas predefinidas si la IA falla
@@ -2235,7 +2236,8 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
             origen: "alba" as const,
           }
         }))
-        return NextResponse.json({ ok: true, sugerencias: FALLBACK })
+        const conDocenteFB = await incorporarActividadDocente(FALLBACK, sala)
+        return NextResponse.json({ ok: true, sugerencias: conDocenteFB })
       }
     }
 
@@ -2244,6 +2246,73 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
   } catch (err) {
     console.error("Error en POST /api/brain:", err)
     return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })
+  }
+}
+
+// ── Repertorio de la docente ────────────────────────────────────────────────
+// Una vez por semana, ALBA reemplaza UNA de las 3 sugerencias por una actividad
+// del repertorio propio de la maestra, elegida al azar entre las que todavia no
+// uso. Al azar a proposito: sin evidencia todavia, ninguna merece prioridad.
+// Si la sala no cargo nada, no pasa nada y siguen las 3 de ALBA.
+// La actividad NO se borra: se marca como "usada" para que conserve su historia.
+async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
+  try {
+    if (!sala || !Array.isArray(sugerencias) || sugerencias.length === 0) return sugerencias
+
+    const supabase = getSupabase()
+    const { data: propias, error } = await supabase
+      .from("actividades_docentes")
+      .select("*")
+      .eq("sala", sala)
+      .eq("estado", "propia")
+
+    if (error) {
+      console.error("[v0] Error leyendo repertorio docente:", error.message)
+      return sugerencias
+    }
+    if (!propias || propias.length === 0) return sugerencias
+
+    const elegida = propias[Math.floor(Math.random() * propias.length)]
+
+    // Traduccion de vocabulario: la tabla usa E, el cronograma usa "Escritura".
+    const NOMBRE_EJE: Record<string, string> = {
+      CF: "CF", CT: "CT", O: "O", E: "Escritura",
+    }
+    const ejeCronograma = NOMBRE_EJE[String(elegida.eje || "")] || String(elegida.eje || "CF")
+
+    // Preferimos el dia cuyo eje coincide. Si ninguno coincide, uno al azar.
+    let idx = sugerencias.findIndex((s) => {
+      const e = String(s?.actividad?.eje || "")
+      return e === ejeCronograma || (e === "EA" && ejeCronograma === "Escritura")
+    })
+    if (idx < 0) idx = Math.floor(Math.random() * sugerencias.length)
+
+    const copia = [...sugerencias]
+    copia[idx] = {
+      ...copia[idx],
+      actividad: {
+        nombre: elegida.nombre || "Actividad de la sala",
+        capacidades: elegida.capacidad || "",
+        contenidos: elegida.objetivo || "",
+        objetivo: elegida.objetivo || "",
+        desarrollo: elegida.desarrollo || "",
+        materiales: elegida.materiales || "",
+        eje: ejeCronograma,
+        alfabetizacion: true,
+        origen: "docente",
+        actividadDocenteId: elegida.id,
+      },
+    }
+
+    await supabase
+      .from("actividades_docentes")
+      .update({ estado: "usada" })
+      .eq("id", elegida.id)
+
+    return copia
+  } catch (e) {
+    console.error("[v0] Error incorporando actividad docente:", e)
+    return sugerencias
   }
 }
 
