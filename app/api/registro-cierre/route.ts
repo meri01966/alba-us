@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       evaluacionGeneral,
       observaciones,
       sugerenciaParaIA,
+      repetir = null,
       stats = { green: 0, yellow: 0, red: 0, ausentes: 0 },
     } = body
 
@@ -43,7 +44,8 @@ export async function POST(request: Request) {
       sala,
       evaluacion_general: evaluacionGeneral,
       observaciones,
-      sugerencia_ia: sugerenciaParaIA,
+sugerencia_ia: sugerenciaParaIA,
+      repetir,
       stats: safeStats,
     }
 
