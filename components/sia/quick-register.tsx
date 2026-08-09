@@ -1,7 +1,8 @@
 "use client"
 
+import type { ChangeEvent } from "react"
 import { useState, useEffect, useRef } from "react"
-import { Send, ThumbsUp, Minus, AlertCircle, CheckCircle2, Pencil, MessageSquare } from "lucide-react"
+import { Send, CheckCircle2, Pencil, MessageSquare } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
 interface QuickRegisterProps {
@@ -16,6 +17,7 @@ interface QuickRegisterProps {
     evaluacion: string
     observaciones: string
     sugerencia: string
+    repetir: boolean | null
   }) => void
 }
 
@@ -29,11 +31,11 @@ export function QuickRegister({
   statsAusentes = 0,
   onGuardar,
 }: QuickRegisterProps) {
-  const [mostrarModal, setMostrarModal]       = useState(false)
-  const [evaluacion, setEvaluacion]           = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | "no_realizada" | null>(null)
-  const [observaciones, setObservaciones]     = useState("")
-  const [sugerencia, setSugerencia]           = useState("")
-  const [guardado, setGuardado]               = useState(false)
+  const [mostrarModal, setMostrarModal]   = useState(false)
+  const [evaluacion, setEvaluacion]       = useState<"excelente" | "buena" | "regular" | "necesita_mejora" | null>(null)
+  const [repetir, setRepetir]             = useState<boolean | null>(null)
+  const [observaciones, setObservaciones] = useState("")
+  const [guardado, setGuardado]           = useState(false)
   const prevActividad = useRef(actividadDelDia)
 
   // Cuando ALBA sugiere una nueva actividad, resetear el boton para la proxima jornada
@@ -42,19 +44,15 @@ export function QuickRegister({
       prevActividad.current = actividadDelDia
       setGuardado(false)
       setEvaluacion(null)
+      setRepetir(null)
       setObservaciones("")
-      setSugerencia("")
     }
   }, [actividadDelDia])
 
-  const totalEvaluados = statsVerdes + statsAmarillos + statsRojos
-  const promedio = totalEvaluados > 0
-    ? Math.round(((statsVerdes * 100) + (statsAmarillos * 50) + (statsRojos * 10)) / totalEvaluados)
-    : 0
-
   function handleGuardar() {
     if (!evaluacion) return
-    onGuardar?.({ evaluacion, observaciones, sugerencia })
+    // sugerencia se mantiene por compatibilidad con quien consume este callback
+    onGuardar?.({ evaluacion, observaciones, sugerencia: "", repetir })
     setGuardado(true)
     setMostrarModal(false)
   }
@@ -131,46 +129,14 @@ export function QuickRegister({
                 </div>
               ) : null}
 
-              {/* Resumen de la jornada */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-sm font-medium text-slate-700 mb-3">Resumen de la jornada</p>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="bg-green-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-green-700">{statsVerdes}</div>
-                    <div className="text-[10px] text-green-600">Logrado</div>
-                  </div>
-                  <div className="bg-yellow-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-yellow-700">{statsAmarillos}</div>
-                    <div className="text-[10px] text-yellow-600">En proceso</div>
-                  </div>
-                  <div className="bg-red-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-red-700">{statsRojos}</div>
-                    <div className="text-[10px] text-red-600">Refuerzo</div>
-                  </div>
-                  <div className="bg-indigo-100 rounded-lg p-2">
-                    <div className="text-xl font-bold text-indigo-700">{statsAusentes}</div>
-                    <div className="text-[10px] text-indigo-600">Ausentes</div>
-                  </div>
-                </div>
-                {totalEvaluados > 0 && (
-                  <div
-                    className={`mt-3 px-4 py-2 rounded-lg text-center font-bold text-white text-sm ${
-                      promedio >= 70 ? "bg-green-500" : promedio >= 40 ? "bg-yellow-500" : "bg-red-500"
-                    }`}
-                  >
-                    Promedio del grupo: {promedio}%
-                  </div>
-                )}
-              </div>
-
-              {/* Como fue la actividad */}
+              {/* Como resulto */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Como fue la actividad?
+                  Como resulto?
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "excelente",      label: "Excelente",       color: "#10b981" },
+                    { value: "excelente",       label: "Excelente",       color: "#10b981" },
                     { value: "buena",           label: "Buena",           color: "#3b82f6" },
                     { value: "regular",         label: "Regular",         color: "#f59e0b" },
                     { value: "necesita_mejora", label: "Necesita mejora", color: "#ef4444" },
@@ -189,46 +155,57 @@ export function QuickRegister({
                     </button>
                   ))}
                 </div>
-                {/* No realizada — ocupa fila completa, separado visualmente */}
-                <button
-                  onClick={() => setEvaluacion("no_realizada")}
-                  className="w-full px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all"
-                  style={
-                    evaluacion === "no_realizada"
-                      ? { backgroundColor: "#64748b", color: "#fff", borderColor: "#64748b" }
-                      : { backgroundColor: "#fff", color: "#64748b", borderColor: "#64748b50" }
-                  }
-                >
-                  No realizada — ALBA la volvera a sugerir
-                </button>
               </div>
 
-              {/* Observaciones */}
+              {/* Volvemos sobre este contenido — decide si ALBA repite el paso o avanza */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Volvemos sobre este contenido?
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setRepetir(true)}
+                    className="px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all"
+                    style={
+                      repetir === true
+                        ? { backgroundColor: "#7c3aed", color: "#fff", borderColor: "#7c3aed" }
+                        : { backgroundColor: "#fff", color: "#7c3aed", borderColor: "#7c3aed50" }
+                    }
+                  >
+                    Si, necesitan mas
+                  </button>
+                  <button
+                    onClick={() => setRepetir(false)}
+                    className="px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all"
+                    style={
+                      repetir === false
+                        ? { backgroundColor: "#0f766e", color: "#fff", borderColor: "#0f766e" }
+                        : { backgroundColor: "#fff", color: "#0f766e", borderColor: "#0f766e50" }
+                    }
+                  >
+                    No, seguimos
+                  </button>
+                </div>
+              </div>
+
+              {/* Comentarios */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-1">
                   <MessageSquare className="w-3.5 h-3.5" />
-                  Observaciones (opcional)
+                  Comentarios (opcional)
                 </label>
                 <Textarea
-                  placeholder="Que observaste durante la actividad?"
+                  placeholder="Algo que quieras dejar anotado de esta jornada"
                   value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setObservaciones(e.target.value)}
                   className="min-h-[70px] text-sm resize-none"
                 />
               </div>
 
-              {/* Sugerencia */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-slate-700">
-                  Sugerencia para la proxima clase (opcional)
-                </label>
-                <Textarea
-                  placeholder="Ej: Repetir con mas imagenes, usar musica..."
-                  value={sugerencia}
-                  onChange={(e) => setSugerencia(e.target.value)}
-                  className="min-h-[56px] text-sm resize-none"
-                />
-              </div>
+              {/* Resumen chico, como referencia */}
+              <p className="text-xs text-slate-400 text-center">
+                {statsVerdes} logrado · {statsAmarillos} en proceso · {statsRojos} refuerzo · {statsAusentes} ausentes
+              </p>
 
               {/* Boton Guardar */}
               <button
