@@ -2479,7 +2479,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
             actividad: {
               nombre: s.nombre,
               capacidades: s.capacidades,
-              contenidos: pasoNombre ? `${s.contenidos} · Paso: ${pasoNombre}` : s.contenidos,
+              contenidos: pasoNombre ? `${s.contenidos} · Estamos trabajando: ${pasoNombre}` : s.contenidos,
               objetivo: s.objetivo,
               desarrollo: s.desarrollo,
               materiales: s.materiales,
