@@ -2221,6 +2221,8 @@ export async function POST(req: NextRequest) {
 
       const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
       const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
+      // Porcentaje de chicos en verde por eje: es la "mayoria consolidada"
+      const verdePorEje: Record<string, number> = { CF: 0, CT: 0, O: 0, EA: 0 }
       const ultimaPorEjeSem: Record<string, number> = {}
 
       try {
@@ -2233,6 +2235,7 @@ export async function POST(req: NextRequest) {
             .in("alumno_id", idsSala)
             .order("fecha", { ascending: true })
           const puntos: Record<string, { suma: number; n: number }> = {}
+          const verdes: Record<string, { verdes: number; n: number }> = {}
           ;(regsSala || []).forEach((r: any) => {
             const e = ejeDeSeguimiento(r.eje)
             if (r.actividad) {
@@ -2246,6 +2249,12 @@ export async function POST(req: NextRequest) {
             if (!puntos[e]) puntos[e] = { suma: 0, n: 0 }
             puntos[e].suma += est === "green" ? 100 : est === "yellow" ? 50 : 0
             puntos[e].n++
+            if (!verdes[e]) verdes[e] = { verdes: 0, n: 0 }
+            if (est === "green") verdes[e].verdes++
+            verdes[e].n++
+          })
+          Object.keys(verdes).forEach((e) => {
+            if (verdes[e].n > 0) verdePorEje[e] = Math.round((verdes[e].verdes / verdes[e].n) * 100)
           })
           Object.keys(puntos).forEach((e) => {
             if (puntos[e].n > 0) promedioPorEje[e] = Math.round(puntos[e].suma / puntos[e].n)
@@ -2276,11 +2285,69 @@ export async function POST(req: NextRequest) {
         O: "Oralidad", EA: "Escritura",
       }
 
+      // ── DECISION DE LA DOCENTE + CONSOLIDACION ──────────────────────────
+      // Del ultimo cierre de cada eje sacamos: en que paso estaba, si la maestra
+      // pidio volver sobre el, y cuantas veces se trabajo ese mismo paso.
+      const ultimoCierrePorEje: Record<string, { paso: string; repetir: boolean | null; veces: number }> = {}
+      try {
+        const { data: cierresSala } = await supabase
+          .from("registro_cierre")
+          .select("eje, paso, repetir, created_at")
+          .eq("sala", salaNombre)
+          .order("created_at", { ascending: false })
+          .limit(80)
+        ;(cierresSala || []).forEach((c: any) => {
+          if (!c.paso) return
+          const e = ejeDeSeguimiento(c.eje)
+          const pasoTxt = String(c.paso)
+          if (!ultimoCierrePorEje[e]) {
+            ultimoCierrePorEje[e] = {
+              paso: pasoTxt,
+              repetir: c.repetir === true ? true : c.repetir === false ? false : null,
+              veces: 0,
+            }
+          }
+          if (ultimoCierrePorEje[e].paso === pasoTxt) ultimoCierrePorEje[e].veces++
+        })
+      } catch (errCierres) {
+        console.error("[v0] Error leyendo cierres para decidir avance:", errCierres)
+      }
+
+      // Criterios acordados: mayoria = 70% de los chicos en verde;
+      // tope = 3 veces el mismo paso, despues avanza igual.
+      const MAYORIA_VERDE = 70
+      const TOPE_REPETICIONES = 3
+
       const pasosDeLaSemana = ejesDeLaSemana.map((e) => {
+        const ultimo = ultimoCierrePorEje[e]
+
+        if (ultimo && ultimo.paso) {
+          const seqEje = SECUENCIA[e] || []
+          const idx = seqEje.findIndex(
+            (a) => a.titulo.trim().toLowerCase() === ultimo.paso.trim().toLowerCase()
+          )
+          if (idx >= 0 && ultimo.veces < TOPE_REPETICIONES) {
+            const consolidado = (verdePorEje[e] ?? 0) >= MAYORIA_VERDE && ultimo.veces >= 2
+            // La docente manda. Si no opino, decide la evidencia.
+            const quedarse = ultimo.repetir === true || (ultimo.repetir === null && !consolidado)
+            if (quedarse) {
+              return {
+                eje: e,
+                paso: seqEje[idx],
+                indice: idx,
+                esRepeticion: true,
+                motivo: ultimo.repetir === true
+                  ? "la docente pidio volver sobre este contenido"
+                  : `el grupo todavia no lo consolido (${verdePorEje[e] ?? 0}% en verde)`,
+              }
+            }
+          }
+        }
+
         const r = calcularActividadDelDia(
           e, yaDadasPorEje[e].length, promedioPorEje[e], salaNombre, yaDadasPorEje[e]
         )
-        return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion }
+        return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion, motivo: "" }
       })
 
       const instruccionesDias = pasosDeLaSemana.map((p, i) =>
@@ -2289,7 +2356,7 @@ export async function POST(req: NextRequest) {
         `  Objetivo del paso: ${p.paso.objetivo}\n` +
         `  Referencia: ${p.paso.descripcion}` +
         (p.esRepeticion
-          ? `\n  ATENCION: el grupo viene flojo en este eje. NO avances de nivel: proponé una variante mas accesible del MISMO paso.`
+          ? `\n  ATENCION: se VUELVE sobre este mismo paso${p.motivo ? ` porque ${p.motivo}` : ""}. NO avances de nivel: proponé una actividad DISTINTA del MISMO paso, mas concreta o con otro soporte.`
           : "")
       ).join("\n\n")
 
