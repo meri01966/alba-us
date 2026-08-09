@@ -572,6 +572,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
           evaluacionGeneral: datos.evaluacion,
           observaciones: datos.observaciones,
           sugerenciaParaIA: datos.sugerencia,
+          repetir: datos.repetir ?? null,
           stats: { green: statsVerdes, yellow: statsAmarillos, red: statsRojos, ausentes: statsAusentes },
         }),
       })
