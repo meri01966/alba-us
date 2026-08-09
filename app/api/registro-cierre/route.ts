@@ -46,10 +46,29 @@ export async function POST(request: Request) {
       observaciones,
 sugerencia_ia: sugerenciaParaIA,
       repetir,
+      paso: "",
       stats: safeStats,
     }
 
     const supabase = getSupabase()
+
+    // Buscar a que paso de la secuencia pertenece esta actividad, leyendolo del
+    // cronograma de la sala. Si no se encuentra, el paso queda vacio.
+    try {
+      const { data: filasCronograma } = await supabase
+        .from("cronograma_jardin")
+        .select("actividades")
+        .eq("sala", sala)
+        .order("fecha", { ascending: false })
+        .limit(20)
+      for (const fila of filasCronograma || []) {
+        const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+        const encontrada = acts.find((a: any) => a && a.nombre === actividadALBA && a.paso)
+        if (encontrada) { registro.paso = String(encontrada.paso); break }
+      }
+    } catch (errPaso) {
+      console.error("[v0] Error buscando el paso de la actividad:", errPaso)
+    }
 
     // Siempre insertar — cada Finalizar Jornada es un nuevo registro independiente.
     // El brain usa cierres.length para avanzar la secuencia: 1 cierre = actividad siguiente.
