@@ -2598,8 +2598,68 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
       return true
     })
 
-    if (candidatas.length === 0) return null
-    return candidatas[Math.floor(Math.random() * candidatas.length)]
+    if (candidatas.length > 0) {
+      return candidatas[Math.floor(Math.random() * candidatas.length)]
+    }
+
+    // ── Segundo pozo: el HISTORIAL de la red ──────────────────────────────
+    // El cronograma guarda la actividad completa (nombre, objetivo, desarrollo,
+    // materiales), asi que una actividad de junio que funciono es tan
+    // transplantable como una del repertorio. Lo que viaja no es el texto:
+    // es la evidencia de que sirvio con un grupo real.
+    const { data: cronoRed } = await supabase
+      .from("cronograma_jardin")
+      .select("sala, actividades")
+      .neq("sala", sala)
+      .order("fecha", { ascending: false })
+      .limit(300)
+
+    const normEje = (v: string): string => {
+      const e = String(v || "").trim().toUpperCase()
+      if (e === "CT") return "CT"
+      if (e === "O" || e === "ORALIDAD") return "O"
+      if (e === "E" || e === "EA" || e === "LE" || e === "ESCRITURA") return "E"
+      return "CF"
+    }
+
+    const delHistorial: any[] = []
+    const vistos = new Set<string>()
+
+    ;(cronoRed || []).forEach((fila: any) => {
+      const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+      acts.forEach((a: any) => {
+        if (!a || !a.nombre) return
+        const nombre = String(a.nombre).trim()
+        const clave = nombre.toLowerCase()
+        if (vistos.has(clave)) return
+
+        // Solo sirve si quedo guardada COMPLETA: sin desarrollo no se puede dar en otra sala
+        const desarrollo = String(a.desarrollo || a.descripcion || "").trim()
+        if (desarrollo.length < 30) return
+
+        const eje = normEje(a.eje)
+        if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
+        if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
+        if (!bienEvaluadas.has(clave)) return         // 1. funciono donde se dio
+        if ((registrosPorSala[fila.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return  // 4. origen confiable
+
+        vistos.add(clave)
+        delHistorial.push({
+          id: null,
+          sala: fila.sala,
+          nombre,
+          eje,
+          capacidad: String(a.capacidades || "").trim(),
+          objetivo: String(a.objetivo || "").trim(),
+          desarrollo,
+          materiales: Array.isArray(a.materiales) ? a.materiales.join(", ") : String(a.materiales || ""),
+          nivelSala: a.nivelSala || "",
+        })
+      })
+    })
+
+    if (delHistorial.length === 0) return null
+    return delHistorial[Math.floor(Math.random() * delHistorial.length)]
   } catch (e) {
     console.error("[v0] Error buscando en la red:", e)
     return null
