@@ -2530,6 +2530,82 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
 // uso. Al azar a proposito: sin evidencia todavia, ninguna merece prioridad.
 // Si la sala no cargo nada, no pasa nada y siguen las 3 de ALBA.
 // La actividad NO se borra: se marca como "usada" para que conserve su historia.
+// ── LA RED ────────────────────────────────────────────────────────────────
+// Una actividad del repertorio de OTRA sala llega aca solo si se cumplen las
+// cuatro condiciones que definio Meri:
+//   1. Le fue bien donde se dio (la docente la califico excelente o buena)
+//   2. La sala que recibe necesita ese eje (es uno de los ejes de la semana)
+//   3. La sala que recibe todavia no la dio
+//   4. El aula de origen viene registrando con consistencia
+// No se rankea por popularidad: se rutea por necesidad.
+async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): Promise<any | null> {
+  try {
+    const REGISTROS_MINIMOS_ORIGEN = 3
+
+    // Ejes que la sala necesita esta semana, en el vocabulario de la tabla
+    const ejesNecesarios = new Set<string>(
+      sugerencias.map((s): string => {
+        const e = String(s?.actividad?.eje || "")
+        if (e === "Escritura" || e === "EA" || e === "E") return "E"
+        if (e === "CT") return "CT"
+        if (e === "O" || e === "Oralidad") return "O"
+        return "CF"
+      })
+    )
+
+    // Candidatas: repertorio de las demas salas, en los ejes que hacen falta
+    const { data: deOtrasSalas } = await supabase
+      .from("actividades_docentes")
+      .select("*")
+      .neq("sala", sala)
+    if (!deOtrasSalas || deOtrasSalas.length === 0) return null
+
+    // Cierres de toda la red: sirven para saber que funciono y que salas registran
+    const { data: cierres } = await supabase
+      .from("registro_cierre")
+      .select("sala, actividad_alba, actividad_docente, evaluacion_general")
+      .limit(1000)
+
+    const registrosPorSala: Record<string, number> = {}
+    const bienEvaluadas = new Set<string>()
+    ;(cierres || []).forEach((c: any) => {
+      if (c.sala) registrosPorSala[c.sala] = (registrosPorSala[c.sala] || 0) + 1
+      const buena = c.evaluacion_general === "excelente" || c.evaluacion_general === "buena"
+      if (!buena) return
+      if (c.actividad_alba) bienEvaluadas.add(String(c.actividad_alba).trim().toLowerCase())
+      if (c.actividad_docente) bienEvaluadas.add(String(c.actividad_docente).trim().toLowerCase())
+    })
+
+    // Lo que esta sala ya trabajo, para no mandarle algo repetido
+    const { data: alumnosSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+    const idsSala = (alumnosSala || []).map((a: any) => a.id)
+    const yaDadasAqui = new Set<string>()
+    if (idsSala.length > 0) {
+      const { data: regs } = await supabase
+        .from("seguimiento").select("actividad").in("alumno_id", idsSala)
+      ;(regs || []).forEach((r: any) => {
+        if (r.actividad) yaDadasAqui.add(String(r.actividad).trim().toLowerCase())
+      })
+    }
+
+    const candidatas = deOtrasSalas.filter((a: any) => {
+      const nombre = String(a.nombre || "").trim().toLowerCase()
+      if (!nombre) return false
+      if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
+      if (yaDadasAqui.has(nombre)) return false                            // 3
+      if (!bienEvaluadas.has(nombre)) return false                         // 1
+      if ((registrosPorSala[a.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return false  // 4
+      return true
+    })
+
+    if (candidatas.length === 0) return null
+    return candidatas[Math.floor(Math.random() * candidatas.length)]
+  } catch (e) {
+    console.error("[v0] Error buscando en la red:", e)
+    return null
+  }
+}
+
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
   try {
     if (!sala || !Array.isArray(sugerencias) || sugerencias.length === 0) return sugerencias
@@ -2545,9 +2621,19 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       console.error("[v0] Error leyendo repertorio docente:", error.message)
       return sugerencias
     }
-    if (!propias || propias.length === 0) return sugerencias
 
-    const elegida = propias[Math.floor(Math.random() * propias.length)]
+    // Primero el repertorio propio. Si la sala ya lo agoto, recien ahi se mira la RED.
+    let elegida: any = null
+    let vieneDeLaRed = false
+
+    if (propias && propias.length > 0) {
+      elegida = propias[Math.floor(Math.random() * propias.length)]
+    } else {
+      elegida = await buscarEnLaRed(supabase, sala, sugerencias)
+      vieneDeLaRed = !!elegida
+    }
+
+    if (!elegida) return sugerencias
 
     // Traduccion de vocabulario: la tabla usa E, el cronograma usa "Escritura".
     const NOMBRE_EJE: Record<string, string> = {
@@ -2574,15 +2660,21 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
         materiales: elegida.materiales || "",
         eje: ejeCronograma,
         alfabetizacion: true,
-        origen: "docente",
+        origen: vieneDeLaRed ? "red" : "docente",
+        origenTexto: vieneDeLaRed
+          ? `De la red — funciono en una sala de ${elegida.nivelSala || "5"} anos`
+          : "Mi actividad",
+        alfabetizacionRed: vieneDeLaRed,
         actividadDocenteId: elegida.id,
       },
     }
 
-    await supabase
-      .from("actividades_docentes")
-      .update({ estado: "usada" })
-      .eq("id", elegida.id)
+    if (!vieneDeLaRed) {
+      await supabase
+        .from("actividades_docentes")
+        .update({ estado: "usada" })
+        .eq("id", elegida.id)
+    }
 
     return copia
   } catch (e) {
