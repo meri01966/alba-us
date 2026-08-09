@@ -498,7 +498,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
   
   // Finalizar semana completa (solo sala de prueba, sin confirmación)
   // Finalizar jornada: guarda evaluaciones y avanza a siguiente día
-  const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string }) => {
+  const handleRegistroCierre = useCallback(async (datos: { evaluacion: string; observaciones: string; sugerencia: string; repetir?: boolean | null }) => {
     const ejeDelDia = ejeActual
     const actividadDelDia = actividadSugeridaALBA || actividadActual
 
@@ -516,6 +516,7 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
             evaluacionGeneral: "no_realizada",
             observaciones: datos.observaciones,
             sugerenciaParaIA: datos.sugerencia,
+          repetir: datos.repetir ?? null,
             stats: { green: 0, yellow: 0, red: 0, ausentes: students.length },
           }),
         })
