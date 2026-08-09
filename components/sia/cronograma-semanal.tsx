@@ -51,7 +51,8 @@ interface Actividad {
   desarrollo: string
   materiales: string
   alfabetizacion?: boolean // marcada como actividad de alfabetizacion (sugerida por ALBA o cargada por la maestra)
-  origen?: "alba" | "docente"
+  origen?: "alba" | "docente" | "red"
+  origenTexto?: string
 }
 
 interface DiaData {
@@ -326,7 +327,10 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
           setSugerenciasAlba(
             data.sugerencias.map((s: SugerenciaAlba) => ({
               dia: s.dia,
-              actividad: { ...s.actividad, alfabetizacion: true, origen: "alba" as const },
+              // El origen lo decide el brain: puede ser de ALBA, del repertorio
+              // de esta sala ("docente") o de otra sala de la red ("red").
+              // Antes se pisaba siempre con "alba" y se perdia esa informacion.
+              actividad: { ...s.actividad, alfabetizacion: true, origen: s.actividad?.origen || "alba" },
             })),
           )
         }
@@ -606,9 +610,20 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                         <div className="p-2 bg-violet-50 border border-violet-200 rounded-lg">
                           <div className="flex items-center gap-1 mb-1">
                             <Sparkles className="w-3 h-3 text-violet-600" />
-                            <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">ALBA sugiere</span>
+                            <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">
+                              {sugerencia.actividad.origen === "docente"
+                                ? "Mi actividad"
+                                : sugerencia.actividad.origen === "red"
+                                ? "De la red"
+                                : "Sugerida por ALBA"}
+                            </span>
                           </div>
                           <p className="text-[11px] font-bold text-violet-900 mb-1 leading-tight">{sugerencia.actividad.nombre}</p>
+                          {sugerencia.actividad.origen === "red" && (
+                            <p className="text-[9px] text-violet-700 italic mb-1 leading-snug">
+                              {sugerencia.actividad.origenTexto || "Otra docente la uso con buenos resultados"}
+                            </p>
+                          )}
                           {sugerencia.actividad.capacidades && (
                             <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Capacidades: </span>{sugerencia.actividad.capacidades}</p>
                           )}
