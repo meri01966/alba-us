@@ -2221,6 +2221,8 @@ export async function POST(req: NextRequest) {
 
       const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
       const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
+      // Porcentaje de chicos en verde por eje: es la "mayoria consolidada"
+      const verdePorEje: Record<string, number> = { CF: 0, CT: 0, O: 0, EA: 0 }
       const ultimaPorEjeSem: Record<string, number> = {}
 
       try {
@@ -2233,6 +2235,7 @@ export async function POST(req: NextRequest) {
             .in("alumno_id", idsSala)
             .order("fecha", { ascending: true })
           const puntos: Record<string, { suma: number; n: number }> = {}
+          const verdes: Record<string, { verdes: number; n: number }> = {}
           ;(regsSala || []).forEach((r: any) => {
             const e = ejeDeSeguimiento(r.eje)
             if (r.actividad) {
@@ -2246,6 +2249,12 @@ export async function POST(req: NextRequest) {
             if (!puntos[e]) puntos[e] = { suma: 0, n: 0 }
             puntos[e].suma += est === "green" ? 100 : est === "yellow" ? 50 : 0
             puntos[e].n++
+            if (!verdes[e]) verdes[e] = { verdes: 0, n: 0 }
+            if (est === "green") verdes[e].verdes++
+            verdes[e].n++
+          })
+          Object.keys(verdes).forEach((e) => {
+            if (verdes[e].n > 0) verdePorEje[e] = Math.round((verdes[e].verdes / verdes[e].n) * 100)
           })
           Object.keys(puntos).forEach((e) => {
             if (puntos[e].n > 0) promedioPorEje[e] = Math.round(puntos[e].suma / puntos[e].n)
@@ -2276,22 +2285,90 @@ export async function POST(req: NextRequest) {
         O: "Oralidad", EA: "Escritura",
       }
 
+      // ── DECISION DE LA DOCENTE + CONSOLIDACION ──────────────────────────
+      // Del ultimo cierre de cada eje sacamos: en que paso estaba, si la maestra
+      // pidio volver sobre el, y cuantas veces se trabajo ese mismo paso.
+      const ultimoCierrePorEje: Record<string, { paso: string; repetir: boolean | null; veces: number }> = {}
+      try {
+        const { data: cierresSala } = await supabase
+          .from("registro_cierre")
+          .select("eje, paso, repetir, created_at")
+          .eq("sala", salaNombre)
+          .order("created_at", { ascending: false })
+          .limit(80)
+        ;(cierresSala || []).forEach((c: any) => {
+          if (!c.paso) return
+          const e = ejeDeSeguimiento(c.eje)
+          const pasoTxt = String(c.paso)
+          if (!ultimoCierrePorEje[e]) {
+            ultimoCierrePorEje[e] = {
+              paso: pasoTxt,
+              repetir: c.repetir === true ? true : c.repetir === false ? false : null,
+              veces: 0,
+            }
+          }
+          if (ultimoCierrePorEje[e].paso === pasoTxt) ultimoCierrePorEje[e].veces++
+        })
+      } catch (errCierres) {
+        console.error("[v0] Error leyendo cierres para decidir avance:", errCierres)
+      }
+
+      // Criterios acordados: mayoria = 70% de los chicos en verde;
+      // tope = 3 veces el mismo paso, despues avanza igual.
+      const MAYORIA_VERDE = 70
+      const TOPE_REPETICIONES = 3
+
       const pasosDeLaSemana = ejesDeLaSemana.map((e) => {
+        const ultimo = ultimoCierrePorEje[e]
+
+        if (ultimo && ultimo.paso) {
+          const seqEje = SECUENCIA[e] || []
+          const idx = seqEje.findIndex(
+            (a) => a.titulo.trim().toLowerCase() === ultimo.paso.trim().toLowerCase()
+          )
+          if (idx >= 0 && ultimo.veces < TOPE_REPETICIONES) {
+            const consolidado = (verdePorEje[e] ?? 0) >= MAYORIA_VERDE && ultimo.veces >= 2
+            // La docente manda. Si no opino, decide la evidencia.
+            const quedarse = ultimo.repetir === true || (ultimo.repetir === null && !consolidado)
+            if (quedarse) {
+              return {
+                eje: e,
+                paso: seqEje[idx],
+                indice: idx,
+                esRepeticion: true,
+                motivo: ultimo.repetir === true
+                  ? "la docente pidio volver sobre este contenido"
+                  : `el grupo todavia no lo consolido (${verdePorEje[e] ?? 0}% en verde)`,
+              }
+            }
+          }
+        }
+
         const r = calcularActividadDelDia(
           e, yaDadasPorEje[e].length, promedioPorEje[e], salaNombre, yaDadasPorEje[e]
         )
-        return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion }
+        return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion, motivo: "" }
       })
 
-      const instruccionesDias = pasosDeLaSemana.map((p, i) =>
-        `Dia ${i + 1} (${diasArray[i]}) — eje ${NOMBRE_EJE_LARGO[p.eje]}.\n` +
-        `  PASO A TRABAJAR: "${p.paso.titulo}"\n` +
-        `  Objetivo del paso: ${p.paso.objetivo}\n` +
-        `  Referencia: ${p.paso.descripcion}` +
-        (p.esRepeticion
-          ? `\n  ATENCION: el grupo viene flojo en este eje. NO avances de nivel: proponé una variante mas accesible del MISMO paso.`
-          : "")
-      ).join("\n\n")
+      const instruccionesDias = pasosDeLaSemana.map((p, i) => {
+        // La prohibicion va PEGADA a la instruccion del dia, no en un bloque aparte:
+        // el modelo la ignora cuando esta veinte lineas mas arriba.
+        const prohibidas = (yaDadasPorEje[p.eje] || []).slice(-10)
+        const bloqueProhibido = prohibidas.length
+          ? `\n  PROHIBIDO para este dia: no uses estos titulos ni variantes parecidas: ${prohibidas.join(" | ")}. El titulo y la consigna tienen que ser claramente distintos.`
+          : ""
+        const bloqueRepeticion = p.esRepeticion
+          ? `\n  SE VUELVE sobre este mismo paso${p.motivo ? ` porque ${p.motivo}` : ""}. NO avances de nivel, pero la actividad tiene que ser OTRA: cambia el formato (de juego corporal a juego con tarjetas, de grupo grande a parejas, de oral a manipulativo), cambia el soporte y cambia el titulo.`
+          : ""
+        return (
+          `Dia ${i + 1} (${diasArray[i]}) — eje ${NOMBRE_EJE_LARGO[p.eje]}.\n` +
+          `  PASO A TRABAJAR: "${p.paso.titulo}"\n` +
+          `  Objetivo del paso: ${p.paso.objetivo}\n` +
+          `  Referencia: ${p.paso.descripcion}` +
+          bloqueRepeticion +
+          bloqueProhibido
+        )
+      }).join("\n\n")
 
       const listaYaDadas = Object.entries(yaDadasPorEje)
         .map(([e, l]) => (l.length ? `- ${NOMBRE_EJE_LARGO[e]}: ${l.slice(-12).join(", ")}` : ""))
@@ -2402,7 +2479,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
             actividad: {
               nombre: s.nombre,
               capacidades: s.capacidades,
-              contenidos: pasoNombre ? `${s.contenidos} · Paso: ${pasoNombre}` : s.contenidos,
+              contenidos: pasoNombre ? `${s.contenidos} · Estamos trabajando: ${pasoNombre}` : s.contenidos,
               objetivo: s.objetivo,
               desarrollo: s.desarrollo,
               materiales: s.materiales,
@@ -2453,6 +2530,142 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
 // uso. Al azar a proposito: sin evidencia todavia, ninguna merece prioridad.
 // Si la sala no cargo nada, no pasa nada y siguen las 3 de ALBA.
 // La actividad NO se borra: se marca como "usada" para que conserve su historia.
+// ── LA RED ────────────────────────────────────────────────────────────────
+// Una actividad del repertorio de OTRA sala llega aca solo si se cumplen las
+// cuatro condiciones que definio Meri:
+//   1. Le fue bien donde se dio (la docente la califico excelente o buena)
+//   2. La sala que recibe necesita ese eje (es uno de los ejes de la semana)
+//   3. La sala que recibe todavia no la dio
+//   4. El aula de origen viene registrando con consistencia
+// No se rankea por popularidad: se rutea por necesidad.
+async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): Promise<any | null> {
+  try {
+    const REGISTROS_MINIMOS_ORIGEN = 3
+
+    // Ejes que la sala necesita esta semana, en el vocabulario de la tabla
+    const ejesNecesarios = new Set<string>(
+      sugerencias.map((s): string => {
+        const e = String(s?.actividad?.eje || "")
+        if (e === "Escritura" || e === "EA" || e === "E") return "E"
+        if (e === "CT") return "CT"
+        if (e === "O" || e === "Oralidad") return "O"
+        return "CF"
+      })
+    )
+
+    // Candidatas: repertorio de las demas salas, en los ejes que hacen falta
+    const { data: deOtrasSalas } = await supabase
+      .from("actividades_docentes")
+      .select("*")
+      .neq("sala", sala)
+    if (!deOtrasSalas || deOtrasSalas.length === 0) return null
+
+    // Cierres de toda la red: sirven para saber que funciono y que salas registran
+    const { data: cierres } = await supabase
+      .from("registro_cierre")
+      .select("sala, actividad_alba, actividad_docente, evaluacion_general")
+      .limit(1000)
+
+    const registrosPorSala: Record<string, number> = {}
+    const bienEvaluadas = new Set<string>()
+    ;(cierres || []).forEach((c: any) => {
+      if (c.sala) registrosPorSala[c.sala] = (registrosPorSala[c.sala] || 0) + 1
+      const buena = c.evaluacion_general === "excelente" || c.evaluacion_general === "buena"
+      if (!buena) return
+      if (c.actividad_alba) bienEvaluadas.add(String(c.actividad_alba).trim().toLowerCase())
+      if (c.actividad_docente) bienEvaluadas.add(String(c.actividad_docente).trim().toLowerCase())
+    })
+
+    // Lo que esta sala ya trabajo, para no mandarle algo repetido
+    const { data: alumnosSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+    const idsSala = (alumnosSala || []).map((a: any) => a.id)
+    const yaDadasAqui = new Set<string>()
+    if (idsSala.length > 0) {
+      const { data: regs } = await supabase
+        .from("seguimiento").select("actividad").in("alumno_id", idsSala)
+      ;(regs || []).forEach((r: any) => {
+        if (r.actividad) yaDadasAqui.add(String(r.actividad).trim().toLowerCase())
+      })
+    }
+
+    const candidatas = deOtrasSalas.filter((a: any) => {
+      const nombre = String(a.nombre || "").trim().toLowerCase()
+      if (!nombre) return false
+      if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
+      if (yaDadasAqui.has(nombre)) return false                            // 3
+      if (!bienEvaluadas.has(nombre)) return false                         // 1
+      if ((registrosPorSala[a.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return false  // 4
+      return true
+    })
+
+    if (candidatas.length > 0) {
+      return candidatas[Math.floor(Math.random() * candidatas.length)]
+    }
+
+    // ── Segundo pozo: el HISTORIAL de la red ──────────────────────────────
+    // El cronograma guarda la actividad completa (nombre, objetivo, desarrollo,
+    // materiales), asi que una actividad de junio que funciono es tan
+    // transplantable como una del repertorio. Lo que viaja no es el texto:
+    // es la evidencia de que sirvio con un grupo real.
+    const { data: cronoRed } = await supabase
+      .from("cronograma_jardin")
+      .select("sala, actividades")
+      .neq("sala", sala)
+      .order("fecha", { ascending: false })
+      .limit(300)
+
+    const normEje = (v: string): string => {
+      const e = String(v || "").trim().toUpperCase()
+      if (e === "CT") return "CT"
+      if (e === "O" || e === "ORALIDAD") return "O"
+      if (e === "E" || e === "EA" || e === "LE" || e === "ESCRITURA") return "E"
+      return "CF"
+    }
+
+    const delHistorial: any[] = []
+    const vistos = new Set<string>()
+
+    ;(cronoRed || []).forEach((fila: any) => {
+      const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+      acts.forEach((a: any) => {
+        if (!a || !a.nombre) return
+        const nombre = String(a.nombre).trim()
+        const clave = nombre.toLowerCase()
+        if (vistos.has(clave)) return
+
+        // Solo sirve si quedo guardada COMPLETA: sin desarrollo no se puede dar en otra sala
+        const desarrollo = String(a.desarrollo || a.descripcion || "").trim()
+        if (desarrollo.length < 30) return
+
+        const eje = normEje(a.eje)
+        if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
+        if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
+        if (!bienEvaluadas.has(clave)) return         // 1. funciono donde se dio
+        if ((registrosPorSala[fila.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return  // 4. origen confiable
+
+        vistos.add(clave)
+        delHistorial.push({
+          id: null,
+          sala: fila.sala,
+          nombre,
+          eje,
+          capacidad: String(a.capacidades || "").trim(),
+          objetivo: String(a.objetivo || "").trim(),
+          desarrollo,
+          materiales: Array.isArray(a.materiales) ? a.materiales.join(", ") : String(a.materiales || ""),
+          nivelSala: a.nivelSala || "",
+        })
+      })
+    })
+
+    if (delHistorial.length === 0) return null
+    return delHistorial[Math.floor(Math.random() * delHistorial.length)]
+  } catch (e) {
+    console.error("[v0] Error buscando en la red:", e)
+    return null
+  }
+}
+
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
   try {
     if (!sala || !Array.isArray(sugerencias) || sugerencias.length === 0) return sugerencias
@@ -2468,9 +2681,19 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       console.error("[v0] Error leyendo repertorio docente:", error.message)
       return sugerencias
     }
-    if (!propias || propias.length === 0) return sugerencias
 
-    const elegida = propias[Math.floor(Math.random() * propias.length)]
+    // Primero el repertorio propio. Si la sala ya lo agoto, recien ahi se mira la RED.
+    let elegida: any = null
+    let vieneDeLaRed = false
+
+    if (propias && propias.length > 0) {
+      elegida = propias[Math.floor(Math.random() * propias.length)]
+    } else {
+      elegida = await buscarEnLaRed(supabase, sala, sugerencias)
+      vieneDeLaRed = !!elegida
+    }
+
+    if (!elegida) return sugerencias
 
     // Traduccion de vocabulario: la tabla usa E, el cronograma usa "Escritura".
     const NOMBRE_EJE: Record<string, string> = {
@@ -2497,15 +2720,21 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
         materiales: elegida.materiales || "",
         eje: ejeCronograma,
         alfabetizacion: true,
-        origen: "docente",
+        origen: vieneDeLaRed ? "red" : "docente",
+        origenTexto: vieneDeLaRed
+          ? `De la red — funciono en una sala de ${elegida.nivelSala || "5"} anos`
+          : "Mi actividad",
+        alfabetizacionRed: vieneDeLaRed,
         actividadDocenteId: elegida.id,
       },
     }
 
-    await supabase
-      .from("actividades_docentes")
-      .update({ estado: "usada" })
-      .eq("id", elegida.id)
+    if (!vieneDeLaRed) {
+      await supabase
+        .from("actividades_docentes")
+        .update({ estado: "usada" })
+        .eq("id", elegida.id)
+    }
 
     return copia
   } catch (e) {
