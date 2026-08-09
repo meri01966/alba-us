@@ -2350,15 +2350,25 @@ export async function POST(req: NextRequest) {
         return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion, motivo: "" }
       })
 
-      const instruccionesDias = pasosDeLaSemana.map((p, i) =>
-        `Dia ${i + 1} (${diasArray[i]}) — eje ${NOMBRE_EJE_LARGO[p.eje]}.\n` +
-        `  PASO A TRABAJAR: "${p.paso.titulo}"\n` +
-        `  Objetivo del paso: ${p.paso.objetivo}\n` +
-        `  Referencia: ${p.paso.descripcion}` +
-        (p.esRepeticion
-          ? `\n  ATENCION: se VUELVE sobre este mismo paso${p.motivo ? ` porque ${p.motivo}` : ""}. NO avances de nivel: proponé una actividad DISTINTA del MISMO paso, mas concreta o con otro soporte.`
-          : "")
-      ).join("\n\n")
+      const instruccionesDias = pasosDeLaSemana.map((p, i) => {
+        // La prohibicion va PEGADA a la instruccion del dia, no en un bloque aparte:
+        // el modelo la ignora cuando esta veinte lineas mas arriba.
+        const prohibidas = (yaDadasPorEje[p.eje] || []).slice(-10)
+        const bloqueProhibido = prohibidas.length
+          ? `\n  PROHIBIDO para este dia: no uses estos titulos ni variantes parecidas: ${prohibidas.join(" | ")}. El titulo y la consigna tienen que ser claramente distintos.`
+          : ""
+        const bloqueRepeticion = p.esRepeticion
+          ? `\n  SE VUELVE sobre este mismo paso${p.motivo ? ` porque ${p.motivo}` : ""}. NO avances de nivel, pero la actividad tiene que ser OTRA: cambia el formato (de juego corporal a juego con tarjetas, de grupo grande a parejas, de oral a manipulativo), cambia el soporte y cambia el titulo.`
+          : ""
+        return (
+          `Dia ${i + 1} (${diasArray[i]}) — eje ${NOMBRE_EJE_LARGO[p.eje]}.\n` +
+          `  PASO A TRABAJAR: "${p.paso.titulo}"\n` +
+          `  Objetivo del paso: ${p.paso.objetivo}\n` +
+          `  Referencia: ${p.paso.descripcion}` +
+          bloqueRepeticion +
+          bloqueProhibido
+        )
+      }).join("\n\n")
 
       const listaYaDadas = Object.entries(yaDadasPorEje)
         .map(([e, l]) => (l.length ? `- ${NOMBRE_EJE_LARGO[e]}: ${l.slice(-12).join(", ")}` : ""))
