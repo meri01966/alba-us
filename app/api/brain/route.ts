@@ -1270,11 +1270,21 @@ function esSegundaMitadAnio(): boolean {
   return semanasTranscurridas >= 21
 }
 
+// Normaliza el eje tal como viene guardado en seguimiento al vocabulario del brain.
+function ejeDeSeguimiento(valor: string): "CF" | "CT" | "O" | "EA" {
+  const e = (valor || "").trim().toUpperCase()
+  if (e === "CT") return "CT"
+  if (e === "O" || e === "ORALIDAD") return "O"
+  if (e === "E" || e === "EA" || e === "LE" || e === "ESCRITURA") return "EA"
+  return "CF"
+}
+
 function calcularActividadDelDia(
   eje: "CF" | "CT" | "O" | "EA",
   clasesCompletadasEnEje: number,
   promedioEje: number,
-  sala = "Manzanos"
+  sala = "Manzanos",
+  yaDadas: string[] = []
 ): { actividad: (typeof SECUENCIA)["CF"][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
   // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
@@ -1286,25 +1296,40 @@ function calcularActividadDelDia(
   // Offset de mitad de año: si la sala no tiene cierres en este eje, arrancar en la actividad 9
   // Esto evita mostrar actividades del primer semestre en Junio
   const OFFSET_MITAD_ANIO = 8
-  const clasesBase = clasesCompletadasEnEje === 0 ? OFFSET_MITAD_ANIO : clasesCompletadasEnEje
-  // Usar modulo para que la secuencia sea ciclica y nunca quede atascada
-  let indice = clasesBase % seq.length
-  let esRepeticion = false
-  let esAvanzado = false
 
-  // CHECKPOINT CADA ~10 CLASES: evaluar si reforzar o avanzar
-  // Si el promedio es bajo (< 40%) retroceder para consolidar
-  if (promedioEje < 40 && indice > 0) {
-    indice = Math.max(0, indice - 1)
-    esRepeticion = true
-  }
-  // Si el promedio es muy bueno (>= 75%) y hay mas actividades, saltar adelante
-  else if (promedioEje >= 75 && indice < seq.length - 2) {
-    indice = Math.min(indice + 1, seq.length - 1)
-    esAvanzado = true
+  // Punto de partida: las salas de 5 ya venian trabajando antes de registrar en ALBA,
+  // asi que no arrancan del principio. Las de 4 si.
+  const arranque = esde4Anios(sala) ? 0 : Math.min(OFFSET_MITAD_ANIO, seq.length - 1)
+
+  const norm = (t: string) => (t || "").trim().toLowerCase()
+  const dadas = new Set(yaDadas.map(norm))
+
+  // CONSOLIDAR: si el grupo viene flojo, no avanzamos. Se repite lo ultimo trabajado.
+  if (promedioEje < 40 && yaDadas.length > 0) {
+    const ultima = norm(yaDadas[yaDadas.length - 1])
+    const idxUltima = seq.findIndex((a) => norm(a.titulo) === ultima)
+    if (idxUltima >= 0) {
+      return { actividad: seq[idxUltima], indice: idxUltima, esRepeticion: true, esAvanzado: false }
+    }
   }
 
-  return { actividad: seq[indice], indice, esRepeticion, esAvanzado }
+  // AVANZAR: la primera de la secuencia que esta sala todavia no dio, desde el arranque.
+  // Asi la posicion se mueve sola con cada actividad evaluada y no puede repetirse.
+  for (let i = arranque; i < seq.length; i++) {
+    if (!dadas.has(norm(seq[i].titulo))) {
+      return { actividad: seq[i], indice: i, esRepeticion: false, esAvanzado: false }
+    }
+  }
+  // Si ya cubrio todo desde el arranque, recuperar lo anterior que quedo sin dar.
+  for (let i = 0; i < arranque && i < seq.length; i++) {
+    if (!dadas.has(norm(seq[i].titulo))) {
+      return { actividad: seq[i], indice: i, esRepeticion: false, esAvanzado: false }
+    }
+  }
+
+  // Secuencia completa: vuelve a ciclar, marcado como repeticion.
+  const indiceCiclo = (clasesCompletadasEnEje || arranque) % seq.length
+  return { actividad: seq[indiceCiclo], indice: indiceCiclo, esRepeticion: true, esAvanzado: false }
 }
 
 // Nunca cachear — cada llamada debe leer los datos mas recientes de Supabase
@@ -1406,7 +1431,7 @@ export async function GET(req: Request) {
     const resultadoCronograma = await buscarActividadCronograma()
     if (resultadoCronograma) {
       const { actAlfa, dia: diaActividad } = resultadoCronograma
-      const ejeActividad: "CF" | "CT" | "O" = (actAlfa.eje === "CT" ? "CT" : actAlfa.eje === "Escritura" ? "O" : "CF")
+      const ejeActividad: "CF" | "CT" | "O" | "E" = (actAlfa.eje === "CT" ? "CT" : (actAlfa.eje === "Escritura" || actAlfa.eje === "E" || actAlfa.eje === "EA") ? "E" : (actAlfa.eje === "Oralidad" || actAlfa.eje === "O") ? "O" : "CF")
       // Etiqueta legible: si la actividad es de Escritura, mostrar "Escritura" (EA)
       // aunque internamente el eje se mapee a "O" para el resto del sistema.
       const ejeNombreActividad =
@@ -1733,23 +1758,41 @@ export async function GET(req: Request) {
       ? ["CF", "O", "CT", "EA"]   // en segunda mitad: CF/O/CT alternan con EA como 4to slot
       : ["CF", "O", "CT"]
 
-    // Para segunda mitad: el slot 1 (indice 1) alterna O y CT segun paridad del total de clases
-    // Esto garantiza que tanto O como CT siguen siendo trabajados
-    let ejeSugerido: "CF" | "CT" | "O" | "EA"
-    if (segundaMitad) {
-      const slotIndex = totalClasesCompletadasGlobal % 3  // rota en 3: CF / O|CT / EA
-      if (slotIndex === 0) {
-        ejeSugerido = "CF"
-      } else if (slotIndex === 1) {
-        // Alterna O y CT segun paridad del total de veces que se paso por este slot
-        const vecesSlot1 = Math.floor(totalClasesCompletadasGlobal / 3)
-        ejeSugerido = vecesSlot1 % 2 === 0 ? "O" : "CT"
-      } else {
-        ejeSugerido = "EA"
-      }
-    } else {
-      ejeSugerido = ORDEN_EJES[totalClasesCompletadasGlobal % ORDEN_EJES.length] as "CF" | "CT" | "O"
+    // ORDEN POR NECESIDAD (reemplaza la rotacion por modulo).
+    // Un eje por dia, como antes: lo que cambia es CUAL va primero, no cuantos dias se lleva.
+    // Prioriza el eje mas postergado y el que peor viene, sin que ninguno desaparezca.
+    const ultimaPorEje: Record<string, number> = {}
+    let ejeUltimaClase = ""
+    let ultimaMs = 0
+    regs.forEach((r: any) => {
+      if (!r.actividad) return
+      const e = ejeDeSeguimiento(r.eje)
+      const t = new Date(r.fecha || r.created_at).getTime()
+      if (isNaN(t)) return
+      if (!ultimaPorEje[e] || t > ultimaPorEje[e]) ultimaPorEje[e] = t
+      if (t > ultimaMs) { ultimaMs = t; ejeUltimaClase = e }
+    })
+
+    const ahoraMs = Date.now()
+    const diasSinTrabajar = (e: string) =>
+      ultimaPorEje[e] ? Math.floor((ahoraMs - ultimaPorEje[e]) / 86400000) : 60
+
+    function prioridadDeEje(e: "CF" | "CT" | "O" | "EA"): number {
+      const d = e === "EA" ? null : analisis[e as "CF" | "CT" | "O"]
+      const clases = d ? d.clasesCompletadas : 0
+      const prom = d ? d.promedio : 50
+      const rojos = d ? d.ultimasClasesEnRojo : 0
+      const espera = Math.min(diasSinTrabajar(e), 60)
+      // La postergacion pesa fuerte: un eje sin trabajar hace dos semanas gana solo.
+      // El fracaso y los rojos suman. La poca cobertura tambien.
+      return espera * 3 + (100 - prom) + rojos * 25 + Math.max(0, 20 - clases * 2)
     }
+
+    let ejeSugerido: "CF" | "CT" | "O" | "EA"
+    // No repetir el mismo eje dos clases seguidas, salvo que sea el unico candidato.
+    const candidatos = ORDEN_EJES.filter((e) => e !== ejeUltimaClase)
+    const pool = candidatos.length > 0 ? candidatos : ORDEN_EJES
+    ejeSugerido = [...pool].sort((a, b) => prioridadDeEje(b) - prioridadDeEje(a))[0]
 
     // Si el eje elegido por rotacion tiene 2+ clases seguidas en rojo, ALBA lo mantiene
     // para consolidar antes de continuar la rotacion (maximo 2 repeticiones)
@@ -1778,11 +1821,18 @@ export async function GET(req: Request) {
       clasesParaCalculo = Math.max(1, clasesParaCalculo - 1)
     }
 
+    // Actividades de este eje que la sala YA dio, en orden cronologico.
+    // regs viene ordenado por fecha ascendente.
+    const yaDadasEje: string[] = regs
+      .filter((r: any) => r.actividad && ejeDeSeguimiento(r.eje) === ejeSugerido)
+      .map((r: any) => String(r.actividad))
+
     const { actividad, indice, esRepeticion, esAvanzado } = calcularActividadDelDia(
       ejeSugerido as "CF" | "CT" | "O" | "EA",
       clasesParaCalculo,
       ejeDatosActivos.promedio,
-      sala
+      sala,
+      yaDadasEje
     )
 
     // Guard: si la secuencia esta vacia o el indice es invalido, no crashear
@@ -2108,9 +2158,95 @@ export async function POST(req: NextRequest) {
         // silencioso
       }
 
-      // Los 3 dias de alfabetizacion rotan eje: dia[0]=CF, dia[1]=CT+O, dia[2]=Escritura
-      const EJES = ["CF", "CT", "Escritura"]
       const diasArray = dias as string[]
+
+      // ── DECISION EN CODIGO: que eje y que paso le toca a cada dia ────────
+      // La IA ya no decide la progresion. El sistema calcula, con la evidencia
+      // real de la sala, en que paso de cada secuencia esta y que eje necesita.
+      const salaNombre = sala || "Girasoles"
+      const ejesPosibles: ("CF" | "CT" | "O" | "EA")[] =
+        semanaAnio >= 20 ? ["CF", "CT", "O", "EA"] : ["CF", "CT", "O"]
+
+      const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
+      const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
+      const ultimaPorEjeSem: Record<string, number> = {}
+
+      try {
+        const { data: alumnosSala } = await supabase
+          .from("alumnos").select("id").eq("sala", salaNombre)
+        const idsSala = (alumnosSala || []).map((a: any) => a.id)
+        if (idsSala.length > 0) {
+          const { data: regsSala } = await supabase
+            .from("seguimiento").select("*")
+            .in("alumno_id", idsSala)
+            .order("fecha", { ascending: true })
+          const puntos: Record<string, { suma: number; n: number }> = {}
+          ;(regsSala || []).forEach((r: any) => {
+            const e = ejeDeSeguimiento(r.eje)
+            if (r.actividad) {
+              const nom = String(r.actividad)
+              if (!yaDadasPorEje[e].includes(nom)) yaDadasPorEje[e].push(nom)
+              const t = new Date(r.fecha || r.created_at).getTime()
+              if (!isNaN(t) && (!ultimaPorEjeSem[e] || t > ultimaPorEjeSem[e])) ultimaPorEjeSem[e] = t
+            }
+            const est = String(r.estado || "").toLowerCase()
+            if (est === "blue") return
+            if (!puntos[e]) puntos[e] = { suma: 0, n: 0 }
+            puntos[e].suma += est === "green" ? 100 : est === "yellow" ? 50 : 0
+            puntos[e].n++
+          })
+          Object.keys(puntos).forEach((e) => {
+            if (puntos[e].n > 0) promedioPorEje[e] = Math.round(puntos[e].suma / puntos[e].n)
+          })
+        }
+      } catch (errEvid) {
+        console.error("[v0] Error leyendo evidencia de la sala:", errEvid)
+      }
+
+      // Prioridad por necesidad: pesa la postergacion, el bajo rendimiento y la poca cobertura
+      const ahoraSemMs = Date.now()
+      const prioridadSemanal = (e: string) => {
+        const dias = ultimaPorEjeSem[e] ? Math.floor((ahoraSemMs - ultimaPorEjeSem[e]) / 86400000) : 60
+        const cobertura = yaDadasPorEje[e].length
+        return Math.min(dias, 60) * 3 + (100 - promedioPorEje[e]) + Math.max(0, 20 - cobertura * 2)
+      }
+
+      // Un eje por dia, sin repetir eje en la misma semana
+      const ejesDeLaSemana = [...ejesPosibles]
+        .sort((a, b) => prioridadSemanal(b) - prioridadSemanal(a))
+        .slice(0, diasArray.length)
+      while (ejesDeLaSemana.length < diasArray.length) {
+        ejesDeLaSemana.push(ejesPosibles[ejesDeLaSemana.length % ejesPosibles.length])
+      }
+
+      const NOMBRE_EJE_LARGO: Record<string, string> = {
+        CF: "Conciencia Fonologica", CT: "Comprension de Textos",
+        O: "Oralidad", EA: "Escritura",
+      }
+
+      const pasosDeLaSemana = ejesDeLaSemana.map((e) => {
+        const r = calcularActividadDelDia(
+          e, yaDadasPorEje[e].length, promedioPorEje[e], salaNombre, yaDadasPorEje[e]
+        )
+        return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion }
+      })
+
+      const instruccionesDias = pasosDeLaSemana.map((p, i) =>
+        `Dia ${i + 1} (${diasArray[i]}) — eje ${NOMBRE_EJE_LARGO[p.eje]}.\n` +
+        `  PASO A TRABAJAR: "${p.paso.titulo}"\n` +
+        `  Objetivo del paso: ${p.paso.objetivo}\n` +
+        `  Referencia: ${p.paso.descripcion}` +
+        (p.esRepeticion
+          ? `\n  ATENCION: el grupo viene flojo en este eje. NO avances de nivel: proponé una variante mas accesible del MISMO paso.`
+          : "")
+      ).join("\n\n")
+
+      const listaYaDadas = Object.entries(yaDadasPorEje)
+        .map(([e, l]) => (l.length ? `- ${NOMBRE_EJE_LARGO[e]}: ${l.slice(-12).join(", ")}` : ""))
+        .filter(Boolean).join("\n") || "Ninguna todavia."
+
+      // Se conserva para el fallback si la IA falla
+      const EJES = ejesDeLaSemana.map((e) => (e === "EA" ? "Escritura" : e))
 
       const prompt = `Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos) de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
 
@@ -2136,7 +2272,7 @@ SECUENCIAS PROGRESIVAS (clave para NO repetir y para que cada semana AVANCE de n
 - CT — Comprension Textual: anticipacion por paratexto → comprension literal → secuencia temporal → inferencias → reconstruccion y recontado.
 - Escritura inicial: trazos y nombre propio como modelo estable → escritura de palabras significativas → escritura de listas y rotulos → escritura de frases → produccion con sentido comunicativo.
 
-REGLA DE PROGRESION: ubica al grupo en un punto de cada secuencia segun el historial y el momento del año (semana ${semanaAnio}). Propone el SIGUIENTE paso de la secuencia, no uno ya consolidado. Nunca propongas dos veces el mismo nivel de la misma secuencia si el historial muestra que ya se trabajo.
+REGLA DE PROGRESION: la progresion NO la decidis vos. El sistema ya calculo, con la evidencia real de esta sala, que eje y que paso corresponde a cada dia. Tu tarea es ESCRIBIR la actividad de ese paso, adaptada al proyecto del grupo. No cambies el eje ni el paso indicado.
 
 HISTORIAL RECIENTE (actividades ya realizadas — NO repetir):
 ${historialResumen || "Sin historial previo — esta es la primera semana."}
@@ -2148,10 +2284,12 @@ ${actividadesNoRealizadasAntiguas.length > 0 ? `ACTIVIDADES NO REALIZADAS HACE M
 ACTIVIDADES YA EN EL CRONOGRAMA ESTA SEMANA (evitar duplicar):
 ${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
 
-TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia indicado.
-Dia 1 (${diasArray[0]}): eje CF (Conciencia Fonologica) — elegi el siguiente paso de la secuencia CF segun el nivel del grupo.
-Dia 2 (${diasArray[1]}): eje CT (Comprension Textual) integrando Oralidad — lectura dialogica + intercambio oral enriquecido.
-Dia 3 (${diasArray[2]}): eje Escritura inicial — respetando y haciendo avanzar las hipotesis de escritura del grupo.
+ACTIVIDADES QUE ESTA SALA YA TRABAJO (no repetir ninguna, ni con otro nombre):
+${listaYaDadas}
+
+TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia, respetando el eje y el paso indicados:
+
+${instruccionesDias}
 
 REQUISITOS DE CADA ACTIVIDAD:
 1. Novedosa, original, no repetida respecto al historial NI a actividades del mismo nivel de secuencia ya trabajadas
@@ -2202,20 +2340,28 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
         const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
         const sugerenciasIA = JSON.parse(jsonStr)
 
-        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nivelSecuencia?: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }) => ({
-          dia: s.dia,
-          actividad: {
-            nombre: s.nombre,
-            capacidades: s.capacidades,
-            contenidos: s.nivelSecuencia ? `${s.contenidos} · Secuencia: ${s.nivelSecuencia}` : s.contenidos,
-            objetivo: s.objetivo,
-            desarrollo: s.desarrollo,
-            materiales: s.materiales,
-            eje: s.eje,
-            alfabetizacion: true,
-            origen: "alba" as const,
+        const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nivelSecuencia?: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }, idx: number) => {
+          // El eje y el paso los impone el sistema: si la IA devolvio otra cosa, se ignora.
+          const decidido = pasosDeLaSemana[idx]
+          const ejeFinal = decidido ? (decidido.eje === "EA" ? "Escritura" : decidido.eje) : s.eje
+          const pasoNombre = decidido ? decidido.paso.titulo : (s.nivelSecuencia || "")
+          return {
+            dia: diasArray[idx] || s.dia,
+            actividad: {
+              nombre: s.nombre,
+              capacidades: s.capacidades,
+              contenidos: pasoNombre ? `${s.contenidos} · Paso: ${pasoNombre}` : s.contenidos,
+              objetivo: s.objetivo,
+              desarrollo: s.desarrollo,
+              materiales: s.materiales,
+              eje: ejeFinal,
+              paso: pasoNombre,
+              pasoNumero: decidido ? decidido.indice + 1 : null,
+              alfabetizacion: true,
+              origen: "alba" as const,
+            }
           }
-        }))
+        })
 
         const conDocenteIA = await incorporarActividadDocente(sugerencias, sala)
         return NextResponse.json({ ok: true, sugerencias: conDocenteIA })
