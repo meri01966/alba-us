@@ -2602,9 +2602,15 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
       })
     }
 
+    // Condicion 0, la que manda sobre todas: la edad tiene que coincidir.
+    // Una actividad de sala de 5 en una sala de 4 no sirve y frustra al grupo.
+    // Si no hay nada de la misma edad, la red no propone y quedan las de ALBA.
+    const recibeEs4 = esde4Anios(sala)
+
     const candidatas = deOtrasSalas.filter((a: any) => {
       const nombre = String(a.nombre || "").trim().toLowerCase()
       if (!nombre) return false
+      if (esde4Anios(String(a.sala || "")) !== recibeEs4) return false    // 0. misma edad
       if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
       if (yaDadasAqui.has(nombre)) return false                            // 3
       if (!bienEvaluadas.has(nombre)) return false                         // 1
@@ -2651,6 +2657,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
         const desarrollo = String(a.desarrollo || a.descripcion || "").trim()
         if (desarrollo.length < 30) return
 
+        if (esde4Anios(String(fila.sala || "")) !== recibeEs4) return  // 0. misma edad
         const eje = normEje(a.eje)
         if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
         if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
@@ -2667,7 +2674,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
           objetivo: String(a.objetivo || "").trim(),
           desarrollo,
           materiales: Array.isArray(a.materiales) ? a.materiales.join(", ") : String(a.materiales || ""),
-          nivelSala: a.nivelSala || "",
+          nivelSala: esde4Anios(String(fila.sala || "")) ? "4" : "5",
         })
       })
     })
@@ -2736,7 +2743,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
         alfabetizacion: true,
         origen: vieneDeLaRed ? "red" : "docente",
         origenTexto: vieneDeLaRed
-          ? `De la red — funciono en una sala de ${elegida.nivelSala || "5"} anos`
+          ? `De la red — funciono en una sala de ${elegida.nivelSala || (esde4Anios(String(elegida.sala || "")) ? "4" : "5")} anos`
           : "Mi actividad",
         alfabetizacionRed: vieneDeLaRed,
         actividadDocenteId: elegida.id,
