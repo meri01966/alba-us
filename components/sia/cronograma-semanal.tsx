@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, ChevronDown } from "lucide-react"
+import { Calendar, X, Plus, Check, Save, Sparkles, Dumbbell, Music, Globe, Monitor, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 // Las 3 actividades de alfabetizacion sugeridas por ALBA van en estos dias
@@ -394,6 +394,39 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     })
   }
 
+  // Mover una actividad al dia anterior o al siguiente.
+  // La maestra ordena la semana como le queda mejor sin tener que rehacer nada.
+  async function moverActividad(dia: string, idx: number, direccion: -1 | 1) {
+    const i = DIAS.indexOf(dia as (typeof DIAS)[number])
+    const destino = DIAS[i + direccion]
+    if (!destino) return
+
+    const actual = cronograma
+    if (!actual[dia] || !actual[destino]) return
+    const act = actual[dia].actividades?.[idx]
+    if (!act) return
+
+    const origenActs = actual[dia].actividades.filter((_, n) => n !== idx)
+    const destinoActs = (actual[destino].actividades || []).filter((a) => (a.nombre || "").trim() !== "")
+
+    const nuevo = {
+      ...actual,
+      [dia]: { ...actual[dia], actividades: origenActs.length ? origenActs : [{ ...actividadVacia }] },
+      [destino]: { ...actual[destino], actividades: [...destinoActs, { ...act }] },
+    }
+    setCronograma(nuevo)
+
+    try {
+      await fetch(`/api/cronograma-jardin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala, cronograma: nuevo, semana_inicio: semanaInicioActual || undefined }),
+      })
+    } catch (e) {
+      console.error("[v0] Error moviendo actividad de dia:", e)
+    }
+  }
+
   // ── Actividades ────────────────────────────────────────────────────
   function actualizarCampo(dia: string, campo: keyof DiaData, valor: string) {
     setCronograma((prev) => ({ ...prev, [dia]: { ...prev[dia], [campo]: valor } }))
@@ -667,6 +700,16 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
+                                  {DIAS.indexOf(dia as (typeof DIAS)[number]) > 0 && (act.nombre || "").trim() !== "" && (
+                                    <button type="button" title="Mover al dia anterior" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, -1) }} className="text-slate-400 hover:text-slate-700">
+                                      <ChevronLeft className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {DIAS.indexOf(dia as (typeof DIAS)[number]) < DIAS.length - 1 && (act.nombre || "").trim() !== "" && (
+                                    <button type="button" title="Mover al dia siguiente" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, 1) }} className="text-slate-400 hover:text-slate-700">
+                                      <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                  )}
                                   {cronograma[dia].actividades.length > 1 && (
                                     <button type="button" onClick={(e) => { e.stopPropagation(); eliminarActividad(dia, idx) }} className="text-red-400 hover:text-red-600">
                                       <X className="w-3 h-3" />
