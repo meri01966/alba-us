@@ -703,13 +703,13 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {DIAS.indexOf(dia as (typeof DIAS)[number]) > 0 && (act.nombre || "").trim() !== "" && (
-                                    <button type="button" title="Mover al dia anterior" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, -1) }} className="text-slate-400 hover:text-slate-700">
-                                      <ChevronLeft className="w-3 h-3" />
+                                    <button type="button" title="Mover al dia anterior" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, -1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
+                                      <ChevronLeft className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>
                                   )}
                                   {DIAS.indexOf(dia as (typeof DIAS)[number]) < DIAS.length - 1 && (act.nombre || "").trim() !== "" && (
-                                    <button type="button" title="Mover al dia siguiente" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, 1) }} className="text-slate-400 hover:text-slate-700">
-                                      <ChevronRight className="w-3 h-3" />
+                                    <button type="button" title="Mover al dia siguiente" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, 1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
+                                      <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>
                                   )}
                                   {cronograma[dia].actividades.length > 1 && (
