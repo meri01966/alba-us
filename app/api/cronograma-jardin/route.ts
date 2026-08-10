@@ -196,6 +196,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json()
   const { sala, cronograma, semana_inicio } = body
+  // Dias que se vacian A PROPOSITO (por ejemplo al mover una actividad a otro dia).
+  // Sin esto, la PROTECCION 3 los rechaza y la actividad queda duplicada.
+  const diasForzados: string[] = Array.isArray(body.diasForzados) ? body.diasForzados : []
   if (!sala || !cronograma) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
   // PROTECCIÓN 1 — Si el cronograma entero llega SIN contenido, rechazar.
@@ -245,7 +248,7 @@ export async function POST(req: Request) {
     const viejoTeniaContenido =
       actsViejas.some((a: any) => (a?.nombre || "").trim().length > 0) ||
       (existente?.recibimiento || "").trim() || (existente?.intercambio || "").trim()
-    if (!nuevoTieneContenido && viejoTeniaContenido) {
+    if (!nuevoTieneContenido && viejoTeniaContenido && !diasForzados.includes(dia)) {
       continue // no tocar este día: lo nuevo está vacío y lo viejo tenía contenido
     }
 
