@@ -420,7 +420,9 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
       await fetch(`/api/cronograma-jardin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala, cronograma: nuevo, semana_inicio: semanaInicioActual || undefined }),
+        // diasForzados avisa que el dia de origen se vacia a proposito:
+        // sin eso la proteccion del servidor lo rechaza y la actividad se duplica.
+        body: JSON.stringify({ sala, cronograma: nuevo, semana_inicio: semanaInicioActual || undefined, diasForzados: [dia] }),
       })
     } catch (e) {
       console.error("[v0] Error moviendo actividad de dia:", e)
