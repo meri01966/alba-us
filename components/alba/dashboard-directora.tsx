@@ -586,27 +586,52 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     </button>
                   </div>
                   
-                  {/* Grafico de barras por eje - clickeable para ver detalle */}
-                  <div className="flex items-center justify-between">
-                    <MiniBarChart 
-                      cf={data.promediosPorEje.CF} 
-                      ct={data.promediosPorEje.CT} 
-                      o={data.promediosPorEje.O}
-                      actCF={data.actividadesPorEje?.CF || 0}
-                      actCT={data.actividadesPorEje?.CT || 0}
-                      actO={data.actividadesPorEje?.O || 0}
-                      onClickEje={(eje) => {
-                        setModalSala(sala)
-                        setEjeSeleccionado(eje)
-                        setModalTipo("detalle_eje")
-                      }}
-                    />
-                    <div className="text-right">
-                      <p className="text-[10px] text-muted-foreground">CF: {data.promediosPorEje.CF}%</p>
-                      <p className="text-[10px] text-muted-foreground">CT: {data.promediosPorEje.CT}%</p>
-                      <p className="text-[10px] text-muted-foreground">O: {data.promediosPorEje.O}%</p>
+                  {/* Estado de la sala en conteos, sin porcentajes */}
+                  {resumenSalas[sala] && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>
+                          <span className="font-semibold text-foreground">{resumenSalas[sala].diasPlanificados}</span> dias planificados
+                        </span>
+                        <span>
+                          <span className="font-semibold text-foreground">{resumenSalas[sala].jornadasCerradas}</span> jornadas cerradas
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-muted-foreground">
+                        {resumenSalas[sala].ultimaVezQueRegistro
+                          ? <>Ultimo registro: <span className="font-semibold text-foreground">{resumenSalas[sala].ultimaVezQueRegistro.slice(8, 10)}/{resumenSalas[sala].ultimaVezQueRegistro.slice(5, 7)}</span></>
+                          : <span className="font-semibold text-red-600">Sin registros este cuatrimestre</span>}
+                      </p>
+
+                      {/* Los cuatro ejes: clases trabajadas y chicos en refuerzo */}
+                      <div className="grid grid-cols-4 gap-1.5 pt-1">
+                        {(["CF", "CT", "O", "E"] as Eje[]).map((k) => {
+                          const e = resumenSalas[sala].porEje?.[k] || { clases: 0, enRefuerzo: 0 }
+                          return (
+                            <button
+                              key={k}
+                              onClick={() => { setModalSala(sala); setEjeSeleccionado(k); setModalTipo("detalle_eje") }}
+                              className="rounded-lg border px-1.5 py-1.5 text-center hover:opacity-80 transition-opacity"
+                              style={{ borderColor: `${EJES[k].color}55`, backgroundColor: `${EJES[k].color}12` }}
+                              title={EJES[k].label}
+                            >
+                              <div className="text-[9px] font-bold" style={{ color: EJES[k].color }}>{k}</div>
+                              <div className="text-sm font-bold text-foreground leading-none mt-0.5">{e.clases}</div>
+                              <div className="text-[8px] text-muted-foreground leading-tight mt-0.5">
+                                {e.clases === 1 ? "clase" : "clases"}
+                              </div>
+                              {e.enRefuerzo > 0 && (
+                                <div className="text-[8px] font-semibold text-red-600 leading-tight mt-0.5">
+                                  {e.enRefuerzo} refuerzo
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Indicador de alertas */}
                   {data.alertasCount > 0 && (
