@@ -184,6 +184,10 @@ export async function GET(req: Request) {
         d.actividades = (d.actividades || []).map((a: any) => {
           const nombre = String(a?.nombre || "").trim()
           if (!nombre) return a
+          // Solo las que pasan por ALBA se evaluan: la secuencia, el repertorio
+          // de la maestra y las de la red. El resto de la jornada queda neutro.
+          const pasaPorAlba = a?.alfabetizacion === true || a?.origen === "alba"
+          if (!pasaPorAlba) return a
           return { ...a, evaluada: evaluadas.has(`${sem.semana_inicio}::${nombre.toLowerCase()}`) }
         })
       })
