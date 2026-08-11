@@ -226,6 +226,27 @@ export async function GET(req: Request) {
   const semanaUsada = semanaObjetivo
   const lunesUsado = lunesObjetivo
 
+  // ── Que actividades de ESTA semana ya tienen evaluacion ───────────────
+  // Se cruza por semana (no por dia): la maestra suele evaluar al dia siguiente.
+  const evaluadasSemana = new Set<string>()
+  try {
+    const { data: alumnosSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+    const ids = (alumnosSala || []).map((a: any) => a.id)
+    if (ids.length > 0) {
+      const desde = lunesUsado.toISOString().split("T")[0]
+      const { data: regsSem } = await supabase
+        .from("seguimiento")
+        .select("actividad, fecha, created_at")
+        .in("alumno_id", ids)
+        .gte("fecha", desde)
+      ;(regsSem || []).forEach((r: any) => {
+        if (r.actividad) evaluadasSemana.add(String(r.actividad).trim().toLowerCase())
+      })
+    }
+  } catch (e) {
+    console.error("[v0] Error marcando evaluadas de la semana:", e)
+  }
+
   const cronograma: Record<string, any> = {}
   DIAS.forEach((dia, idx) => {
     const fecha = new Date(lunesUsado)
@@ -235,7 +256,12 @@ export async function GET(req: Request) {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
       intercambio: registro?.intercambio || "",
-      actividades: registro?.actividades || [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }],
+      actividades: (registro?.actividades || [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }]).map((a: any) => {
+        const nombre = String(a?.nombre || "").trim()
+        const pasaPorAlba = a?.alfabetizacion === true || a?.origen === "alba"
+        if (!nombre || !pasaPorAlba) return a
+        return { ...a, evaluada: evaluadasSemana.has(nombre.toLowerCase()) }
+      }),
       edFisica: registro?.ed_fisica || "",
       musica: registro?.musica || "",
       ingles: registro?.ingles || "",
