@@ -1,1375 +1,200 @@
-"use client"
+// ALBA — Sintesis grupal por sala
+// Se calcula en vivo cada vez que se abre: no hay nada precomputado ni cacheado.
+// Segundo cuatrimestre solamente (desde el 3/8/2026).
+// Sin porcentajes: cuenta CHICOS, que es lo que la directora necesita leer.
+import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
-import { useState, useEffect } from "react"
-import { CronogramaVerModal } from "@/components/sia/cronograma-ver-modal"
+const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
-type Eje = "CF" | "CT" | "O" | "E"
-type Estado = "green" | "yellow" | "red"
+const INICIO_CUATRIMESTRE = "2026-08-03"
 
-interface Alumno {
-  id: string
-  nombre: string
-  sala: string
+const EJES = [
+  { key: "CF", nombre: "Conciencia Fonologica" },
+  { key: "CT", nombre: "Comprension de Textos" },
+  { key: "O",  nombre: "Oralidad" },
+  { key: "E",  nombre: "Escritura" },
+] as const
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
+function getSupabase() {
+  return createClient(SUPABASE_URL, SUPABASE_KEY)
 }
 
-interface Registro {
-  id: string
-  alumno_id: string
-  eje: string
-  resultado: string
-  actividad: string
-  fecha: string
-  sala?: string
-}
-
-interface BrainAlerta {
-  tipo: string
-  mensaje: string
-  urgencia: "alta" | "media" | "baja" | "info"
-  alumnoNombre?: string
-}
-
-interface SalaData {
-  nombre: string
-  totalAlumnos: number
-  promedioGeneral: number
-  promediosPorEje: { CF: number; CT: number; O: number }
-  actividadesPorEje: { CF: number; CT: number; O: number }
-  evaluacionesPorEje: { 
-    CF: { green: number; yellow: number; red: number; total: number }
-    CT: { green: number; yellow: number; red: number; total: number }
-    O: { green: number; yellow: number; red: number; total: number }
-  }
-  alertasCount: number
-  alertas: BrainAlerta[]
-}
-
-const EJES: Record<Eje, { label: string; color: string }> = {
-  CF: { label: "Conciencia Fonologica", color: "#3b82f6" },
-  CT: { label: "Comprension de Textos", color: "#10b981" },
-  O:  { label: "Oralidad", color: "#f59e0b" },
-  E:  { label: "Escritura", color: "#8b5cf6" },
-}
-
-// A partir del MARTES se avisa si una sala todavia no planifico la semana.
-// El lunes no: es el dia en que muchas maestras planifican.
-function corresponsdeAvisarSinPlanificar(): boolean {
-  const ahora = new Date()
-  const ar = new Date(ahora.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }))
-  const dia = ar.getDay() // 0 domingo, 1 lunes, 2 martes...
-  return dia >= 2 && dia <= 5
-}
-
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
-const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
-
-// Detectar si una sala es Maternal (Naranjos y Pinitos son maternal en ambos turnos; ademas cualquier sala que termine en TM)
-const esMateral = (sala: string) => {
-  const s = sala.toUpperCase()
-  return s.startsWith("NARANJOS") || s.startsWith("PINITOS")
-}
-
-// Grafico de barras mini para los 3 ejes - clickeable
-function MiniBarChart({ 
-  cf, ct, o, 
-  actCF, actCT, actO,
-  onClickEje 
-}: { 
-  cf: number; ct: number; o: number
-  actCF: number; actCT: number; actO: number
-  onClickEje: (eje: Eje) => void
-}) {
-  // Las barras muestran actividades realizadas, altura proporcional a cantidad
-  const maxAct = Math.max(actCF, actCT, actO, 10) // minimo 10 para escala
-  return (
-    <div className="flex items-end gap-1.5 h-16">
-      <button 
-        onClick={() => onClickEje("CF")}
-        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
-        title={`CF: ${actCF} actividades - ${cf}% logrado`}
-      >
-        <div className="relative">
-          <div 
-            className="w-6 rounded-t transition-all group-hover:ring-2 ring-blue-300" 
-            style={{ height: `${Math.max((actCF / maxAct) * 44, 8)}px`, backgroundColor: EJES.CF.color }} 
-          />
-          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actCF}</span>
-        </div>
-        <span className="text-[9px] font-bold text-slate-500">CF</span>
-      </button>
-      <button 
-        onClick={() => onClickEje("CT")}
-        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
-        title={`CT: ${actCT} actividades - ${ct}% logrado`}
-      >
-        <div className="relative">
-          <div 
-            className="w-6 rounded-t transition-all group-hover:ring-2 ring-emerald-300" 
-            style={{ height: `${Math.max((actCT / maxAct) * 44, 8)}px`, backgroundColor: EJES.CT.color }} 
-          />
-          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actCT}</span>
-        </div>
-        <span className="text-[9px] font-bold text-slate-500">CT</span>
-      </button>
-      <button 
-        onClick={() => onClickEje("O")}
-        className="flex flex-col items-center gap-0.5 group cursor-pointer hover:opacity-80 transition-opacity"
-        title={`O: ${actO} actividades - ${o}% logrado`}
-      >
-        <div className="relative">
-          <div 
-            className="w-6 rounded-t transition-all group-hover:ring-2 ring-amber-300" 
-            style={{ height: `${Math.max((actO / maxAct) * 44, 8)}px`, backgroundColor: EJES.O.color }} 
-          />
-          <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600">{actO}</span>
-        </div>
-        <span className="text-[9px] font-bold text-slate-500">O</span>
-      </button>
-    </div>
-  )
-}
-
-export default function DashboardDirectora({ soloSala }: { soloSala?: string } = {}) {
-  // Modo demo: si se pasa soloSala, el tablero muestra unicamente esa sala
-  const salasVisibles = soloSala ? SALAS.filter((s) => s === soloSala) : SALAS
-  const [alumnos, setAlumnos] = useState<Alumno[]>([])
-  const [registros, setRegistros] = useState<Registro[]>([])
-  const [cierres, setCierres] = useState<{ sala: string; eje: string; fecha: string }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [salasData, setSalasData] = useState<Record<string, SalaData>>({})
-  
-  // Modales
-  const [modalSala, setModalSala] = useState<string | null>(null)
-  const [modalTipo, setModalTipo] = useState<"planificacion" | "sintesis" | "alertas" | "proyectos" | "detalle_eje" | null>(null)
-  const [loadingModal, setLoadingModal] = useState(false)
-  const [sintesisData, setSintesisData] = useState<any>(null)
-  const [planificacionData, setPlanificacionData] = useState<any>(null)
-  const [cronogramaActivoData, setCronogramaActivoData] = useState<any>(null)
-  // Historial de grillas de semanas finalizadas (para que la directora pueda revisarlas)
-  const [historialSemanas, setHistorialSemanas] = useState<any[]>([])
-  const [grillaHistorialActiva, setGrillaHistorialActiva] = useState<any>(null)
-  // Modal de cronograma completo (5 columnas) para la directora
-  const [cronogramaModalOpen, setCronogramaModalOpen] = useState(false)
-  const [vistoLoading, setVistoLoading] = useState(false)
-  const [vistoConfirmado, setVistoConfirmado] = useState(false)
-  const [ejeSeleccionado, setEjeSeleccionado] = useState<Eje | null>(null)
-  const [proyectosData, setProyectosData] = useState<any>(null)
-  
-  // Chat/Mensajes
-  const [mensajesSalas, setMensajesSalas] = useState<Record<string, any[]>>({})
-  // Resumen por sala: dice si planificaron la semana y si vienen registrando
-  const [resumenSalas, setResumenSalas] = useState<Record<string, any>>({})
-  const [chatSala, setChatSala] = useState<string | null>(null)
-  const [nuevoMensaje, setNuevoMensaje] = useState("")
-  const [enviandoMensaje, setEnviandoMensaje] = useState(false)
-
-  async function cargarDatos() {
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : ""
-      const res = await fetch(`${base}/api/directora-data`, { cache: "no-store" })
-      if (res.ok) {
-        const json = await res.json()
-        if (json.ok) {
-          setAlumnos(json.alumnos || [])
-          setRegistros(json.registros || [])
-          setCierres(json.cierres || [])
-        }
-      }
-    } catch (e) {
-      console.error("[v0] Error cargando datos:", e)
+// Supabase corta en 1000 filas por consulta: esto trae todo, de a mil por vez.
+async function traerTodo(query: any): Promise<any[]> {
+  const PAGINA = 1000
+  const acumulado: any[] = []
+  for (let desde = 0; desde < 50000; desde += PAGINA) {
+    const { data, error } = await query.range(desde, desde + PAGINA - 1)
+    if (error) {
+      console.error("[v0] Error paginando:", error.message)
+      break
     }
-    setLoading(false)
+    const filas = data || []
+    acumulado.push(...filas)
+    if (filas.length < PAGINA) break
   }
+  return acumulado
+}
 
-  async function cargarMensajes() {
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : ""
-      // Resumen por sala (planificacion y registro de la semana)
-      try {
-        const resR = await fetch(`${base}/api/directora-resumen`, { cache: "no-store" })
-        const dataR = await resR.json()
-        if (dataR?.ok && Array.isArray(dataR.salas)) {
-          const mapa: Record<string, any> = {}
-          dataR.salas.forEach((s: any) => { mapa[s.sala] = s })
-          setResumenSalas(mapa)
-        }
-      } catch (e) {
-        console.error("[v0] Error cargando resumen de salas:", e)
-      }
+function normalizarEje(valor: string): "CF" | "CT" | "O" | "E" {
+  const e = (valor || "").trim().toUpperCase()
+  if (e === "CT") return "CT"
+  if (e === "O" || e === "ORALIDAD") return "O"
+  if (e === "E" || e === "EA" || e === "LE" || e === "ESCRITURA") return "E"
+  return "CF"
+}
 
-      const res = await fetch(`${base}/api/mensajes-directora`, { cache: "no-store" })
-      if (res.ok) {
-        const json = await res.json()
-        if (json.ok) {
-          // Agrupar mensajes por sala
-          const porSala: Record<string, any[]> = {}
-          for (const m of (json.mensajes || [])) {
-            if (!porSala[m.sala]) porSala[m.sala] = []
-            porSala[m.sala].push(m)
-          }
-          setMensajesSalas(porSala)
-        }
-      }
-    } catch (e) {
-      console.error("[v0] Error cargando mensajes:", e)
-    }
-  }
+function fechaAR(valor: any): string {
+  if (!valor) return ""
+  const s = String(valor).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return s.slice(0, 10)
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+}
 
-  async function marcarLeido(id: string) {
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : ""
-      const res = await fetch(`${base}/api/mensajes-directora`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id })
+function ddmm(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "")
+  return m ? `${m[3]}/${m[2]}` : ""
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const sala = searchParams.get("sala")
+    if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
+
+    const supabase = getSupabase()
+
+    const { data: alumnos } = await supabase.from("alumnos").select("id, nombre").eq("sala", sala)
+    const listaAlumnos = alumnos || []
+
+    if (listaAlumnos.length === 0) {
+      return NextResponse.json({
+        ok: true, sala, sinDatos: true,
+        mensaje: "Esta sala todavia no tiene alumnos cargados.",
       })
-      if (res.ok) {
-        await cargarMensajes()
-      }
-    } catch (e) {
-      console.error("[v0] Error marcando leido:", e)
     }
-  }
 
-  async function enviarMensaje(sala: string) {
-    if (!nuevoMensaje.trim()) return
-    setEnviandoMensaje(true)
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : ""
-      const res = await fetch(`${base}/api/mensajes-directora`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala, mensaje: nuevoMensaje.trim(), autor: "directora" })
-      })
-      if (res.ok) {
-        setNuevoMensaje("")
-        await cargarMensajes()
-      }
-    } catch (e) {
-      console.error("[v0] Error enviando mensaje:", e)
-    }
-    setEnviandoMensaje(false)
-  }
-
-  async function cargarDataPorSala() {
-    const base = typeof window !== "undefined" ? window.location.origin : ""
-    const data: Record<string, SalaData> = {}
-    
-    for (const sala of SALAS) {
-      const alumnosSala = alumnos.filter(a => a.sala === sala)
-      const regsSala = registros.filter(r => alumnosSala.some(a => a.id === r.alumno_id))
-      
-      // Calcular evaluaciones por eje (verdes, amarillos, rojos) - columna correcta es "estado"
-      const calcEvaluaciones = (eje: string) => {
-        const regs = regsSala.filter(r => r.eje === eje)
-        return {
-          green: regs.filter(r => r.estado === "green" || r.estado === "logrado").length,
-          yellow: regs.filter(r => r.estado === "yellow" || r.estado === "proceso").length,
-          red: regs.filter(r => r.estado === "red" || r.estado === "refuerzo").length,
-          total: regs.filter(r => ["green","logrado","yellow","proceso","red","refuerzo"].includes(r.estado)).length
-        }
-      }
-      
-      const evalCF = calcEvaluaciones("CF")
-      const evalCT = calcEvaluaciones("CT")
-      const evalO = calcEvaluaciones("O")
-      
-      // Calcular promedios (porcentaje de verdes)
-      const calcProm = (eval_: { green: number; total: number }) => {
-        if (eval_.total === 0) return 0
-        return Math.round((eval_.green / eval_.total) * 100)
-      }
-      
-      const cf = calcProm(evalCF)
-      const ct = calcProm(evalCT)
-      const o = calcProm(evalO)
-      const promGen = (evalCF.total + evalCT.total + evalO.total) > 0 ? Math.round((cf + ct + o) / 3) : 0
-      
-       // Contar ACTIVIDADES ALBA CON EVIDENCIA COMPLETA por eje.
-      // Una actividad cuenta (verde) solo si la MISMA actividad se cerró (registro_cierre)
-      // Y tiene evaluaciones de chicos (seguimiento). Se comparan nombres normalizados.
-      const cierresSala = cierres.filter(c => c.sala === sala)
-      const normAct = (s: any) => {
-        if (s == null) return ""
-        return String(s).trim().toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .split(/\s+/).join(" ")
-      }
-      const actividadesCompletas = (eje: string) => {
-        const cerradas = new Set(
-          cierresSala.filter(c => c.eje === eje && (c as any).actividad_alba)
-            .map(c => normAct((c as any).actividad_alba))
-        )
-        const evaluadas = new Set(
-          regsSala.filter(r => r.eje === eje && r.actividad)
-            .map(r => normAct(r.actividad))
-        )
-        let n = 0
-        cerradas.forEach(a => { if (evaluadas.has(a)) n++ })
-        return n
-      }
-      const clasesCF = actividadesCompletas("CF")
-      const clasesCT = actividadesCompletas("CT")
-      const clasesO = actividadesCompletas("O")
-      
-      // Cargar alertas REALES basadas en datos de seguimiento (no del brain)
-      let alertas: BrainAlerta[] = []
-      try {
-        const alertasRes = await fetch(`${base}/api/alertas-reales?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (alertasRes.ok) {
-          const alertasData = await alertasRes.json()
-          alertas = (alertasData.alertas || []).map((a: any) => ({
-            tipo: a.tipo,
-            urgencia: a.urgencia,
-            mensaje: a.mensaje,
-            alumnoNombre: a.alumnoNombre
-          }))
-        }
-      } catch {}
-      
-      data[sala] = {
-        nombre: sala,
-        totalAlumnos: alumnosSala.length,
-        promedioGeneral: promGen,
-        promediosPorEje: { CF: cf, CT: ct, O: o },
-        actividadesPorEje: { CF: clasesCF, CT: clasesCT, O: clasesO },
-        evaluacionesPorEje: { CF: evalCF, CT: evalCT, O: evalO },
-        alertasCount: alertas.length,
-        alertas
-      }
-    }
-    
-    setSalasData(data)
-  }
-
-  useEffect(() => {
-    cargarDatos()
-    cargarMensajes()
-  }, [])
-
-  useEffect(() => {
-    if (alumnos.length > 0 || registros.length > 0) {
-      cargarDataPorSala()
-    }
-  }, [alumnos, registros, cierres])
-
-  async function abrirModal(sala: string, tipo: "planificacion" | "sintesis" | "alertas" | "proyectos") {
-    setModalSala(sala)
-    setModalTipo(tipo)
-    setLoadingModal(true)
-    setSintesisData(null)
-    setPlanificacionData(null)
-    setCronogramaActivoData(null)
-    setHistorialSemanas([])
-    setGrillaHistorialActiva(null)
-    setCronogramaModalOpen(false)
-    setVistoConfirmado(false)
-    
-    const base = typeof window !== "undefined" ? window.location.origin : ""
-    
-    if (tipo === "sintesis") {
-      try {
-        const res = await fetch(`${base}/api/sintesis-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (res.ok) {
-          const data = await res.json()
-          setSintesisData(data)
-        }
-      } catch {}
-    }
-    
-    if (tipo === "planificacion") {
-      try {
-        const res = await fetch(`${base}/api/planificacion-sala?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (res.ok) {
-          const data = await res.json()
-          setPlanificacionData(data)
-        }
-      } catch {}
-      // Tambien traer el cronograma activo de la semana (el que ve la maestra)
-      try {
-        const resCrono = await fetch(`${base}/api/cronograma-jardin?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (resCrono.ok) {
-          const dataCrono = await resCrono.json()
-          if (dataCrono.ok && dataCrono.hayRegistros) {
-            setCronogramaActivoData(dataCrono)
-          }
-        }
-      } catch {}
-      // Traer el historial de grillas de semanas ya finalizadas
-      try {
-        const resHist = await fetch(`${base}/api/cronograma-jardin?sala=${encodeURIComponent(sala)}&historial=true`, { cache: "no-store" })
-        if (resHist.ok) {
-          const dataHist = await resHist.json()
-          if (dataHist.ok && Array.isArray(dataHist.historial)) {
-            setHistorialSemanas(dataHist.historial)
-          }
-        }
-      } catch {}
-    }
-    
-    // Cargar proyectos
-    if (tipo === "proyectos") {
-      try {
-        const res = await fetch(`${base}/api/proyectos-sala?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
-        if (res.ok) {
-          const data = await res.json()
-          setProyectosData(data)
-        }
-      } catch {}
-    }
-    
-    setLoadingModal(false)
-  }
-
-  function cerrarModal() {
-    setModalSala(null)
-    setModalTipo(null)
-    setSintesisData(null)
-    setPlanificacionData(null)
-    setEjeSeleccionado(null)
-    setProyectosData(null)
-    setCronogramaActivoData(null)
-    setHistorialSemanas([])
-    setGrillaHistorialActiva(null)
-    setCronogramaModalOpen(false)
-    setVistoConfirmado(false)
-  }
-
-  // Rango legible de la semana del cronograma activo (ej: "del 1 al 5 de jun")
-  function rangoSemanaActivo(): string {
-    return rangoSemanaDe(cronogramaActivoData?.cronograma)
-  }
-
-  // Rango legible para cualquier grilla (activa o de historial)
-  function rangoSemanaDe(crono: any): string {
-    if (!crono) return ""
-    const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
-    const fLunes = crono["Lunes"]?.fecha
-    const fViernes = crono["Viernes"]?.fecha
-    if (!fLunes || !fViernes) return ""
-    const [, , dL] = fLunes.split("-")
-    const [, mV, dV] = fViernes.split("-")
-    return `del ${parseInt(dL)} al ${parseInt(dV)} de ${meses[parseInt(mV) - 1]}`
-  }
-
-  // Construye el array de clases especiales (musica/ingles/edFisica) desde el cronograma
-  function clasesEspecialesActivo(): { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] {
-    return clasesEspecialesDe(cronogramaActivoData?.cronograma)
-  }
-
-  // Clases especiales para cualquier grilla (activa o de historial)
-  function clasesEspecialesDe(crono: any): { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] {
-    if (!crono) return []
-    const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
-    const out: { tipo: "musica" | "ingles" | "edFisica" | "computacion"; dia: string }[] = []
-    for (const dia of dias) {
-      const d = crono[dia]
-      if (!d) continue
-      if ((d.musica || "").toString().trim()) out.push({ tipo: "musica", dia })
-      if ((d.ingles || "").toString().trim()) out.push({ tipo: "ingles", dia })
-      if ((d.edFisica || "").toString().trim()) out.push({ tipo: "edFisica", dia })
-    }
-    return out
-  }
-
-  // Botón "Visto": guarda el visto enviando un mensaje a la sala (la maestra lo ve)
-  async function enviarVisto() {
-    if (!modalSala) return
-    setVistoLoading(true)
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : ""
-      const rango = rangoSemanaActivo()
-      const mensaje = `La dirección revisó el cronograma de la semana${rango ? ` (${rango})` : ""}. Visto ✓`
-      const res = await fetch(`${base}/api/mensajes-directora`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: modalSala, mensaje }),
-      })
-      if (res.ok) {
-        setVistoConfirmado(true)
-      }
-    } catch (err) {
-      console.error("[v0] Error enviando visto:", err)
-    } finally {
-      setVistoLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Cargando datos institucionales...</p>
-        </div>
-      </div>
+    const registros = await traerTodo(
+      supabase
+        .from("seguimiento")
+        .select("alumno_id, eje, estado, actividad, fecha, created_at")
+        .in("alumno_id", listaAlumnos.map((a: any) => a.id))
+        .gte("fecha", INICIO_CUATRIMESTRE)
     )
+
+    if (registros.length === 0) {
+      return NextResponse.json({
+        ok: true, sala, sinDatos: true,
+        totalAlumnos: listaAlumnos.length,
+        mensaje: "Todavia no hay evaluaciones registradas en este cuatrimestre.",
+      })
+    }
+
+    // Rango real de fechas con registro
+    let desde = "9999-99-99"
+    let hasta = ""
+    registros.forEach((r: any) => {
+      const f = fechaAR(r.fecha || r.created_at)
+      if (!f) return
+      if (f < desde) desde = f
+      if (f > hasta) hasta = f
+    })
+
+    const nombrePorAlumno: Record<string, string> = {}
+    listaAlumnos.forEach((a: any) => { nombrePorAlumno[a.id] = a.nombre })
+
+    const ejes = EJES.map((eje) => {
+      const delEje = registros.filter((r: any) => normalizarEje(r.eje) === eje.key)
+
+      // Que trabajamos: los nombres reales de las actividades dadas
+      const actividades: string[] = []
+      const vistas = new Set<string>()
+      delEje.forEach((r: any) => {
+        if (!r.actividad) return
+        const n = String(r.actividad).trim()
+        const k = n.toLowerCase()
+        if (!vistas.has(k)) { vistas.add(k); actividades.push(n) }
+      })
+
+      // Como esta cada chico: se toma su estado predominante en el eje,
+      // ignorando las ausencias. Un chico cuenta una sola vez.
+      const porAlumno: Record<string, { green: number; yellow: number; red: number }> = {}
+      delEje.forEach((r: any) => {
+        const est = String(r.estado || "").toLowerCase()
+        if (est !== "green" && est !== "yellow" && est !== "red") return
+        if (!porAlumno[r.alumno_id]) porAlumno[r.alumno_id] = { green: 0, yellow: 0, red: 0 }
+        porAlumno[r.alumno_id][est as "green" | "yellow" | "red"]++
+      })
+
+      let logrado = 0, enProceso = 0, refuerzo = 0
+      const necesitanApoyo: string[] = []
+
+      Object.entries(porAlumno).forEach(([alumnoId, c]) => {
+        const max = Math.max(c.green, c.yellow, c.red)
+        if (c.red === max) {
+          refuerzo++
+          necesitanApoyo.push(nombrePorAlumno[alumnoId] || "Sin nombre")
+        } else if (c.yellow === max) {
+          enProceso++
+        } else {
+          logrado++
+        }
+      })
+
+      const evaluados = logrado + enProceso + refuerzo
+
+      // Frase de estado, en conteos y sin porcentajes
+      let comoEsta = ""
+      if (evaluados === 0) {
+        comoEsta = "Todavia no hay evaluaciones registradas en este eje."
+      } else if (refuerzo === 0 && enProceso === 0) {
+        comoEsta = `Los ${logrado} chicos evaluados vienen logrando lo trabajado.`
+      } else if (refuerzo === 0) {
+        comoEsta = `${logrado} de ${evaluados} chicos vienen logrando lo trabajado y ${enProceso} estan en proceso.`
+      } else {
+        comoEsta = `${logrado} de ${evaluados} chicos vienen logrando lo trabajado, ${enProceso} estan en proceso y ${refuerzo} necesitan refuerzo.`
+      }
+
+      return {
+        eje: eje.key,
+        nombre: eje.nombre,
+        clases: actividades.length,
+        actividades,
+        logrado,
+        enProceso,
+        refuerzo,
+        evaluados,
+        necesitanApoyo: necesitanApoyo.sort(),
+        comoEsta,
+      }
+    })
+
+    // Total de clases distintas de alfabetizacion en el cuatrimestre
+    const todasActividades = new Set<string>()
+    registros.forEach((r: any) => {
+      if (r.actividad) todasActividades.add(String(r.actividad).trim().toLowerCase())
+    })
+
+    return NextResponse.json({
+      ok: true,
+      sala,
+      sinDatos: false,
+      periodo: "Segundo cuatrimestre",
+      totalAlumnos: listaAlumnos.length,
+      totalClases: todasActividades.size,
+      periodoDesde: ddmm(desde === "9999-99-99" ? "" : desde),
+      periodoHasta: ddmm(hasta),
+      ejes,
+    })
+  } catch (e) {
+    console.error("[v0] Error en sintesis-grupal:", e)
+    return NextResponse.json({ ok: false, error: "Error interno" }, { status: 500 })
   }
-
-  // KPIs globales
-  const totalAlumnos = alumnos.length
-  const totalRegistros = registros.length
-  const alertasTotal = Object.values(salasData).reduce((acc, s) => acc + s.alertasCount, 0)
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-primary text-primary-foreground px-4 py-3 shadow-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-lg font-bold">D</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold">ALBA — Vista Direccion</h1>
-              <p className="text-xs opacity-80">Panel de seguimiento institucional</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {alertasTotal > 0 && (
-              <div className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-full">
-                <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-                <span className="text-xs font-medium">{alertasTotal} alertas</span>
-              </div>
-            )}
-            <div className="text-right">
-              <p className="text-xs opacity-70">{totalAlumnos} alumnos</p>
-              <p className="text-xs opacity-70">{totalRegistros} evaluaciones</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Contenido principal */}
-      <main className="max-w-6xl mx-auto p-4 space-y-4">
-        {/* Grid de tarjetas por sala */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {salasVisibles.map(sala => {
-            const data = salasData[sala]
-            if (!data) return null
-            
-            return (
-              <div key={sala} className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-                {/* Contenido de la tarjeta */}
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-bold text-foreground">{sala}</h3>
-                      <p className="text-xs text-muted-foreground">{data.totalAlumnos} alumnos</p>
-                      {corresponsdeAvisarSinPlanificar() && resumenSalas[sala] && resumenSalas[sala].diasPlanificados === 0 && (
-                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                          Semana sin planificar
-                        </span>
-                      )}
-                    </div>
-                    {/* Boton de chat estilo WhatsApp */}
-                    <button
-                      onClick={() => setChatSala(sala)}
-                      className="relative p-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors shadow-sm"
-                      title="Enviar mensaje a esta sala"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                      {/* Indicador: la MAESTRA le escribio a Direccion y Direccion no lo leyo aun */}
-                      {mensajesSalas[sala]?.some(m => !m.leido && m.autor && m.autor !== "directora") && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
-                      )}
-                      {/* Indicador: todo leido (no hay mensajes de la maestra pendientes) */}
-                      {mensajesSalas[sala]?.length > 0 && !mensajesSalas[sala].some(m => !m.leido && m.autor && m.autor !== "directora") && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                          <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* Estado de la sala en conteos, sin porcentajes */}
-                  {resumenSalas[sala] && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span>
-                          <span className="font-semibold text-foreground">{resumenSalas[sala].diasPlanificados}</span> dias planificados
-                        </span>
-                        <span>
-                          <span className="font-semibold text-foreground">{resumenSalas[sala].jornadasCerradas}</span> jornadas cerradas
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground">
-                        {resumenSalas[sala].ultimaVezQueRegistro
-                          ? <>Ultimo registro: <span className="font-semibold text-foreground">{resumenSalas[sala].ultimaVezQueRegistro.slice(8, 10)}/{resumenSalas[sala].ultimaVezQueRegistro.slice(5, 7)}</span></>
-                          : <span className="font-semibold text-red-600">Sin registros este cuatrimestre</span>}
-                      </p>
-
-                      {/* Los cuatro ejes con su color de siempre. El color aca es
-                          identidad del eje, NO estado: el verde y el rojo de
-                          evaluado / sin evaluar viven en el cronograma. */}
-                      <div className="flex items-center gap-3 pt-0.5">
-                        {(["CF", "CT", "O", "E"] as Eje[]).map((k) => {
-                          const e = resumenSalas[sala].porEje?.[k] || { clases: 0 }
-                          return (
-                            <button
-                              key={k}
-                              onClick={() => { setModalSala(sala); setEjeSeleccionado(k); setModalTipo("detalle_eje") }}
-                              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
-                              title={`${EJES[k].label}: ${e.clases} ${e.clases === 1 ? "clase" : "clases"}`}
-                            >
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: EJES[k].color }} />
-                              <span className="text-[10px] text-muted-foreground">{k}</span>
-                              <span className="text-[11px] font-semibold text-foreground">{e.clases}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Indicador de alertas */}
-                  {data.alertasCount > 0 && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                      {data.alertasCount} alerta{data.alertasCount > 1 ? "s" : ""} pedagogica{data.alertasCount > 1 ? "s" : ""}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Barra con botones - AZUL para Jardin, VERDE para Maternal */}
-                <div className={`px-3 py-2 flex items-center justify-between gap-2 ${esMateral(sala) ? "bg-green-600" : "bg-blue-600"}`}>
-                  <button 
-                    onClick={() => abrirModal(sala, "planificacion")}
-                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
-                  >
-                    Planificacion
-                  </button>
-                  <div className="w-px h-4 bg-white/20" />
-                  <button 
-                    onClick={() => abrirModal(sala, "sintesis")}
-                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
-                  >
-                    Sintesis Grupal
-                  </button>
-                  {!esMateral(sala) && (
-                    <>
-                      <div className="w-px h-4 bg-white/20" />
-                      <button 
-                        onClick={() => abrirModal(sala, "alertas")}
-                        className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors relative"
-                      >
-                        Alertas
-                        {data.alertasCount > 0 && (
-                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[8px] flex items-center justify-center">
-                            {data.alertasCount}
-                          </span>
-                        )}
-                      </button>
-                    </>
-                  )}
-                  {esMateral(sala) && (
-                    <>
-                      <div className="w-px h-4 bg-white/20" />
-                      <button 
-                        onClick={() => abrirModal(sala, "alertas")}
-                        className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
-                      >
-                        Alertas
-                      </button>
-                    </>
-                  )}
-                  <div className="w-px h-4 bg-white/20" />
-                  <button 
-                    onClick={() => abrirModal(sala, esMateral(sala) ? "barraActividades" : "proyectos")}
-                    className="flex-1 text-[10px] font-medium text-white hover:text-white py-1.5 px-2 rounded hover:bg-white/10 transition-colors"
-                  >
-                    {esMateral(sala) ? "Actividades" : "Proyectos"}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </main>
-
-      {/* Modal */}
-      {modalSala && modalTipo && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={cerrarModal}>
-          <div className="bg-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* Header del modal */}
-            <div className="bg-primary text-primary-foreground px-5 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="font-bold text-lg">{modalSala}</h2>
-                <p className="text-xs opacity-80">
-                  {modalTipo === "planificacion" && "Planificacion semanal"}
-                  {modalTipo === "sintesis" && "Sintesis Grupal Cuatrimestral"}
-                  {modalTipo === "alertas" && "Alertas Pedagogicas"}
-                  {modalTipo === "proyectos" && "Proyectos de la Sala"}
-                  {modalTipo === "barraActividades" && "Actividades por Habilidades"}
-                  {modalTipo === "detalle_eje" && ejeSeleccionado && `Detalle ${EJES[ejeSeleccionado].label}`}
-                </p>
-              </div>
-              <button onClick={cerrarModal} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
-                <span className="text-sm">X</span>
-              </button>
-            </div>
-            
-            {/* Contenido del modal */}
-            <div className="p-5 overflow-y-auto max-h-[calc(85vh-80px)]">
-              {/* Aviso: la sala todavia no planifico la semana en curso */}
-              {corresponsdeAvisarSinPlanificar() && resumenSalas[modalSala] && resumenSalas[modalSala].diasPlanificados === 0 && (
-                <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-3">
-                  <p className="text-sm font-semibold text-amber-900">Semana aun sin planificar</p>
-                  <p className="text-xs text-amber-800 mt-0.5">
-                    Esta sala todavia no cargo actividades para la semana en curso.
-                  </p>
-                </div>
-              )}
-
-              {loadingModal ? (
-                <div className="py-12 text-center">
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Cargando...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Planificacion */}
-                  {modalTipo === "planificacion" && (
-                    <div className="space-y-4">
-                      {/* Cronograma activo de la semana: abre la vista completa de 5 columnas */}
-                      {cronogramaActivoData?.cronograma && (
-                        <button
-                          type="button"
-                          onClick={() => setCronogramaModalOpen(true)}
-                          className="w-full text-left border border-primary/30 rounded-lg overflow-hidden hover:border-primary/60 transition-colors"
-                        >
-                          <div className="bg-primary/15 px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activo</span>
-                              <p className="text-sm font-semibold text-foreground">
-                                Cronograma semana {rangoSemanaActivo()}
-                              </p>
-                            </div>
-                            <span className="text-xs font-semibold text-primary">Ver completo →</span>
-                          </div>
-                        </button>
-                      )}
-
-                      {/* Historial de grillas de semanas finalizadas (5 columnas) */}
-                      {historialSemanas.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-foreground pt-1">Cronogramas de semanas anteriores</p>
-                          {historialSemanas.map((sem: any) => {
-                            const rango = rangoSemanaDe(sem.dias)
-                            return (
-                              <button
-                                key={sem.semana_inicio}
-                                type="button"
-                                onClick={() => { setGrillaHistorialActiva(sem.dias); setCronogramaModalOpen(true) }}
-                                className="w-full text-left border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors"
-                              >
-                                <div className="bg-muted px-4 py-3 flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-medium text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border">Finalizada</span>
-                                    <p className="text-sm font-semibold text-foreground">
-                                      Cronograma semana {rango || sem.semana_inicio}
-                                    </p>
-                                  </div>
-                                  <span className="text-xs font-semibold text-primary">Ver completo →</span>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/* Historial de dias finalizados */}
-                      {!planificacionData || planificacionData.totalActividades === 0 ? (
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-amber-800">No hay actividades registradas en esta sala todavia.</p>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Historial */}
-                          <p className="text-sm font-semibold text-foreground pt-2">Historial de jornadas finalizadas</p>
-                          {/* Resumen */}
-                          <div className="flex items-center justify-between bg-muted rounded-lg p-3">
-                            <div className="text-sm">
-                              <span className="font-semibold text-foreground">{planificacionData.totalActividades}</span>
-                              <span className="text-muted-foreground"> actividades en </span>
-                              <span className="font-semibold text-foreground">{planificacionData.totalDias}</span>
-                              <span className="text-muted-foreground"> dias</span>
-                            </div>
-                          </div>
-                          
-                          {/* Lista por dia */}
-                          {planificacionData.planificacion?.map((dia: any) => (
-                            <div key={dia.fecha} className="border border-border rounded-lg overflow-hidden">
-                              {/* Cabecera del dia */}
-                              <div className="bg-primary/10 px-4 py-2 border-b border-border">
-                                <p className="text-sm font-semibold text-foreground">{dia.fechaFormateada}</p>
-                              </div>
-                              
-                              {/* Actividades del dia */}
-                              <div className="divide-y divide-border">
-                                {dia.actividades.map((act: any) => (
-                                  <div key={act.id} className="px-4 py-3 flex items-start gap-3">
-                                    {/* Tilde verde o circulo gris */}
-                                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${act.completa ? "bg-green-500" : "bg-gray-200"}`}>
-                                      {act.completa && (
-                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                    
-                                    {/* Contenido */}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: EJES[act.eje as Eje]?.color || "#6b7280" }}>
-                                          {act.eje}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{act.ejeNombre}</span>
-                                        {act.hora && <span className="text-[10px] text-muted-foreground ml-auto">{act.hora}</span>}
-                                      </div>
-                                      
-                                      {/* Actividad ALBA o Docente */}
-                                      {act.actividadAlba && (
-                                        <p className="text-sm text-foreground mb-1">
-                                          <span className="text-muted-foreground">ALBA: </span>
-                                          {act.actividadAlba}
-                                        </p>
-                                      )}
-                                      {act.actividadDocente && (
-                                        <p className="text-sm text-foreground mb-1">
-                                          <span className="text-muted-foreground">Docente: </span>
-                                          {act.actividadDocente}
-                                        </p>
-                                      )}
-                                      
-                                      {/* Evaluacion general */}
-                                      {act.evaluacionGeneral && (
-                                        <p className="text-xs text-muted-foreground mb-1">
-                                          <span className="font-medium">Evaluacion: </span>
-                                          {act.evaluacionGeneral}
-                                        </p>
-                                      )}
-                                      
-                                      {/* Observaciones */}
-                                      {act.observaciones && (
-                                        <p className="text-xs text-muted-foreground italic">
-                                          {act.observaciones}
-                                        </p>
-                                      )}
-                                      
-                                      {/* Si no hay info, mostrar placeholder */}
-                                      {!act.actividadAlba && !act.actividadDocente && !act.evaluacionGeneral && (
-                                        <p className="text-xs text-muted-foreground italic">Actividad registrada sin descripcion</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Sintesis Grupal - informacion clara para la directora */}
-                  {modalTipo === "sintesis" && (
-                    <div className="space-y-4">
-                      {esMateral(modalSala) ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-blue-800">La síntesis grupal no está disponible para Maternal porque aún no se realizan evaluaciones de alumnos en este nivel.</p>
-                        </div>
-                      ) : sintesisData && (
-                        <>
-                          {sintesisData.sinDatos ? (
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                              <p className="text-sm text-amber-800">{sintesisData.mensaje}</p>
-                            </div>
-                          ) : (
-                            <>
-                              {/* Resumen simple */}
-                              <div className="bg-muted rounded-lg p-4">
-                                <p className="text-sm text-foreground mb-2">
-                                  <span className="font-semibold">{sintesisData.totalAlumnos} alumnos</span>
-                                  <span className="text-muted-foreground"> trabajaron en </span>
-                                  <span className="font-semibold">{sintesisData.totalClases} clases</span>
-                                </p>
-                                {sintesisData.periodoDesde && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Desde {sintesisData.periodoDesde} hasta {sintesisData.periodoHasta}
-                                  </p>
-                                )}
-                              </div>
-                              
-                              {/* Ejes — conteos de chicos, sin porcentajes */}
-                              {sintesisData.ejes?.map((eje: any) => {
-                                const hayRefuerzo = (eje.refuerzo || 0) > 0
-                                const sinDatos = (eje.evaluados || 0) === 0
-                                const colorBorde = sinDatos ? "border-slate-200" : hayRefuerzo ? "border-red-300" : "border-green-300"
-                                const colorFondo = sinDatos ? "bg-slate-50" : hayRefuerzo ? "bg-red-50" : "bg-green-50"
-
-                                return (
-                                  <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
-                                    <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
-                                      <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
-                                      <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
-                                      <span className="text-xs text-muted-foreground ml-auto">
-                                        {eje.clases === 1 ? "1 clase" : `${eje.clases} clases`}
-                                      </span>
-                                    </div>
-
-                                    <div className="p-4 space-y-3">
-                                      {eje.actividades?.length > 0 && (
-                                        <div>
-                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
-                                          <ul className="text-sm text-foreground space-y-0.5">
-                                            {eje.actividades.map((a: string, i: number) => (
-                                              <li key={i}>· {a}</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      )}
-
-                                      <div className={`${colorFondo} rounded-lg p-3`}>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
-                                        <p className="text-sm text-foreground">{eje.comoEsta}</p>
-                                      </div>
-
-                                      {eje.necesitanApoyo?.length > 0 && (
-                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                          <p className="text-xs font-semibold text-amber-800 mb-1">
-                                            {eje.necesitanApoyo.length === 1 ? "Necesita refuerzo:" : "Necesitan refuerzo:"}
-                                          </p>
-                                          <p className="text-sm text-amber-900">{eje.necesitanApoyo.join(", ")}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Alertas */}
-                  {modalTipo === "alertas" && (
-                    <div className="space-y-3">
-                      {salasData[modalSala]?.alertas.length === 0 ? (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-green-800">No hay alertas pedagogicas en esta sala</p>
-                        </div>
-                      ) : (
-                        salasData[modalSala]?.alertas.map((alerta, i) => {
-                          const esAlta = alerta.urgencia === "alta"
-                          const esBaja = alerta.urgencia === "baja"
-                          const titulo = esAlta
-                            ? "Necesita apoyo prioritario"
-                            : esBaja
-                            ? "Para acompañar"
-                            : "Seguir de cerca"
-                          const estilo = esAlta
-                            ? "bg-red-50 border-red-200"
-                            : esBaja
-                            ? "bg-sky-50 border-sky-200"
-                            : "bg-amber-50 border-amber-200"
-                          const punto = esAlta ? "bg-red-500" : esBaja ? "bg-sky-500" : "bg-amber-500"
-                          return (
-                          <div key={i} className={`rounded-lg p-3 border ${estilo}`}>
-                            <div className="flex items-start gap-2">
-                              <span className={`w-2 h-2 rounded-full mt-1.5 ${punto}`} />
-                              <div>
-                                <p className="text-xs font-semibold text-foreground">{titulo}</p>
-                                <p className="text-sm text-muted-foreground">{alerta.mensaje}</p>
-                                {alerta.alumnoNombre && <p className="text-xs text-muted-foreground mt-1">Alumno: {alerta.alumnoNombre}</p>}
-                              </div>
-                            </div>
-                          </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Proyectos */}
-                  {modalTipo === "proyectos" && (
-                    <div className="space-y-4">
-                      {!proyectosData ? (
-                        <div className="flex justify-center py-8">
-                          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      ) : proyectosData.totalProyectos === 0 ? (
-                        <div className="bg-muted rounded-lg p-4 text-center">
-                          <p className="text-sm text-muted-foreground">Esta sala aun no tiene proyectos registrados</p>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Lista de proyectos con tilde si estan finalizados */}
-                          <div className="bg-muted rounded-lg p-3">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2">Proyectos de la sala:</p>
-                            <div className="space-y-1">
-                              {proyectosData.proyectos?.map((p: any, idx: number) => (
-                                <div key={p.id} className="flex items-center gap-2">
-                                  {p.finalizado ? (
-                                    <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  ) : (
-                                    <div className="w-4 h-4 border-2 border-gray-300 rounded flex-shrink-0" />
-                                  )}
-                                  <span className={`text-sm ${p.finalizado ? "text-green-700" : "text-foreground"}`}>
-                                    {idx + 1}. {p.titulo}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          {/* Lista de proyectos */}
-                          {proyectosData.proyectos?.map((proyecto: any) => (
-                            <div 
-                              key={proyecto.id} 
-                              className={`border-2 rounded-lg overflow-hidden ${proyecto.finalizado ? "border-green-300 bg-green-50/30" : "border-border"}`}
-                            >
-                              {/* Cabecera del proyecto */}
-                              <div className="px-4 py-3 border-b border-border bg-muted/50 flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-foreground">{proyecto.titulo}</h4>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {proyecto.cantidadActividades} {proyecto.cantidadActividades === 1 ? "actividad" : "actividades"}
-                                  </p>
-                                </div>
-                                {proyecto.finalizado ? (
-                                  <span className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Finalizado
-                                  </span>
-                                ) : (
-                                  <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
-                                    En curso
-                                  </span>
-                                )}
-                              </div>
-                              
-                              {/* Contenido del proyecto */}
-                              <div className="p-4 space-y-4">
-                                {/* Objetivo de aprendizaje del proyecto - COMPLETO */}
-                                {proyecto.objetivoGeneral && (
-                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                    <p className="text-xs font-semibold text-blue-800 mb-2">Objetivo de aprendizaje del proyecto:</p>
-                                    <p className="text-sm text-foreground whitespace-pre-line">{proyecto.objetivoGeneral}</p>
-                                  </div>
-                                )}
-                                
-                                {/* Actividades del proyecto - COMPLETAS */}
-                                {proyecto.actividades?.length > 0 && proyecto.actividades.some((a: any) => a.titulo || a.objetivo || a.desarrollo || a.materiales) && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-3">Actividades del proyecto:</p>
-                                    <div className="space-y-4">
-                                      {proyecto.actividades.map((act: any, idx: number) => (
-                                        (act.titulo || act.objetivo || act.desarrollo || act.materiales) && (
-                                          <div key={act.id || idx} className="border border-border rounded-lg overflow-hidden">
-                                            {/* Titulo de la actividad con numero */}
-                                            <div className="bg-muted px-3 py-2 border-b border-border flex items-center gap-2">
-                                              <span className="text-xs font-bold bg-primary text-primary-foreground w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                                                {idx + 1}
-                                              </span>
-                                              <p className="text-sm font-semibold text-foreground">
-                                                {act.titulo || `Actividad ${idx + 1}`}
-                                              </p>
-                                            </div>
-                                            
-                                            <div className="p-3 space-y-3">
-                                              {/* Objetivo de aprendizaje de la actividad */}
-                                              {act.objetivo && (
-                                                <div>
-                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Objetivo de aprendizaje:</p>
-                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.objetivo}</p>
-                                                </div>
-                                              )}
-                                              
-                                              {/* Desarrollo de la actividad */}
-                                              {act.desarrollo && (
-                                                <div>
-                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Desarrollo:</p>
-                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.desarrollo}</p>
-                                                </div>
-                                              )}
-                                              
-                                              {/* Materiales */}
-                                              {act.materiales && (
-                                                <div>
-                                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Materiales:</p>
-                                                  <p className="text-sm text-foreground whitespace-pre-line">{act.materiales}</p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Fecha de finalizacion */}
-                                {proyecto.finalizado && proyecto.finalizadoAt && (
-                                  <p className="text-xs text-green-600 mt-2">
-                                    Finalizado el {new Date(proyecto.finalizadoAt).toLocaleDateString("es-AR")}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Barra de actividades por habilidades - MATERNAL */}
-                  {modalTipo === "barraActividades" && (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-sm font-semibold text-green-900 mb-3">Cantidad de actividades por habilidades</p>
-                        <p className="text-xs text-green-700 mb-4">Las barras muestran cuántas actividades se trabajaron en cada habilidad/capacidad durante las semanas realizadas.</p>
-                        
-                        {/* Placeholder: mientras no hay datos reales, mostrar estructura de barras vacía */}
-                        <div className="grid grid-cols-2 gap-3">
-                          {["Motricidad Fina", "Motricidad Gruesa", "Lenguaje", "Socioemocional", "Cognitiva", "Autonomía"].map((hab) => (
-                            <div key={hab} className="bg-white rounded-lg p-3 border border-green-100">
-                              <div className="flex items-end gap-2 mb-2">
-                                <div 
-                                  className="flex-1 bg-green-500 rounded-t transition-all" 
-                                  style={{ height: "40px" }}
-                                />
-                              </div>
-                              <p className="text-xs font-medium text-foreground">{hab}</p>
-                              <p className="text-[10px] text-muted-foreground">0 actividades</p>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-xs font-semibold text-blue-800 mb-1">Nota:</p>
-                          <p className="text-xs text-blue-700">Este gráfico se actualiza automáticamente conforme la maestra carga actividades en Maternal.</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Detalle de Eje - informacion clara y util, no numeros crudos */}
-                  {modalTipo === "detalle_eje" && ejeSeleccionado && salasData[modalSala] && (
-                    <div className="space-y-4">
-                      {(() => {
-                        const eval_ = salasData[modalSala].evaluacionesPorEje?.[ejeSeleccionado] || { green: 0, yellow: 0, red: 0, total: 0 }
-                        const clases = salasData[modalSala].actividadesPorEje?.[ejeSeleccionado] || 0
-                        const totalAlumnos = salasData[modalSala].totalAlumnos
-                        const total = eval_.total
-                        
-                        // Calcular situacion del grupo
-                        const pctGreen = total > 0 ? (eval_.green / total) * 100 : 0
-                        const pctYellow = total > 0 ? (eval_.yellow / total) * 100 : 0
-                        const pctRed = total > 0 ? (eval_.red / total) * 100 : 0
-                        
-                        // Generar mensaje claro basado en evidencia
-                        let estadoGrupo = ""
-                        let colorEstado = ""
-                        let sugerencia = ""
-                        
-                        if (clases === 0) {
-                          estadoGrupo = "Sin actividades registradas"
-                          colorEstado = "text-muted-foreground"
-                          sugerencia = "Aun no se realizaron actividades en este eje."
-                        } else if (pctGreen >= 70) {
-                          estadoGrupo = "El grupo avanza muy bien"
-                          colorEstado = "text-green-600"
-                          sugerencia = `La mayoria de los ninos logra los objetivos de ${EJES[ejeSeleccionado].label}.`
-                        } else if (pctGreen >= 50) {
-                          estadoGrupo = "El grupo avanza con algunos a reforzar"
-                          colorEstado = "text-amber-600"
-                          if (eval_.red > 0) {
-                            sugerencia = `${eval_.red} evaluaciones necesitan refuerzo. Considerar estrategias alternativas para esos ninos.`
-                          } else {
-                            sugerencia = "Algunos ninos estan en proceso. Continuar con las actividades planificadas."
-                          }
-                        } else if (pctRed >= 40) {
-                          estadoGrupo = "Atencion: varios ninos necesitan refuerzo"
-                          colorEstado = "text-red-600"
-                          sugerencia = "Revisar si la actividad es adecuada para el grupo o si hay factores externos afectando. Considerar hablar con las familias de los ninos con mas dificultad."
-                        } else {
-                          estadoGrupo = "El grupo esta en proceso"
-                          colorEstado = "text-amber-600"
-                          sugerencia = "Continuar observando la evolucion en las proximas actividades."
-                        }
-                        
-                        return (
-                          <>
-                            {/* Cabecera del eje */}
-                            <div className="flex items-center gap-3 pb-3 border-b border-border">
-                              <div 
-                                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                style={{ backgroundColor: EJES[ejeSeleccionado].color }}
-                              >
-                                {ejeSeleccionado}
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-foreground">{EJES[ejeSeleccionado].label}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {clases} {clases === 1 ? "actividad realizada" : "actividades realizadas"}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Estado del grupo - mensaje claro */}
-                            <div className="bg-muted rounded-lg p-4">
-                              <p className={`font-semibold ${colorEstado}`}>{estadoGrupo}</p>
-                              <p className="text-sm text-muted-foreground mt-1">{sugerencia}</p>
-                            </div>
-                            
-                            
-                            
-                            {/* Inferencias de ALBA si hay patrones preocupantes */}
-                            {pctRed >= 30 && clases >= 2 && (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencias de ALBA:</p>
-                                <ul className="text-xs text-blue-700 space-y-1">
-                                  {pctRed >= 50 && <li>• Considerar una reunion con las familias de los ninos con mas dificultad</li>}
-                                  {pctRed >= 30 && <li>• Evaluar si hay factores emocionales o de atencion afectando el desempeno</li>}
-                                  <li>• Probar estrategias alternativas para las proximas actividades de este eje</li>
-                                </ul>
-                              </div>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Chat */}
-      {chatSala && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            {/* Header */}
-            <div className="bg-green-500 text-white px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                <div>
-                  <h3 className="font-bold">Mensaje a {chatSala}</h3>
-                  <p className="text-xs opacity-80">La maestra lo vera en su tablero</p>
-                </div>
-              </div>
-              <button onClick={() => { setChatSala(null); setNuevoMensaje("") }} className="p-1 hover:bg-white/20 rounded">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Mensajes anteriores */}
-            <div className="p-4 max-h-60 overflow-y-auto bg-muted/30">
-              {(!mensajesSalas[chatSala] || mensajesSalas[chatSala].length === 0) ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No hay mensajes anteriores</p>
-              ) : (
-                <div className="space-y-2">
-                  {[...mensajesSalas[chatSala]].reverse().map((m: any) => {
-                    const esDeDireccion = m.autor === "directora"
-                    return (
-                      <div key={m.id} className={`rounded-lg p-3 shadow-sm ${esDeDireccion ? "bg-emerald-100 ml-6" : "bg-white mr-6"}`}>
-                        <p className="text-[10px] font-semibold mb-0.5" style={{ color: esDeDireccion ? "#047857" : "#1e40af" }}>
-                          {esDeDireccion ? "Vos (Direccion)" : chatSala}
-                        </p>
-                        <p className="text-sm text-foreground">{m.mensaje}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(m.created_at).toLocaleDateString("es-AR")} {new Date(m.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                          {esDeDireccion ? (
-                            <span className="text-[10px] text-gray-400">Enviado</span>
-                          ) : m.leido ? (
-                            <span className="text-[10px] text-blue-500 flex items-center gap-1">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Leido {m.leido_at && new Date(m.leido_at).toLocaleDateString("es-AR")}
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => marcarLeido(m.id)}
-                              className="text-[10px] font-semibold text-white px-2 py-0.5 rounded"
-                              style={{ backgroundColor: "#1e3a5f" }}
-                            >
-                              Marcar leido
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-            
-            {/* Input para nuevo mensaje */}
-            <div className="p-4 border-t border-border">
-              <textarea
-                value={nuevoMensaje}
-                onChange={(e) => setNuevoMensaje(e.target.value)}
-                placeholder="Escribi tu mensaje para la maestra..."
-                className="w-full p-3 border border-border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-                rows={3}
-              />
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => enviarMensaje(chatSala)}
-                  disabled={enviandoMensaje || !nuevoMensaje.trim()}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
-                >
-                  {enviandoMensaje ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  )}
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cronograma completo (5 columnas) para la directora, con boton Visto */}
-      {cronogramaModalOpen && modalSala && (grillaHistorialActiva || cronogramaActivoData?.cronograma) && (
-        <CronogramaVerModal
-          open={cronogramaModalOpen}
-          onClose={() => { setCronogramaModalOpen(false); setGrillaHistorialActiva(null) }}
-          sala={modalSala}
-          cronograma={grillaHistorialActiva || cronogramaActivoData.cronograma}
-          clasesEspeciales={clasesEspecialesDe(grillaHistorialActiva || cronogramaActivoData?.cronograma)}
-          rangoSemana={rangoSemanaDe(grillaHistorialActiva || cronogramaActivoData?.cronograma)}
-          onVisto={grillaHistorialActiva ? undefined : enviarVisto}
-          vistoLabel="Marcar como visto"
-          vistoLoading={vistoLoading}
-          vistoConfirmado={vistoConfirmado}
-        />
-      )}
-    </div>
-  )
 }
