@@ -14,6 +14,11 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // registrar en ALBA. Todo lo anterior queda en la base pero no se muestra.
 const INICIO_CUATRIMESTRE = "2026-08-03"
 
+// Hasta el 10/8 un bug reseteaba dia_finalizado en cada guardado del cronograma,
+// asi que las jornadas cerradas antes de esa fecha no quedaron registradas.
+// Se cuentan desde aca para no mostrar ceros que no son reales.
+const JORNADAS_CONFIABLES_DESDE = "2026-08-10"
+
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT"]
 const EJES = ["CF", "CT", "O", "E"] as const
 
@@ -57,8 +62,8 @@ function lunesDeLaSemana(): string {
 }
 
 interface ResumenEje {
-  clases: number        // actividades distintas trabajadas
-  necesitanApoyo: number // chicos con refuerzo en ese eje
+  clases: number      // actividades distintas trabajadas en el eje
+  enRefuerzo: number  // chicos con al menos una evaluacion en refuerzo en ese eje
 }
 
 export async function GET(_req: NextRequest) {
@@ -94,11 +99,13 @@ export async function GET(_req: NextRequest) {
         const acts = Array.isArray(c.actividades) ? c.actividades : []
         return acts.some((a: any) => (a?.nombre || "").trim().length > 0)
       }).length
-      const jornadasCerradas = cronoSemana.filter((c: any) => c.dia_finalizado === true).length
+      const jornadasCerradas = cronoSemana.filter(
+        (c: any) => c.dia_finalizado === true && fechaAR(c.fecha) >= JORNADAS_CONFIABLES_DESDE
+      ).length
 
       // ── 2. ¿Como viene cada eje? ─────────────────────────────────────
       const porEje: Record<string, ResumenEje> = {}
-      EJES.forEach((e) => { porEje[e] = { clases: 0, necesitanApoyo: 0 } })
+      EJES.forEach((e) => { porEje[e] = { clases: 0, enRefuerzo: 0 } })
 
       const actividadesPorEje: Record<string, Set<string>> = {}
       const chicosEnRojoPorEje: Record<string, Set<string>> = {}
@@ -112,7 +119,7 @@ export async function GET(_req: NextRequest) {
 
       EJES.forEach((e) => {
         porEje[e].clases = actividadesPorEje[e].size
-        porEje[e].necesitanApoyo = chicosEnRojoPorEje[e].size
+        porEje[e].enRefuerzo = chicosEnRojoPorEje[e].size
       })
 
       // ── 3. ¿Quienes necesitan apoyo? ─────────────────────────────────
@@ -148,6 +155,7 @@ export async function GET(_req: NextRequest) {
       ok: true,
       desde: INICIO_CUATRIMESTRE,
       periodo: "Segundo cuatrimestre",
+      jornadasDesde: JORNADAS_CONFIABLES_DESDE,
       semanaEnCurso: semana,
       salas,
     })
