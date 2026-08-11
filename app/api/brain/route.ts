@@ -2395,6 +2395,15 @@ ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 ` : `
 Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
 `}
+
+CAPACIDADES DEL DISENO CURRICULAR DE CABA (son cinco, comunes a todos los niveles).
+Para cada actividad elegi la que MAS se pone en juego, escrita exactamente asi:
+- Autonomia para aprender
+- Comunicacion
+- Pensamiento reflexivo y critico
+- Resolucion de problemas
+- Compromiso y colaboracion
+
 - Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
 - Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
@@ -2451,6 +2460,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
     "capacidades": "una linea con las capacidades que desarrolla",
+    "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
     "desarrollo": "descripcion paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave",
@@ -2493,6 +2503,9 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
             actividad: {
               nombre: s.nombre,
               capacidades: s.capacidades,
+              // Capacidad del Diseno Curricular de CABA (cinco posibles).
+              // Permite agrupar despues las actividades por capacidad.
+              capacidadDC: (s as any).capacidadDC || "",
               contenidos: pasoNombre ? `${s.contenidos} · Estamos trabajando: ${pasoNombre}` : s.contenidos,
               objetivo: s.objetivo,
               desarrollo: s.desarrollo,
