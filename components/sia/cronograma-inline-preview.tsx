@@ -239,7 +239,7 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                           ? "border-green-300 bg-green-50"
                           : yaPaso(fecha)
                           ? "border-red-200 bg-red-50"
-                          : `${ejeColor.border} ${ejeColor.bg}`
+                          : "border-slate-200 bg-slate-50"
                       }`}
                       title={
                         actAlba.evaluada === true
