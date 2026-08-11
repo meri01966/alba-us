@@ -604,28 +604,22 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                           : <span className="font-semibold text-red-600">Sin registros este cuatrimestre</span>}
                       </p>
 
-                      {/* Los cuatro ejes: clases trabajadas y chicos en refuerzo */}
-                      <div className="grid grid-cols-4 gap-1.5 pt-1">
+                      {/* Los cuatro ejes con su color de siempre. El color aca es
+                          identidad del eje, NO estado: el verde y el rojo de
+                          evaluado / sin evaluar viven en el cronograma. */}
+                      <div className="flex items-center gap-3 pt-0.5">
                         {(["CF", "CT", "O", "E"] as Eje[]).map((k) => {
-                          const e = resumenSalas[sala].porEje?.[k] || { clases: 0, enRefuerzo: 0 }
+                          const e = resumenSalas[sala].porEje?.[k] || { clases: 0 }
                           return (
                             <button
                               key={k}
                               onClick={() => { setModalSala(sala); setEjeSeleccionado(k); setModalTipo("detalle_eje") }}
-                              className="rounded-lg border px-1.5 py-1.5 text-center hover:opacity-80 transition-opacity"
-                              style={{ borderColor: `${EJES[k].color}55`, backgroundColor: `${EJES[k].color}12` }}
-                              title={EJES[k].label}
+                              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+                              title={`${EJES[k].label}: ${e.clases} ${e.clases === 1 ? "clase" : "clases"}`}
                             >
-                              <div className="text-[9px] font-bold" style={{ color: EJES[k].color }}>{k}</div>
-                              <div className="text-sm font-bold text-foreground leading-none mt-0.5">{e.clases}</div>
-                              <div className="text-[8px] text-muted-foreground leading-tight mt-0.5">
-                                {e.clases === 1 ? "clase" : "clases"}
-                              </div>
-                              {e.enRefuerzo > 0 && (
-                                <div className="text-[8px] font-semibold text-red-600 leading-tight mt-0.5">
-                                  {e.enRefuerzo} refuerzo
-                                </div>
-                              )}
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: EJES[k].color }} />
+                              <span className="text-[10px] text-muted-foreground">{k}</span>
+                              <span className="text-[11px] font-semibold text-foreground">{e.clases}</span>
                             </button>
                           )
                         })}
