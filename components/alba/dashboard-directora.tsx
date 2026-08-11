@@ -51,6 +51,15 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   E:  { label: "Escritura", color: "#8b5cf6" },
 }
 
+// A partir del MARTES se avisa si una sala todavia no planifico la semana.
+// El lunes no: es el dia en que muchas maestras planifican.
+function corresponsdeAvisarSinPlanificar(): boolean {
+  const ahora = new Date()
+  const ar = new Date(ahora.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }))
+  const dia = ar.getDay() // 0 domingo, 1 lunes, 2 martes...
+  return dia >= 2 && dia <= 5
+}
+
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
@@ -148,6 +157,8 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   
   // Chat/Mensajes
   const [mensajesSalas, setMensajesSalas] = useState<Record<string, any[]>>({})
+  // Resumen por sala: dice si planificaron la semana y si vienen registrando
+  const [resumenSalas, setResumenSalas] = useState<Record<string, any>>({})
   const [chatSala, setChatSala] = useState<string | null>(null)
   const [nuevoMensaje, setNuevoMensaje] = useState("")
   const [enviandoMensaje, setEnviandoMensaje] = useState(false)
@@ -173,6 +184,19 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   async function cargarMensajes() {
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
+      // Resumen por sala (planificacion y registro de la semana)
+      try {
+        const resR = await fetch(`${base}/api/directora-resumen`, { cache: "no-store" })
+        const dataR = await resR.json()
+        if (dataR?.ok && Array.isArray(dataR.salas)) {
+          const mapa: Record<string, any> = {}
+          dataR.salas.forEach((s: any) => { mapa[s.sala] = s })
+          setResumenSalas(mapa)
+        }
+      } catch (e) {
+        console.error("[v0] Error cargando resumen de salas:", e)
+      }
+
       const res = await fetch(`${base}/api/mensajes-directora`, { cache: "no-store" })
       if (res.ok) {
         const json = await res.json()
@@ -532,6 +556,11 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     <div>
                       <h3 className="font-bold text-foreground">{sala}</h3>
                       <p className="text-xs text-muted-foreground">{data.totalAlumnos} alumnos</p>
+                      {corresponsdeAvisarSinPlanificar() && resumenSalas[sala] && resumenSalas[sala].diasPlanificados === 0 && (
+                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          Semana sin planificar
+                        </span>
+                      )}
                     </div>
                     {/* Boton de chat estilo WhatsApp */}
                     <button
@@ -668,6 +697,16 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
             
             {/* Contenido del modal */}
             <div className="p-5 overflow-y-auto max-h-[calc(85vh-80px)]">
+              {/* Aviso: la sala todavia no planifico la semana en curso */}
+              {corresponsdeAvisarSinPlanificar() && resumenSalas[modalSala] && resumenSalas[modalSala].diasPlanificados === 0 && (
+                <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-900">Semana aun sin planificar</p>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Esta sala todavia no cargo actividades para la semana en curso.
+                  </p>
+                </div>
+              )}
+
               {loadingModal ? (
                 <div className="py-12 text-center">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
