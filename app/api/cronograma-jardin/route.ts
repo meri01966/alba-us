@@ -233,7 +233,7 @@ export async function POST(req: Request) {
     // Traemos tambien el contenido del dia existente para poder compararlo (PROTECCION 3)
     const { data: existente } = await supabase
       .from(TABLA)
-      .select("id, actividades, recibimiento, intercambio")
+      .select("id, actividades, recibimiento, intercambio, finalizado, dia_finalizado")
       .eq("sala", sala)
       .eq("semana_inicio", lunesStr)
       .eq("dia", dia)
@@ -263,8 +263,10 @@ export async function POST(req: Request) {
       ed_fisica: datosDia.edFisica || "",
       musica: datosDia.musica || "",
       ingles: datosDia.ingles || "",
-      finalizado: false,
-      dia_finalizado: false,
+      // NO se reabre un dia ya cerrado. Antes esto ponia false siempre, asi que
+      // cualquier edicion del cronograma reabria todas las jornadas finalizadas.
+      finalizado: existente?.finalizado ?? false,
+      dia_finalizado: existente?.dia_finalizado ?? false,
       updated_at: new Date().toISOString(),
     }
 
