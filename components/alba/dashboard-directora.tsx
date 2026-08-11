@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { CronogramaVerModal } from "@/components/sia/cronograma-ver-modal"
 
-type Eje = "CF" | "CT" | "O"
+type Eje = "CF" | "CT" | "O" | "E"
 type Estado = "green" | "yellow" | "red"
 
 interface Alumno {
@@ -48,6 +48,7 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   CF: { label: "Conciencia Fonologica", color: "#3b82f6" },
   CT: { label: "Comprension de Textos", color: "#10b981" },
   O:  { label: "Oralidad", color: "#f59e0b" },
+  E:  { label: "Escritura", color: "#8b5cf6" },
 }
 
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
@@ -344,7 +345,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     
     if (tipo === "sintesis") {
       try {
-        const res = await fetch(`${base}/api/reporte-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        const res = await fetch(`${base}/api/sintesis-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         if (res.ok) {
           const data = await res.json()
           setSintesisData(data)
@@ -847,52 +848,46 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                                 )}
                               </div>
                               
-                              {/* Ejes - informacion clara sin porcentajes */}
+                              {/* Ejes — conteos de chicos, sin porcentajes */}
                               {sintesisData.ejes?.map((eje: any) => {
-                                // Determinar estado visual
-                                const estado = eje.pctLogrado >= 70 ? "bien" : eje.pctLogrado >= 50 ? "avanzando" : eje.pctRefuerzo >= 40 ? "atencion" : "proceso"
-                                const colorBorde = estado === "bien" ? "border-green-300" : estado === "atencion" ? "border-red-300" : "border-amber-300"
-                                const colorFondo = estado === "bien" ? "bg-green-50" : estado === "atencion" ? "bg-red-50" : "bg-amber-50"
-                                
+                                const hayRefuerzo = (eje.refuerzo || 0) > 0
+                                const sinDatos = (eje.evaluados || 0) === 0
+                                const colorBorde = sinDatos ? "border-slate-200" : hayRefuerzo ? "border-red-300" : "border-green-300"
+                                const colorFondo = sinDatos ? "bg-slate-50" : hayRefuerzo ? "bg-red-50" : "bg-green-50"
+
                                 return (
                                   <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
-                                    {/* Cabecera del eje */}
                                     <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
                                       <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
                                       <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
-                                      <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
+                                      <span className="text-xs text-muted-foreground ml-auto">
+                                        {eje.clases === 1 ? "1 clase" : `${eje.clases} clases`}
+                                      </span>
                                     </div>
-                                    
+
                                     <div className="p-4 space-y-3">
-                                      {/* Que trabajamos */}
-                                      <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
-                                        <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
-                                      </div>
-                                      
-                                      {/* Como lo trabajamos */}
-                                      {eje.metodologias?.length > 0 && (
+                                      {eje.actividades?.length > 0 && (
                                         <div>
-                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Como lo trabajamos:</p>
-                                          <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Estado del grupo - mensaje claro */}
-                                      <div className={`${colorFondo} rounded-lg p-3`}>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
-                                        <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
-                                      </div>
-                                      
-                                      {/* Sugerencias de ALBA solo si hay situaciones importantes */}
-                                      {(eje.pctRefuerzo >= 25 || eje.tendencia === "necesita_apoyo") && (
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                          <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
-                                          <ul className="text-xs text-blue-700 space-y-1">
-                                            {eje.sugerenciasContinuacion?.slice(0, 2).map((s: string, i: number) => (
-                                              <li key={i}>• {s}</li>
+                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
+                                          <ul className="text-sm text-foreground space-y-0.5">
+                                            {eje.actividades.map((a: string, i: number) => (
+                                              <li key={i}>· {a}</li>
                                             ))}
                                           </ul>
+                                        </div>
+                                      )}
+
+                                      <div className={`${colorFondo} rounded-lg p-3`}>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
+                                        <p className="text-sm text-foreground">{eje.comoEsta}</p>
+                                      </div>
+
+                                      {eje.necesitanApoyo?.length > 0 && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                          <p className="text-xs font-semibold text-amber-800 mb-1">
+                                            {eje.necesitanApoyo.length === 1 ? "Necesita refuerzo:" : "Necesitan refuerzo:"}
+                                          </p>
+                                          <p className="text-sm text-amber-900">{eje.necesitanApoyo.join(", ")}</p>
                                         </div>
                                       )}
                                     </div>
