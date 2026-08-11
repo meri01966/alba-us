@@ -196,6 +196,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json()
   const { sala, cronograma, semana_inicio } = body
+  // Dias que se vacian A PROPOSITO (por ejemplo al mover una actividad a otro dia).
+  // Sin esto, la PROTECCION 3 los rechaza y la actividad queda duplicada.
+  const diasForzados: string[] = Array.isArray(body.diasForzados) ? body.diasForzados : []
   if (!sala || !cronograma) return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
 
   // PROTECCIÓN 1 — Si el cronograma entero llega SIN contenido, rechazar.
@@ -230,7 +233,7 @@ export async function POST(req: Request) {
     // Traemos tambien el contenido del dia existente para poder compararlo (PROTECCION 3)
     const { data: existente } = await supabase
       .from(TABLA)
-      .select("id, actividades, recibimiento, intercambio")
+      .select("id, actividades, recibimiento, intercambio, finalizado, dia_finalizado")
       .eq("sala", sala)
       .eq("semana_inicio", lunesStr)
       .eq("dia", dia)
@@ -245,7 +248,7 @@ export async function POST(req: Request) {
     const viejoTeniaContenido =
       actsViejas.some((a: any) => (a?.nombre || "").trim().length > 0) ||
       (existente?.recibimiento || "").trim() || (existente?.intercambio || "").trim()
-    if (!nuevoTieneContenido && viejoTeniaContenido) {
+    if (!nuevoTieneContenido && viejoTeniaContenido && !diasForzados.includes(dia)) {
       continue // no tocar este día: lo nuevo está vacío y lo viejo tenía contenido
     }
 
@@ -260,8 +263,10 @@ export async function POST(req: Request) {
       ed_fisica: datosDia.edFisica || "",
       musica: datosDia.musica || "",
       ingles: datosDia.ingles || "",
-      finalizado: false,
-      dia_finalizado: false,
+      // NO se reabre un dia ya cerrado. Antes esto ponia false siempre, asi que
+      // cualquier edicion del cronograma reabria todas las jornadas finalizadas.
+      finalizado: existente?.finalizado ?? false,
+      dia_finalizado: existente?.dia_finalizado ?? false,
       updated_at: new Date().toISOString(),
     }
 
