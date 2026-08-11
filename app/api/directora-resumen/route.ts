@@ -19,7 +19,7 @@ const INICIO_CUATRIMESTRE = "2026-08-03"
 // Se cuentan desde aca para no mostrar ceros que no son reales.
 const JORNADAS_CONFIABLES_DESDE = "2026-08-10"
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
 const EJES = ["CF", "CT", "O", "E"] as const
 
 export const dynamic = "force-dynamic"
@@ -27,6 +27,25 @@ export const revalidate = 0
 
 function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
+}
+
+// Supabase corta en 1000 filas por consulta. Con mas de mil evaluaciones,
+// cualquier cuenta hecha sobre una consulta suelta queda incompleta.
+// Esto trae TODO, de a mil por vez.
+async function traerTodo(query: any): Promise<any[]> {
+  const PAGINA = 1000
+  const acumulado: any[] = []
+  for (let desde = 0; desde < 50000; desde += PAGINA) {
+    const { data, error } = await query.range(desde, desde + PAGINA - 1)
+    if (error) {
+      console.error("[v0] Error paginando:", error.message)
+      break
+    }
+    const filas = data || []
+    acumulado.push(...filas)
+    if (filas.length < PAGINA) break
+  }
+  return acumulado
 }
 
 function normalizarEje(valor: string): "CF" | "CT" | "O" | "E" {
@@ -71,17 +90,12 @@ export async function GET(_req: NextRequest) {
     const supabase = getSupabase()
     const semana = lunesDeLaSemana()
 
-    const [alumnosRes, seguimientoRes, cronoRes, cierresRes] = await Promise.all([
-      supabase.from("alumnos").select("id, nombre, sala"),
-      supabase.from("seguimiento").select("alumno_id, sala, eje, estado, actividad, fecha, created_at").gte("fecha", INICIO_CUATRIMESTRE),
-      supabase.from("cronograma_jardin").select("sala, dia, fecha, actividades, dia_finalizado, semana_inicio").gte("fecha", INICIO_CUATRIMESTRE),
-      supabase.from("registro_cierre").select("sala, eje, actividad_alba, evaluacion_general, fecha").gte("fecha", INICIO_CUATRIMESTRE),
+    const [alumnos, seguimiento, crono, cierres] = await Promise.all([
+      traerTodo(supabase.from("alumnos").select("id, nombre, sala")),
+      traerTodo(supabase.from("seguimiento").select("alumno_id, sala, eje, estado, actividad, fecha, created_at").gte("fecha", INICIO_CUATRIMESTRE)),
+      traerTodo(supabase.from("cronograma_jardin").select("sala, dia, fecha, actividades, dia_finalizado, semana_inicio").gte("fecha", INICIO_CUATRIMESTRE)),
+      traerTodo(supabase.from("registro_cierre").select("sala, eje, actividad_alba, evaluacion_general, fecha").gte("fecha", INICIO_CUATRIMESTRE)),
     ])
-
-    const alumnos = alumnosRes.data || []
-    const seguimiento = seguimientoRes.data || []
-    const crono = cronoRes.data || []
-    const cierres = cierresRes.data || []
 
     const salas = SALAS.map((sala) => {
       const alumnosSala = alumnos.filter((a: any) => a.sala === sala)
@@ -157,6 +171,8 @@ export async function GET(_req: NextRequest) {
       periodo: "Segundo cuatrimestre",
       jornadasDesde: JORNADAS_CONFIABLES_DESDE,
       semanaEnCurso: semana,
+      totalAlumnos: alumnos.length,
+      totalEvaluaciones: seguimiento.length,
       salas,
     })
   } catch (e) {
