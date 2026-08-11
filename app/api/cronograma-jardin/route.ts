@@ -135,6 +135,60 @@ export async function GET(req: Request) {
       mapa[r.semana_inicio]._filas.push(r)
     }
 
+    // ── Marcar cada actividad como evaluada o sin evaluar ────────────────
+    // Se cruza con seguimiento: si algun chico tiene evaluacion de esa actividad
+    // ese dia, la actividad quedo registrada. Si no, se dio sin registrar o no se dio.
+    const alumnosIds: string[] = []
+    try {
+      const { data: alumnosSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+      ;(alumnosSala || []).forEach((a: any) => alumnosIds.push(a.id))
+    } catch (e) {
+      console.error("[v0] Error leyendo alumnos para el historial:", e)
+    }
+
+    // Se cruza por SEMANA, no por dia exacto: la maestra suele evaluar al dia
+    // siguiente de dar la actividad, y exigir que coincida el dia marcaba como
+    // no evaluadas actividades que si se habian registrado.
+    const lunesDe = (fechaStr: string): string => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fechaStr || ""))
+      if (!m) return ""
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      const dia = d.getDay()
+      d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1))
+      const y = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const dd = String(d.getDate()).padStart(2, "0")
+      return `${y}-${mm}-${dd}`
+    }
+
+    const evaluadas = new Set<string>()
+    if (alumnosIds.length > 0) {
+      const { data: regsSeg } = await supabase
+        .from("seguimiento")
+        .select("actividad, fecha, created_at")
+        .in("alumno_id", alumnosIds)
+      ;(regsSeg || []).forEach((r: any) => {
+        if (!r.actividad) return
+        const bruto = String(r.fecha || r.created_at || "")
+        const f = /^\d{4}-\d{2}-\d{2}/.test(bruto)
+          ? bruto.slice(0, 10)
+          : new Date(bruto).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+        const semanaDeLaEval = lunesDe(f)
+        if (!semanaDeLaEval) return
+        evaluadas.add(`${semanaDeLaEval}::${String(r.actividad).trim().toLowerCase()}`)
+      })
+    }
+
+    Object.values(mapa).forEach((sem: any) => {
+      Object.values(sem.dias).forEach((d: any) => {
+        d.actividades = (d.actividades || []).map((a: any) => {
+          const nombre = String(a?.nombre || "").trim()
+          if (!nombre) return a
+          return { ...a, evaluada: evaluadas.has(`${sem.semana_inicio}::${nombre.toLowerCase()}`) }
+        })
+      })
+    })
+
     // Una semana es "historial" si TODOS sus dias estan finalizados (o el flag finalizado=true).
     // Las semanas que aun tienen dias sin finalizar son "activas" y no van al historial.
     const semanas = Object.values(mapa)
