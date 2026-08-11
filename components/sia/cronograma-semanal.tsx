@@ -53,6 +53,7 @@ interface Actividad {
   alfabetizacion?: boolean // marcada como actividad de alfabetizacion (sugerida por ALBA o cargada por la maestra)
   origen?: "alba" | "docente" | "red"
   origenTexto?: string
+  evaluada?: boolean
 }
 
 interface DiaData {
@@ -181,6 +182,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                 alfabetizacion: a?.alfabetizacion  ?? false,
                 origen:         a?.origen          ?? "docente",
                 eje:            a?.eje             ?? undefined,
+                evaluada:       a?.evaluada,
               })) ?? []
             cronogramaCargado[dia] = {
               fecha:       diaGuardado?.fecha       || diaBase.fecha,
@@ -452,7 +454,10 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     if (!d || d.diaFinalizado) return false
     const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
     if (!d.fecha || d.fecha >= hoy) return false
-    return (d.actividades || []).some((a: any) => a?.alfabetizacion && (a?.nombre || "").trim())
+    // Si ya tiene evaluacion, no se puede marcar como no realizada
+    return (d.actividades || []).some(
+      (a: any) => a?.alfabetizacion && (a?.nombre || "").trim() && a?.evaluada !== true
+    )
   }
 
   // ── Actividades ────────────────────────────────────────────────────
