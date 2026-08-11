@@ -2381,6 +2381,20 @@ export async function POST(req: NextRequest) {
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
+- EDAD DE LOS NIÑOS: ${esde4Anios(salaNombre) ? "4 anos" : "5 anos"}
+${esde4Anios(salaNombre) ? `
+ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
+- Duracion: 10 a 15 minutos como maximo. Los de 4 no sostienen mas.
+- Consignas de UN SOLO paso por vez. Nada de "primero, luego, despues, finalmente".
+- Todo oral, corporal y manipulativo: cantar, palmear, saltar, mover objetos. NADA de leer ni escribir de forma convencional.
+- En conciencia fonologica quedate en la unidad GRANDE: palabra, silaba, rima. NO trabajes fonemas aislados.
+- En escritura: garabato, marcas, el nombre propio como dibujo. Nunca pedir que escriban frases.
+- Grupos chicos o ronda completa, nunca trabajo individual en mesa.
+- Materiales concretos que se puedan tocar. Sin fichas ni consignas escritas.
+- Vocabulario simple y frases cortas en la consigna.
+` : `
+Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
+`}
 - Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
 - Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
@@ -2588,9 +2602,15 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
       })
     }
 
+    // Condicion 0, la que manda sobre todas: la edad tiene que coincidir.
+    // Una actividad de sala de 5 en una sala de 4 no sirve y frustra al grupo.
+    // Si no hay nada de la misma edad, la red no propone y quedan las de ALBA.
+    const recibeEs4 = esde4Anios(sala)
+
     const candidatas = deOtrasSalas.filter((a: any) => {
       const nombre = String(a.nombre || "").trim().toLowerCase()
       if (!nombre) return false
+      if (esde4Anios(String(a.sala || "")) !== recibeEs4) return false    // 0. misma edad
       if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
       if (yaDadasAqui.has(nombre)) return false                            // 3
       if (!bienEvaluadas.has(nombre)) return false                         // 1
@@ -2637,6 +2657,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
         const desarrollo = String(a.desarrollo || a.descripcion || "").trim()
         if (desarrollo.length < 30) return
 
+        if (esde4Anios(String(fila.sala || "")) !== recibeEs4) return  // 0. misma edad
         const eje = normEje(a.eje)
         if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
         if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
@@ -2653,7 +2674,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
           objetivo: String(a.objetivo || "").trim(),
           desarrollo,
           materiales: Array.isArray(a.materiales) ? a.materiales.join(", ") : String(a.materiales || ""),
-          nivelSala: a.nivelSala || "",
+          nivelSala: esde4Anios(String(fila.sala || "")) ? "4" : "5",
         })
       })
     })
@@ -2722,7 +2743,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
         alfabetizacion: true,
         origen: vieneDeLaRed ? "red" : "docente",
         origenTexto: vieneDeLaRed
-          ? `De la red — funciono en una sala de ${elegida.nivelSala || "5"} anos`
+          ? `De la red — funciono en una sala de ${elegida.nivelSala || (esde4Anios(String(elegida.sala || "")) ? "4" : "5")} anos`
           : "Mi actividad",
         alfabetizacionRed: vieneDeLaRed,
         actividadDocenteId: elegida.id,
