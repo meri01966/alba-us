@@ -153,10 +153,21 @@ export async function GET(_req: NextRequest) {
         (c: any) => c.sala === sala && c.evaluacion_general === "no_realizada"
       ).length
 
+      // Dias sin registrar: la señal de si la sala viene sosteniendo la secuencia.
+      // Si nunca registro en el cuatrimestre, se cuenta desde el inicio.
+      const hoyAR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+      const desdeCuando = ultimaFecha || INICIO_CUATRIMESTRE
+      const diasSinRegistrar = Math.max(
+        0,
+        Math.round((new Date(hoyAR).getTime() - new Date(desdeCuando).getTime()) / 86400000)
+      )
+
       return {
         sala,
         alumnos: alumnosSala.length,
         ultimaVezQueRegistro: ultimaFecha || null,
+        diasSinRegistrar,
+        necesitaAcompanamiento: diasSinRegistrar >= 7,
         diasPlanificados,
         jornadasCerradas,
         porEje,

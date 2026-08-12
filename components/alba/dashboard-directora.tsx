@@ -546,6 +546,31 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
 
       {/* Contenido principal */}
       <main className="max-w-6xl mx-auto p-4 space-y-4">
+        {/* Salas que hace una semana o mas que no registran. Lo que importa es
+            el registro: da cuenta de si se esta sosteniendo la secuencia.
+            No es un modal: queda a la vista mientras el caso exista. */}
+        {(() => {
+          const paraAcompanar = Object.values(resumenSalas).filter((r: any) => r?.necesitaAcompanamiento)
+          if (paraAcompanar.length === 0) return null
+          return (
+            <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900 mb-1.5">
+                {paraAcompanar.length === 1 ? "Una sala puede necesitar acompanamiento" : `${paraAcompanar.length} salas pueden necesitar acompanamiento`}
+              </p>
+              <ul className="space-y-0.5">
+                {paraAcompanar.map((r: any) => (
+                  <li key={r.sala} className="text-sm text-amber-800">
+                    <span className="font-semibold">{r.sala}</span>
+                    {r.ultimaVezQueRegistro
+                      ? ` — sin registrar hace ${r.diasSinRegistrar} dias`
+                      : " — sin registros en el cuatrimestre"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })()}
+
         {/* Grid de tarjetas por sala */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {salasVisibles.map(sala => {
@@ -910,6 +935,38 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                                 )}
                               </div>
                               
+                              {/* Las clases del cuatrimestre, en orden: una mirada
+                                  y se entiende como viene la sala. */}
+                              {sintesisData.clases?.length > 0 && (
+                                <div className="bg-muted/40 rounded-lg p-4">
+                                  <p className="text-sm font-semibold text-foreground">Las clases del cuatrimestre</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                                    {sintesisData.totalRealizadas} trabajadas
+                                    {sintesisData.totalSinRealizar > 0 && ` · ${sintesisData.totalSinRealizar} sin realizar`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {sintesisData.clases.map((c: any, i: number) => (
+                                      <div
+                                        key={i}
+                                        className={`rounded-md px-2 py-1 text-center border max-w-[120px] ${
+                                          c.realizada
+                                            ? "bg-green-100 border-green-400"
+                                            : "bg-red-100 border-red-400"
+                                        }`}
+                                        title={c.realizada ? "Trabajada" : "Sin realizar"}
+                                      >
+                                        <div className={`text-[10px] font-semibold leading-tight truncate ${c.realizada ? "text-green-900" : "text-red-900"}`}>
+                                          {c.nombre}
+                                        </div>
+                                        <div className={`text-[9px] ${c.realizada ? "text-green-700" : "text-red-700"}`}>
+                                          {c.eje}{c.fechaCorta ? ` ${c.fechaCorta}` : ""}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               {/* Ejes — conteos de chicos, sin porcentajes */}
                               {sintesisData.ejes?.map((eje: any) => {
                                 const hayRefuerzo = (eje.refuerzo || 0) > 0
@@ -928,17 +985,6 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                                     </div>
 
                                     <div className="p-4 space-y-3">
-                                      {eje.actividades?.length > 0 && (
-                                        <div>
-                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
-                                          <ul className="text-sm text-foreground space-y-0.5">
-                                            {eje.actividades.map((a: string, i: number) => (
-                                              <li key={i}>· {a}</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      )}
-
                                       <div className={`${colorFondo} rounded-lg p-3`}>
                                         <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
                                         <p className="text-sm text-foreground">{eje.comoEsta}</p>
