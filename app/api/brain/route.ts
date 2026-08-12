@@ -1287,6 +1287,62 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
 }
 
 const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
+// ── MATERNAL — SALA DE 2 ANOS ───────────────────────────────────────────
+// Los ejes son las CINCO CAPACIDADES del Diseno Curricular de CABA.
+// La capacidad es la lente con la que se observa; la alfabetizacion sigue
+// siendo el objetivo: toda actividad, sea de la capacidad que sea, tiene que
+// hacer trabajar el lenguaje.
+const SALAS_MATERNAL = ["PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBAMATERNAL"]
+
+function esDeMaternal(sala: string): boolean {
+  const s = (sala || "").toLowerCase().replace(/\s/g, "")
+  return SALAS_MATERNAL.some((ref) => s.includes(ref.toLowerCase().replace(/\s/g, "")))
+}
+
+const CAPACIDADES_MATERNAL = [
+  { key: "COM", nombre: "Comunicacion" },
+  { key: "AUT", nombre: "Autonomia para aprender" },
+  { key: "RES", nombre: "Resolucion de problemas" },
+  { key: "COL", nombre: "Compromiso y colaboracion" },
+  { key: "REF", nombre: "Pensamiento reflexivo y critico" },
+] as const
+
+const SECUENCIA_MATERNAL: Record<string, { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string }[]> = {
+  COM: [
+    { titulo: "Responde a su nombre y a consignas simples", objetivo: "Reconocer su nombre y responder a preguntas e instrucciones breves", descripcion: "En rondas y momentos de rutina, la docente nombra a cada nino y espera su respuesta: la mirada, un gesto, una palabra. Se dan consignas de un solo paso acompanadas de gesto.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Lengua Oral: responder preguntas e instrucciones verbales simples" },
+    { titulo: "Expresa lo que quiere con palabras", objetivo: "Usar el lenguaje para saludar, nombrar, pedir y llamar la atencion", descripcion: "Se generan situaciones donde decir algo tiene un efecto: pedir un objeto que esta a la vista pero fuera de alcance, saludar al entrar, elegir entre dos cosas nombrandolas.", materiales: ["Objetos conocidos de la sala"], dccaba: "DC CABA Maternal - Lengua Oral: expresar intenciones comunicativas" },
+    { titulo: "Suma palabras nuevas", objetivo: "Incorporar palabras para nombrar objetos y hechos del entorno", descripcion: "Se presenta un objeto o una escena nueva y se la nombra muchas veces, en frases distintas. Los ninos repiten, senalan y buscan. Se retoma la misma palabra en dias siguientes.", materiales: ["Objetos reales", "Imagenes grandes"], dccaba: "DC CABA Maternal - Lengua Oral: adquisicion de palabras nuevas" },
+    { titulo: "Conversa por turnos", objetivo: "Participar de intercambios de uno o dos turnos", descripcion: "Juegos de ida y vuelta donde la docente dice algo y espera. Se sostiene el silencio para dar lugar a la respuesta, sea palabra, gesto o vocalizacion, y se la retoma en palabras.", materiales: ["Titeres u objetos que aparecen y desaparecen"], dccaba: "DC CABA Maternal - Lengua Oral: intercambios de uno o dos turnos" },
+    { titulo: "Arma frases de dos o tres palabras", objetivo: "Comprender y producir oraciones cortas con orden sujeto-verbo-objeto", descripcion: "La docente modela frases cortas sobre lo que esta pasando y los ninos las completan o repiten. Se aprovechan las acciones reales de la sala para nombrarlas mientras suceden.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Lengua Oral: comprension y produccion de oraciones" },
+    { titulo: "Participa cuando se lee y se canta", objetivo: "Imitar, repetir o completar palabras y sonidos en cuentos y canciones", descripcion: "Lectura y canto con pausas a proposito para que los ninos completen. Se repite el mismo cuento o cancion varios dias hasta que anticipan lo que viene.", materiales: ["Libros de imagenes", "Canciones conocidas"], dccaba: "DC CABA Maternal - Lengua Oral: participar de situaciones de lectura y canto" },
+    { titulo: "Descubre que lo escrito dice algo", objetivo: "Reconocer la escritura como medio para comunicar", descripcion: "Se usan carteles con los nombres de los ninos en sus perchas y cajas. Se lee en voz alta senalando, para que descubran que esas marcas dicen siempre lo mismo.", materiales: ["Carteles con los nombres", "Libros"], dccaba: "DC CABA Maternal - Lengua Oral: reconocimiento de la escritura como medio comunicativo" },
+  ],
+  AUT: [
+    { titulo: "Explora los materiales a su modo", objetivo: "Explorar libremente objetos y materiales", descripcion: "Se ofrecen materiales variados sin consigna y se acompana nombrando lo que cada nino hace. La docente pone en palabras la exploracion: que agarra, que suena, que pasa.", materiales: ["Materiales de exploracion variados"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Elige entre dos propuestas", objetivo: "Tomar pequenas decisiones y sostenerlas", descripcion: "Se ofrecen dos opciones a la vez, nombrandolas, y se espera la eleccion. Se nombra lo que eligio y se lo acompana a sostenerlo hasta terminar.", materiales: ["Dos propuestas simultaneas"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Sostiene una actividad hasta terminarla", objetivo: "Mantener la atencion en una propuesta breve", descripcion: "Propuestas cortas con un final visible: llenar, encajar, guardar. Se anticipa en palabras cuanto falta y se celebra el cierre.", materiales: ["Materiales con inicio y fin claros"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Anticipa la rutina y la nombra", objetivo: "Reconocer y anticipar los momentos del dia", descripcion: "Se nombra siempre igual cada momento de la jornada y se pregunta que viene despues. Los ninos anticipan con palabras o gestos.", materiales: ["Imagenes de la rutina"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+  ],
+  RES: [
+    { titulo: "Descubre que sus acciones tienen efecto", objetivo: "Descubrir relaciones causa-efecto", descripcion: "Materiales donde una accion produce un resultado visible o sonoro. Se nombra la relacion: si lo empujas, cae; si lo agitas, suena.", materiales: ["Objetos sonoros", "Torres para derribar"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+    { titulo: "Prueba otra manera cuando no sale", objetivo: "Ensayar alternativas frente a una dificultad", descripcion: "Se ofrecen desafios simples que no salen al primer intento. La docente no resuelve: nombra el problema en voz alta y acompana el segundo intento.", materiales: ["Encastres", "Recipientes con tapa"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+    { titulo: "Pide ayuda con palabras", objetivo: "Usar el lenguaje para pedir lo que necesita", descripcion: "Situaciones donde hace falta ayuda y la docente espera el pedido antes de intervenir, ofreciendo la palabra si no aparece.", materiales: ["Frascos, cajas o envases dificiles de abrir"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Busca el modo de conseguir lo que quiere", objetivo: "Buscar modos de alcanzar un objetivo simple", descripcion: "Un objeto deseado a la vista pero fuera de alcance. Se acompana la busqueda del modo, nombrando cada intento.", materiales: ["Objetos conocidos", "Elementos para alcanzar"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+  ],
+  COL: [
+    { titulo: "Comparte el espacio con otros", objetivo: "Jugar cerca de otros compartiendo materiales", descripcion: "Propuestas en grupos pequenos con material suficiente. Se nombra lo que hace cada uno para que se miren entre ellos.", materiales: ["Material abundante"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Espera su turno", objetivo: "Esperar y respetar turnos en un juego", descripcion: "Juegos de ida y vuelta con un solo objeto que circula. Se nombra de quien es el turno y se sostiene la espera con palabras.", materiales: ["Una pelota o un objeto que circule"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Participa de una propuesta grupal", objetivo: "Sumarse a una actividad con todo el grupo", descripcion: "Canciones con movimiento, murales colectivos o juegos donde todos hacen lo mismo a la vez. Se nombra al grupo como grupo.", materiales: ["Canciones", "Papel afiche"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Ayuda a un companero o a la docente", objetivo: "Colaborar en tareas cotidianas de la sala", descripcion: "Guardar juntos, repartir, alcanzar algo a un companero. Se agradece nombrando lo que hizo.", materiales: ["Elementos de la rutina"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+  ],
+  REF: [
+    { titulo: "Explora y descubre que pasa", objetivo: "Descubrir efectos de sus acciones sobre los objetos", descripcion: "Materiales que cambian al manipularlos: agua, masa, arena. Se conversa sobre lo que pasa mientras pasa.", materiales: ["Agua", "Masa", "Arena"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+    { titulo: "Anticipa lo que va a pasar", objetivo: "Anticipar el resultado de una accion conocida", descripcion: "Se repite una secuencia conocida y se hace una pausa antes del final para que anticipen, con palabra o gesto.", materiales: ["Juegos de aparecer y desaparecer"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+    { titulo: "Dice que le gusta y que no", objetivo: "Expresar preferencias y elegir", descripcion: "Se presentan dos opciones y se pide elegir, nombrando el motivo si aparece. Se acepta y se nombra la eleccion.", materiales: ["Dos opciones a la vez"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
+    { titulo: "Reconoce lo conocido en algo nuevo", objetivo: "Relacionar lo nuevo con lo que ya conoce", descripcion: "Se presenta un objeto o imagen parecido a otro conocido y se conversa sobre en que se parecen y en que no.", materiales: ["Objetos e imagenes familiares"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
+  ],
+}
+
 function esde4Anios(sala: string): boolean {
   const s = sala.toLowerCase().replace(/\s/g, "")
   return SALAS_4_ANIOS.some(ref => s.includes(ref.replace(/\s/g, "")))
@@ -2261,13 +2317,17 @@ export async function POST(req: NextRequest) {
       // La IA ya no decide la progresion. El sistema calcula, con la evidencia
       // real de la sala, en que paso de cada secuencia esta y que eje necesita.
       const salaNombre = sala || "Girasoles"
-      const ejesPosibles: ("CF" | "CT" | "O" | "EA")[] =
-        semanaAnio >= 20 ? ["CF", "CT", "O", "EA"] : ["CF", "CT", "O"]
+      const esMaternal = esDeMaternal(salaNombre)
+      const ejesPosibles: string[] = esMaternal
+        ? CAPACIDADES_MATERNAL.map((c) => c.key)
+        : semanaAnio >= 20 ? ["CF", "CT", "O", "EA"] : ["CF", "CT", "O"]
 
       const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
       const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
+      CAPACIDADES_MATERNAL.forEach((c) => { yaDadasPorEje[c.key] = []; promedioPorEje[c.key] = 50; verdePorEjeInit.push(c.key) })
       // Porcentaje de chicos en verde por eje: es la "mayoria consolidada"
       const verdePorEje: Record<string, number> = { CF: 0, CT: 0, O: 0, EA: 0 }
+      const verdePorEjeInit: string[] = []
       const ultimaPorEjeSem: Record<string, number> = {}
 
       try {
@@ -2329,6 +2389,7 @@ export async function POST(req: NextRequest) {
         CF: "Conciencia Fonologica", CT: "Comprension de Textos",
         O: "Oralidad", EA: "Escritura",
       }
+      CAPACIDADES_MATERNAL.forEach((c) => { NOMBRE_EJE_LARGO[c.key] = c.nombre })
 
       // ── DECISION DE LA DOCENTE + CONSOLIDACION ──────────────────────────
       // Del ultimo cierre de cada eje sacamos: en que paso estaba, si la maestra
@@ -2364,10 +2425,20 @@ export async function POST(req: NextRequest) {
       const TOPE_REPETICIONES = 3
 
       const pasosDeLaSemana = ejesDeLaSemana.map((e) => {
+        // Maternal usa la secuencia de las cinco capacidades
+        if (esMaternal) {
+          const seqCap = SECUENCIA_MATERNAL[e] || []
+          const dadas = new Set((yaDadasPorEje[e] || []).map((t: string) => t.trim().toLowerCase()))
+          let idx = seqCap.findIndex((a: any) => !dadas.has(String(a.titulo).trim().toLowerCase()))
+          let repite = false
+          if (idx < 0) { idx = 0; repite = true }
+          return { eje: e, paso: seqCap[idx], indice: idx, esRepeticion: repite, motivo: "" }
+        }
+
         const ultimo = ultimoCierrePorEje[e]
 
         if (ultimo && ultimo.paso) {
-          const seqEje = SECUENCIA[e] || []
+          const seqEje = SECUENCIA[e as "CF" | "CT" | "O" | "EA"] || []
           const idx = seqEje.findIndex(
             (a) => a.titulo.trim().toLowerCase() === ultimo.paso.trim().toLowerCase()
           )
@@ -2390,7 +2461,7 @@ export async function POST(req: NextRequest) {
         }
 
         const r = calcularActividadDelDia(
-          e, yaDadasPorEje[e].length, promedioPorEje[e], salaNombre, yaDadasPorEje[e]
+          e as "CF" | "CT" | "O" | "EA", yaDadasPorEje[e].length, promedioPorEje[e], salaNombre, yaDadasPorEje[e]
         )
         return { eje: e, paso: r.actividad, indice: r.indice, esRepeticion: r.esRepeticion, motivo: "" }
       })
@@ -2426,8 +2497,28 @@ export async function POST(req: NextRequest) {
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
-- EDAD DE LOS NIÑOS: ${esde4Anios(salaNombre) ? "4 anos" : "5 anos"}
-${esde4Anios(salaNombre) ? `
+- EDAD DE LOS NIÑOS: ${esMaternal ? "2 anos (jardin maternal)" : esde4Anios(salaNombre) ? "4 anos" : "5 anos"}
+${esMaternal ? `
+ATENCION — ESTA ES UNA SALA DE 2 ANOS DEL JARDIN MATERNAL.
+
+Los ejes son las CINCO CAPACIDADES del Diseno Curricular, no los ejes de alfabetizacion.
+Pero el objetivo de fondo NO cambia: TODA actividad, sea de la capacidad que sea,
+tiene que hacer trabajar el LENGUAJE. La capacidad es la lente con la que se observa;
+la alfabetizacion es lo que se busca potenciar.
+
+En cada actividad tiene que quedar claro QUE SE DICE y QUE SE ESCUCHA: que nombra la
+docente, que palabra se repite, que se pregunta, que se espera que el nino diga o senale.
+
+Adapta TODO a los 2 anos:
+- Duracion: 5 a 10 minutos. A esta edad la atencion sostenida es muy breve.
+- UNA sola consigna, dicha en una frase corta y acompanada de gesto.
+- Todo corporal, manipulativo y con objetos reales. NADA de fichas, papel ni consignas escritas.
+- Grupos muy chicos o ronda con toda la sala, nunca trabajo individual en mesa.
+- La repeticion es central: la misma propuesta se repite muchos dias y asi se aprende.
+- Se aprende jugando y en las rutinas cotidianas (cambiado, merienda, guardado), no en "clases".
+- El adulto pone en palabras lo que el nino hace, siente y quiere: ese es el motor del lenguaje.
+- No se espera un resultado: se observa un proceso.
+` : esde4Anios(salaNombre) ? `
 ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 - Duracion: 10 a 15 minutos como maximo. Los de 4 no sostienen mas.
 - Consignas de UN SOLO paso por vez. Nada de "primero, luego, despues, finalmente".
@@ -2542,6 +2633,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
           // El eje y el paso los impone el sistema: si la IA devolvio otra cosa, se ignora.
           const decidido = pasosDeLaSemana[idx]
           const ejeFinal = decidido ? (decidido.eje === "EA" ? "Escritura" : decidido.eje) : s.eje
+          const nombreEjeFinal = NOMBRE_EJE_LARGO[String(decidido?.eje || "")] || ejeFinal
           const pasoNombre = decidido ? decidido.paso.titulo : (s.nivelSecuencia || "")
           return {
             dia: diasArray[idx] || s.dia,
