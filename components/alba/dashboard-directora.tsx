@@ -546,6 +546,31 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
 
       {/* Contenido principal */}
       <main className="max-w-6xl mx-auto p-4 space-y-4">
+        {/* Salas que hace una semana o mas que no registran. Lo que importa es
+            el registro: da cuenta de si se esta sosteniendo la secuencia.
+            No es un modal: queda a la vista mientras el caso exista. */}
+        {(() => {
+          const paraAcompanar = Object.values(resumenSalas).filter((r: any) => r?.necesitaAcompanamiento)
+          if (paraAcompanar.length === 0) return null
+          return (
+            <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900 mb-1.5">
+                {paraAcompanar.length === 1 ? "Una sala puede necesitar acompanamiento" : `${paraAcompanar.length} salas pueden necesitar acompanamiento`}
+              </p>
+              <ul className="space-y-0.5">
+                {paraAcompanar.map((r: any) => (
+                  <li key={r.sala} className="text-sm text-amber-800">
+                    <span className="font-semibold">{r.sala}</span>
+                    {r.ultimaVezQueRegistro
+                      ? ` — sin registrar hace ${r.diasSinRegistrar} dias`
+                      : " — sin registros en el cuatrimestre"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })()}
+
         {/* Grid de tarjetas por sala */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {salasVisibles.map(sala => {
