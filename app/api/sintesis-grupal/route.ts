@@ -71,6 +71,33 @@ export async function GET(req: NextRequest) {
 
     const supabase = getSupabase()
 
+    // Actividades que quedaron sin realizar en el cuatrimestre, por eje
+    const noRealizadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], E: [] }
+    const fechasNoRealizadas: Record<string, string> = {}
+    try {
+      const cierres = await traerTodo(
+        supabase
+          .from("registro_cierre")
+          .select("eje, actividad_alba, evaluacion_general, fecha")
+          .eq("sala", sala)
+          .eq("evaluacion_general", "no_realizada")
+          .gte("fecha", INICIO_CUATRIMESTRE)
+      )
+      const vistos = new Set<string>()
+      cierres.forEach((c: any) => {
+        const nom = String(c.actividad_alba || "").trim()
+        if (!nom) return
+        const e = normalizarEje(c.eje)
+        const k = `${e}::${nom.toLowerCase()}`
+        if (vistos.has(k)) return
+        vistos.add(k)
+        noRealizadasPorEje[e].push(nom)
+        fechasNoRealizadas[k] = fechaAR(c.fecha)
+      })
+    } catch (e) {
+      console.error("[v0] Error leyendo no realizadas:", e)
+    }
+
     const { data: alumnos } = await supabase.from("alumnos").select("id, nombre").eq("sala", sala)
     const listaAlumnos = alumnos || []
 
@@ -162,11 +189,15 @@ export async function GET(req: NextRequest) {
         comoEsta = `${logrado} de ${evaluados} chicos vienen logrando lo trabajado, ${enProceso} estan en proceso y ${refuerzo} necesitan refuerzo.`
       }
 
+      const sinRealizar = noRealizadasPorEje[eje.key] || []
+
       return {
         eje: eje.key,
         nombre: eje.nombre,
         clases: actividades.length,
         actividades,
+        sinRealizar,
+        cantidadSinRealizar: sinRealizar.length,
         logrado,
         enProceso,
         refuerzo,
@@ -176,7 +207,37 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Total de clases distintas de alfabetizacion en el cuatrimestre
+    // ── Linea de tiempo: todas las clases del cuatrimestre, en orden ──────
+    // Una mirada y se entiende como viene: verde lo trabajado, rojo lo que
+    // quedo sin realizar. Sin segmentar por eje, que se lee en cada tarjeta.
+    const clasesMapa: Record<string, { nombre: string; eje: string; fecha: string; realizada: boolean }> = {}
+
+    registros.forEach((r: any) => {
+      const nom = String(r.actividad || "").trim()
+      if (!nom) return
+      const e = normalizarEje(r.eje)
+      const f = fechaAR(r.fecha || r.created_at)
+      const k = `${e}::${nom.toLowerCase()}`
+      if (!clasesMapa[k] || f < clasesMapa[k].fecha) {
+        clasesMapa[k] = { nombre: nom, eje: e, fecha: f, realizada: true }
+      }
+    })
+
+    Object.entries(noRealizadasPorEje).forEach(([e, nombres]) => {
+      nombres.forEach((nom: string) => {
+        const k = `${e}::${nom.toLowerCase()}`
+        if (clasesMapa[k]) return   // si tambien se evaluo, gana la evidencia
+        clasesMapa[k] = { nombre: nom, eje: e, fecha: fechasNoRealizadas[k] || "", realizada: false }
+      })
+    })
+
+    const clases = Object.values(clasesMapa)
+      .sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""))
+      .map((c) => ({ ...c, fechaCorta: ddmm(c.fecha) }))
+
+    const totalRealizadas = clases.filter((c) => c.realizada).length
+    const totalSinRealizar = clases.length - totalRealizadas
+
     const todasActividades = new Set<string>()
     registros.forEach((r: any) => {
       if (r.actividad) todasActividades.add(String(r.actividad).trim().toLowerCase())
@@ -189,6 +250,9 @@ export async function GET(req: NextRequest) {
       periodo: "Segundo cuatrimestre",
       totalAlumnos: listaAlumnos.length,
       totalClases: todasActividades.size,
+      clases,
+      totalRealizadas,
+      totalSinRealizar,
       periodoDesde: ddmm(desde === "9999-99-99" ? "" : desde),
       periodoHasta: ddmm(hasta),
       ejes,
