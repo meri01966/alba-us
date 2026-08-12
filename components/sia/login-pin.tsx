@@ -12,6 +12,16 @@ const PIN_POR_SALA: Record<string, string> = {
   "2026TM": "Nogales TM",
   "2026TT": "Nogales TT",
 }
+
+// Salas de maternal: entran a /maestra-maternal, que es otra pantalla
+const PIN_MATERNAL: Record<string, string> = {
+  "1111":   "PRUEBA MATERNAL",
+  "2026P1": "PINITOS TM",
+  "2026P2": "PINITOS TT",
+  "2026N1": "NARANJOS TM",
+  "2026N2": "NARANJOS TT",
+}
+
 const PIN_DIRECCION = "7788"
 const PIN_ADMIN = "0000"
 
@@ -78,6 +88,19 @@ export function LoginPin({ onIngreso }: LoginPinProps) {
         localStorage.removeItem(SESION_SALA)
       } catch {}
       onIngreso({ rol: "direccion", sala: null })
+      return
+    }
+
+    // Maternal: mismo esquema que maestra, pero la pantalla es otra
+    const salaMat = PIN_MATERNAL[pinLimpio]
+    if (salaMat) {
+      try {
+        localStorage.setItem(SESION_ROL, "maestra")
+        localStorage.setItem(SESION_SALA, salaMat)
+        // El dashboard de maternal lee la sala de SU propia clave
+        localStorage.setItem("maternal-sala-activa", salaMat)
+      } catch {}
+      window.location.href = "/maestra-maternal"
       return
     }
 

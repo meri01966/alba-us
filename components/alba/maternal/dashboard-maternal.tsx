@@ -5,11 +5,11 @@ import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, Gradu
 
 // Salas de maternal disponibles (2 y 3 años)
 const SALAS_MATERNAL = [
-  "Naranjos TM",      // 3 años turno mañana
-  "Naranjos TT",      // 3 años turno tarde
+  "NARANJOS TM",      // 3 años turno mañana
+  "NARANJOS TT",      // 3 años turno tarde
   "PINITOS TM",       // 2 años turno mañana
   "PINITOS TT",       // 2 años turno tarde
-  "Sala de prueba"
+  "PRUEBA MATERNAL"
 ]
 
 // Dias de la semana
