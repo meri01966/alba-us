@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { CronogramaVerModal } from "@/components/sia/cronograma-ver-modal"
 
-type Eje = "CF" | "CT" | "O"
+type Eje = "CF" | "CT" | "O" | "E"
 type Estado = "green" | "yellow" | "red"
 
 interface Alumno {
@@ -48,6 +48,16 @@ const EJES: Record<Eje, { label: string; color: string }> = {
   CF: { label: "Conciencia Fonologica", color: "#3b82f6" },
   CT: { label: "Comprension de Textos", color: "#10b981" },
   O:  { label: "Oralidad", color: "#f59e0b" },
+  E:  { label: "Escritura", color: "#8b5cf6" },
+}
+
+// A partir del MARTES se avisa si una sala todavia no planifico la semana.
+// El lunes no: es el dia en que muchas maestras planifican.
+function corresponsdeAvisarSinPlanificar(): boolean {
+  const ahora = new Date()
+  const ar = new Date(ahora.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }))
+  const dia = ar.getDay() // 0 domingo, 1 lunes, 2 martes...
+  return dia >= 2 && dia <= 5
 }
 
 const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
@@ -147,6 +157,9 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   
   // Chat/Mensajes
   const [mensajesSalas, setMensajesSalas] = useState<Record<string, any[]>>({})
+  // Resumen por sala: dice si planificaron la semana y si vienen registrando
+  const [resumenSalas, setResumenSalas] = useState<Record<string, any>>({})
+  const [totalesReales, setTotalesReales] = useState<{ alumnos?: number; evaluaciones?: number }>({})
   const [chatSala, setChatSala] = useState<string | null>(null)
   const [nuevoMensaje, setNuevoMensaje] = useState("")
   const [enviandoMensaje, setEnviandoMensaje] = useState(false)
@@ -172,6 +185,20 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   async function cargarMensajes() {
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
+      // Resumen por sala (planificacion y registro de la semana)
+      try {
+        const resR = await fetch(`${base}/api/directora-resumen`, { cache: "no-store" })
+        const dataR = await resR.json()
+        if (dataR?.ok && Array.isArray(dataR.salas)) {
+          const mapa: Record<string, any> = {}
+          dataR.salas.forEach((s: any) => { mapa[s.sala] = s })
+          setResumenSalas(mapa)
+          setTotalesReales({ alumnos: dataR.totalAlumnos, evaluaciones: dataR.totalEvaluaciones })
+        }
+      } catch (e) {
+        console.error("[v0] Error cargando resumen de salas:", e)
+      }
+
       const res = await fetch(`${base}/api/mensajes-directora`, { cache: "no-store" })
       if (res.ok) {
         const json = await res.json()
@@ -344,7 +371,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     
     if (tipo === "sintesis") {
       try {
-        const res = await fetch(`${base}/api/reporte-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        const res = await fetch(`${base}/api/sintesis-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         if (res.ok) {
           const data = await res.json()
           setSintesisData(data)
@@ -483,7 +510,9 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
 
   // KPIs globales
   const totalAlumnos = alumnos.length
-  const totalRegistros = registros.length
+  // Los totales del encabezado salen del endpoint paginado: la consulta directa
+  // corta en 1000 filas y mostraba siempre "1000 evaluaciones".
+  const totalRegistros = totalesReales.evaluaciones ?? registros.length
   const alertasTotal = Object.values(salasData).reduce((acc, s) => acc + s.alertasCount, 0)
 
   return (
@@ -531,6 +560,11 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     <div>
                       <h3 className="font-bold text-foreground">{sala}</h3>
                       <p className="text-xs text-muted-foreground">{data.totalAlumnos} alumnos</p>
+                      {corresponsdeAvisarSinPlanificar() && resumenSalas[sala] && resumenSalas[sala].diasPlanificados === 0 && (
+                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          Semana sin planificar
+                        </span>
+                      )}
                     </div>
                     {/* Boton de chat estilo WhatsApp */}
                     <button
@@ -556,27 +590,46 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     </button>
                   </div>
                   
-                  {/* Grafico de barras por eje - clickeable para ver detalle */}
-                  <div className="flex items-center justify-between">
-                    <MiniBarChart 
-                      cf={data.promediosPorEje.CF} 
-                      ct={data.promediosPorEje.CT} 
-                      o={data.promediosPorEje.O}
-                      actCF={data.actividadesPorEje?.CF || 0}
-                      actCT={data.actividadesPorEje?.CT || 0}
-                      actO={data.actividadesPorEje?.O || 0}
-                      onClickEje={(eje) => {
-                        setModalSala(sala)
-                        setEjeSeleccionado(eje)
-                        setModalTipo("detalle_eje")
-                      }}
-                    />
-                    <div className="text-right">
-                      <p className="text-[10px] text-muted-foreground">CF: {data.promediosPorEje.CF}%</p>
-                      <p className="text-[10px] text-muted-foreground">CT: {data.promediosPorEje.CT}%</p>
-                      <p className="text-[10px] text-muted-foreground">O: {data.promediosPorEje.O}%</p>
+                  {/* Estado de la sala en conteos, sin porcentajes */}
+                  {resumenSalas[sala] && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>
+                          <span className="font-semibold text-foreground">{resumenSalas[sala].diasPlanificados}</span> dias planificados
+                        </span>
+                        <span>
+                          <span className="font-semibold text-foreground">{resumenSalas[sala].jornadasCerradas}</span> jornadas cerradas
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-muted-foreground">
+                        {resumenSalas[sala].ultimaVezQueRegistro
+                          ? <>Ultimo registro: <span className="font-semibold text-foreground">{resumenSalas[sala].ultimaVezQueRegistro.slice(8, 10)}/{resumenSalas[sala].ultimaVezQueRegistro.slice(5, 7)}</span></>
+                          : <span className="font-semibold text-red-600">Sin registros este cuatrimestre</span>}
+                      </p>
+
+                      {/* Los cuatro ejes con su color de siempre. El color aca es
+                          identidad del eje, NO estado: el verde y el rojo de
+                          evaluado / sin evaluar viven en el cronograma. */}
+                      <div className="flex items-center gap-3 pt-0.5">
+                        {(["CF", "CT", "O", "E"] as Eje[]).map((k) => {
+                          const e = resumenSalas[sala].porEje?.[k] || { clases: 0 }
+                          return (
+                            <button
+                              key={k}
+                              onClick={() => { setModalSala(sala); setEjeSeleccionado(k); setModalTipo("detalle_eje") }}
+                              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+                              title={`${EJES[k].label}: ${e.clases} ${e.clases === 1 ? "clase" : "clases"}`}
+                            >
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: EJES[k].color }} />
+                              <span className="text-[10px] text-muted-foreground">{k}</span>
+                              <span className="text-[11px] font-semibold text-foreground">{e.clases}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Indicador de alertas */}
                   {data.alertasCount > 0 && (
@@ -667,6 +720,16 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
             
             {/* Contenido del modal */}
             <div className="p-5 overflow-y-auto max-h-[calc(85vh-80px)]">
+              {/* Aviso: la sala todavia no planifico la semana en curso */}
+              {corresponsdeAvisarSinPlanificar() && resumenSalas[modalSala] && resumenSalas[modalSala].diasPlanificados === 0 && (
+                <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-lg px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-900">Semana aun sin planificar</p>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Esta sala todavia no cargo actividades para la semana en curso.
+                  </p>
+                </div>
+              )}
+
               {loadingModal ? (
                 <div className="py-12 text-center">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
@@ -847,52 +910,46 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                                 )}
                               </div>
                               
-                              {/* Ejes - informacion clara sin porcentajes */}
+                              {/* Ejes — conteos de chicos, sin porcentajes */}
                               {sintesisData.ejes?.map((eje: any) => {
-                                // Determinar estado visual
-                                const estado = eje.pctLogrado >= 70 ? "bien" : eje.pctLogrado >= 50 ? "avanzando" : eje.pctRefuerzo >= 40 ? "atencion" : "proceso"
-                                const colorBorde = estado === "bien" ? "border-green-300" : estado === "atencion" ? "border-red-300" : "border-amber-300"
-                                const colorFondo = estado === "bien" ? "bg-green-50" : estado === "atencion" ? "bg-red-50" : "bg-amber-50"
-                                
+                                const hayRefuerzo = (eje.refuerzo || 0) > 0
+                                const sinDatos = (eje.evaluados || 0) === 0
+                                const colorBorde = sinDatos ? "border-slate-200" : hayRefuerzo ? "border-red-300" : "border-green-300"
+                                const colorFondo = sinDatos ? "bg-slate-50" : hayRefuerzo ? "bg-red-50" : "bg-green-50"
+
                                 return (
                                   <div key={eje.eje} className={`border-2 ${colorBorde} rounded-lg overflow-hidden`}>
-                                    {/* Cabecera del eje */}
                                     <div className="px-4 py-3 border-b border-border flex items-center gap-2" style={{ backgroundColor: `${EJES[eje.eje as Eje]?.color}15` }}>
                                       <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: EJES[eje.eje as Eje]?.color }}>{eje.eje}</span>
                                       <span className="text-sm font-semibold text-foreground">{eje.nombre}</span>
-                                      <span className="text-xs text-muted-foreground ml-auto">{eje.totalClases} actividades</span>
+                                      <span className="text-xs text-muted-foreground ml-auto">
+                                        {eje.clases === 1 ? "1 clase" : `${eje.clases} clases`}
+                                      </span>
                                     </div>
-                                    
+
                                     <div className="p-4 space-y-3">
-                                      {/* Que trabajamos */}
-                                      <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
-                                        <p className="text-sm text-foreground">{eje.txt_queTrabajaamos}</p>
-                                      </div>
-                                      
-                                      {/* Como lo trabajamos */}
-                                      {eje.metodologias?.length > 0 && (
+                                      {eje.actividades?.length > 0 && (
                                         <div>
-                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Como lo trabajamos:</p>
-                                          <p className="text-sm text-foreground">{eje.txt_comoLoTrabajaamos}</p>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Estado del grupo - mensaje claro */}
-                                      <div className={`${colorFondo} rounded-lg p-3`}>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
-                                        <p className="text-sm text-foreground">{eje.txt_queAprendioElGrupo}</p>
-                                      </div>
-                                      
-                                      {/* Sugerencias de ALBA solo si hay situaciones importantes */}
-                                      {(eje.pctRefuerzo >= 25 || eje.tendencia === "necesita_apoyo") && (
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                          <p className="text-xs font-semibold text-blue-800 mb-1">Sugerencia de ALBA:</p>
-                                          <ul className="text-xs text-blue-700 space-y-1">
-                                            {eje.sugerenciasContinuacion?.slice(0, 2).map((s: string, i: number) => (
-                                              <li key={i}>• {s}</li>
+                                          <p className="text-xs font-semibold text-muted-foreground mb-1">Que trabajamos:</p>
+                                          <ul className="text-sm text-foreground space-y-0.5">
+                                            {eje.actividades.map((a: string, i: number) => (
+                                              <li key={i}>· {a}</li>
                                             ))}
                                           </ul>
+                                        </div>
+                                      )}
+
+                                      <div className={`${colorFondo} rounded-lg p-3`}>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-1">Como esta el grupo:</p>
+                                        <p className="text-sm text-foreground">{eje.comoEsta}</p>
+                                      </div>
+
+                                      {eje.necesitanApoyo?.length > 0 && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                          <p className="text-xs font-semibold text-amber-800 mb-1">
+                                            {eje.necesitanApoyo.length === 1 ? "Necesita refuerzo:" : "Necesitan refuerzo:"}
+                                          </p>
+                                          <p className="text-sm text-amber-900">{eje.necesitanApoyo.join(", ")}</p>
                                         </div>
                                       )}
                                     </div>

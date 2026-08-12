@@ -24,6 +24,23 @@ function getSupabase() {
   return createClient(SUPABASE_URL, SUPABASE_KEY)
 }
 
+// Supabase corta en 1000 filas por consulta: esto trae todo, de a mil por vez.
+async function traerTodo(query: any): Promise<any[]> {
+  const PAGINA = 1000
+  const acumulado: any[] = []
+  for (let desde = 0; desde < 50000; desde += PAGINA) {
+    const { data, error } = await query.range(desde, desde + PAGINA - 1)
+    if (error) {
+      console.error("[v0] Error paginando:", error.message)
+      break
+    }
+    const filas = data || []
+    acumulado.push(...filas)
+    if (filas.length < PAGINA) break
+  }
+  return acumulado
+}
+
 function normalizarEje(valor: string): "CF" | "CT" | "O" | "E" {
   const e = (valor || "").trim().toUpperCase()
   if (e === "CT") return "CT"
@@ -64,13 +81,13 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const { data: regs } = await supabase
-      .from("seguimiento")
-      .select("alumno_id, eje, estado, actividad, fecha, created_at")
-      .in("alumno_id", listaAlumnos.map((a: any) => a.id))
-      .gte("fecha", INICIO_CUATRIMESTRE)
-
-    const registros = regs || []
+    const registros = await traerTodo(
+      supabase
+        .from("seguimiento")
+        .select("alumno_id, eje, estado, actividad, fecha, created_at")
+        .in("alumno_id", listaAlumnos.map((a: any) => a.id))
+        .gte("fecha", INICIO_CUATRIMESTRE)
+    )
 
     if (registros.length === 0) {
       return NextResponse.json({
