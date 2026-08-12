@@ -1292,7 +1292,7 @@ const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
 // La capacidad es la lente con la que se observa; la alfabetizacion sigue
 // siendo el objetivo: toda actividad, sea de la capacidad que sea, tiene que
 // hacer trabajar el lenguaje.
-const SALAS_MATERNAL = ["PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBAMATERNAL"]
+const SALAS_MATERNAL = ["PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBA MATERNAL"]
 
 function esDeMaternal(sala: string): boolean {
   const s = (sala || "").toLowerCase().replace(/\s/g, "")
