@@ -53,6 +53,7 @@ interface Actividad {
   alfabetizacion?: boolean // marcada como actividad de alfabetizacion (sugerida por ALBA o cargada por la maestra)
   origen?: "alba" | "docente" | "red"
   origenTexto?: string
+  evaluada?: boolean
 }
 
 interface DiaData {
@@ -63,6 +64,7 @@ interface DiaData {
   edFisica: string
   musica: string
   ingles: string
+  diaFinalizado?: boolean
 }
 
 interface ClaseEspecial {
@@ -180,6 +182,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                 alfabetizacion: a?.alfabetizacion  ?? false,
                 origen:         a?.origen          ?? "docente",
                 eje:            a?.eje             ?? undefined,
+                evaluada:       a?.evaluada,
               })) ?? []
             cronogramaCargado[dia] = {
               fecha:       diaGuardado?.fecha       || diaBase.fecha,
@@ -189,6 +192,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
               edFisica:    diaGuardado?.edFisica     || "",
               musica:      diaGuardado?.musica       || "",
               ingles:      diaGuardado?.ingles       || "",
+              diaFinalizado: diaGuardado?.diaFinalizado === true,
             }
           })
           setCronograma(cronogramaCargado)
@@ -429,6 +433,33 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     }
   }
 
+  // Marcar un dia que quedo atras como no realizado, para que la secuencia
+  // no se trabe. Queda registrado que NO se hizo y ALBA la puede reofrecer.
+  async function marcarNoSeHizo(dia: string) {
+    try {
+      await fetch(`/api/cronograma-jardin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "no_se_hizo", sala, dia, semana_inicio: semanaInicioActual }),
+      })
+      setCronograma((prev) => ({ ...prev, [dia]: { ...prev[dia], diaFinalizado: true } }))
+    } catch (e) {
+      console.error("[v0] Error marcando el dia como no realizado:", e)
+    }
+  }
+
+  // Un dia se puede saltear solo si YA PASO y todavia no se cerro
+  function sePuedeSaltear(dia: string): boolean {
+    const d = cronograma[dia]
+    if (!d || d.diaFinalizado) return false
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+    if (!d.fecha || d.fecha >= hoy) return false
+    // Si ya tiene evaluacion, no se puede marcar como no realizada
+    return (d.actividades || []).some(
+      (a: any) => a?.alfabetizacion && (a?.nombre || "").trim() && a?.evaluada !== true
+    )
+  }
+
   // ── Actividades ────────────────────────────────────────────────────
   function actualizarCampo(dia: string, campo: keyof DiaData, valor: string) {
     setCronograma((prev) => ({ ...prev, [dia]: { ...prev[dia], [campo]: valor } }))
@@ -603,6 +634,16 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                       <div>
                         <span className="font-bold text-sm text-white">{dia}</span>
                         <span className="text-[10px] text-white/60 block">{cronograma[dia]?.fecha && formatearFecha(cronograma[dia].fecha)}</span>
+                        {sePuedeSaltear(dia) && (
+                          <button
+                            type="button"
+                            onClick={() => marcarNoSeHizo(dia)}
+                            className="mt-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-white/90 border border-white/25 transition-colors"
+                            title="Marcar que esta actividad no se realizo y seguir con el proximo dia"
+                          >
+                            No se hizo
+                          </button>
+                        )}
                       </div>
                       {clasesDelDia.length > 0 && (
                         <div className="flex flex-wrap gap-1 justify-end">
@@ -702,12 +743,14 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                  {DIAS.indexOf(dia as (typeof DIAS)[number]) > 0 && (act.nombre || "").trim() !== "" && (
+                                  {/* No se mueve nada de un dia ya cerrado: esa evidencia
+                                      quedo guardada con esa fecha. */}
+                                  {!cronograma[dia]?.diaFinalizado && DIAS.indexOf(dia as (typeof DIAS)[number]) > 0 && (act.nombre || "").trim() !== "" && (
                                     <button type="button" title="Mover al dia anterior" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, -1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
                                       <ChevronLeft className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>
                                   )}
-                                  {DIAS.indexOf(dia as (typeof DIAS)[number]) < DIAS.length - 1 && (act.nombre || "").trim() !== "" && (
+                                  {!cronograma[dia]?.diaFinalizado && DIAS.indexOf(dia as (typeof DIAS)[number]) < DIAS.length - 1 && (act.nombre || "").trim() !== "" && (
                                     <button type="button" title="Mover al dia siguiente" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, 1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
                                       <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>

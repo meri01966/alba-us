@@ -27,8 +27,9 @@ interface Actividad {
   desarrollo?: string
   materiales?: string
   alfabetizacion?: boolean
-  origen?: "alba" | "docente"
+  origen?: "alba" | "docente" | "red"
   eje?: string
+  evaluada?: boolean
 }
 
 interface DiaData {
@@ -48,6 +49,13 @@ function formatearFecha(fecha: string): string {
   const [y, m, d] = fecha.split("-")
   const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
   return `${parseInt(d)} ${meses[parseInt(m) - 1]}`
+}
+
+// Un dia se considera pasado si su fecha es anterior a hoy (hora de Argentina)
+function yaPaso(fecha: string): boolean {
+  if (!fecha) return false
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  return fecha < hoy
 }
 
 function esHoy(fecha: string): boolean {
@@ -78,27 +86,45 @@ function SeccionDetalle({ label, texto }: { label: string; texto: string }) {
   )
 }
 
-function CardActividad({ act, origen }: { act: Actividad; origen: "alba" | "docente" }) {
+function CardActividad({ act, origen, fecha }: { act: Actividad; origen: "alba" | "docente"; fecha?: string }) {
   const ejeColor = act.eje ? (EJE_COLOR[act.eje] || EJE_COLOR.CF) : EJE_COLOR.CF
   const esAlba = origen === "alba"
 
+  // El color de la tarjeta dice UNA sola cosa: si hay evidencia o no.
+  // El eje se sigue leyendo en la etiqueta de arriba, escrito.
+  const evaluada = act.evaluada === true
+  const pendiente = esAlba && !evaluada && yaPaso(fecha || "")
+  const estilo = !esAlba
+    ? { borde: "border-slate-200", fondo: "bg-slate-50", texto: "text-slate-500" }
+    : evaluada
+    ? { borde: "border-green-500", fondo: "bg-green-200", texto: "text-green-900" }
+    : pendiente
+    ? { borde: "border-red-400", fondo: "bg-red-200", texto: "text-red-900" }
+    : { borde: "border-slate-200", fondo: "bg-slate-50", texto: "text-slate-600" }
+
   return (
-    <div className={`rounded-2xl border ${esAlba ? ejeColor.border : "border-slate-200"} overflow-hidden`}>
+    <div className={`rounded-2xl border-2 ${estilo.borde} overflow-hidden`}>
       {/* Header de la card */}
-      <div className={`flex items-center gap-2 px-4 py-3 ${esAlba ? ejeColor.bg : "bg-slate-50"}`}>
+      <div className={`flex items-center gap-2 px-4 py-3 ${estilo.fondo}`}>
         {esAlba
-          ? <Sparkles className={`w-4 h-4 flex-shrink-0 ${ejeColor.text}`} />
+          ? <Sparkles className={`w-4 h-4 flex-shrink-0 ${estilo.texto}`} />
           : <BookOpen className="w-4 h-4 flex-shrink-0 text-slate-500" />
         }
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${esAlba ? ejeColor.text : "text-slate-500"}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${estilo.texto}`}>
               {esAlba ? `ALBA — ${act.eje || "Alfabetizacion"}` : "Actividad docente"}
             </span>
             {act.eje && esAlba && (
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${ejeColor.tag}`}>
                 {act.eje}
               </span>
+            )}
+            {esAlba && evaluada && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-600 text-white">Evaluada</span>
+            )}
+            {esAlba && pendiente && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-600 text-white">Sin evaluar</span>
             )}
           </div>
         </div>
@@ -231,10 +257,10 @@ export function CronogramaVerModal({ open, onClose, sala, cronograma, clasesEspe
                   )}
                   {/* Actividades — con todos los detalles */}
                   <div className="flex-1 px-3 py-3 space-y-3">
-                    {actAlba && <CardActividad act={actAlba} origen="alba" />}
+                    {actAlba && <CardActividad act={actAlba} origen="alba" fecha={fecha} />}
 
                     {actDocente.map((act, i) => (
-                      <CardActividad key={i} act={act} origen="docente" />
+                      <CardActividad key={i} act={act} origen="docente" fecha={fecha} />
                     ))}
 
                     {!actAlba && actDocente.length === 0 && (

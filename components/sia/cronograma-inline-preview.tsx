@@ -17,8 +17,9 @@ interface Actividad {
   desarrollo?: string
   materiales?: string
   alfabetizacion?: boolean
-  origen?: "alba" | "docente"
+  origen?: "alba" | "docente" | "red"
   eje?: string
+  evaluada?: boolean
 }
 
 interface DiaData {
@@ -43,10 +44,24 @@ const CONFIG_CLASES: Record<TipoClase, { label: string; icon: React.ElementType;
   computacion: { label: "Computacion", icon: Monitor,  color: "text-teal-700",   bg: "bg-teal-100" },
 }
 
+// Los cuatro ejes con los colores que ya usa el resto de la app.
+// Este color es IDENTIDAD del eje. El estado (evaluada / sin evaluar) se muestra
+// aparte, en el fondo y el borde de la tarjeta.
 const EJE_COLOR: Record<string, { bg: string; text: string; border: string }> = {
-  CF:        { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
-  CT:        { bg: "bg-sky-50",     text: "text-sky-700",     border: "border-sky-200" },
-  Escritura: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  CF:        { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
+  CT:        { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  O:         { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  Oralidad:  { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  E:         { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  EA:        { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  Escritura: { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+}
+
+// Un dia se considera pasado si su fecha es anterior a hoy (hora de Argentina)
+function yaPaso(fecha: string): boolean {
+  if (!fecha) return false
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  return fecha < hoy
 }
 
 function getLunesSemana(): Date {
@@ -219,7 +234,20 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                     <button
                       type="button"
                       onClick={() => setVerModalOpen(true)}
-                      className={`w-full text-left rounded-xl border ${ejeColor.border} ${ejeColor.bg} px-2 py-2 hover:opacity-80 transition-opacity`}
+                      className={`w-full text-left rounded-xl border-2 px-2 py-2 hover:opacity-80 transition-opacity ${
+                        actAlba.evaluada === true
+                          ? "border-green-500 bg-green-200"
+                          : yaPaso(fecha)
+                          ? "border-red-400 bg-red-200"
+                          : "border-slate-200 bg-slate-50"
+                      }`}
+                      title={
+                        actAlba.evaluada === true
+                          ? "Evaluada"
+                          : yaPaso(fecha)
+                          ? "Ya paso y quedo sin evaluar"
+                          : ""
+                      }
                     >
                       <div className="flex items-center gap-1 mb-0.5">
                         <Sparkles className={`w-2.5 h-2.5 flex-shrink-0 ${ejeColor.text}`} />
@@ -228,7 +256,9 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                         </span>
                       </div>
                       {/* Solo nombre */}
-                      <p className="text-[11px] font-semibold text-slate-800 leading-snug line-clamp-2">
+                      <p className={`text-[11px] font-semibold leading-snug line-clamp-2 ${
+                        actAlba.evaluada === true ? "text-green-900" : yaPaso(fecha) ? "text-red-900" : "text-slate-800"
+                      }`}>
                         {actAlba.nombre}
                       </p>
                     </button>

@@ -185,7 +185,8 @@ export async function GET(req: Request) {
           const nombre = String(a?.nombre || "").trim()
           if (!nombre) return a
           // Solo las que pasan por ALBA se evaluan: la secuencia, el repertorio
-          // de la maestra y las de la red. El resto de la jornada queda neutro.
+          // de la maestra y las de la red. Las demas actividades de la jornada
+          // no llevan el campo y en pantalla quedan neutras, sin color.
           const pasaPorAlba = a?.alfabetizacion === true || a?.origen === "alba"
           if (!pasaPorAlba) return a
           return { ...a, evaluada: evaluadas.has(`${sem.semana_inicio}::${nombre.toLowerCase()}`) }
@@ -225,6 +226,27 @@ export async function GET(req: Request) {
   const semanaUsada = semanaObjetivo
   const lunesUsado = lunesObjetivo
 
+  // ── Que actividades de ESTA semana ya tienen evaluacion ───────────────
+  // Se cruza por semana (no por dia): la maestra suele evaluar al dia siguiente.
+  const evaluadasSemana = new Set<string>()
+  try {
+    const { data: alumnosSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+    const ids = (alumnosSala || []).map((a: any) => a.id)
+    if (ids.length > 0) {
+      const desde = lunesUsado.toISOString().split("T")[0]
+      const { data: regsSem } = await supabase
+        .from("seguimiento")
+        .select("actividad, fecha, created_at")
+        .in("alumno_id", ids)
+        .gte("fecha", desde)
+      ;(regsSem || []).forEach((r: any) => {
+        if (r.actividad) evaluadasSemana.add(String(r.actividad).trim().toLowerCase())
+      })
+    }
+  } catch (e) {
+    console.error("[v0] Error marcando evaluadas de la semana:", e)
+  }
+
   const cronograma: Record<string, any> = {}
   DIAS.forEach((dia, idx) => {
     const fecha = new Date(lunesUsado)
@@ -234,10 +256,18 @@ export async function GET(req: Request) {
       fecha: fecha.toISOString().split("T")[0],
       recibimiento: registro?.recibimiento || "",
       intercambio: registro?.intercambio || "",
-      actividades: registro?.actividades || [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }],
+      actividades: (registro?.actividades || [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }]).map((a: any) => {
+        const nombre = String(a?.nombre || "").trim()
+        const pasaPorAlba = a?.alfabetizacion === true || a?.origen === "alba"
+        if (!nombre || !pasaPorAlba) return a
+        return { ...a, evaluada: evaluadasSemana.has(nombre.toLowerCase()) }
+      }),
       edFisica: registro?.ed_fisica || "",
       musica: registro?.musica || "",
       ingles: registro?.ingles || "",
+      // Lo necesita el cronograma para saber si un dia ya se cerro y poder
+      // ofrecer "No se hizo" solo en los dias que quedaron atras sin cerrar.
+      diaFinalizado: registro?.dia_finalizado === true,
     }
   })
 
@@ -254,6 +284,59 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json()
   const { sala, cronograma, semana_inicio } = body
+
+  // ── "No se hizo": la maestra saltea un dia que quedo atras ────────────
+  // Sin esto la secuencia se traba: el panel muestra el primer dia sin cerrar,
+  // asi que un dia no dado bloquea todos los siguientes. Cierra ese dia y deja
+  // registrado que NO se hizo, para que ALBA pueda reofrecer la actividad.
+  if (body.accion === "no_se_hizo" && sala && body.dia && body.semana_inicio) {
+    const { data: fila } = await supabase
+      .from(TABLA)
+      .select("id, sala, dia, fecha, actividades")
+      .eq("sala", sala)
+      .eq("semana_inicio", body.semana_inicio)
+      .eq("dia", body.dia)
+      .maybeSingle()
+
+    if (!fila) return NextResponse.json({ ok: false, error: "No se encontro el dia" }, { status: 404 })
+
+    const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+    const actAlba = acts.find(
+      (a: any) => (a?.alfabetizacion === true || a?.origen === "alba") && (a?.nombre || "").trim().length > 0
+    )
+
+    if (actAlba) {
+      const { data: yaExiste } = await supabase
+        .from("registro_cierre")
+        .select("id")
+        .eq("sala", sala)
+        .eq("actividad_alba", actAlba.nombre)
+        .eq("fecha", fila.fecha)
+        .maybeSingle()
+
+      if (!yaExiste) {
+        await supabase.from("registro_cierre").insert([{
+          fecha: fila.fecha,
+          sala,
+          eje: actAlba.eje || "CF",
+          actividad_alba: actAlba.nombre,
+          actividad_docente: actAlba.nombre,
+          evaluacion_general: "no_realizada",
+          observaciones: "La docente marco que la actividad no se realizo.",
+          paso: actAlba.paso || "",
+          stats: { green: 0, yellow: 0, red: 0, ausentes: 0 },
+        }])
+      }
+    }
+
+    await supabase
+      .from(TABLA)
+      .update({ dia_finalizado: true, updated_at: new Date().toISOString() })
+      .eq("id", fila.id)
+
+    return NextResponse.json({ ok: true, dia: body.dia })
+  }
+
   // Dias que se vacian A PROPOSITO (por ejemplo al mover una actividad a otro dia).
   // Sin esto, la PROTECCION 3 los rechaza y la actividad queda duplicada.
   const diasForzados: string[] = Array.isArray(body.diasForzados) ? body.diasForzados : []
