@@ -97,13 +97,13 @@ function CardActividad({ act, origen, fecha }: { act: Actividad; origen: "alba" 
   const estilo = !esAlba
     ? { borde: "border-slate-200", fondo: "bg-slate-50", texto: "text-slate-500" }
     : evaluada
-    ? { borde: "border-green-300", fondo: "bg-green-50", texto: "text-green-800" }
+    ? { borde: "border-green-500", fondo: "bg-green-200", texto: "text-green-900" }
     : pendiente
-    ? { borde: "border-red-200", fondo: "bg-red-50", texto: "text-red-800" }
+    ? { borde: "border-red-400", fondo: "bg-red-200", texto: "text-red-900" }
     : { borde: "border-slate-200", fondo: "bg-slate-50", texto: "text-slate-600" }
 
   return (
-    <div className={`rounded-2xl border ${estilo.borde} overflow-hidden`}>
+    <div className={`rounded-2xl border-2 ${estilo.borde} overflow-hidden`}>
       {/* Header de la card */}
       <div className={`flex items-center gap-2 px-4 py-3 ${estilo.fondo}`}>
         {esAlba
@@ -121,10 +121,10 @@ function CardActividad({ act, origen, fecha }: { act: Actividad; origen: "alba" 
               </span>
             )}
             {esAlba && evaluada && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700">Evaluada</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-600 text-white">Evaluada</span>
             )}
             {esAlba && pendiente && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700">Sin evaluar</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-600 text-white">Sin evaluar</span>
             )}
           </div>
         </div>
