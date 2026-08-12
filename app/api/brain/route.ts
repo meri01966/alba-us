@@ -1428,6 +1428,9 @@ export async function GET(req: Request) {
     const salaKey = normalizarSala(sala)
     const esSalaPrueba = salaKey.includes("prueba")
 
+    // Aviso de lo que viene: se completa dentro de buscarActividadCronograma
+    let proximaAlfabetizacion: { dia: string; nombre: string } | null = null
+
     const buscarActividadCronograma = async (): Promise<{ actAlfa: any; dia: string } | null> => {
       // LA SEMANA LA DECIDE EL CALENDARIO — misma regla que el GET de cronograma-jardin.
       // Lunes a viernes: semana actual. Sabado y domingo: semana siguiente.
@@ -1492,8 +1495,9 @@ export async function GET(req: Request) {
         console.error("[v0] Error mirando evaluadas de la semana:", e)
       }
 
-      // Primero: el dia mas cercano a hoy que todavia se puede trabajar.
-      let respaldo: { actAlfa: any; dia: string } | null = null
+      // Solo se OFRECE PARA EVALUAR un dia vigente (hoy o antes) sin evaluar.
+      // La que viene mas adelante no se ofrece: se guarda aparte para avisar
+      // que se viene, sin que la maestra pueda evaluarla antes de darla.
       for (const reg of pendientes) {
         if (!Array.isArray(reg.actividades)) continue
         const actAlfa = reg.actividades.find(
@@ -1502,21 +1506,18 @@ export async function GET(req: Request) {
         if (!actAlfa) continue
 
         const fDia = fechaDelDia(reg.dia)
-        if (fDia && fDia > hoyStr) continue  // todavia no llego: no se ofrece
-
-        const nombre = String(actAlfa.nombre || "").trim().toLowerCase()
-        const yaEvaluada = evaluadasSem.has(nombre)
-        const vencidoSinEvaluar = !!fDia && fDia < hoyStr && !yaEvaluada
-
-        // Un dia vencido sin evaluar queda atras: se guarda de respaldo por si
-        // no hay nada mas, pero no se ofrece si hay un dia vigente.
-        if (vencidoSinEvaluar) {
-          if (!respaldo) respaldo = { actAlfa, dia: reg.dia }
+        if (fDia && fDia > hoyStr) {
+          // Todavia no llego: solo se anota como aviso
+          if (!proximaAlfabetizacion) proximaAlfabetizacion = { dia: reg.dia, nombre: String(actAlfa.nombre || "") }
           continue
         }
+
+        const nombre = String(actAlfa.nombre || "").trim().toLowerCase()
+        if (fDia && fDia < hoyStr && !evaluadasSem.has(nombre)) continue  // vencida: queda atras con su rojo
+
         return { actAlfa, dia: reg.dia }
       }
-      return respaldo
+      return null
     }
 
     const resultadoCronograma = await buscarActividadCronograma()
@@ -1570,6 +1571,7 @@ export async function GET(req: Request) {
     // la "actividad fantasma" que aparecia sin que la maestra hiciera nada.
     return NextResponse.json({
       sugerencia: null,
+      proximaAlfabetizacion,
       microCapacitacion: null,
       alertas: [],
       historial: { promediosPorEje: { CF: 0, CT: 0, O: 0 } },
