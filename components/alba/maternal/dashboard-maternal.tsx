@@ -420,8 +420,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Generar sugerencias de ALBA basadas en el proyecto
   async function generarSugerenciasAlba() {
-    if (!proyecto.titulo || !proyecto.objetivoGeneral) return
-    
+    // Sin proyecto cargado ALBA sugiere igual: el proyecto es contexto que
+    // enriquece la sugerencia, no un requisito para pedirla.
     setGenerandoSugerencias(true)
     const base = typeof window !== "undefined" ? window.location.origin : ""
     
@@ -432,9 +432,9 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         body: JSON.stringify({
           action: "sugerir_actividades_semana",
           proyecto: {
-            titulo: proyecto.titulo,
-            objetivoGeneral: proyecto.objetivoGeneral,
-            duracion: proyecto.duracion
+            titulo: proyecto.titulo || "Alfabetizacion en el jardin maternal",
+            objetivoGeneral: proyecto.objetivoGeneral || "Desarrollo del lenguaje y la comunicacion en situaciones cotidianas y de juego",
+            duracion: proyecto.duracion || ""
           },
           sala: salaActual,
           dias: DIAS,
@@ -688,7 +688,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
   // Contar actividades cargadas en la semana
   const actividadesCargadas = Object.values(cronograma).filter(d => 
-    d?.recibimiento || d?.intercambio || d?.actividades?.some(a => a.nombre)
+    d?.intercambio || d?.actividades?.some(a => a.nombre)
   ).length
 
   return (
@@ -875,14 +875,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     <Pencil className="w-4 h-4" />
                     Editar
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowCalificacionModal(true)}
-                    disabled={guardando}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-50 shadow-md"
-                  >
-                    Finalizar Semana
-                  </button>
                 </div>
               </div>
               
@@ -917,11 +909,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         </div>
                         
                         {/* Contenido del dia */}
-                        {cronograma[dia] && (cronograma[dia].recibimiento || cronograma[dia].actividades?.some(a => a.nombre)) ? (
+                        {cronograma[dia] && cronograma[dia].actividades?.some(a => a.nombre) ? (
                           <div className="space-y-1">
-                            {cronograma[dia].recibimiento && (
-                              <p className="text-[10px] text-slate-600 truncate"><span className="font-semibold">Rec:</span> {cronograma[dia].recibimiento}</p>
-                            )}
                             {cronograma[dia].intercambio && (
                               <p className="text-[10px] text-slate-600 truncate"><span className="font-semibold">Int:</span> {cronograma[dia].intercambio}</p>
                             )}
@@ -1054,7 +1043,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                 <button
                   type="button"
                   onClick={generarSugerenciasAlba}
-                  disabled={generandoSugerencias || !proyecto.titulo}
+                  disabled={generandoSugerencias}
                   className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title={proyecto.titulo ? "ALBA sugiere actividades basadas en tu proyecto" : "Carga un proyecto primero"}
                 >
@@ -1212,17 +1201,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       </div>
                     )}
                     
-                    {/* Recibimiento */}
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 uppercase">Recibimiento</label>
-                      <textarea
-                        value={cronograma[dia]?.recibimiento || ""}
-                        onChange={(e) => actualizarCampo(dia, "recibimiento", e.target.value)}
-                        placeholder="Juego en la alfombra..."
-                        className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-12 focus:outline-none focus:ring-1 focus:ring-green-300"
-                      />
-                    </div>
-                    
                     {/* Intercambio */}
                     <div>
                       <label className="text-[10px] font-bold text-slate-600 uppercase">Intercambio</label>
@@ -1298,36 +1276,19 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             placeholder="Nombre de la actividad"
                             className="w-full text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-green-300 font-medium"
                           />
-                          <textarea
-                            value={act.capacidades}
-                            onChange={(e) => actualizarActividad(dia, idx, "capacidades", e.target.value)}
-                            placeholder="Capacidades"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-green-300"
-                          />
-                          <textarea
-                            value={act.contenidos}
-                            onChange={(e) => actualizarActividad(dia, idx, "contenidos", e.target.value)}
-                            placeholder="Contenidos"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-green-300"
-                          />
-                          <textarea
-                            value={act.objetivo}
-                            onChange={(e) => actualizarActividad(dia, idx, "objetivo", e.target.value)}
-                            placeholder="Objetivo"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-green-300"
-                          />
+                          {/* Solo nombre y desarrollo: capacidades, contenidos,
+                              objetivo y materiales los completa ALBA por detras */}
                           <textarea
                             value={act.desarrollo}
                             onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
-                            placeholder="Desarrollo"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-12 focus:outline-none focus:ring-1 focus:ring-green-300"
+                            placeholder="Que van a hacer los ninos"
+                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-16 focus:outline-none focus:ring-1 focus:ring-green-300"
                           />
-                          <textarea
-                            value={act.materiales}
-                            onChange={(e) => actualizarActividad(dia, idx, "materiales", e.target.value)}
-                            placeholder="Materiales"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-8 focus:outline-none focus:ring-1 focus:ring-green-300"
-                          />
+                          {act.capacidades && (
+                            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-200 rounded px-1.5 py-1">
+                              <span className="font-bold">Mira si:</span> {act.capacidades}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1493,14 +1454,17 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         <div key={i} className="bg-green-50 p-2 rounded-lg border-l-3 border-green-500">
                           <p className="text-[10px] font-bold text-green-600 uppercase">Actividad {i+1}</p>
                           <p className="text-xs font-semibold text-slate-800">{act.nombre}</p>
-                          {act.capacidades && <p className="text-[10px] text-slate-600 mt-1"><span className="font-semibold">Capacidades:</span> {act.capacidades}</p>}
-                          {act.objetivo && <p className="text-[10px] text-slate-600"><span className="font-semibold">Objetivo:</span> {act.objetivo}</p>}
+                          {act.capacidades && (
+                            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-200 rounded px-1.5 py-1 mt-1">
+                              <span className="font-bold">Mira si:</span> {act.capacidades}
+                            </p>
+                          )}
                           {act.desarrollo && <p className="text-[10px] text-slate-600"><span className="font-semibold">Desarrollo:</span> {act.desarrollo}</p>}
                           {act.materiales && <p className="text-[10px] text-slate-600"><span className="font-semibold">Materiales:</span> {act.materiales}</p>}
                         </div>
                       ))}
                       
-                      {!cronograma[dia]?.recibimiento && !cronograma[dia]?.actividades?.some(a => a.nombre) && clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
+                      {!cronograma[dia]?.actividades?.some(a => a.nombre) && clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
                         <p className="text-xs text-slate-400 text-center py-8">Sin actividades</p>
                       )}
                     </div>
