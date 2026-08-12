@@ -1465,15 +1465,58 @@ export async function GET(req: Request) {
       const ORDEN_DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
       pendientes.sort((a: any, b: any) => ORDEN_DIAS.indexOf(a.dia) - ORDEN_DIAS.indexOf(b.dia))
 
-      // Devolver el PRIMERO que tenga actividad alfabetización
+      // No mirar mas alla de HOY: los dias que todavia no llegaron no se ofrecen.
+      const hoyStr = hoyBA.toISOString().split("T")[0]
+      const fechaDelDia = (nombreDia: string): string => {
+        const idx = ORDEN_DIAS.indexOf(nombreDia)
+        if (idx < 0) return ""
+        const f = new Date(lunesSemana)
+        f.setDate(f.getDate() + idx)
+        return f.toISOString().split("T")[0]
+      }
+
+      // Que actividades de esta semana YA tienen evaluacion: un dia que paso y
+      // quedo sin evaluar no se vuelve a ofrecer, queda atras con su rojo.
+      const evaluadasSem = new Set<string>()
+      try {
+        const { data: alSala } = await supabase.from("alumnos").select("id").eq("sala", sala)
+        const idsSala = (alSala || []).map((a: any) => a.id)
+        if (idsSala.length > 0) {
+          const { data: rs } = await supabase
+            .from("seguimiento").select("actividad").in("alumno_id", idsSala).gte("fecha", semanaObjetivo)
+          ;(rs || []).forEach((r: any) => {
+            if (r.actividad) evaluadasSem.add(String(r.actividad).trim().toLowerCase())
+          })
+        }
+      } catch (e) {
+        console.error("[v0] Error mirando evaluadas de la semana:", e)
+      }
+
+      // Primero: el dia mas cercano a hoy que todavia se puede trabajar.
+      let respaldo: { actAlfa: any; dia: string } | null = null
       for (const reg of pendientes) {
         if (!Array.isArray(reg.actividades)) continue
         const actAlfa = reg.actividades.find(
           (a: any) => (a.alfabetizacion === true || a.origen === "alba") && (a.nombre || "").trim().length > 0
         )
-        if (actAlfa) return { actAlfa, dia: reg.dia }
+        if (!actAlfa) continue
+
+        const fDia = fechaDelDia(reg.dia)
+        if (fDia && fDia > hoyStr) continue  // todavia no llego: no se ofrece
+
+        const nombre = String(actAlfa.nombre || "").trim().toLowerCase()
+        const yaEvaluada = evaluadasSem.has(nombre)
+        const vencidoSinEvaluar = !!fDia && fDia < hoyStr && !yaEvaluada
+
+        // Un dia vencido sin evaluar queda atras: se guarda de respaldo por si
+        // no hay nada mas, pero no se ofrece si hay un dia vigente.
+        if (vencidoSinEvaluar) {
+          if (!respaldo) respaldo = { actAlfa, dia: reg.dia }
+          continue
+        }
+        return { actAlfa, dia: reg.dia }
       }
-      return null
+      return respaldo
     }
 
     const resultadoCronograma = await buscarActividadCronograma()
