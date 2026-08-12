@@ -2595,7 +2595,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "eje": "CF",
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
-    "capacidades": "una linea con las capacidades que desarrolla",
+    "capacidades": "SI LA SALA ES DE MATERNAL: una sola ACCION OBSERVABLE, corta, que empiece con verbo en tercera persona, para que la docente sepa que mirar mientras los ninos hacen la actividad (ej: 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'). SI NO ES MATERNAL: una linea con las capacidades que desarrolla",
     "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
