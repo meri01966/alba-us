@@ -391,11 +391,12 @@ function SecuenciaModal({
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function BrainColumn({ activity, isLoading, stats, microCapacitacion }: { 
+function BrainColumn({ activity, isLoading, stats, microCapacitacion, proximaAlfa }: { 
   activity: BrainActivity | null; 
   isLoading: boolean;
   stats?: { green: number; yellow: number; red: number; sinEvaluar: number };
   microCapacitacion?: { titulo: string; contenido: string; tips: string[] } | null;
+  proximaAlfa?: { dia: string; nombre: string } | null;
 }) {
   const [showSecuencia, setShowSecuencia] = useState(false)
   
@@ -479,8 +480,19 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion }: {
           <Spinner className="text-primary" />
         </div>
       ) : !activity ? (
-        <div className="flex-1 flex items-center justify-center text-center text-muted-foreground text-sm py-6">
-          Sin actividad disponible
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 px-3">
+          {proximaAlfa ? (
+            <>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                Proxima actividad de alfabetizacion
+              </p>
+              <p className="text-sm text-foreground">
+                <span className="font-semibold">{proximaAlfa.dia}:</span> {proximaAlfa.nombre}
+              </p>
+            </>
+          ) : (
+            <span className="text-muted-foreground text-sm">Sin actividad disponible</span>
+          )}
         </div>
       ) : (
         <div className="space-y-3 flex-1">
@@ -859,6 +871,8 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
   ref
 ) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)
+  // Aviso de la proxima actividad cuando hoy no hay ninguna para evaluar
+  const [proximaAlfa,   setProximaAlfa]   = useState<{ dia: string; nombre: string } | null>(null)
   const [isBrainLoading, setIsBrainLoading] = useState(true)
   const [microCapacitacion, setMicroCapacitacion] = useState<{ titulo: string; contenido: string; tips: string[] } | null>(null)
 
@@ -926,6 +940,8 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
     } else {
       setBrain(null)
     }
+    // Aviso de lo que viene cuando hoy no hay actividad para evaluar
+    setProximaAlfa(brainData.proximaAlfabetizacion || null)
   }, [brainData, isBrainLoadingSWR])
 
   // fetchBrain ahora es un alias de mutateBrain para compatibilidad con el resto del componente
@@ -982,7 +998,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
+          <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} proximaAlfa={proximaAlfa} />
         </CardContent>
       </Card>
     )
@@ -1022,7 +1038,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
           {/* Left: Sugerencia SIA */}
           <div className="pb-4 sm:pb-0 sm:pr-4">
-            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} />
+            <BrainColumn activity={brain} isLoading={isBrainLoading} stats={stats} microCapacitacion={microCapacitacion} proximaAlfa={proximaAlfa} />
           </div>
           {/* Right: Proyecto / Unidad Didactica */}
           <div className="pt-4 sm:pt-0 sm:pl-4">
