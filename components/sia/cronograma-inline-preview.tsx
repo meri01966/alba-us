@@ -234,11 +234,11 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                     <button
                       type="button"
                       onClick={() => setVerModalOpen(true)}
-                      className={`w-full text-left rounded-xl border px-2 py-2 hover:opacity-80 transition-opacity ${
+                      className={`w-full text-left rounded-xl border-2 px-2 py-2 hover:opacity-80 transition-opacity ${
                         actAlba.evaluada === true
-                          ? "border-green-300 bg-green-50"
+                          ? "border-green-500 bg-green-200"
                           : yaPaso(fecha)
-                          ? "border-red-200 bg-red-50"
+                          ? "border-red-400 bg-red-200"
                           : "border-slate-200 bg-slate-50"
                       }`}
                       title={
@@ -256,7 +256,9 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                         </span>
                       </div>
                       {/* Solo nombre */}
-                      <p className="text-[11px] font-semibold text-slate-800 leading-snug line-clamp-2">
+                      <p className={`text-[11px] font-semibold leading-snug line-clamp-2 ${
+                        actAlba.evaluada === true ? "text-green-900" : yaPaso(fecha) ? "text-red-900" : "text-slate-800"
+                      }`}>
                         {actAlba.nombre}
                       </p>
                     </button>
