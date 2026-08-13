@@ -60,13 +60,13 @@ function corresponsdeAvisarSinPlanificar(): boolean {
   return dia >= 2 && dia <= 5
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "Naranjos TM", "Naranjos TT"]
+const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBA MATERNAL"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
 // Detectar si una sala es Maternal (Naranjos y Pinitos son maternal en ambos turnos; ademas cualquier sala que termine en TM)
 const esMateral = (sala: string) => {
   const s = sala.toUpperCase()
-  return s.startsWith("NARANJOS") || s.startsWith("PINITOS")
+  return s.startsWith("NARANJOS") || s.startsWith("PINITOS") || s.startsWith("PRUEBA MATERNAL")
 }
 
 // Grafico de barras mini para los 3 ejes - clickeable
@@ -160,6 +160,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   // Resumen por sala: dice si planificaron la semana y si vienen registrando
   const [resumenSalas, setResumenSalas] = useState<Record<string, any>>({})
   const [totalesReales, setTotalesReales] = useState<{ alumnos?: number; evaluaciones?: number }>({})
+  const [registroMaternal, setRegistroMaternal] = useState<Record<string, any>>({})
   const [chatSala, setChatSala] = useState<string | null>(null)
   const [nuevoMensaje, setNuevoMensaje] = useState("")
   const [enviandoMensaje, setEnviandoMensaje] = useState(false)
@@ -185,6 +186,20 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   async function cargarMensajes() {
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
+      // Registro de las salas de maternal: como quedo la ultima evaluacion
+      try {
+        const mats = SALAS.filter((sa) => esMateral(sa))
+        const mapaMat: Record<string, any> = {}
+        for (const sa of mats) {
+          const r = await fetch(`${base}/api/registro-maternal?sala=${encodeURIComponent(sa)}`, { cache: "no-store" })
+          const d = await r.json()
+          if (d?.ok) mapaMat[sa] = d
+        }
+        setRegistroMaternal(mapaMat)
+      } catch (e) {
+        console.error("[v0] Error trayendo el registro de maternal:", e)
+      }
+
       // Resumen por sala (planificacion y registro de la semana)
       try {
         const resR = await fetch(`${base}/api/directora-resumen`, { cache: "no-store" })
@@ -615,8 +630,36 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     </button>
                   </div>
                   
+                  {/* Maternal: como quedo la ultima evaluacion de la sala */}
+                  {esMateral(sala) && (
+                    registroMaternal[sala]?.ultimo ? (
+                      <div className="space-y-1">
+                        <p className="text-[11px] text-muted-foreground">
+                          {registroMaternal[sala].diasSinRegistrar === 0
+                            ? "Evaluado hoy"
+                            : `Ultimo registro: hace ${registroMaternal[sala].diasSinRegistrar} dias`}
+                        </p>
+                        <p className="text-[11px] font-semibold text-foreground">
+                          {registroMaternal[sala].ultimo.capacidad}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-semibold text-green-600">{registroMaternal[sala].ultimo.yaLoHacen}</span> ya lo hacen
+                          {registroMaternal[sala].ultimo.empezando > 0 && <> · <span className="font-semibold text-amber-600">{registroMaternal[sala].ultimo.empezando}</span> empezando</>}
+                          {registroMaternal[sala].ultimo.acompanar > 0 && <> · <span className="font-semibold text-red-600">{registroMaternal[sala].ultimo.acompanar}</span> acompanar</>}
+                        </p>
+                        {registroMaternal[sala].ultimo.necesitanAcompanamiento?.length > 0 && (
+                          <p className="text-[11px] text-red-600">
+                            {registroMaternal[sala].ultimo.necesitanAcompanamiento.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-red-600 font-semibold">Sin registros todavia</p>
+                    )
+                  )}
+
                   {/* Estado de la sala en conteos, sin porcentajes */}
-                  {resumenSalas[sala] && (
+                  {!esMateral(sala) && resumenSalas[sala] && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span>
