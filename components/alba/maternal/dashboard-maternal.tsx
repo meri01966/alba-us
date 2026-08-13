@@ -114,6 +114,51 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Recursos de capacitacion basados en las actividades planificadas
   const [recursosCapacitacion, setRecursosCapacitacion] = useState<{ titulo: string; autor: string; descripcion: string; tipo: string }[]>([])
+  // Registro de maternal: se evalua UNA capacidad por vez, la que hace mas
+  // que no se mira. La docente marca solo a los que se apartan.
+  const [showEvaluar, setShowEvaluar] = useState(false)
+  const [datosEval, setDatosEval] = useState<any>(null)
+  const [marcados, setMarcados] = useState<Record<string, string>>({})
+  const [guardandoEval, setGuardandoEval] = useState(false)
+  const [ultimoRegistro, setUltimoRegistro] = useState<{ fecha: string | null; dias: number | null }>({ fecha: null, dias: null })
+
+  async function abrirEvaluar() {
+    setShowEvaluar(true)
+    setMarcados({})
+    try {
+      const res = await fetch(`/api/registro-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      const data = await res.json()
+      if (data?.ok) {
+        setDatosEval(data)
+        setUltimoRegistro({ fecha: data.ultimoRegistro, dias: data.diasSinRegistrar })
+      }
+    } catch (e) {
+      console.error("[v0] Error abriendo el registro:", e)
+    }
+  }
+
+  async function guardarEvaluacion() {
+    if (!datosEval?.capacidadSugerida) return
+    setGuardandoEval(true)
+    try {
+      await fetch("/api/registro-maternal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sala: salaActual,
+          capacidad: datosEval.capacidadSugerida.key,
+          paso: datosEval.capacidadSugerida.nombre,
+          marcados,
+        }),
+      })
+      setShowEvaluar(false)
+      setUltimoRegistro({ fecha: new Date().toISOString().split("T")[0], dias: 0 })
+    } catch (e) {
+      console.error("[v0] Error guardando la evaluacion:", e)
+    }
+    setGuardandoEval(false)
+  }
+
   // Micro capacitacion situada: anclada al proyecto y a la actividad del dia
   const [capacitacion, setCapacitacion] = useState<{ titulo: string; contenido: string; autor: string; tips: string[] } | null>(null)
   const [cargandoCap, setCargandoCap] = useState(false)
@@ -889,8 +934,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="font-bold text-slate-800 text-lg">Registro del Aula</h2>
-                      <p className="text-xs text-blue-600">Lista de alumnos</p>
+                      <h2 className="font-bold text-slate-800 text-lg">Evaluar</h2>
+                      <p className="text-xs text-blue-600">Como viene cada nino</p>
                     </div>
                   </div>
                   <span className="text-sm px-4 py-1.5 rounded-full bg-white text-blue-600 font-bold shadow-sm border border-blue-200">
@@ -898,12 +943,26 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </span>
                 </div>
                 <div className="p-5">
-                  <div className="text-center py-6">
-                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
-                      <Users className="w-7 h-7 text-blue-400" />
-                    </div>
-                    <p className="text-slate-500 mb-3">Proximamente</p>
-                  </div>
+                  <p className="text-sm text-slate-600 mb-3">
+                    Ultimo registro:{" "}
+                    {ultimoRegistro.dias === null ? (
+                      <span className="font-semibold text-red-600">todavia sin registros</span>
+                    ) : ultimoRegistro.dias > 15 ? (
+                      <span className="font-semibold text-red-600">hace {ultimoRegistro.dias} dias</span>
+                    ) : (
+                      <span className="font-semibold text-slate-800">
+                        {ultimoRegistro.dias === 0 ? "hoy" : `hace ${ultimoRegistro.dias} dias`}
+                      </span>
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={abrirEvaluar}
+                    disabled={alumnos.length === 0}
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-40"
+                  >
+                    Evaluar la sala
+                  </button>
                 </div>
               </div>
             </div>
@@ -1860,6 +1919,94 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </section>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Ventana de evaluacion ────────────────────────────────────────
+          Una capacidad por vez. La docente marca SOLO a los que se apartan;
+          el resto queda en "ya lo hace" sin tocar nada. */}
+      {showEvaluar && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEvaluar(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+
+            <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
+              <div>
+                <p className="text-white font-bold text-base leading-none">
+                  {datosEval?.capacidadSugerida?.nombre || "Evaluar"}
+                </p>
+                <p className="text-white/70 text-xs mt-1">Sala {salaActual}</p>
+              </div>
+              <button type="button" onClick={() => setShowEvaluar(false)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
+              <p className="text-xs text-slate-600">
+                Marca solo los que estan empezando o necesitan acompanamiento.
+                El resto queda en <span className="font-semibold">ya lo hace</span>.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              {(datosEval?.alumnos || []).map((al: any) => {
+                const estado = marcados[al.id]
+                return (
+                  <div key={al.id} className="flex items-center gap-2 py-2 border-b border-slate-100">
+                    <span className="flex-1 text-sm text-slate-800">{al.nombre}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMarcados((p) => {
+                        const n = { ...p }
+                        if (n[al.id] === "empezando") delete n[al.id]
+                        else n[al.id] = "empezando"
+                        return n
+                      })}
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors"
+                      style={estado === "empezando"
+                        ? { backgroundColor: "#fef3c7", borderColor: "#f59e0b", color: "#92400e" }
+                        : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
+                    >
+                      Empezando
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMarcados((p) => {
+                        const n = { ...p }
+                        if (n[al.id] === "acompanar") delete n[al.id]
+                        else n[al.id] = "acompanar"
+                        return n
+                      })}
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors"
+                      style={estado === "acompanar"
+                        ? { backgroundColor: "#fee2e2", borderColor: "#ef4444", color: "#991b1b" }
+                        : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
+                    >
+                      Acompanar
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-slate-500">
+                {(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} ya lo hacen
+                {Object.values(marcados).filter((v) => v === "empezando").length > 0 &&
+                  ` · ${Object.values(marcados).filter((v) => v === "empezando").length} empezando`}
+                {Object.values(marcados).filter((v) => v === "acompanar").length > 0 &&
+                  ` · ${Object.values(marcados).filter((v) => v === "acompanar").length} acompanar`}
+              </p>
+              <button
+                type="button"
+                onClick={guardarEvaluacion}
+                disabled={guardandoEval}
+                className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {guardandoEval ? "Guardando..." : "Guardar"}
+              </button>
             </div>
           </div>
         </div>
