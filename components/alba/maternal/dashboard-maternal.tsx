@@ -193,7 +193,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         body: JSON.stringify({
           sala: salaActual,
           capacidad: datosEval.capacidadSugerida.key,
-          paso: datosEval.capacidadSugerida.nombre,
+          paso: datosEval.indicador || datosEval.capacidadSugerida.nombre,
           marcados,
         }),
       })
@@ -2047,10 +2047,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
             <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
               <div>
-                <p className="text-white font-bold text-base leading-none">
+                <p className="text-white/70 text-[11px] font-semibold uppercase tracking-wide">
                   {datosEval?.capacidadSugerida?.nombre || "Evaluar"}
                 </p>
-                <p className="text-white/70 text-xs mt-1">Sala {salaActual}</p>
+                <p className="text-white font-bold text-base leading-snug mt-0.5">
+                  {datosEval?.indicador || ""}
+                </p>
               </div>
               <button type="button" onClick={() => setShowEvaluar(false)} className="text-white/80 hover:text-white">
                 <X className="w-5 h-5" />
@@ -2106,12 +2108,20 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             </div>
 
             <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+              {/* Hasta que no se guarda no se afirma que el resto "ya lo hace":
+                  todavia no hay evaluacion. Solo se cuenta lo que ella marco. */}
               <p className="text-[11px] text-slate-500">
-                {(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} ya lo hacen
-                {Object.values(marcados).filter((v) => v === "empezando").length > 0 &&
-                  ` · ${Object.values(marcados).filter((v) => v === "empezando").length} empezando`}
-                {Object.values(marcados).filter((v) => v === "acompanar").length > 0 &&
-                  ` · ${Object.values(marcados).filter((v) => v === "acompanar").length} acompanar`}
+                {Object.keys(marcados).length === 0
+                  ? "Marca solo los que se apartan"
+                  : [
+                      Object.values(marcados).filter((v) => v === "empezando").length > 0
+                        ? `${Object.values(marcados).filter((v) => v === "empezando").length} empezando`
+                        : "",
+                      Object.values(marcados).filter((v) => v === "acompanar").length > 0
+                        ? `${Object.values(marcados).filter((v) => v === "acompanar").length} acompanar`
+                        : "",
+                      `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} sin marcar`,
+                    ].filter(Boolean).join(" · ")}
               </p>
               <button
                 type="button"
