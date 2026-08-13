@@ -2656,7 +2656,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
-    "desarrollo": "descripcion paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave",
+    "desarrollo": "paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave. ESCRIBILE A LA MAESTRA, no sobre ella: usa 'pone', 'invita', 'preguntales', 'espera', 'nombra'. NUNCA 'la docente pone' ni 'el docente invita'",
     "materiales": "lista de materiales necesarios"
   },
   {
