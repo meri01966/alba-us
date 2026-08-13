@@ -139,6 +139,67 @@ export async function GET(req: NextRequest) {
         .forEach((r: any) => { ultimoEstado[r.alumno_id] = r.estado })
     }
 
+    // ── Resumen de la ULTIMA evaluacion, para la tarjeta ──────────────────
+    // No es un promedio: es como quedo el grupo la ultima vez que se miro.
+    const nombrePorAlumno: Record<string, string> = {}
+    ;(alumnos || []).forEach((a: any) => { nombrePorAlumno[a.id] = a.nombre })
+
+    let ultimo: any = null
+    if (ultimoRegistro) {
+      const delDia = regs.filter((r: any) => String(r.fecha) === ultimoRegistro)
+      const cap = delDia[0]?.capacidad || ""
+      const delaCap = delDia.filter((r: any) => r.capacidad === cap)
+      const nombres = delaCap
+        .filter((r: any) => r.estado === "acompanar")
+        .map((r: any) => nombrePorAlumno[r.alumno_id] || "")
+        .filter(Boolean)
+        .sort()
+
+      ultimo = {
+        capacidad: CAPACIDADES.find((c) => c.key === cap)?.nombre || cap,
+        indicador: delaCap[0]?.paso || "",
+        yaLoHacen: delaCap.filter((r: any) => r.estado === "ya_lo_hace").length,
+        empezando: delaCap.filter((r: any) => r.estado === "empezando").length,
+        acompanar: delaCap.filter((r: any) => r.estado === "acompanar").length,
+        necesitanAcompanamiento: nombres,
+      }
+    }
+
+    // ── Sintesis de la sala: las cinco capacidades y la trayectoria ────────
+    const porCapacidad = CAPACIDADES.map((c) => {
+      const deLaCap = regs.filter((r: any) => r.capacidad === c.key)
+      const fechaUlt = deLaCap.reduce((f: string, r: any) => (String(r.fecha) > f ? String(r.fecha) : f), "")
+      const ult = deLaCap.filter((r: any) => String(r.fecha) === fechaUlt)
+      return {
+        key: c.key,
+        nombre: c.nombre,
+        evaluada: !!fechaUlt,
+        fecha: fechaUlt || null,
+        indicador: ult[0]?.paso || "",
+        indicadoresTrabajados: Array.from(new Set(deLaCap.map((r: any) => String(r.paso || "")).filter(Boolean))).length,
+        totalIndicadores: c.indicadores.length,
+        yaLoHacen: ult.filter((r: any) => r.estado === "ya_lo_hace").length,
+        empezando: ult.filter((r: any) => r.estado === "empezando").length,
+        acompanar: ult.filter((r: any) => r.estado === "acompanar").length,
+        necesitanAcompanamiento: ult
+          .filter((r: any) => r.estado === "acompanar")
+          .map((r: any) => nombrePorAlumno[r.alumno_id] || "")
+          .filter(Boolean).sort(),
+      }
+    })
+
+    // Trayectoria por chico: cuantas veces quedo en cada estado
+    const porAlumno = (alumnos || []).map((a: any) => {
+      const suyos = regs.filter((r: any) => r.alumno_id === a.id)
+      return {
+        id: a.id,
+        nombre: a.nombre,
+        yaLoHacen: suyos.filter((r: any) => r.estado === "ya_lo_hace").length,
+        empezando: suyos.filter((r: any) => r.estado === "empezando").length,
+        acompanar: suyos.filter((r: any) => r.estado === "acompanar").length,
+      }
+    }).sort((x: any, y: any) => y.acompanar - x.acompanar)
+
     return NextResponse.json({
       ok: true,
       alumnos: alumnos || [],
@@ -148,6 +209,9 @@ export async function GET(req: NextRequest) {
       ultimoRegistro: ultimoRegistro || null,
       diasSinRegistrar,
       ultimoEstado,
+      ultimo,
+      porCapacidad,
+      porAlumno,
     })
   } catch (e) {
     console.error("[v0] Error en registro-maternal GET:", e)
