@@ -4,6 +4,26 @@ import { useState, useEffect } from "react"
 import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle, FolderClock, ChevronRight, Eye } from "lucide-react"
 
 // Salas de maternal disponibles (2 y 3 años)
+// Color de cada capacidad. IDENTIDAD, no estado: ninguno es verde ni rojo,
+// para que nunca se confundan con "realizada" o "sin hacer".
+const COLOR_CAPACIDAD: Record<string, { bg: string; border: string; text: string }> = {
+  COM: { bg: "#eff6ff", border: "#93c5fd", text: "#1d4ed8" },  // Comunicacion — azul
+  AUT: { bg: "#f5f3ff", border: "#c4b5fd", text: "#6d28d9" },  // Autonomia — violeta
+  RES: { bg: "#f0fdfa", border: "#5eead4", text: "#0f766e" },  // Resolucion — turquesa
+  COL: { bg: "#fff7ed", border: "#fdba74", text: "#c2410c" },  // Colaboracion — naranja
+  REF: { bg: "#fdf2f8", border: "#f9a8d4", text: "#be185d" },  // Reflexivo — rosa
+}
+const NOMBRE_CAPACIDAD: Record<string, string> = {
+  COM: "Comunicacion", AUT: "Autonomia", RES: "Resolucion", COL: "Colaboracion", REF: "Reflexivo",
+}
+
+// Un dia se considera pasado si su fecha es anterior a hoy (hora de Argentina)
+function diaYaPaso(fecha: string): boolean {
+  if (!fecha) return false
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  return fecha < hoy
+}
+
 const SALAS_MATERNAL = [
   "NARANJOS TM",      // 3 años turno mañana
   "NARANJOS TT",      // 3 años turno tarde
@@ -468,6 +488,34 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }, [proyecto.titulo])
   
   // Generar recursos de capacitacion basados en las actividades del cronograma
+  // Mueve una actividad al dia anterior o al siguiente.
+  async function moverActividadDia(dia: string, idx: number, dir: -1 | 1) {
+    const i = DIAS.indexOf(dia)
+    const destino = DIAS[i + dir]
+    if (!destino || !cronograma[dia] || !cronograma[destino]) return
+    const act = cronograma[dia].actividades?.[idx]
+    if (!act) return
+
+    const origen = cronograma[dia].actividades.filter((_, n) => n !== idx)
+    const dest = (cronograma[destino].actividades || []).filter((a) => (a.nombre || "").trim() !== "")
+    const nuevo = {
+      ...cronograma,
+      [dia]: { ...cronograma[dia], actividades: origen.length ? origen : [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }] },
+      [destino]: { ...cronograma[destino], actividades: [...dest, { ...act }] },
+    }
+    setCronograma(nuevo)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      await fetch(`${base}/api/cronograma-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+      })
+    } catch (e) {
+      console.error("[v0] Error moviendo la actividad:", e)
+    }
+  }
+
   // Marca una actividad como realizada. Un toque y listo: es lo que le dice a
   // ALBA que ese paso se trabajo y puede proponer el siguiente.
   async function marcarRealizada(dia: string, idx: number) {
@@ -634,7 +682,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     
     // Agregar la sugerencia marcada como de ALBA: asi queda FIJA en la vista
     // (se lee, no se edita) y se distingue de las que carga la maestra.
-    nuevoCronograma[dia].actividades.push({ ...sugerencia.actividad, origen: "alba", alfabetizacion: true } as any)
+    nuevoCronograma[dia].actividades.push({
+      ...sugerencia.actividad,
+      origen: "alba",
+      alfabetizacion: true,
+      capacidadKey: (sugerencia.actividad as any).capacidadKey || "",
+    } as any)
 
     // Si el dia tenia una actividad vacia de relleno, se saca
     nuevoCronograma[dia].actividades = nuevoCronograma[dia].actividades.filter(
@@ -1137,15 +1190,61 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                           ))}
                         </div>
                         
-                        {/* Contenido del dia */}
+                        {/* Contenido del dia — tarjetas, como en jardin.
+                            Verde si se hizo, rojo si el dia paso sin marcarla,
+                            y el color de la capacidad si todavia no llego. */}
                         {cronograma[dia] && cronograma[dia].actividades?.some(a => a.nombre) ? (
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {cronograma[dia].intercambio && (
-                              <p className="text-[10px] text-slate-600 truncate"><span className="font-semibold">Int:</span> {cronograma[dia].intercambio}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{cronograma[dia].intercambio}</p>
                             )}
-                            {cronograma[dia].actividades?.filter(a => a.nombre).map((act, i) => (
-                              <p key={i} className="text-[10px] text-green-700 font-medium truncate">Act {i+1}: {act.nombre}</p>
-                            ))}
+                            {cronograma[dia].actividades?.filter(a => a.nombre).map((act, i) => {
+                              const cap = (act as any).capacidadKey || ""
+                              const col = COLOR_CAPACIDAD[cap]
+                              const hecha = (act as any).realizada === true
+                              const vencida = !hecha && diaYaPaso(cronograma[dia].fecha)
+                              const idxReal = cronograma[dia].actividades.findIndex((x) => x === act)
+                              const iDia = DIAS.indexOf(dia)
+                              return (
+                                <div
+                                  key={i}
+                                  className="rounded-lg border-2 px-2 py-1.5"
+                                  style={
+                                    hecha
+                                      ? { backgroundColor: "#dcfce7", borderColor: "#22c55e" }
+                                      : vencida
+                                      ? { backgroundColor: "#fee2e2", borderColor: "#f87171" }
+                                      : col
+                                      ? { backgroundColor: col.bg, borderColor: col.border }
+                                      : { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" }
+                                  }
+                                >
+                                  <div className="flex items-start gap-1">
+                                    <div className="flex-1 min-w-0">
+                                      {cap && (
+                                        <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: hecha ? "#15803d" : vencida ? "#b91c1c" : col?.text }}>
+                                          {NOMBRE_CAPACIDAD[cap] || cap}
+                                        </p>
+                                      )}
+                                      <p className="text-[11px] font-semibold text-slate-800 leading-snug">{act.nombre}</p>
+                                      {hecha && <p className="text-[9px] font-bold text-green-700 mt-0.5">Realizada</p>}
+                                    </div>
+                                    {!hecha && (
+                                      <div className="flex flex-col gap-0.5 shrink-0">
+                                        {iDia > 0 && (
+                                          <button type="button" onClick={() => moverActividadDia(dia, idxReal, -1)} title="Al dia anterior"
+                                            className="w-4 h-4 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-[9px] leading-none">‹</button>
+                                        )}
+                                        {iDia < DIAS.length - 1 && (
+                                          <button type="button" onClick={() => moverActividadDia(dia, idxReal, 1)} title="Al dia siguiente"
+                                            className="w-4 h-4 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-[9px] leading-none">›</button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
                           <p className="text-xs text-slate-300 text-center mt-6">Sin actividades</p>
