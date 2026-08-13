@@ -2324,10 +2324,10 @@ export async function POST(req: NextRequest) {
 
       const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
       const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
-      CAPACIDADES_MATERNAL.forEach((c) => { yaDadasPorEje[c.key] = []; promedioPorEje[c.key] = 50; verdePorEjeInit.push(c.key) })
+      CAPACIDADES_MATERNAL.forEach((c) => { yaDadasPorEje[c.key] = []; promedioPorEje[c.key] = 50 })
       // Porcentaje de chicos en verde por eje: es la "mayoria consolidada"
       const verdePorEje: Record<string, number> = { CF: 0, CT: 0, O: 0, EA: 0 }
-      const verdePorEjeInit: string[] = []
+      CAPACIDADES_MATERNAL.forEach((c) => { verdePorEje[c.key] = 0 })
       const ultimaPorEjeSem: Record<string, number> = {}
 
       try {
@@ -2595,7 +2595,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "eje": "CF",
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
-    "capacidades": "una linea con las capacidades que desarrolla",
+    "capacidades": "SI LA SALA ES DE MATERNAL: una sola ACCION OBSERVABLE, corta, que empiece con verbo en tercera persona, para que la docente sepa que mirar mientras los ninos hacen la actividad (ej: 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'). SI NO ES MATERNAL: una linea con las capacidades que desarrolla",
     "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
