@@ -168,6 +168,24 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   const [guardandoEval, setGuardandoEval] = useState(false)
   const [ultimoRegistro, setUltimoRegistro] = useState<{ fecha: string | null; dias: number | null }>({ fecha: null, dias: null })
 
+  const [resumenEval, setResumenEval] = useState<any>(null)
+  const [showSintesis, setShowSintesis] = useState(false)
+
+  // Se trae al entrar: la tarjeta tiene que mostrar algo sin abrir nada
+  async function traerResumenEval() {
+    if (!salaActual) return
+    try {
+      const res = await fetch(`/api/registro-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      const data = await res.json()
+      if (data?.ok) {
+        setResumenEval(data)
+        setUltimoRegistro({ fecha: data.ultimoRegistro, dias: data.diasSinRegistrar })
+      }
+    } catch (e) {
+      console.error("[v0] Error trayendo el resumen:", e)
+    }
+  }
+
   async function abrirEvaluar() {
     setShowEvaluar(true)
     setMarcados({})
@@ -198,7 +216,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         }),
       })
       setShowEvaluar(false)
-      setUltimoRegistro({ fecha: new Date().toISOString().split("T")[0], dias: 0 })
+      await traerResumenEval()
     } catch (e) {
       console.error("[v0] Error guardando la evaluacion:", e)
     }
@@ -227,6 +245,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   useEffect(() => {
     cargarDatos()
     traerAlumnos()
+    traerResumenEval()
   }, [salaActual])
   
   // Inicializar cronograma vacio
@@ -1007,14 +1026,45 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       </span>
                     )}
                   </p>
-                  <button
-                    type="button"
-                    onClick={abrirEvaluar}
-                    disabled={alumnos.length === 0}
-                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-40"
-                  >
-                    Evaluar la sala
-                  </button>
+                  {resumenEval?.ultimo && (
+                    <div className="mb-3 bg-white rounded-xl border border-blue-200 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">
+                        {resumenEval.ultimo.capacidad}
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800 leading-snug mt-0.5">
+                        {resumenEval.ultimo.indicador}
+                      </p>
+                      <p className="text-sm text-slate-700 mt-2">
+                        <span className="font-bold text-green-700">{resumenEval.ultimo.yaLoHacen}</span> ya lo hacen
+                        {resumenEval.ultimo.empezando > 0 && <> · <span className="font-bold text-amber-600">{resumenEval.ultimo.empezando}</span> empezando</>}
+                        {resumenEval.ultimo.acompanar > 0 && <> · <span className="font-bold text-red-600">{resumenEval.ultimo.acompanar}</span> acompanar</>}
+                      </p>
+                      {resumenEval.ultimo.necesitanAcompanamiento?.length > 0 && (
+                        <p className="text-xs text-red-700 mt-1.5">
+                          Necesitan acompanamiento: {resumenEval.ultimo.necesitanAcompanamiento.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={abrirEvaluar}
+                      disabled={alumnos.length === 0}
+                      className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-40"
+                    >
+                      Evaluar la sala
+                    </button>
+                    {resumenEval?.ultimo && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSintesis(true)}
+                        className="px-4 py-2.5 rounded-xl border border-blue-300 text-blue-700 text-sm font-semibold hover:bg-blue-50 transition-colors"
+                      >
+                        Sintesis
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1970,6 +2020,79 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     )}
                   </section>
                 </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sintesis de la sala: las cinco capacidades y la trayectoria ── */}
+      {showSintesis && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSintesis(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
+              <div>
+                <p className="text-white font-bold text-base leading-none">Como viene la sala</p>
+                <p className="text-white/70 text-xs mt-1">{salaActual} — {alumnos.length} alumnos</p>
+              </div>
+              <button type="button" onClick={() => setShowSintesis(false)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              {/* Las cinco capacidades */}
+              {(resumenEval?.porCapacidad || []).map((c: any) => (
+                <div key={c.key} className={`rounded-xl border-2 p-3 ${!c.evaluada ? "border-slate-200 bg-slate-50" : c.acompanar > 0 ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-800">{c.nombre}</p>
+                    <span className="text-[11px] text-slate-500">
+                      {c.indicadoresTrabajados} de {c.totalIndicadores} miradas
+                    </span>
+                  </div>
+                  {c.evaluada ? (
+                    <>
+                      <p className="text-xs text-slate-600 mt-0.5">{c.indicador}</p>
+                      <p className="text-sm text-slate-700 mt-1.5">
+                        <span className="font-bold text-green-700">{c.yaLoHacen}</span> ya lo hacen
+                        {c.empezando > 0 && <> · <span className="font-bold text-amber-600">{c.empezando}</span> empezando</>}
+                        {c.acompanar > 0 && <> · <span className="font-bold text-red-600">{c.acompanar}</span> acompanar</>}
+                      </p>
+                      {c.necesitanAcompanamiento?.length > 0 && (
+                        <p className="text-xs text-red-700 mt-1">{c.necesitanAcompanamiento.join(", ")}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-500 mt-1">Todavia sin evaluar</p>
+                  )}
+                </div>
+              ))}
+
+              {/* Trayectoria de cada chico */}
+              {(resumenEval?.porAlumno || []).length > 0 && (
+                <div className="pt-2">
+                  <p className="text-sm font-bold text-slate-800 mb-2">Cada nino</p>
+                  <div className="space-y-1">
+                    {resumenEval.porAlumno.map((a: any) => (
+                      <div key={a.id} className="flex items-center gap-2 py-1.5 border-b border-slate-100">
+                        <span className="flex-1 text-sm text-slate-800">{a.nombre}</span>
+                        {a.acompanar > 0 && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                            {a.acompanar} acompanar
+                          </span>
+                        )}
+                        {a.empezando > 0 && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            {a.empezando} empezando
+                          </span>
+                        )}
+                        {a.acompanar === 0 && a.empezando === 0 && (
+                          <span className="text-[11px] text-green-700">viene bien</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
