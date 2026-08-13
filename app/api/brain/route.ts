@@ -2700,6 +2700,9 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
               // Capacidad del Diseno Curricular de CABA (cinco posibles).
               // Permite agrupar despues las actividades por capacidad.
               capacidadDC: (s as any).capacidadDC || "",
+              // Clave de la capacidad en maternal (COM/AUT/RES/COL/REF):
+              // la usa la tarjeta del cronograma para su color
+              capacidadKey: decidido && esMaternal ? decidido.eje : "",
               contenidos: pasoNombre ? `${s.contenidos} · Estamos trabajando: ${pasoNombre}` : s.contenidos,
               objetivo: s.objetivo,
               desarrollo: s.desarrollo,
