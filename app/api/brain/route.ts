@@ -2263,6 +2263,63 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { action, proyecto, sala, dias, actividadesYaSugeridas = [] } = body
+
+    // ── MICRO CAPACITACION SITUADA ────────────────────────────────────────
+    // Un consejo anclado en tres cosas: el proyecto de la sala, la actividad
+    // que va a dar, y un enfoque de una lista CERRADA de autores. La lista es
+    // cerrada a proposito: sin ella la IA inventa titulos y paginas que no existen.
+    if (action === "micro_capacitacion") {
+      const actividad = String(body.actividad || "").trim()
+      const evitar = Array.isArray(body.evitar) ? body.evitar : []
+      const esMat = esDeMaternal(String(sala || ""))
+
+      const AUTORES = [
+        "Vigotsky (zona de desarrollo proximo, andamiaje del adulto, el lenguaje como herramienta del pensamiento)",
+        "Piaget (exploracion sensoriomotriz, el nino construye conocimiento actuando sobre los objetos)",
+        "Montessori (ambiente preparado, autonomia, materiales que se explican solos)",
+        "Perkins (hacer visible el pensamiento, comprension como desempeno)",
+        "Pikler (movimiento libre, respeto por los tiempos propios, el adulto acompana sin apurar)",
+        "Malaguzzi y Reggio Emilia (los cien lenguajes, la documentacion, el ambiente como tercer maestro)",
+        "Goldschmied (cesto de los tesoros, juego heuristico, exploracion con objetos cotidianos)",
+        "Calmels (el cuerpo y el gesto como primer lenguaje, juegos de crianza)",
+        "Borzone (alfabetizacion temprana, vocabulario e intercambio oral con el adulto)",
+        "Devetach (la poesia y el juego con las palabras desde muy chicos)",
+        "Furman (preguntas que abren la exploracion y el pensamiento)",
+        "Malajovich (el juego como contenido y como forma de ensenar en el nivel inicial)",
+        "Beneito (desarrollo temprano, la mirada atenta del adulto)",
+        "Maria Emilia Lopez (literatura en la primera infancia, la voz que arrulla y narra)",
+      ]
+
+      const promptCap = `Sos ALBA, formadora de docentes de nivel inicial.
+
+Escribi UN consejo pedagogico corto y situado para la docente, sobre COMO dar mejor esta actividad concreta. No teoria general: algo que pueda aplicar hoy.
+
+${esMat ? "SALA DE 2 ANOS (jardin maternal). El consejo tiene que servir para esa edad: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
+${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+${actividad ? `Actividad que va a dar: "${actividad}".` : ""}
+${evitar.length ? `Ya le dimos estos consejos, deci algo DISTINTO: ${evitar.join(" | ")}` : ""}
+
+Podes apoyarte en UNO de estos enfoques, y solo en estos. No inventes titulos de libros, paginas ni citas textuales: nombra al autor y su idea.
+${AUTORES.map((a) => "- " + a).join("\n")}
+
+Respondé SOLO con este JSON, sin backticks:
+{
+  "titulo": "una frase corta e imperativa, maximo 6 palabras",
+  "contenido": "2 o 3 oraciones concretas sobre que hacer en esta actividad",
+  "autor": "nombre del autor y su idea en 4 o 5 palabras",
+  "tips": ["un detalle practico", "otro detalle practico"]
+}`
+
+      try {
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 500, temperature: 0.85 })
+        const t = r.text.trim()
+        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
+        return NextResponse.json({ ok: true, capacitacion: JSON.parse(j) })
+      } catch (e) {
+        console.error("[v0] Error generando micro capacitacion:", e)
+        return NextResponse.json({ ok: false, error: "No se pudo generar el consejo" }, { status: 502 })
+      }
+    }
     
     if (action === "sugerir_actividades_semana" && proyecto && dias) {
       // ALBA usa IA real para generar actividades de alfabetizacion ricas, variadas y siempre nuevas.
