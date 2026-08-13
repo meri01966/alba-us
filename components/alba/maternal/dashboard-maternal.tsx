@@ -114,6 +114,52 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Recursos de capacitacion basados en las actividades planificadas
   const [recursosCapacitacion, setRecursosCapacitacion] = useState<{ titulo: string; autor: string; descripcion: string; tipo: string }[]>([])
+  // Gestion de alumnos: usa el mismo endpoint que jardin (/api/students)
+  const [showGestionSala, setShowGestionSala] = useState(false)
+  const [bulkNames, setBulkNames] = useState("")
+  const [cargandoAlumnos, setCargandoAlumnos] = useState(false)
+
+  async function traerAlumnos() {
+    if (!salaActual) return
+    try {
+      const res = await fetch(`/api/students?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      const data = await res.json()
+      setAlumnos(Array.isArray(data?.students) ? data.students : Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error("[v0] Error trayendo alumnos:", e)
+    }
+  }
+
+  async function cargarListaAlumnos() {
+    const nombres = bulkNames.split("\n").map((n) => n.trim().toUpperCase()).filter((n) => n.length > 0)
+    if (nombres.length === 0) return
+    setCargandoAlumnos(true)
+    try {
+      for (const nombre of nombres) {
+        await fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, sala: salaActual }),
+        })
+      }
+      setBulkNames("")
+      setShowGestionSala(false)
+      await traerAlumnos()
+    } catch (e) {
+      console.error("[v0] Error cargando alumnos:", e)
+    }
+    setCargandoAlumnos(false)
+  }
+
+  async function borrarAlumno(id: string) {
+    try {
+      await fetch(`/api/students?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+      await traerAlumnos()
+    } catch (e) {
+      console.error("[v0] Error borrando alumno:", e)
+    }
+  }
+
   // Registro de maternal: se evalua UNA capacidad por vez, la que hace mas
   // que no se mira. La docente marca solo a los que se apartan.
   const [showEvaluar, setShowEvaluar] = useState(false)
@@ -180,6 +226,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   // Cargar cronograma y proyecto cuando cambia la sala
   useEffect(() => {
     cargarDatos()
+    traerAlumnos()
   }, [salaActual])
   
   // Inicializar cronograma vacio
@@ -938,9 +985,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <p className="text-xs text-blue-600">Como viene cada nino</p>
                     </div>
                   </div>
-                  <span className="text-sm px-4 py-1.5 rounded-full bg-white text-blue-600 font-bold shadow-sm border border-blue-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowGestionSala(true)}
+                    className="text-sm px-4 py-1.5 rounded-full bg-white text-blue-600 font-bold shadow-sm border border-blue-200 hover:bg-blue-50 transition-colors"
+                    title="Cargar o editar los alumnos de la sala"
+                  >
                     {alumnos.length} alumnos
-                  </span>
+                  </button>
                 </div>
                 <div className="p-5">
                   <p className="text-sm text-slate-600 mb-3">
@@ -1918,6 +1970,68 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     )}
                   </section>
                 </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gestionar sala: cargar y borrar alumnos ─────────────────── */}
+      {showGestionSala && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowGestionSala(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Gestionar Sala</h2>
+                <p className="text-sm text-slate-500">Sala {salaActual} — {alumnos.length} alumnos</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGestionSala(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200"
+              >
+                <X className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Cargar lista completa (un nombre por linea)
+              </label>
+              <textarea
+                value={bulkNames}
+                onChange={(e) => setBulkNames(e.target.value)}
+                placeholder={"Sofia Garcia\nMartin Lopez\nLucia Fernandez"}
+                className="w-full h-32 p-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none"
+              />
+              <button
+                type="button"
+                onClick={cargarListaAlumnos}
+                disabled={cargandoAlumnos || !bulkNames.trim()}
+                className="w-full mt-2 py-2.5 text-white rounded-xl font-medium disabled:opacity-50 text-sm bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                {cargandoAlumnos ? "Guardando..." : `Cargar Alumnos (${bulkNames.split("\n").filter((n) => n.trim()).length})`}
+              </button>
+
+              {alumnos.length > 0 && (
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <p className="text-sm font-medium text-slate-700 mb-2">Alumnos de la sala</p>
+                  <ul className="space-y-1">
+                    {alumnos.map((al: any) => (
+                      <li key={al.id} className="flex items-center justify-between text-sm text-slate-700 py-1.5 border-b border-slate-50">
+                        <span>{al.nombre}</span>
+                        <button
+                          type="button"
+                          onClick={() => borrarAlumno(al.id)}
+                          className="text-slate-300 hover:text-red-500"
+                          title="Quitar"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>
