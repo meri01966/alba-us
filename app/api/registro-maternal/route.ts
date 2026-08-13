@@ -11,12 +11,58 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const TABLA = "registro_maternal"
 
 // Las cinco capacidades, con su nombre para mostrar
+// Cada capacidad se evalua por un INDICADOR OBSERVABLE concreto, no en abstracto.
+// Son los mismos pasos que trabaja la secuencia del cronograma, sacados de los
+// objetivos de aprendizaje del DC de CABA para sala de 2.
 const CAPACIDADES = [
-  { key: "COM", nombre: "Comunicacion" },
-  { key: "AUT", nombre: "Autonomia para aprender" },
-  { key: "RES", nombre: "Resolucion de problemas" },
-  { key: "COL", nombre: "Compromiso y colaboracion" },
-  { key: "REF", nombre: "Pensamiento reflexivo y critico" },
+  {
+    key: "COM", nombre: "Comunicacion",
+    indicadores: [
+      "Responde a su nombre, a preguntas y a instrucciones simples",
+      "Expresa lo que quiere con palabras: saluda, nombra, pide",
+      "Incorpora palabras nuevas del entorno cotidiano",
+      "Participa de intercambios respetando turnos",
+      "Comprende y produce oraciones de dos o tres palabras",
+      "Participa cuando se lee, se narra o se canta",
+      "Reconoce que lo escrito dice algo",
+    ],
+  },
+  {
+    key: "AUT", nombre: "Autonomia para aprender",
+    indicadores: [
+      "Explora libremente objetos y materiales",
+      "Elige entre dos propuestas",
+      "Sostiene una actividad breve hasta terminarla",
+      "Anticipa la rutina y la nombra",
+    ],
+  },
+  {
+    key: "RES", nombre: "Resolucion de problemas",
+    indicadores: [
+      "Descubre que sus acciones tienen efecto",
+      "Ensaya otra manera cuando algo no sale",
+      "Pide ayuda con palabras",
+      "Busca el modo de alcanzar lo que quiere",
+    ],
+  },
+  {
+    key: "COL", nombre: "Compromiso y colaboracion",
+    indicadores: [
+      "Comparte el espacio y los materiales con otros",
+      "Espera y respeta su turno",
+      "Participa de una propuesta grupal",
+      "Ayuda a un companero o a la docente",
+    ],
+  },
+  {
+    key: "REF", nombre: "Pensamiento reflexivo y critico",
+    indicadores: [
+      "Explora y descubre efectos de sus acciones",
+      "Anticipa lo que va a pasar",
+      "Expresa lo que le gusta y lo que no",
+      "Reconoce lo conocido en algo nuevo",
+    ],
+  },
 ]
 
 export const dynamic = "force-dynamic"
@@ -75,6 +121,15 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    // Que INDICADOR toca: el primero de esa capacidad que todavia no se evaluo.
+    // Asi la evaluacion pregunta por algo concreto y observable, no por la
+    // capacidad en abstracto, y coincide con lo que se viene trabajando.
+    const evaluadosDeEsta = new Set(
+      regs.filter((r: any) => r.capacidad === sugerida.key).map((r: any) => String(r.paso || ""))
+    )
+    const indicador =
+      sugerida.indicadores.find((i: string) => !evaluadosDeEsta.has(i)) || sugerida.indicadores[0]
+
     // Como quedo cada chico la ultima vez que se evaluo ESTA capacidad
     const ultimoEstado: Record<string, string> = {}
     const fechaCap = ultimaPorCapacidad[sugerida.key]
@@ -89,6 +144,7 @@ export async function GET(req: NextRequest) {
       alumnos: alumnos || [],
       capacidades: CAPACIDADES,
       capacidadSugerida: sugerida,
+      indicador,
       ultimoRegistro: ultimoRegistro || null,
       diasSinRegistrar,
       ultimoEstado,
