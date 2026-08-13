@@ -104,7 +104,7 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
     "eje": "CF | CT | O | E",
     "capacidad": "accion observable que empieza con verbo",
     "objetivo": "que se busca que los ninos logren, una oracion",
-    "desarrollo": "pasos concretos para darla en el aula, 2 a 4 pasos",
+    "desarrollo": "pasos concretos para darla en el aula, 2 a 4 pasos. Escribile A LA MAESTRA, no sobre ella: 'pone', 'invita', 'preguntales'. Nunca 'la docente pone'",
     "materiales": "lista breve separada por comas",
     "texto_original": "el fragmento exacto del listado que corresponde a esta actividad"
   }
