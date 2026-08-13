@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle, FolderClock, ChevronRight } from "lucide-react"
+import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle, FolderClock, ChevronRight, Eye } from "lucide-react"
 
 // Salas de maternal disponibles (2 y 3 años)
 const SALAS_MATERNAL = [
@@ -114,6 +114,10 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Recursos de capacitacion basados en las actividades planificadas
   const [recursosCapacitacion, setRecursosCapacitacion] = useState<{ titulo: string; autor: string; descripcion: string; tipo: string }[]>([])
+  // Micro capacitacion situada: anclada al proyecto y a la actividad del dia
+  const [capacitacion, setCapacitacion] = useState<{ titulo: string; contenido: string; autor: string; tips: string[] } | null>(null)
+  const [cargandoCap, setCargandoCap] = useState(false)
+  const [capVistas, setCapVistas] = useState<string[]>([])
   
   // Cargar datos de la sala
   useEffect(() => {
@@ -353,6 +357,55 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }, [proyecto.titulo])
   
   // Generar recursos de capacitacion basados en las actividades del cronograma
+  // Marca una actividad como realizada. Un toque y listo: es lo que le dice a
+  // ALBA que ese paso se trabajo y puede proponer el siguiente.
+  async function marcarRealizada(dia: string, idx: number) {
+    const nuevo = { ...cronograma }
+    const acts = [...(nuevo[dia]?.actividades || [])]
+    if (!acts[idx]) return
+    acts[idx] = { ...acts[idx], realizada: true } as any
+    nuevo[dia] = { ...nuevo[dia], actividades: acts }
+    setCronograma(nuevo)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      await fetch(`${base}/api/cronograma-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+      })
+    } catch (e) {
+      console.error("[v0] Error marcando la actividad como realizada:", e)
+    }
+  }
+
+  // Pide un consejo pedagogico situado. "otro" evita repetir los ya vistos.
+  async function pedirCapacitacion(otro = false) {
+    const primeraAct = DIAS.map((d) => cronograma[d]?.actividades?.find((a) => (a.nombre || "").trim()))
+      .find((a) => a)?.nombre || ""
+    setCargandoCap(true)
+    try {
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "micro_capacitacion",
+          sala: salaActual,
+          proyecto: { titulo: proyecto.titulo || "" },
+          actividad: primeraAct,
+          evitar: otro ? capVistas : [],
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && data.capacitacion) {
+        setCapacitacion(data.capacitacion)
+        setCapVistas((prev) => [...prev, data.capacitacion.titulo].slice(-6))
+      }
+    } catch (e) {
+      console.error("[v0] Error pidiendo capacitacion:", e)
+    }
+    setCargandoCap(false)
+  }
+
   function generarRecursosCapacitacion() {
     const actividadesNombres: string[] = []
     DIAS.forEach(dia => {
@@ -468,8 +521,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       nuevoCronograma[dia].actividades = [{ nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }]
     }
     
-    // Agregar la sugerencia como nueva actividad
-    nuevoCronograma[dia].actividades.push(sugerencia.actividad)
+    // Agregar la sugerencia marcada como de ALBA: asi queda FIJA en la vista
+    // (se lee, no se edita) y se distingue de las que carga la maestra.
+    nuevoCronograma[dia].actividades.push({ ...sugerencia.actividad, origen: "alba", alfabetizacion: true } as any)
+
+    // Si el dia tenia una actividad vacia de relleno, se saca
+    nuevoCronograma[dia].actividades = nuevoCronograma[dia].actividades.filter(
+      (a: any, i: number, arr: any[]) => (a?.nombre || "").trim() !== "" || arr.length === 1
+    )
     setCronograma(nuevoCronograma)
     
     // Remover la sugerencia
@@ -869,6 +928,15 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => setShowCronogramaLectura(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-300 text-green-700 hover:bg-green-50 text-sm font-medium transition-colors"
+                    title="Ver la semana completa"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Ver
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowCronogramaModal(true)}
                     className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-white hover:bg-green-100 text-green-700 font-medium transition-colors shadow-sm border border-green-200"
                   >
@@ -992,7 +1060,32 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </div>
                 </div>
                 <div className="p-5">
-                  {recursosCapacitacion.length > 0 ? (
+                  {capacitacion ? (
+                    <div className="space-y-3">
+                      <div className="bg-white p-4 rounded-xl border border-teal-200">
+                        <h4 className="font-bold text-slate-800 text-base leading-snug">{capacitacion.titulo}</h4>
+                        <p className="text-sm text-slate-700 leading-relaxed mt-1.5">{capacitacion.contenido}</p>
+                        {capacitacion.tips?.length > 0 && (
+                          <ul className="mt-2 space-y-0.5">
+                            {capacitacion.tips.map((t, i) => (
+                              <li key={i} className="text-xs text-slate-600">· {t}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {capacitacion.autor && (
+                          <p className="text-xs text-teal-700 font-medium mt-2.5 italic">{capacitacion.autor}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => pedirCapacitacion(true)}
+                        disabled={cargandoCap}
+                        className="w-full text-xs font-semibold py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors disabled:opacity-50"
+                      >
+                        {cargandoCap ? "Buscando..." : "Otro consejo"}
+                      </button>
+                    </div>
+                  ) : recursosCapacitacion.length > 0 ? (
                     <div className="space-y-3">
                       {recursosCapacitacion.map((recurso, i) => (
                         <div key={i} className="bg-white p-3 rounded-xl border border-teal-100 hover:border-teal-300 transition-colors">
@@ -1014,7 +1107,15 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-3">
                         <FileText className="w-7 h-7 text-teal-400" />
                       </div>
-                      <p className="text-slate-500 text-sm">Agrega actividades al cronograma para ver recursos pedagogicos relacionados</p>
+                      <p className="text-slate-500 text-sm mb-3">Un consejo para dar mejor la actividad de esta semana</p>
+                      <button
+                        type="button"
+                        onClick={() => pedirCapacitacion(false)}
+                        disabled={cargandoCap}
+                        className="text-xs font-semibold px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors disabled:opacity-50"
+                      >
+                        {cargandoCap ? "Buscando..." : "Pedir consejo"}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1173,75 +1274,63 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </div>
                   
                   <div className="p-3 space-y-3">
-                    {/* Sugerencia de ALBA para este dia */}
-                    {sugerenciasAlba.find(s => s.dia === dia) && (
-                      <div className="p-2 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
-                        <div className="flex items-center gap-1 mb-1">
-                          <Sparkles className="w-3 h-3 text-violet-600" />
-                          <span className="text-[9px] font-bold text-violet-600 uppercase">Sugerencia ALBA</span>
-                        </div>
-                        <p className="text-[10px] font-medium text-slate-700 mb-1">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.nombre}</p>
-                        <p className="text-[9px] text-slate-500 mb-2 line-clamp-2">{sugerenciasAlba.find(s => s.dia === dia)?.actividad.objetivo}</p>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => aceptarSugerenciaAlba(dia)}
-                            className="flex-1 text-[9px] px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors"
-                          >
-                            Aceptar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => rechazarSugerenciaAlba(dia)}
-                            className="flex-1 text-[9px] px-2 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded font-medium transition-colors"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Intercambio */}
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 uppercase">Intercambio</label>
-                      <textarea
-                        value={cronograma[dia]?.intercambio || ""}
-                        onChange={(e) => actualizarCampo(dia, "intercambio", e.target.value)}
-                        placeholder="Tema del dia..."
-                        className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-12 focus:outline-none focus:ring-1 focus:ring-green-300"
-                      />
-                    </div>
-                    
-                    {/* Badges de clases especiales del dia */}
-                    <div className="space-y-1">
-                      {clasesEspeciales.filter(c => c.dia === dia).map((clase, idx) => (
-                        <div 
-                          key={`${clase.tipo}-${idx}`} 
-                          className={`relative group flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
-                            clase.tipo === "edFisica" ? "bg-orange-100 text-orange-700 border-l-3 border-orange-500" :
-                            clase.tipo === "musica" ? "bg-purple-100 text-purple-700 border-l-3 border-purple-500" :
-                            "bg-blue-100 text-blue-700 border-l-3 border-blue-500"
-                          }`}
-                        >
-                          {clase.tipo === "edFisica" && <><Dumbbell className="w-3 h-3" /> Ed. Fisica</>}
-                          {clase.tipo === "musica" && <><Music className="w-3 h-3" /> Musica</>}
-                          {clase.tipo === "ingles" && <><Globe className="w-3 h-3" /> Ingles</>}
-                          {editandoClases && (
+                    {/* Intercambio: una sola vez, arriba */}
+                    <input
+                      type="text"
+                      value={cronograma[dia]?.intercambio || ""}
+                      onChange={(e) => actualizarCampo(dia, "intercambio", e.target.value)}
+                      placeholder="Tema del dia"
+                      className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-300"
+                    />
+
+                    {/* Sugerencia de ALBA: la actividad completa, para aceptar o cambiar.
+                        Al aceptar queda fija; si no la acepta, escribe la suya abajo. */}
+                    {sugerenciasAlba.find(s => s.dia === dia) && (() => {
+                      const sug = sugerenciasAlba.find(s => s.dia === dia)!
+                      return (
+                        <div className="bg-violet-50 border-2 border-violet-300 rounded-xl p-3">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-violet-700">ALBA sugiere</span>
+                          </div>
+
+                          <p className="text-sm font-bold text-slate-800 leading-snug mb-1.5">
+                            {sug.actividad.nombre}
+                          </p>
+
+                          {sug.actividad.desarrollo && (
+                            <p className="text-xs text-slate-700 leading-relaxed mb-2 whitespace-pre-line">
+                              {sug.actividad.desarrollo}
+                            </p>
+                          )}
+
+                          {sug.actividad.capacidades && (
+                            <p className="text-xs bg-white border border-violet-300 rounded-lg px-2 py-1.5 mb-2.5">
+                              <span className="font-bold text-violet-700">Mira si: </span>
+                              <span className="text-slate-800">{sug.actividad.capacidades}</span>
+                            </p>
+                          )}
+
+                          <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => eliminarClaseEspecial(clase.tipo, dia)}
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => aceptarSugerenciaAlba(dia)}
+                              className="flex-1 text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
                             >
-                              <X className="w-2.5 h-2.5" />
+                              Aceptar
                             </button>
-                          )}
+                            <button
+                              type="button"
+                              onClick={() => rechazarSugerenciaAlba(dia)}
+                              className="flex-1 text-xs font-semibold py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+                            >
+                              Cambiar
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                      {clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
-                        <p className="text-[10px] text-slate-400 italic">Sin clases especiales</p>
-                      )}
-                    </div>
-                    
+                      )
+                    })()}
+
                     {/* Actividades - multiples */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -1255,42 +1344,79 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         </button>
                       </div>
                       
-                      {cronograma[dia]?.actividades?.map((act, idx) => (
-                        <div key={idx} className="bg-white border border-green-200 rounded-lg p-2 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-green-600">Actividad {idx + 1}</span>
-                            {cronograma[dia].actividades.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => eliminarActividad(dia, idx)}
-                                className="text-red-400 hover:text-red-600"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
+                      {cronograma[dia]?.actividades?.map((act, idx) => {
+                        // Una actividad de ALBA ya aceptada queda FIJA: se lee, no se edita.
+                        // Si no le sirve, la borra con la cruz y escribe la suya.
+                        const esDeAlba = (act as any).origen === "alba" && (act.nombre || "").trim() !== ""
+                        if (esDeAlba) {
+                          return (
+                            <div key={idx} className={`rounded-xl p-3 border-2 ${(act as any).realizada ? "bg-green-100 border-green-500" : "bg-white border-green-300"}`}>
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <p className="text-sm font-bold text-slate-800 leading-snug">{act.nombre}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarActividad(dia, idx)}
+                                  className="text-slate-300 hover:text-red-500 shrink-0"
+                                  title="Quitar"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              {act.desarrollo && (
+                                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">{act.desarrollo}</p>
+                              )}
+                              {act.capacidades && (
+                                <p className="text-xs bg-violet-50 border border-violet-300 rounded-lg px-2 py-1.5">
+                                  <span className="font-bold text-violet-700">Mira si: </span>
+                                  <span className="text-slate-800">{act.capacidades}</span>
+                                </p>
+                              )}
+                              {(act as any).realizada ? (
+                                <p className="mt-2 text-xs font-bold text-green-700 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5" /> Realizada
+                                </p>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => marcarRealizada(dia, idx)}
+                                  className="mt-2 w-full text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                >
+                                  Marcar como realizada
+                                </button>
+                              )}
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div key={idx} className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+                            <div className="flex items-center justify-end">
+                              {cronograma[dia].actividades.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarActividad(dia, idx)}
+                                  className="text-slate-300 hover:text-red-500"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              value={act.nombre}
+                              onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
+                              placeholder="Nombre de la actividad"
+                              className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-300 font-medium"
+                            />
+                            <textarea
+                              value={act.desarrollo}
+                              onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
+                              placeholder="Que van a hacer los ninos"
+                              className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-green-300"
+                            />
                           </div>
-                          <input
-                            type="text"
-                            value={act.nombre}
-                            onChange={(e) => actualizarActividad(dia, idx, "nombre", e.target.value)}
-                            placeholder="Nombre de la actividad"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-green-300 font-medium"
-                          />
-                          {/* Solo nombre y desarrollo: capacidades, contenidos,
-                              objetivo y materiales los completa ALBA por detras */}
-                          <textarea
-                            value={act.desarrollo}
-                            onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
-                            placeholder="Que van a hacer los ninos"
-                            className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none h-16 focus:outline-none focus:ring-1 focus:ring-green-300"
-                          />
-                          {act.capacidades && (
-                            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-200 rounded px-1.5 py-1">
-                              <span className="font-bold">Mira si:</span> {act.capacidades}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
