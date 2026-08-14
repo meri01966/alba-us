@@ -104,7 +104,7 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
     "eje": "CF | CT | O | E",
     "capacidad": "accion observable que empieza con verbo",
     "objetivo": "que se busca que los ninos logren, una oracion",
-    "desarrollo": "pasos concretos para darla en el aula, 2 a 4 pasos. Escribile A LA MAESTRA, no sobre ella: 'pone', 'invita', 'preguntales'. Nunca 'la docente pone'",
+    "desarrollo": "pasos concretos para darla en el aula. LA PRUEBA: si entra una SUPLENTE que no conoce al grupo, tiene que poder darla leyendo esto una sola vez — materiales exactos, como se agrupan los chicos, cuanto dura, que frases decir. Escribile A LA DOCENTE en segunda persona: 'pone', 'invitalos', 'preguntales'. Nunca 'la docente pone' ni 'quien coordine'",
     "materiales": "lista breve separada por comas",
     "texto_original": "el fragmento exacto del listado que corresponde a esta actividad"
   }
