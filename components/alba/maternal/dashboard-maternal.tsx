@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ChevronDown, Users, BookOpen, Calendar, Sparkles, FileText, Save, GraduationCap, Pencil, Check, Plus, X, Music, Dumbbell, Globe, CheckCircle, FolderClock, ChevronRight, Eye } from "lucide-react"
+import { ActividadesDocentes } from "@/components/alba/actividades-docentes"
 
 // Salas de maternal disponibles (2 y 3 años)
 // Color de cada capacidad. IDENTIDAD, no estado: ninguno es verde ni rojo,
@@ -34,6 +35,9 @@ const SALAS_MATERNAL = [
 
 // Dias de la semana
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
+// ALBA sugiere solo estos tres dias, igual que en jardin. Los otros dos los
+// carga la maestra con sus propias actividades.
+const DIAS_ALBA = ["Lunes", "Martes", "Viernes"] as const
 
 // Estructura de una actividad
 interface Actividad {
@@ -263,9 +267,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Cargar cronograma y proyecto cuando cambia la sala
   useEffect(() => {
+    if (!salaActual) return
     cargarDatos()
     traerAlumnos()
     traerResumenEval()
+    generarRecursosCapacitacion()
   }, [salaActual])
   
   // Inicializar cronograma vacio
@@ -382,8 +388,36 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }
   }
   
-  // Generar tips didacticos de ALBA basados en el proyecto
-  function generarTipsALBA() {
+  // Tips generados por ALBA. Antes eran una lista fija en el codigo y salian
+  // siempre los mismos; ahora se piden al brain evitando los ya vistos.
+  const [tipsVistos, setTipsVistos] = useState<string[]>([])
+
+  async function generarTipsALBA() {
+    setLoadingSugerencias(true)
+    try {
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "tips_planificacion",
+          sala: salaActual,
+          proyecto: { titulo: proyecto.titulo || "" },
+          evitar: tipsVistos,
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && Array.isArray(data.tips) && data.tips.length > 0) {
+        setSugerenciasALBA(data.tips)
+        setTipsVistos((prev) => [...prev, ...data.tips].slice(-12))
+      }
+    } catch (e) {
+      console.error("[v0] Error generando tips:", e)
+    }
+    setLoadingSugerencias(false)
+  }
+
+  // Version anterior (lista fija), sin uso
+  function generarTipsALBAviejo() {
     if (!proyecto.titulo) {
       setSugerenciasALBA([])
       return
@@ -482,15 +516,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }, 500)
   }
   
-  // Llamar a generarTipsALBA cuando cambia el proyecto
-  useEffect(() => {
-    generarTipsALBA()
-  }, [proyecto.titulo])
+  // Los tips NO se piden solos: llaman a la IA y al dispararse con cada cambio
+  // del proyecto se pisaban con la capacitacion y borraban lo que ya estaba.
+  // Se piden una sola vez al entrar a la sala, y despues solo con el boton.
   
   // Generar recursos de capacitacion basados en las actividades del cronograma
   // Mueve una actividad al dia anterior o al siguiente.
   async function moverActividadDia(dia: string, idx: number, dir: -1 | 1) {
-    const i = DIAS.indexOf(dia)
+    const i = DIAS.indexOf(dia as (typeof DIAS)[number])
     const destino = DIAS[i + dir]
     if (!destino || !cronograma[dia] || !cronograma[destino]) return
     const act = cronograma[dia].actividades?.[idx]
@@ -625,10 +658,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }
   }
   
-  // Actualizar recursos cuando cambia el cronograma
-  useEffect(() => {
-    generarRecursosCapacitacion()
-  }, [cronograma])
+  // La capacitacion tampoco se recalcula sola con cada cambio del cronograma:
+  // marcar una actividad o moverla no tiene por que rehacer los recursos.
   
   // Generar sugerencias de ALBA basadas en el proyecto
   async function generarSugerenciasAlba() {
@@ -649,7 +680,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             duracion: proyecto.duracion || ""
           },
           sala: salaActual,
-          dias: DIAS,
+          dias: DIAS_ALBA,
           actividadesYaSugeridas // Enviar actividades ya aceptadas/rechazadas para no repetir
         })
       })
@@ -1199,13 +1230,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                               <p className="text-[10px] text-slate-500 truncate">{cronograma[dia].intercambio}</p>
                             )}
                             {cronograma[dia].actividades?.filter(a => a.nombre).map((act, i) => {
-                              const cap = (act as any).capacidadKey || ""
-                              const col = COLOR_CAPACIDAD[cap]
                               const hecha = (act as any).realizada === true
                               const vencida = !hecha && diaYaPaso(cronograma[dia].fecha)
-                              const idxReal = cronograma[dia].actividades.findIndex((x) => x === act)
-                              const iDia = DIAS.indexOf(dia)
                               return (
+                                // En el tablero la tarjeta dice UNA sola cosa: si se hizo o no.
+                                // Gris mientras no llego, verde si se hizo, rojo si paso sin hacerse.
+                                // El color de la capacidad se ve en Evaluar, no aca.
                                 <div
                                   key={i}
                                   className="rounded-lg border-2 px-2 py-1.5"
@@ -1214,34 +1244,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                       ? { backgroundColor: "#dcfce7", borderColor: "#22c55e" }
                                       : vencida
                                       ? { backgroundColor: "#fee2e2", borderColor: "#f87171" }
-                                      : col
-                                      ? { backgroundColor: col.bg, borderColor: col.border }
                                       : { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" }
                                   }
                                 >
-                                  <div className="flex items-start gap-1">
-                                    <div className="flex-1 min-w-0">
-                                      {cap && (
-                                        <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: hecha ? "#15803d" : vencida ? "#b91c1c" : col?.text }}>
-                                          {NOMBRE_CAPACIDAD[cap] || cap}
-                                        </p>
-                                      )}
-                                      <p className="text-[11px] font-semibold text-slate-800 leading-snug">{act.nombre}</p>
-                                      {hecha && <p className="text-[9px] font-bold text-green-700 mt-0.5">Realizada</p>}
-                                    </div>
-                                    {!hecha && (
-                                      <div className="flex flex-col gap-0.5 shrink-0">
-                                        {iDia > 0 && (
-                                          <button type="button" onClick={() => moverActividadDia(dia, idxReal, -1)} title="Al dia anterior"
-                                            className="w-4 h-4 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-[9px] leading-none">‹</button>
-                                        )}
-                                        {iDia < DIAS.length - 1 && (
-                                          <button type="button" onClick={() => moverActividadDia(dia, idxReal, 1)} title="Al dia siguiente"
-                                            className="w-4 h-4 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-[9px] leading-none">›</button>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <p className="text-[11px] font-semibold text-slate-800 leading-snug">{act.nombre}</p>
+                                  {hecha && <p className="text-[9px] font-bold text-green-700 mt-0.5">Realizada</p>}
+                                  {vencida && <p className="text-[9px] font-bold text-red-700 mt-0.5">Sin hacer</p>}
                                 </div>
                               )
                             })}
@@ -1256,6 +1264,10 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
               </div>
             </div>
             
+            {/* Mis actividades: el repertorio propio de la maestra.
+                ALBA lo clasifica por capacidad y lo suma a sus sugerencias. */}
+            <ActividadesDocentes sala={salaActual} proyecto={proyecto.titulo || ""} />
+
             {/* Fila inferior: Sugerencias ALBA + Capacitacion */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
@@ -1612,15 +1624,26 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                           return (
                             <div key={idx} className={`rounded-xl p-3 border-2 ${(act as any).realizada ? "bg-green-100 border-green-500" : "bg-white border-green-300"}`}>
                               <div className="flex items-start justify-between gap-2 mb-1.5">
-                                <p className="text-sm font-bold text-slate-800 leading-snug">{act.nombre}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarActividad(dia, idx)}
-                                  className="text-slate-300 hover:text-red-500 shrink-0"
-                                  title="Quitar"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
+                                <p className="text-sm font-bold text-slate-800 leading-snug flex-1">{act.nombre}</p>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* Mover de dia: solo si todavia no se hizo */}
+                                  {!(act as any).realizada && DIAS.indexOf(dia) > 0 && (
+                                    <button type="button" onClick={() => moverActividadDia(dia, idx, -1)} title="Al dia anterior"
+                                      className="w-5 h-5 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-xs leading-none">‹</button>
+                                  )}
+                                  {!(act as any).realizada && DIAS.indexOf(dia) < DIAS.length - 1 && (
+                                    <button type="button" onClick={() => moverActividadDia(dia, idx, 1)} title="Al dia siguiente"
+                                      className="w-5 h-5 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-xs leading-none">›</button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarActividad(dia, idx)}
+                                    className="text-slate-300 hover:text-red-500"
+                                    title="Quitar"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                               {act.desarrollo && (
                                 <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">{act.desarrollo}</p>
