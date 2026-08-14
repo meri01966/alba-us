@@ -21,8 +21,16 @@ export const revalidate = 0
 
 // Vocabulario UNICO de ejes: CF / CT / O / E. Si otra parte del sistema usa
 // "Escritura" o "EA", se traduce en el borde — aca se guarda siempre asi.
-function normalizarEje(valor: string): "CF" | "CT" | "O" | "E" | null {
+// Las salas de maternal se clasifican por CAPACIDAD, no por eje de alfabetizacion
+const SALAS_MATERNAL_AD = ["PINITOS", "NARANJOS", "PRUEBA MATERNAL"]
+function esDeMaternalAD(sala: string): boolean {
+  const s = (sala || "").toUpperCase()
+  return SALAS_MATERNAL_AD.some((ref) => s.includes(ref))
+}
+
+function normalizarEje(valor: string): string | null {
   const e = (valor || "").trim().toUpperCase()
+  if (["COM", "AUT", "RES", "COL", "REF"].includes(e)) return e
   if (e === "CF") return "CF"
   if (e === "CT") return "CT"
   if (e === "O" || e === "ORALIDAD") return "O"
@@ -73,6 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     const textoCompleto = String(texto).trim().slice(0, 12000)
+    const esMaternal = esDeMaternalAD(String(sala || ""))
 
     const prompt = `Sos ALBA, asistente pedagogico de alfabetizacion inicial para salas de 4 y 5 anos (Diseno Curricular de Educacion Inicial, Ciudad de Buenos Aires).
 
@@ -80,11 +89,17 @@ Una maestra pego un LISTADO con varias actividades que ella ya usa en su sala. T
 
 ${proyecto ? `Proyecto en curso de la sala: "${proyecto}"` : ""}
 
-EJES (elegi exactamente uno por actividad):
+${esMaternal ? `CAPACIDADES (elegi exactamente una por actividad, es una sala de 2 anos):
+- COM: Comunicacion — responder, nombrar, pedir, conversar, escuchar cuentos y canciones
+- AUT: Autonomia para aprender — explorar, elegir, sostener una actividad, anticipar la rutina
+- RES: Resolucion de problemas — causa y efecto, ensayar alternativas, pedir ayuda
+- COL: Compromiso y colaboracion — compartir, esperar turnos, participar del grupo
+- REF: Pensamiento reflexivo y critico — descubrir efectos, anticipar, expresar preferencias
+Aunque la capacidad sea otra, la actividad SIEMPRE tiene que hacer trabajar el lenguaje.` : `EJES (elegi exactamente uno por actividad):
 - CF: Conciencia Fonologica — sonidos, rimas, silabas, fonemas
 - CT: Comprension de Textos — cuentos, lectura dialogica, secuencias, preguntas sobre el texto
 - O: Oralidad — conversacion, escucha, vocabulario, narracion oral, argumentacion
-- E: Escritura — escribir el nombre, rotular, listas, frases, hipotesis de escritura
+- E: Escritura — escribir el nombre, rotular, listas, frases, hipotesis de escritura`}
 
 CAPACIDAD: una sola capacidad por actividad, redactada como ACCION OBSERVABLE que la maestra pueda evaluar mirando al nino. Empezá con un verbo en tercera persona del singular.
 Ejemplos correctos: "Identifica el sonido inicial de una palabra", "Escribe su nombre con letras convencionales", "Reconstruye oralmente la secuencia de un cuento", "Anticipa el contenido de un texto a partir de las imagenes".
@@ -101,7 +116,7 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
 [
   {
     "nombre": "titulo corto y claro, maximo 6 palabras",
-    "eje": "CF | CT | O | E",
+    "eje": "${esMaternal ? "COM | AUT | RES | COL | REF" : "CF | CT | O | E"}",
     "capacidad": "accion observable que empieza con verbo",
     "objetivo": "que se busca que los ninos logren, una oracion",
     "desarrollo": "pasos concretos para darla en el aula. LA PRUEBA: si entra una SUPLENTE que no conoce al grupo, tiene que poder darla leyendo esto una sola vez — materiales exactos, como se agrupan los chicos, cuanto dura, que frases decir. Escribile A LA DOCENTE en segunda persona: 'pone', 'invitalos', 'preguntales'. Nunca 'la docente pone' ni 'quien coordine'",
