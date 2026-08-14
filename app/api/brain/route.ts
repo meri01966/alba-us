@@ -2268,6 +2268,33 @@ export async function POST(req: NextRequest) {
     // Un consejo anclado en tres cosas: el proyecto de la sala, la actividad
     // que va a dar, y un enfoque de una lista CERRADA de autores. La lista es
     // cerrada a proposito: sin ella la IA inventa titulos y paginas que no existen.
+    // Tips de planificacion: se generan cada vez, anclados al proyecto.
+    // Antes eran una lista fija en el codigo y salian siempre los mismos.
+    if (action === "tips_planificacion") {
+      const evitarTips = Array.isArray(body.evitar) ? body.evitar : []
+      const esMatTip = esDeMaternal(String(sala || ""))
+      const promptTips = `Sos ALBA, asistente pedagogico de nivel inicial.
+
+Escribi 3 tips breves y practicos para la planificacion de esta semana. Uno por linea, sin numerar.
+${esMatTip ? "Sala de 2 anos: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
+${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
+${evitarTips.length ? `NO repitas estos, que ya se los dimos: ${evitarTips.join(" | ")}` : ""}
+
+Respondé SOLO con este JSON, sin backticks:
+{ "tips": ["tip 1", "tip 2", "tip 3"] }`
+
+      try {
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
+        const t = r.text.trim()
+        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
+        return NextResponse.json({ ok: true, ...JSON.parse(j) })
+      } catch (e) {
+        console.error("[v0] Error generando tips:", e)
+        return NextResponse.json({ ok: false, tips: [] }, { status: 502 })
+      }
+    }
+
     if (action === "micro_capacitacion") {
       const actividad = String(body.actividad || "").trim()
       const evitar = Array.isArray(body.evitar) ? body.evitar : []
@@ -2297,7 +2324,7 @@ Escribi UN consejo pedagogico corto y situado para la docente, sobre COMO dar me
 ${esMat ? "SALA DE 2 ANOS (jardin maternal). El consejo tiene que servir para esa edad: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
 ${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
 ${actividad ? `Actividad que va a dar: "${actividad}".` : ""}
-${evitar.length ? `Ya le dimos estos consejos, deci algo DISTINTO: ${evitar.join(" | ")}` : ""}
+${evitar.length ? `Ya le dimos estos consejos: ${evitar.join(" | ")}. Deci algo CLARAMENTE DISTINTO y apoyate en OTRO autor de la lista.` : ""}
 
 Podes apoyarte en UNO de estos enfoques, y solo en estos. No inventes titulos de libros, paginas ni citas textuales: nombra al autor y su idea.
 ${AUTORES.map((a) => "- " + a).join("\n")}
@@ -2311,7 +2338,7 @@ Respondé SOLO con este JSON, sin backticks:
 }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 500, temperature: 0.85 })
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         return NextResponse.json({ ok: true, capacitacion: JSON.parse(j) })
@@ -2589,6 +2616,12 @@ ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
 `}
 
+COMO SE ESCRIBE UNA ACTIVIDAD: es una planificacion de aula, no una idea suelta.
+La prueba es esta: si manana la maestra falta y entra una SUPLENTE que no conoce
+al grupo, tiene que poder dar la actividad leyendola una sola vez. Eso obliga a
+nombrar los materiales exactos y las cantidades, decir como se agrupan los chicos,
+cuanto dura, que frases decir textualmente y que hacer si no sale.
+
 CAPACIDADES DEL DISENO CURRICULAR DE CABA (son cinco, comunes a todos los niveles).
 Para cada actividad elegi la que MAS se pone en juego, escrita exactamente asi:
 - Autonomia para aprender
@@ -2656,7 +2689,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
-    "desarrollo": "paso a paso de como se hace la actividad, con dinamicas concretas y momentos clave. ESCRIBILE A LA MAESTRA, no sobre ella: usa 'pone', 'invita', 'preguntales', 'espera', 'nombra'. NUNCA 'la docente pone' ni 'el docente invita'",
+    "desarrollo": "paso a paso concreto. LA PRUEBA: si manana entra una SUPLENTE que no conoce al grupo, tiene que poder dar la actividad leyendo esto una sola vez. TRES REGLAS: (1) ESCRIBILE A LA DOCENTE, en segunda persona: 'deci', 'pone', 'invitalos', 'preguntales', 'espera'. NUNCA 'la docente dice', 'el docente invita' ni 'quien coordine'. (2) CADA PASO CON EJEMPLO CONCRETO: no 'deci una palabra con un sonido', sino 'deci una palabra que empiece con /m/, por ejemplo mama'. Nombra las palabras y los objetos exactos. (3) Que no quede nada librado a la interpretacion: como se agrupan los chicos, cuanto dura, y que frases decir textualmente",
     "materiales": "lista de materiales necesarios"
   },
   {
