@@ -7,6 +7,26 @@ const supabase = createClient(
 )
 
 // Obtener lunes de la semana actual
+// Hora de Argentina. Vercel corre en UTC: sin esto, despues de las 21 el
+// servidor cree que ya es el dia siguiente.
+function hoyEnBuenosAires(): Date {
+  const ahora = new Date()
+  const utcMs = ahora.getTime() + ahora.getTimezoneOffset() * 60000
+  return new Date(utcMs - 3 * 60 * 60 * 1000)
+}
+
+// LA SEMANA LA DECIDE EL CALENDARIO, no las semanas pendientes.
+// Lunes a viernes -> semana actual. Sabado y domingo -> semana siguiente.
+// Misma regla que jardin: antes maternal saltaba a la semana siguiente cuando
+// no encontraba pendientes, y como nunca cerraba semanas, se descontrolaba.
+function lunesDeLaSemanaAMostrar(): Date {
+  const hoy = hoyEnBuenosAires()
+  const lunes = getLunesSemana(hoy)
+  const dia = hoy.getDay()
+  if (dia === 0 || dia === 6) lunes.setDate(lunes.getDate() + 7)
+  return lunes
+}
+
 function getLunesSemana(fecha: Date): Date {
   const d = new Date(fecha)
   const day = d.getDay()
@@ -94,17 +114,58 @@ export async function GET(req: Request) {
   let lunesUsado: Date
   let mostrarEnBlanco = false
 
-  if (semanasPendientes.length > 0) {
-    // Primera semana pendiente (la más antigua sin finalizar)
-    semanaUsada = semanasPendientes[0]
-    lunesUsado = new Date(semanaUsada + "T00:00:00")
-  } else {
-    // No hay semana pendiente: mostrar semana en blanco para el próximo cronograma
-    mostrarEnBlanco = true
-    const lunesSig = getLunesSemana(new Date())
-    lunesSig.setDate(lunesSig.getDate() + 7)
-    semanaUsada = lunesSig.toISOString().split("T")[0]
-    lunesUsado = lunesSig
+  // La semana la decide el calendario, siempre
+  lunesUsado = lunesDeLaSemanaAMostrar()
+  semanaUsada = lunesUsado.toISOString().split("T")[0]
+
+  // ── CIERRE AUTOMATICO de las semanas que ya vencieron ─────────────────
+  // Se dispara cuando alguien entra despues del corte, igual que jardin.
+  // Lo que no se marco como realizado queda registrado como no hecho.
+  try {
+    const vencidas = (data || [])
+      .filter((r: any) => r.finalizado !== true && String(r.semana_inicio) < semanaUsada)
+      .map((r: any) => String(r.semana_inicio))
+    const semanasACerrar = Array.from(new Set(vencidas))
+
+    for (const sem of semanasACerrar) {
+      const filasSem = (data || []).filter((r: any) => String(r.semana_inicio) === sem)
+
+      for (const fila of filasSem) {
+        const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+        const sinHacer = acts.filter(
+          (a: any) => (a?.nombre || "").trim().length > 0 && a?.realizada !== true
+        )
+        for (const a of sinHacer) {
+          const { data: yaEsta } = await supabase
+            .from("registro_cierre")
+            .select("id")
+            .eq("sala", sala)
+            .eq("actividad_alba", a.nombre)
+            .eq("fecha", fila.fecha)
+            .maybeSingle()
+          if (yaEsta) continue
+
+          await supabase.from("registro_cierre").insert([{
+            fecha: fila.fecha,
+            sala,
+            eje: a.capacidadKey || a.eje || "COM",
+            actividad_alba: a.nombre,
+            actividad_docente: a.nombre,
+            evaluacion_general: "no_realizada",
+            observaciones: "Cierre automatico: la actividad no se marco como realizada.",
+            stats: { green: 0, yellow: 0, red: 0, ausentes: 0 },
+          }])
+        }
+      }
+
+      await supabase
+        .from("cronograma_maternal")
+        .update({ finalizado: true, updated_at: new Date().toISOString() })
+        .eq("sala", sala)
+        .eq("semana_inicio", sem)
+    }
+  } catch (errCierre) {
+    console.error("[v0] Error en el cierre automatico de maternal:", errCierre)
   }
 
   // Organizar por dia
@@ -166,17 +227,12 @@ export async function POST(req: Request) {
     new Set(deSala.filter((r: any) => r.finalizado !== true).map((r: any) => r.semana_inicio as string))
   ).sort((a, b) => a.localeCompare(b))
 
-  let lunesStr: string
-  let lunesSemana: Date
-  if (pendientes.length > 0) {
-    lunesStr = pendientes[0]
-    lunesSemana = new Date(lunesStr + "T00:00:00")
-  } else {
-    const lunesSig = getLunesSemana(new Date())
-    lunesSig.setDate(lunesSig.getDate() + 7)
-    lunesSemana = lunesSig
-    lunesStr = lunesSig.toISOString().split("T")[0]
-  }
+  // Se guarda en la MISMA semana que muestra el GET: la del calendario.
+  // Antes el POST podia escribir en una semana distinta a la que se veia.
+  const lunesSemana: Date = body.semana_inicio
+    ? new Date(String(body.semana_inicio) + "T00:00:00")
+    : lunesDeLaSemanaAMostrar()
+  const lunesStr: string = lunesSemana.toISOString().split("T")[0]
 
   const dias = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
   
