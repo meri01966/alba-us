@@ -2329,12 +2329,20 @@ ${evitar.length ? `Ya le dimos estos consejos: ${evitar.join(" | ")}. Deci algo 
 Podes apoyarte en UNO de estos enfoques, y solo en estos. No inventes titulos de libros, paginas ni citas textuales: nombra al autor y su idea.
 ${AUTORES.map((a) => "- " + a).join("\n")}
 
+Dame DOS consejos que se complementen: dos enfoques distintos sobre la misma
+actividad, de DOS autores diferentes de la lista. Uno sobre como preparar o
+presentar la propuesta, otro sobre que hacer mientras los ninos la hacen.
+
 Respondé SOLO con este JSON, sin backticks:
 {
   "titulo": "una frase corta e imperativa, maximo 6 palabras",
   "contenido": "2 o 3 oraciones concretas sobre que hacer en esta actividad",
   "autor": "nombre del autor y su idea en 4 o 5 palabras",
-  "tips": ["un detalle practico", "otro detalle practico"]
+  "segundo": {
+    "titulo": "otra frase corta e imperativa, maximo 6 palabras",
+    "contenido": "2 o 3 oraciones concretas, un angulo DISTINTO del primero",
+    "autor": "OTRO autor de la lista y su idea en 4 o 5 palabras"
+  }
 }`
 
       try {
