@@ -3010,18 +3010,93 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       return sugerencias
     }
 
-    // Primero el repertorio propio. Si la sala ya lo agoto, recien ahi se mira la RED.
+    // Orden: primero las que nunca se usaron, tal cual las escribio la maestra.
+    // Si ya se usaron todas, vuelven — pero REFORMULADAS: misma estructura,
+    // otros materiales, otro cuento. Asi la version original nunca se pierde
+    // y la repeticion no aburre.
     let elegida: any = null
     let vieneDeLaRed = false
+    let esVariante = false
 
     if (propias && propias.length > 0) {
       elegida = propias[Math.floor(Math.random() * propias.length)]
     } else {
-      elegida = await buscarEnLaRed(supabase, sala, sugerencias)
-      vieneDeLaRed = !!elegida
+      // Ya usadas: solo las que anduvieron bien vuelven a proponerse
+      const { data: usadas } = await supabase
+        .from("actividades_docentes")
+        .select("*")
+        .eq("sala", sala)
+        .neq("estado", "propia")
+
+      if (usadas && usadas.length > 0) {
+        const { data: cierresSala } = await supabase
+          .from("registro_cierre")
+          .select("actividad_alba, evaluacion_general")
+          .eq("sala", sala)
+          .limit(400)
+        const anduvieronBien = new Set(
+          (cierresSala || [])
+            .filter((c: any) => c.evaluacion_general === "excelente" || c.evaluacion_general === "buena")
+            .map((c: any) => String(c.actividad_alba || "").trim().toLowerCase())
+        )
+        const candidatas = usadas.filter((u: any) =>
+          anduvieronBien.has(String(u.nombre || "").trim().toLowerCase())
+        )
+        const pool = candidatas.length > 0 ? candidatas : usadas
+        elegida = pool[Math.floor(Math.random() * pool.length)]
+        esVariante = !!elegida
+      }
+
+      if (!elegida) {
+        elegida = await buscarEnLaRed(supabase, sala, sugerencias)
+        vieneDeLaRed = !!elegida
+        esVariante = !!elegida   // las de la red tambien se reformulan
+      }
     }
 
     if (!elegida) return sugerencias
+
+    // ── REFORMULACION ────────────────────────────────────────────────────
+    // Mantiene la estructura de la actividad y cambia materiales, cuento o
+    // formato. La original queda intacta en la tabla.
+    let nombreFinal = elegida.nombre || "Actividad de la sala"
+    let desarrolloFinal = elegida.desarrollo || ""
+    let materialesFinal = elegida.materiales || ""
+
+    if (esVariante) {
+      try {
+        const r = await generateText({
+          model: "openai/gpt-4o-mini",
+          maxOutputTokens: 700,
+          temperature: 0.9,
+          prompt: `Sos ALBA, asistente pedagogico de nivel inicial.
+
+Esta actividad ya se dio en la sala y funciono. Escribi una VARIANTE: la misma
+estructura y el mismo objetivo, pero con OTROS materiales, otro cuento u otro
+formato. No la mejores ni la cambies de fondo: es la misma propuesta con ropa nueva.
+
+Actividad original:
+- Nombre: "${elegida.nombre || ""}"
+- Que se hace: ${elegida.desarrollo || ""}
+- Materiales: ${elegida.materiales || ""}
+${elegida.capacidad ? `- Se observa: ${elegida.capacidad}` : ""}
+
+Escribile A LA DOCENTE en segunda persona ("pone", "invitalos", "preguntales").
+Si entra una suplente que no conoce al grupo, tiene que poder darla leyendola una vez.
+
+Respondé SOLO con este JSON, sin backticks:
+{ "nombre": "titulo nuevo, corto", "desarrollo": "pasos concretos", "materiales": "lista breve" }`,
+        })
+        const t = r.text.trim()
+        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
+        const v = JSON.parse(j)
+        if (v?.nombre) nombreFinal = String(v.nombre).trim()
+        if (v?.desarrollo) desarrolloFinal = String(v.desarrollo).trim()
+        if (v?.materiales) materialesFinal = String(v.materiales).trim()
+      } catch (e) {
+        console.error("[v0] Error reformulando la actividad, se usa tal cual:", e)
+      }
+    }
 
     // Traduccion de vocabulario: la tabla usa E, el cronograma usa "Escritura".
     const NOMBRE_EJE: Record<string, string> = {
@@ -3040,24 +3115,28 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     copia[idx] = {
       ...copia[idx],
       actividad: {
-        nombre: elegida.nombre || "Actividad de la sala",
+        nombre: nombreFinal,
         capacidades: elegida.capacidad || "",
         contenidos: elegida.objetivo || "",
         objetivo: elegida.objetivo || "",
-        desarrollo: elegida.desarrollo || "",
-        materiales: elegida.materiales || "",
+        desarrollo: desarrolloFinal,
+        materiales: materialesFinal,
         eje: ejeCronograma,
         alfabetizacion: true,
         origen: vieneDeLaRed ? "red" : "docente",
         origenTexto: vieneDeLaRed
           ? `De la red — funciono en una sala de ${elegida.nivelSala || (esde4Anios(String(elegida.sala || "")) ? "4" : "5")} anos`
+          : esVariante
+          ? `Variante de tu actividad "${elegida.nombre}"`
           : "Mi actividad",
         alfabetizacionRed: vieneDeLaRed,
+        esVariante,
         actividadDocenteId: elegida.id,
       },
     }
 
-    if (!vieneDeLaRed) {
+    // Solo la primera vez: si ya era una variante, ya estaba marcada
+    if (!vieneDeLaRed && !esVariante) {
       await supabase
         .from("actividades_docentes")
         .update({ estado: "usada" })
