@@ -1578,7 +1578,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
                           {sug.actividad.capacidades && (
                             <p className="text-xs bg-white border border-violet-300 rounded-lg px-2 py-1.5 mb-2.5">
-                              <span className="font-bold text-violet-700">Mira si: </span>
+                              <span className="font-bold text-violet-700">Observa si: </span>
                               <span className="text-slate-800">{sug.actividad.capacidades}</span>
                             </p>
                           )}
@@ -1650,22 +1650,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                               )}
                               {act.capacidades && (
                                 <p className="text-xs bg-violet-50 border border-violet-300 rounded-lg px-2 py-1.5">
-                                  <span className="font-bold text-violet-700">Mira si: </span>
+                                  <span className="font-bold text-violet-700">Observa si: </span>
                                   <span className="text-slate-800">{act.capacidades}</span>
                                 </p>
                               )}
-                              {(act as any).realizada ? (
+                              {/* "Marcar como realizada" vive en la vista Ver:
+                                  aca se planifica, alla se registra lo que se hizo. */}
+                              {(act as any).realizada && (
                                 <p className="mt-2 text-xs font-bold text-green-700 flex items-center gap-1">
                                   <Check className="w-3.5 h-3.5" /> Realizada
                                 </p>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => marcarRealizada(dia, idx)}
-                                  className="mt-2 w-full text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
-                                >
-                                  Marcar como realizada
-                                </button>
                               )}
                             </div>
                           )
@@ -1845,33 +1839,54 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         </div>
                       ))}
                       
-                      {cronograma[dia]?.recibimiento && (
-                        <div className="bg-slate-50 p-2 rounded-lg">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">Recibimiento</p>
-                          <p className="text-xs text-slate-700">{cronograma[dia].recibimiento}</p>
-                        </div>
-                      )}
-                      
                       {cronograma[dia]?.intercambio && (
-                        <div className="bg-slate-50 p-2 rounded-lg">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">Intercambio</p>
-                          <p className="text-xs text-slate-700">{cronograma[dia].intercambio}</p>
-                        </div>
+                        <input
+                          type="text"
+                          value={cronograma[dia].intercambio}
+                          readOnly
+                          className="w-full text-xs p-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-600"
+                        />
                       )}
-                      
-                      {cronograma[dia]?.actividades?.filter(a => a.nombre).map((act, i) => (
-                        <div key={i} className="bg-green-50 p-2 rounded-lg border-l-3 border-green-500">
-                          <p className="text-[10px] font-bold text-green-600 uppercase">Actividad {i+1}</p>
-                          <p className="text-xs font-semibold text-slate-800">{act.nombre}</p>
-                          {act.capacidades && (
-                            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-200 rounded px-1.5 py-1 mt-1">
-                              <span className="font-bold">Mira si:</span> {act.capacidades}
-                            </p>
-                          )}
-                          {act.desarrollo && <p className="text-[10px] text-slate-600"><span className="font-semibold">Desarrollo:</span> {act.desarrollo}</p>}
-                          {act.materiales && <p className="text-[10px] text-slate-600"><span className="font-semibold">Materiales:</span> {act.materiales}</p>}
-                        </div>
-                      ))}
+
+                      {/* Misma tarjeta que en Editar semana. Aca se LEE y se marca
+                          lo que se hizo: por eso el boton vive en esta vista. */}
+                      {cronograma[dia]?.actividades?.filter(a => a.nombre).map((act, i) => {
+                        const idxReal = cronograma[dia].actividades.findIndex((x) => x === act)
+                        const hecha = (act as any).realizada === true
+                        return (
+                          <div key={i} className={`rounded-xl p-3 border-2 ${hecha ? "bg-green-100 border-green-500" : "bg-white border-green-300"}`}>
+                            <p className="text-sm font-bold text-slate-800 leading-snug mb-1.5">{act.nombre}</p>
+                            {act.desarrollo && (
+                              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">{act.desarrollo}</p>
+                            )}
+                            {act.contenidos && (
+                              <p className="text-xs text-slate-600 mb-1"><span className="font-semibold">Contenidos:</span> {act.contenidos}</p>
+                            )}
+                            {act.materiales && (
+                              <p className="text-xs text-slate-600 mb-2"><span className="font-semibold">Materiales:</span> {act.materiales}</p>
+                            )}
+                            {act.capacidades && (
+                              <p className="text-xs bg-violet-50 border border-violet-300 rounded-lg px-2 py-1.5">
+                                <span className="font-bold text-violet-700">Observa si: </span>
+                                <span className="text-slate-800">{act.capacidades}</span>
+                              </p>
+                            )}
+                            {hecha ? (
+                              <p className="mt-2 text-xs font-bold text-green-700 flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5" /> Realizada
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => marcarRealizada(dia, idxReal)}
+                                className="mt-2 w-full text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+                              >
+                                Marcar como realizada
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
                       
                       {!cronograma[dia]?.actividades?.some(a => a.nombre) && clasesEspeciales.filter(c => c.dia === dia).length === 0 && (
                         <p className="text-xs text-slate-400 text-center py-8">Sin actividades</p>
