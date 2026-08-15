@@ -1299,6 +1299,77 @@ function esDeMaternal(sala: string): boolean {
   return SALAS_MATERNAL.some((ref) => s.includes(ref.toLowerCase().replace(/\s/g, "")))
 }
 
+// ── EJES DE SALA DE 2 (DC maternal, bloque Lengua Oral) ─────────────────
+// El EJE ordena que se ensena; la CAPACIDAD es la lente con la que se observa.
+// La actividad sale del eje, no de la capacidad.
+const EJES_SALA2 = [
+  { key: "USO", nombre: "Uso de la lengua" },
+  { key: "ORA", nombre: "Oraciones" },
+  { key: "VOC", nombre: "Vocabulario" },
+  { key: "ESC", nombre: "La escritura comunica" },
+] as const
+
+const SECUENCIA_SALA2: Record<string, { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string }[]> = {
+  USO: [
+    { titulo: "Responde a su nombre y a consignas simples", objetivo: "Reconocer su nombre y responder a preguntas e instrucciones breves", descripcion: "En rondas y momentos de rutina nombra a cada nino y espera su respuesta: la mirada, un gesto, una palabra. Da consignas de un solo paso acompanadas de gesto.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Lengua Oral: responder preguntas e instrucciones simples" },
+    { titulo: "Expresa lo que quiere con palabras", objetivo: "Usar el lenguaje para saludar, nombrar, pedir y llamar la atencion", descripcion: "Genera situaciones donde decir algo tiene un efecto: un objeto a la vista pero fuera de alcance, saludar al entrar, elegir entre dos cosas nombrandolas.", materiales: ["Objetos conocidos de la sala"], dccaba: "DC CABA Maternal - Lengua Oral: expresar intenciones comunicativas" },
+    { titulo: "Conversa por turnos", objetivo: "Participar de intercambios de uno o dos turnos", descripcion: "Juegos de ida y vuelta: deci algo y espera. Sostene el silencio para dar lugar a la respuesta, sea palabra, gesto o vocalizacion, y retomala en palabras.", materiales: ["Titeres u objetos que aparecen y desaparecen"], dccaba: "DC CABA Maternal - Lengua Oral: intercambios de uno o dos turnos" },
+    { titulo: "Pide ayuda con palabras", objetivo: "Usar el lenguaje para pedir lo que necesita", descripcion: "Situaciones donde hace falta ayuda: espera el pedido antes de intervenir y ofrece la palabra si no aparece.", materiales: ["Frascos o cajas dificiles de abrir"], dccaba: "DC CABA Maternal - Lengua Oral: uso de la lengua en intercambios" },
+  ],
+  ORA: [
+    { titulo: "Comprende consignas de dos partes", objetivo: "Entender enunciados con dos elementos", descripcion: "Da consignas de dos partes en situaciones reales: agarra la pelota y ponela en la caja. Acompana con gesto las primeras veces y despues solo con la palabra.", materiales: ["Objetos de la sala", "Cajas o canastos"], dccaba: "DC CABA Maternal - Lengua Oral: comprension de oraciones" },
+    { titulo: "Arma frases de dos palabras", objetivo: "Producir combinaciones de dos palabras", descripcion: "Modela frases cortas sobre lo que esta pasando y espera que las completen o repitan. Aprovecha las acciones reales de la sala para nombrarlas mientras suceden.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Lengua Oral: produccion de oraciones" },
+    { titulo: "Arma frases de tres palabras", objetivo: "Producir oraciones de tres palabras con orden sujeto-verbo-objeto", descripcion: "Nombra lo que hace cada nino con una frase completa y esperala de vuelta. Repeti la misma estructura muchas veces con distintos protagonistas.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Lengua Oral: oraciones con orden canonico" },
+    { titulo: "Cuenta algo que paso", objetivo: "Relatar un hecho reciente con apoyo del adulto", descripcion: "Al final de la jornada retoma algo que paso y ayudalos a contarlo, poniendo vos las palabras que faltan.", materiales: ["Fotos o el objeto que se uso"], dccaba: "DC CABA Maternal - Lengua Oral: produccion" },
+  ],
+  VOC: [
+    { titulo: "Nombra lo que hay en la sala", objetivo: "Incorporar palabras para nombrar objetos del entorno", descripcion: "Presenta un objeto o escena y nombralo muchas veces, en frases distintas. Ellos repiten, senalan y buscan. Retoma la misma palabra en dias siguientes.", materiales: ["Objetos reales", "Imagenes grandes"], dccaba: "DC CABA Maternal - Lengua Oral: adquisicion de palabras nuevas" },
+    { titulo: "Agrupa por categorias", objetivo: "Reunir palabras que pertenecen a un mismo grupo", descripcion: "Juegos de juntar: todo lo que se come, todo lo que se pone. Nombra la categoria mientras la arman.", materiales: ["Objetos o imagenes de categorias conocidas"], dccaba: "DC CABA Maternal - Lengua Oral: vocabulario" },
+    { titulo: "Palabras que dicen donde", objetivo: "Comprender arriba, abajo, adentro, afuera", descripcion: "Juegos corporales y con objetos donde la palabra indica el lugar. Deci la palabra y espera que la accion aparezca.", materiales: ["Cajas, tuneles, telas"], dccaba: "DC CABA Maternal - Lengua Oral: vocabulario" },
+    { titulo: "Escucha cuentos y canciones", objetivo: "Incorporar vocabulario en situaciones de lectura y canto", descripcion: "Lee y canta con pausas a proposito para que completen. Repeti el mismo cuento o cancion varios dias hasta que anticipen lo que viene.", materiales: ["Libros de imagenes", "Canciones conocidas"], dccaba: "DC CABA Maternal - Lengua Oral: participar de situaciones de lectura" },
+  ],
+  ESC: [
+    { titulo: "Los libros dicen cosas", objetivo: "Descubrir el libro como objeto que comunica", descripcion: "Ofrece libros para explorar libremente y lee en voz alta senalando. Nombra lo que ves en las imagenes.", materiales: ["Libros resistentes de imagenes"], dccaba: "DC CABA Maternal - Lengua Oral: reconocimiento de la escritura" },
+    { titulo: "Su nombre en su lugar", objetivo: "Reconocer su nombre escrito como marca propia", descripcion: "Pone carteles con los nombres en las perchas y las cajas. Leelos en voz alta senalando, para que descubran que esas marcas dicen siempre lo mismo. No se copia ni se traza.", materiales: ["Carteles con los nombres"], dccaba: "DC CABA Maternal - Lengua Oral: la escritura como medio comunicativo" },
+    { titulo: "Dejar marcas", objetivo: "Explorar el trazo espontaneo sobre distintos soportes", descripcion: "Ofrece superficies grandes y materiales para dejar marcas con todo el brazo. Nombra lo que hicieron sin pedir que dibujen algo.", materiales: ["Papel grande", "Crayones gruesos"], dccaba: "DC CABA Maternal - Lengua Oral: precursores" },
+  ],
+}
+
+// ── EJES DE SALA DE 3 (DC sala de 3, area Lengua) ───────────────────────
+// Tres bloques, tal como los define el Diseno: Comprension, Produccion,
+// y Precursores y sistema de escritura.
+const EJES_SALA3 = [
+  { key: "COMP", nombre: "Comprension" },
+  { key: "PROD", nombre: "Produccion" },
+  { key: "PREC", nombre: "Precursores y sistema de escritura" },
+] as const
+
+const SECUENCIA_SALA3: Record<string, { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string }[]> = {
+  COMP: [
+    { titulo: "Vocabulario del entorno y categorias", objetivo: "Clasificar palabras segun categorias semanticas", descripcion: "Juegos de agrupar: animales, alimentos, prendas. Nombra la categoria mientras arman los grupos y pregunta por que va ahi.", materiales: ["Imagenes u objetos de categorias conocidas"], dccaba: "DC CABA Sala de 3 - Lengua, bloque Comprension: clasificacion del vocabulario" },
+    { titulo: "Palabras que dicen donde y cuando", objetivo: "Comprender contrastes locativos y temporales", descripcion: "Juegos corporales con arriba, abajo, detras, delante, cerca, lejos. Despues los del tiempo: antes, despues, dia, noche. La palabra manda la accion.", materiales: ["Objetos, aros, telas"], dccaba: "DC CABA Sala de 3 - Comprension: conceptos locativos y temporales" },
+    { titulo: "Palabras que suenan parecido", objetivo: "Distinguir palabras que se diferencian por minimos contrastes", descripcion: "Juegos con pares como masa y mesa, pero y perro. Deci una y que senalen la imagen. Exagera el contraste al principio.", materiales: ["Imagenes de pares minimos"], dccaba: "DC CABA Sala de 3 - Comprension: contrastes fonologicos minimos" },
+    { titulo: "Escuchar un cuento y comentarlo", objetivo: "Comprender textos leidos por la docente y responder", descripcion: "Lee con pausas y hace preguntas: que paso, que le paso a, que te parece que va a pasar. Aceptamos comentarios espontaneos.", materiales: ["Cuentos breves con imagenes"], dccaba: "DC CABA Sala de 3 - Comprension guiada de textos orales" },
+    { titulo: "Anticipar de que se trata", objetivo: "Anticipar el contenido a partir del titulo y las imagenes", descripcion: "Antes de leer, mostra la tapa y pregunta de que creen que se trata. Al terminar, volve a la anticipacion y comparen.", materiales: ["Libros con tapa ilustrada"], dccaba: "DC CABA Sala de 3 - Comprension" },
+  ],
+  PROD: [
+    { titulo: "Oraciones completas para pedir y contar", objetivo: "Producir oraciones completas en situaciones reales", descripcion: "En los momentos de la rutina, espera la frase completa antes de dar lo que piden, ofreciendo el modelo si hace falta.", materiales: ["Ninguno"], dccaba: "DC CABA Sala de 3 - Produccion: oraciones completas" },
+    { titulo: "Turnos de habla y cortesia", objetivo: "Respetar turnos y usar formulas de cortesia", descripcion: "En la ronda, un objeto marca de quien es la palabra. Nombra el turno y sostene la espera. Modela por favor y gracias en situaciones reales.", materiales: ["Un objeto que circule"], dccaba: "DC CABA Sala de 3 - Produccion: turnos de habla y formulas de cortesia" },
+    { titulo: "Contar algo que paso", objetivo: "Narrar un hecho propio con inicio y final", descripcion: "Da un espacio fijo para que uno cuente algo que le paso. Ayudalo con preguntas: y despues que paso, quien estaba.", materiales: ["Ninguno"], dccaba: "DC CABA Sala de 3 - Produccion: narracion" },
+    { titulo: "Recontar un cuento conocido", objetivo: "Reconstruir oralmente un cuento ya escuchado", descripcion: "Despues de leer el mismo cuento varias veces, pedi que lo cuenten ellos. Usa las imagenes como apoyo del orden.", materiales: ["El cuento y sus imagenes"], dccaba: "DC CABA Sala de 3 - Produccion: recontado" },
+    { titulo: "Describir con palabras precisas", objetivo: "Describir objetos y escenas con vocabulario preciso", descripcion: "Juegos de adivinar: uno describe y los demas buscan. Empuja hacia palabras mas exactas que grande o lindo.", materiales: ["Objetos variados o laminas"], dccaba: "DC CABA Sala de 3 - Produccion: vocabulario preciso" },
+  ],
+  PREC: [
+    { titulo: "Cuantas palabras tiene", objetivo: "Reconocer palabras dentro de la cadena hablada", descripcion: "Deci una oracion corta y que pongan una ficha por cada palabra. Compara oraciones largas y cortas: lo que se cuenta son las palabras, no lo que dura decirlas.", materiales: ["Fichas o tapitas"], dccaba: "DC CABA Sala de 3 - Precursores: reconocimiento de palabras en la cadena hablada" },
+    { titulo: "Las palabras se separan en golpes", objetivo: "Reconocer silabas dentro de la palabra", descripcion: "Palmear los nombres del grupo y las palabras del proyecto. Primero con vos, despues solos. Compara cuales tienen mas golpes.", materiales: ["Ninguno"], dccaba: "DC CABA Sala de 3 - Precursores: reconocimiento de silabas" },
+    { titulo: "Palabras que terminan igual", objetivo: "Reconocer y producir rimas jugando", descripcion: "Poesias y canciones con rima, con pausa antes de la palabra final para que la completen. Despues, buscar otras que rimen.", materiales: ["Poesias y canciones conocidas"], dccaba: "DC CABA Sala de 3 - Precursores: rimas en actividades ludicas" },
+    { titulo: "La escritura dice algo", objetivo: "Reconocer que la escritura comunica significados", descripcion: "Usa carteles reales de la sala y leelos senalando. Muestra que dicen siempre lo mismo aunque cambie quien lee.", materiales: ["Carteles, envases, libros"], dccaba: "DC CABA Sala de 3 - Precursores: la escritura comunica significados" },
+    { titulo: "Como es un libro", objetivo: "Reconocer las convenciones del sistema de escritura", descripcion: "Antes de leer, mostra la tapa, el titulo, por donde se empieza y hacia donde va la lectura. Repetilo cada vez hasta que lo anticipen.", materiales: ["Libros de la sala"], dccaba: "DC CABA Sala de 3 - Precursores: convenciones de la escritura" },
+    { titulo: "Trazos con direccion", objetivo: "Producir trazos controlados y tomar el lapiz", descripcion: "Trazos grandes con distintos patrones: horizontales, verticales, oblicuos. Primero con todo el brazo, despues con el lapiz.", materiales: ["Papel grande", "Crayones y lapices gruesos"], dccaba: "DC CABA Sala de 3 - Precursores: toma del lapiz y trazos controlados" },
+    { titulo: "Mi nombre es esta marca", objetivo: "Reconocer el propio nombre escrito", descripcion: "Que busquen su cartel entre otros para retirar sus cosas. Se reconoce, no se copia: mira si lo identifica entre varios.", materiales: ["Carteles con los nombres del grupo"], dccaba: "DC CABA Sala de 3 - Precursores: sistema de escritura" },
+  ],
+}
+
 const CAPACIDADES_MATERNAL = [
   { key: "COM", nombre: "Comunicacion" },
   { key: "AUT", nombre: "Autonomia para aprender" },
@@ -1341,6 +1412,18 @@ const SECUENCIA_MATERNAL: Record<string, { titulo: string; objetivo: string; des
     { titulo: "Dice que le gusta y que no", objetivo: "Expresar preferencias y elegir", descripcion: "Se presentan dos opciones y se pide elegir, nombrando el motivo si aparece. Se acepta y se nombra la eleccion.", materiales: ["Dos opciones a la vez"], dccaba: "DC CABA Maternal - Desarrollo personal y social" },
     { titulo: "Reconoce lo conocido en algo nuevo", objetivo: "Relacionar lo nuevo con lo que ya conoce", descripcion: "Se presenta un objeto o imagen parecido a otro conocido y se conversa sobre en que se parecen y en que no.", materiales: ["Objetos e imagenes familiares"], dccaba: "DC CABA Maternal - Exploracion del ambiente" },
   ],
+}
+
+// Nivel pedagogico de la sala. La red NUNCA cruza niveles: una actividad de
+// sala de 5 en una de 2 no sirve y ademas confunde. Antes el filtro usaba
+// esde4Anios, que solo distingue 4 de 5, asi que trataba a maternal como
+// sala de 5 y le mandaba actividades de escritura del nombre propio.
+function nivelDeSala(sala: string): "2" | "3" | "4" | "5" {
+  const s = (sala || "").toUpperCase()
+  if (s.includes("PINITOS")) return "2"
+  if (s.includes("PRUEBA MATERNAL")) return "2"
+  if (s.includes("NARANJOS")) return "3"
+  return esde4Anios(sala) ? "4" : "5"
 }
 
 function esde4Anios(sala: string): boolean {
@@ -2466,16 +2549,27 @@ Respondé SOLO con este JSON, sin backticks:
       // real de la sala, en que paso de cada secuencia esta y que eje necesita.
       const salaNombre = sala || "Girasoles"
       const esMaternal = esDeMaternal(salaNombre)
-      const ejesPosibles: string[] = esMaternal
-        ? CAPACIDADES_MATERNAL.map((c) => c.key)
+      const nivel = nivelDeSala(salaNombre)
+
+      // Los EJES los decide el NIVEL de la sala: cada edad tiene su territorio
+      // pedagogico y su progresion. La capacidad no elige la actividad: es la
+      // lente con la que se observa lo que la actividad pone en juego.
+      const ejesDeEsteNivel =
+        nivel === "2" ? EJES_SALA2.map((e) => e.key)
+        : nivel === "3" ? EJES_SALA3.map((e) => e.key)
         : semanaAnio >= 20 ? ["CF", "CT", "O", "EA"] : ["CF", "CT", "O"]
+
+      const secuenciaDeEsteNivel: Record<string, any[]> | null =
+        nivel === "2" ? SECUENCIA_SALA2 : nivel === "3" ? SECUENCIA_SALA3 : null
+
+      const ejesPosibles: string[] = ejesDeEsteNivel
 
       const yaDadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], EA: [] }
       const promedioPorEje: Record<string, number> = { CF: 50, CT: 50, O: 50, EA: 50 }
-      CAPACIDADES_MATERNAL.forEach((c) => { yaDadasPorEje[c.key] = []; promedioPorEje[c.key] = 50 })
+      ejesPosibles.forEach((k) => { yaDadasPorEje[k] = []; promedioPorEje[k] = 50 })
       // Porcentaje de chicos en verde por eje: es la "mayoria consolidada"
       const verdePorEje: Record<string, number> = { CF: 0, CT: 0, O: 0, EA: 0 }
-      CAPACIDADES_MATERNAL.forEach((c) => { verdePorEje[c.key] = 0 })
+      ejesPosibles.forEach((k) => { verdePorEje[k] = 0 })
       const ultimaPorEjeSem: Record<string, number> = {}
 
       try {
@@ -2538,6 +2632,8 @@ Respondé SOLO con este JSON, sin backticks:
         O: "Oralidad", EA: "Escritura",
       }
       CAPACIDADES_MATERNAL.forEach((c) => { NOMBRE_EJE_LARGO[c.key] = c.nombre })
+      EJES_SALA2.forEach((e) => { NOMBRE_EJE_LARGO[e.key] = e.nombre })
+      EJES_SALA3.forEach((e) => { NOMBRE_EJE_LARGO[e.key] = e.nombre })
 
       // ── DECISION DE LA DOCENTE + CONSOLIDACION ──────────────────────────
       // Del ultimo cierre de cada eje sacamos: en que paso estaba, si la maestra
@@ -2573,13 +2669,16 @@ Respondé SOLO con este JSON, sin backticks:
       const TOPE_REPETICIONES = 3
 
       const pasosDeLaSemana = ejesDeLaSemana.map((e) => {
-        // Maternal usa la secuencia de las cinco capacidades
-        if (esMaternal) {
-          const seqCap = SECUENCIA_MATERNAL[e] || []
+        // Maternal usa la secuencia de SU NIVEL: sala de 2 o sala de 3.
+        // Arranca a mitad de secuencia porque estamos a mitad de ano.
+        if (secuenciaDeEsteNivel) {
+          const seqCap = secuenciaDeEsteNivel[e] || []
           const dadas = new Set((yaDadasPorEje[e] || []).map((t: string) => t.trim().toLowerCase()))
-          let idx = seqCap.findIndex((a: any) => !dadas.has(String(a.titulo).trim().toLowerCase()))
+          const arranqueNivel = Math.floor(seqCap.length / 2)
+          let idx = seqCap.findIndex((a: any, i: number) => i >= arranqueNivel && !dadas.has(String(a.titulo).trim().toLowerCase()))
+          if (idx < 0) idx = seqCap.findIndex((a: any) => !dadas.has(String(a.titulo).trim().toLowerCase()))
           let repite = false
-          if (idx < 0) { idx = 0; repite = true }
+          if (idx < 0) { idx = arranqueNivel; repite = true }
           return { eje: e, paso: seqCap[idx], indice: idx, esRepeticion: repite, motivo: "" }
         }
 
@@ -2645,8 +2744,24 @@ Respondé SOLO con este JSON, sin backticks:
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
-- EDAD DE LOS NIÑOS: ${esMaternal ? "2 anos (jardin maternal)" : esde4Anios(salaNombre) ? "4 anos" : "5 anos"}
-${esMaternal ? `
+- EDAD DE LOS NIÑOS: ${nivel === "2" ? "2 anos (jardin maternal)" : nivel === "3" ? "3 anos" : nivel === "4" ? "4 anos" : "5 anos"}
+${nivel === "3" ? `
+ATENCION — ESTA ES UNA SALA DE 3 ANOS, y estamos a MITAD DE ANO: el grupo ya
+viene trabajando, no arranca de cero.
+
+Los ejes son los tres bloques del area Lengua del Diseno de sala de 3:
+Comprension, Produccion, y Precursores y sistema de escritura.
+
+Adapta TODO a los 3 anos:
+- Duracion: 15 a 20 minutos.
+- Consignas de uno o dos pasos, dichas en frases cortas.
+- Mucho juego, cuerpo y objetos reales. Se empieza a trabajar con imagenes y carteles.
+- En precursores: palabra dentro de la oracion, silaba dentro de la palabra y rimas.
+  NADA de fonemas aislados, ni copiar palabras, ni escritura convencional.
+- El nombre propio se RECONOCE entre otros, no se copia ni se traza letra por letra.
+- Trazos grandes y controlados, toma del lapiz: eso si.
+- La repeticion sigue siendo central: la misma propuesta varios dias.
+` : nivel === "2" ? `
 ATENCION — ESTA ES UNA SALA DE 2 ANOS DEL JARDIN MATERNAL.
 
 Los ejes son las CINCO CAPACIDADES del Diseno Curricular, no los ejes de alfabetizacion.
@@ -2666,6 +2781,7 @@ Adapta TODO a los 2 anos:
 - Se aprende jugando y en las rutinas cotidianas (cambiado, merienda, guardado), no en "clases".
 - El adulto pone en palabras lo que el nino hace, siente y quiere: ese es el motor del lenguaje.
 - No se espera un resultado: se observa un proceso.
+- Estamos a MITAD DE ANO: el grupo ya viene trabajando, no arranca de cero.
 ` : esde4Anios(salaNombre) ? `
 ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 - Duracion: 10 a 15 minutos como maximo. Los de 4 no sostienen mas.
@@ -2750,7 +2866,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
     "capacidades": "UNA SOLA ACCION OBSERVABLE que completa la frase 'Observa si...'. Es lo que la docente va a MIRAR en los ninos mientras hacen la actividad, no lo que la actividad desarrolla. Empeza con un VERBO en tercera persona del singular y describi una conducta concreta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'favorecer' o 'lograr': eso son objetivos, no se pueden mirar. MAL: 'desarrollar la conciencia fonologica y la segmentacion intrasilabica'. BIEN: 'separa la palabra en golpes de voz al palmear', 'reconoce dos palabras que terminan igual', 'escribe su nombre con letras que reconoce', 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'",
-    "capacidadDC": "elegi UNA de estas cinco, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
+    "capacidadDC": "elegi UNA de estas cinco segun lo que ESTA actividad pone en juego, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. La capacidad NO decide la actividad: la actividad sale del eje y despues se mira con la capacidad que corresponda",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
     "desarrollo": "paso a paso concreto. LA PRUEBA: si manana entra una SUPLENTE que no conoce al grupo, tiene que poder dar la actividad leyendo esto una sola vez. TRES REGLAS: (1) ESCRIBILE A LA DOCENTE, en segunda persona: 'deci', 'pone', 'invitalos', 'preguntales', 'espera'. NUNCA 'la docente dice', 'el docente invita' ni 'quien coordine'. (2) CADA PASO CON EJEMPLO CONCRETO: no 'deci una palabra con un sonido', sino 'deci una palabra que empiece con /m/, por ejemplo mama'. Nombra las palabras y los objetos exactos. (3) Que no quede nada librado a la interpretacion: como se agrupan los chicos, cuanto dura, y que frases decir textualmente",
@@ -2912,12 +3028,12 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
     // Condicion 0, la que manda sobre todas: la edad tiene que coincidir.
     // Una actividad de sala de 5 en una sala de 4 no sirve y frustra al grupo.
     // Si no hay nada de la misma edad, la red no propone y quedan las de ALBA.
-    const recibeEs4 = esde4Anios(sala)
+    const nivelRecibe = nivelDeSala(sala)
 
     const candidatas = deOtrasSalas.filter((a: any) => {
       const nombre = String(a.nombre || "").trim().toLowerCase()
       if (!nombre) return false
-      if (esde4Anios(String(a.sala || "")) !== recibeEs4) return false    // 0. misma edad
+      if (nivelDeSala(String(a.sala || "")) !== nivelRecibe) return false  // 0. mismo nivel
       if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
       if (yaDadasAqui.has(nombre)) return false                            // 3
       if (!bienEvaluadas.has(nombre)) return false                         // 1
@@ -2964,7 +3080,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
         const desarrollo = String(a.desarrollo || a.descripcion || "").trim()
         if (desarrollo.length < 30) return
 
-        if (esde4Anios(String(fila.sala || "")) !== recibeEs4) return  // 0. misma edad
+        if (nivelDeSala(String(fila.sala || "")) !== nivelRecibe) return  // 0. mismo nivel
         const eje = normEje(a.eje)
         if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
         if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
@@ -2981,7 +3097,7 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
           objetivo: String(a.objetivo || "").trim(),
           desarrollo,
           materiales: Array.isArray(a.materiales) ? a.materiales.join(", ") : String(a.materiales || ""),
-          nivelSala: esde4Anios(String(fila.sala || "")) ? "4" : "5",
+          nivelSala: nivelDeSala(String(fila.sala || "")),
         })
       })
     })
@@ -3125,7 +3241,7 @@ Respondé SOLO con este JSON, sin backticks:
         alfabetizacion: true,
         origen: vieneDeLaRed ? "red" : "docente",
         origenTexto: vieneDeLaRed
-          ? `De la red — funciono en una sala de ${elegida.nivelSala || (esde4Anios(String(elegida.sala || "")) ? "4" : "5")} anos`
+          ? `De la red — funciono en una sala de ${elegida.nivelSala || nivelDeSala(String(elegida.sala || ""))} anos`
           : esVariante
           ? `Variante de tu actividad "${elegida.nombre}"`
           : "Mi actividad",
