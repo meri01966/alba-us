@@ -188,17 +188,27 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Trayectoria por chico: cuantas veces quedo en cada estado
+    // Cada chico, con su estado POR CAPACIDAD: "3 empezando" suelto no dice
+    // nada; lo que la maestra necesita saber es en QUE capacidad esta flojo.
     const porAlumno = (alumnos || []).map((a: any) => {
       const suyos = regs.filter((r: any) => r.alumno_id === a.id)
+      const capacidades = CAPACIDADES.map((c) => {
+        const deLaCap = suyos.filter((r: any) => r.capacidad === c.key)
+        if (deLaCap.length === 0) return { key: c.key, nombre: c.nombre, estado: null, indicador: "" }
+        const ultimaF = deLaCap.reduce((f: string, r: any) => (String(r.fecha) > f ? String(r.fecha) : f), "")
+        const ult = deLaCap.find((r: any) => String(r.fecha) === ultimaF)
+        return { key: c.key, nombre: c.nombre, estado: ult?.estado || null, indicador: ult?.paso || "" }
+      }).filter((c) => c.estado !== null)
+
       return {
         id: a.id,
         nombre: a.nombre,
-        yaLoHacen: suyos.filter((r: any) => r.estado === "ya_lo_hace").length,
-        empezando: suyos.filter((r: any) => r.estado === "empezando").length,
-        acompanar: suyos.filter((r: any) => r.estado === "acompanar").length,
+        capacidades,
+        acompanar: capacidades.filter((c) => c.estado === "acompanar").length,
+        empezando: capacidades.filter((c) => c.estado === "empezando").length,
+        yaLoHacen: capacidades.filter((c) => c.estado === "ya_lo_hace").length,
       }
-    }).sort((x: any, y: any) => y.acompanar - x.acompanar)
+    }).sort((x: any, y: any) => (y.acompanar - x.acompanar) || (y.empezando - x.empezando))
 
     return NextResponse.json({
       ok: true,
