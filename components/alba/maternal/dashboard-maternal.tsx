@@ -1066,7 +1066,24 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         ) : (
           <div className="space-y-4">
             
-            {/* La actividad de HOY. Si no hay, no se muestra nada. */}
+            {/* La actividad de HOY. La tarjeta esta siempre: si hoy no hay
+                actividad lo dice, en vez de desaparecer. */}
+            {!actividadDeHoy && (
+              <div className="rounded-2xl border-2 border-slate-200 bg-white overflow-hidden mb-4">
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-slate-300 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <h2 className="font-bold text-slate-800 text-lg leading-none">Hoy en la sala</h2>
+                </div>
+                <div className="p-5">
+                  <p className="text-sm text-slate-400 text-center py-2">
+                    Hoy no hay actividad de ALBA en el cronograma.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {actividadDeHoy && (
               <div className={`rounded-2xl border-2 overflow-hidden mb-4 ${
                 (actividadDeHoy as any).realizada
