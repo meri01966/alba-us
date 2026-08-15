@@ -132,7 +132,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
             Mis actividades
             {lista.length > 0 && (
               <span className="text-xs font-normal text-slate-400">
-                {pendientes} sin usar de {lista.length}
+                {pendientes} para usar
               </span>
             )}
           </CardTitle>
@@ -212,7 +212,10 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                 se vea de un vistazo que trabaja cada actividad. */}
             {(() => {
               const grupos: { key: string; items: ActividadDocente[] }[] = []
-              lista.forEach((a: ActividadDocente) => {
+              // Solo las que ALBA todavia no uso. Las usadas van plegadas
+              // abajo: siguen disponibles para volver a proponerse, pero no
+              // ocupan lugar en la lista de trabajo.
+              lista.filter((x: ActividadDocente) => x.estado === "propia").forEach((a: ActividadDocente) => {
                 const k = a.eje || "sin"
                 const g = grupos.find((x) => x.key === k)
                 if (g) g.items.push(a)
@@ -340,6 +343,37 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                 )
               })
             })()}
+            {/* Las que ALBA ya propuso: plegadas, para no alargar la lista */}
+            {lista.some((a: ActividadDocente) => a.estado !== "propia") && (
+              <details className="pt-2 border-t border-slate-100">
+                <summary className="text-xs font-semibold text-slate-500 cursor-pointer py-1">
+                  Ya sugeridas · {lista.filter((a: ActividadDocente) => a.estado !== "propia").length}
+                </summary>
+                <ul className="space-y-1.5 mt-2">
+                  {lista.filter((a: ActividadDocente) => a.estado !== "propia").map((a: ActividadDocente) => {
+                    const info = ejeInfo(a.eje)
+                    return (
+                      <li key={a.id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5">
+                        <span className="flex-1 text-xs text-slate-600 truncate">{a.nombre || "Actividad sin titulo"}</span>
+                        {info && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                                style={{ backgroundColor: info.bg, color: info.color }}>
+                            {info.corto}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => borrar(a.id)}
+                          title="Borrar"
+                          className="text-slate-300 hover:text-red-500 shrink-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </CardContent>
