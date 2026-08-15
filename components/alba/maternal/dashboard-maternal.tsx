@@ -195,6 +195,76 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   const [resumenEval, setResumenEval] = useState<any>(null)
   const [showSintesis, setShowSintesis] = useState(false)
   const [showAvance, setShowAvance] = useState(false)
+  const [showAlumnos, setShowAlumnos] = useState(false)
+  const [relatoGrupo, setRelatoGrupo] = useState<any>(null)
+  const [relatoAlumnos, setRelatoAlumnos] = useState<any[]>([])
+  const [cargandoRelato, setCargandoRelato] = useState(false)
+
+  // Relato del grupo: se pide al abrir, con la evidencia real de la sala
+  async function abrirAvance() {
+    setShowAvance(true)
+    if (relatoGrupo || cargandoRelato) return
+    setCargandoRelato(true)
+    try {
+      const acts: string[] = []
+      let realizadas = 0
+      let total = 0
+      DIAS.forEach((d) => {
+        cronograma[d]?.actividades?.forEach((a: any) => {
+          const n = (a.nombre || "").trim()
+          if (!n) return
+          total++
+          if (a.realizada) realizadas++
+          if (!acts.includes(n)) acts.push(n)
+        })
+      })
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "relato_maternal",
+          tipo: "grupo",
+          sala: salaActual,
+          datos: {
+            proyecto: proyecto.titulo || "",
+            actividades: acts,
+            realizadas,
+            total,
+            capacidades: resumenEval?.porCapacidad || [],
+          },
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok) setRelatoGrupo(data)
+    } catch (e) {
+      console.error("[v0] Error pidiendo el relato del grupo:", e)
+    }
+    setCargandoRelato(false)
+  }
+
+  // Relato de cada chico
+  async function abrirAlumnos() {
+    setShowAlumnos(true)
+    if (relatoAlumnos.length > 0 || cargandoRelato) return
+    setCargandoRelato(true)
+    try {
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "relato_maternal",
+          tipo: "alumnos",
+          sala: salaActual,
+          datos: { alumnos: resumenEval?.porAlumno || [] },
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && Array.isArray(data.alumnos)) setRelatoAlumnos(data.alumnos)
+    } catch (e) {
+      console.error("[v0] Error pidiendo el relato de los alumnos:", e)
+    }
+    setCargandoRelato(false)
+  }
 
   // Se trae al entrar: la tarjeta tiene que mostrar algo sin abrir nada
   async function traerResumenEval() {
@@ -283,7 +353,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       if (cancelado) return
       await traerResumenEval()
       if (cancelado) return
-      generarRecursosCapacitacion()
+      generarTipsALBA()
     })()
 
     // Si la maestra cambia de sala antes de que termine, se descarta lo viejo
@@ -308,7 +378,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   useEffect(() => {
     const nombre = actividadDeHoy?.nombre || ""
     if (!nombre || nombre === capParaActividad || cargandoCap) return
-    pedirCapacitacion(false, nombre)
+    pedirCapacitacion(false, nombre, actividadDeHoy?.capacidades || "")
   }, [actividadDeHoy?.nombre])
 
   // Inicializar cronograma vacio
@@ -430,6 +500,18 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   const [tipsVistos, setTipsVistos] = useState<string[]>([])
 
   async function generarTipsALBA() {
+    // Los tips hablan del proyecto Y de las actividades de la semana con lo
+    // que se observa en cada una: sin eso salen consejos generales que no sirven.
+    const actsSemana: { nombre: string; capacidad: string }[] = []
+    DIAS.forEach((d) => {
+      cronograma[d]?.actividades?.forEach((a) => {
+        const n = (a.nombre || "").trim()
+        if (n && !actsSemana.some((x) => x.nombre === n)) {
+          actsSemana.push({ nombre: n, capacidad: a.capacidades || "" })
+        }
+      })
+    })
+
     setLoadingSugerencias(true)
     try {
       const res = await fetch("/api/brain", {
@@ -439,6 +521,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           action: "tips_planificacion",
           sala: salaActual,
           proyecto: { titulo: proyecto.titulo || "" },
+          actividades: actsSemana,
           evitar: tipsVistos,
         }),
       })
@@ -608,8 +691,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }
 
   // Pide un consejo pedagogico situado. "otro" evita repetir los ya vistos.
-  async function pedirCapacitacion(otro = false, actividadNombre?: string) {
+  // La capacitacion es AUTOMATICA: se pide sola sobre la actividad que toca
+  // ese dia y cambia sola cuando cambia la actividad. Sin botones.
+  async function pedirCapacitacion(_otro = false, actividadNombre?: string, capacidadAct?: string) {
     const primeraAct = actividadNombre ?? (actividadDeHoy?.nombre || "")
+    if (!primeraAct) return
     setCargandoCap(true)
     try {
       const res = await fetch("/api/brain", {
@@ -620,7 +706,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           sala: salaActual,
           proyecto: { titulo: proyecto.titulo || "" },
           actividad: primeraAct,
-          evitar: otro ? capVistas : [],
+          capacidad: capacidadAct ?? (actividadDeHoy?.capacidades || ""),
+          evitar: capVistas,
         }),
       })
       const data = await res.json()
@@ -1000,11 +1087,19 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           {/* Acciones del header */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowAvance(true)}
+              onClick={abrirAvance}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
             >
               <FileText className="w-4 h-4" />
               <span className="text-sm font-medium hidden sm:inline">Avance del grupo</span>
+            </button>
+
+            <button
+              onClick={abrirAlumnos}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Alumnos</span>
             </button>
 
             <button
@@ -1427,7 +1522,9 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
                         <Sparkles className="w-7 h-7 text-purple-400" />
                       </div>
-                      <p className="text-slate-500 text-sm">Carga un proyecto para recibir tips didacticos personalizados</p>
+                      <p className="text-slate-500 text-sm">
+                        Cuando haya actividades en el cronograma, ALBA sugiere como aprovecharlas.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1445,63 +1542,35 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </div>
                 </div>
                 <div className="p-5">
+                  {/* Automatica: se apoya en la actividad que toca ese dia y
+                      cambia sola cuando cambia la actividad. Sin botones. */}
                   {capacitacion ? (
                     <div className="space-y-3">
                       <div className="bg-white p-4 rounded-xl border border-teal-200">
                         <h4 className="font-bold text-slate-800 text-base leading-snug">{capacitacion.titulo}</h4>
                         <p className="text-sm text-slate-700 leading-relaxed mt-1.5">{capacitacion.contenido}</p>
-                        {capacitacion.tips?.length > 0 && (
-                          <ul className="mt-2 space-y-0.5">
-                            {capacitacion.tips.map((t, i) => (
-                              <li key={i} className="text-xs text-slate-600">· {t}</li>
-                            ))}
-                          </ul>
-                        )}
                         {capacitacion.autor && (
                           <p className="text-xs text-teal-700 font-medium mt-2.5 italic">{capacitacion.autor}</p>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => pedirCapacitacion(true)}
-                        disabled={cargandoCap}
-                        className="w-full text-xs font-semibold py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors disabled:opacity-50"
-                      >
-                        {cargandoCap ? "Buscando..." : "Otro consejo"}
-                      </button>
-                    </div>
-                  ) : recursosCapacitacion.length > 0 ? (
-                    <div className="space-y-3">
-                      {recursosCapacitacion.map((recurso, i) => (
-                        <div key={i} className="bg-white p-3 rounded-xl border border-teal-100 hover:border-teal-300 transition-colors">
-                          <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-4 h-4 text-teal-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-slate-800 text-sm">{recurso.titulo}</h4>
-                              <p className="text-[10px] text-teal-600 font-medium">{recurso.autor}</p>
-                              <p className="text-xs text-slate-600 mt-1 line-clamp-2">{recurso.descripcion}</p>
-                            </div>
-                          </div>
+
+                      {/* Segundo consejo: otro autor, otro angulo */}
+                      {capacitacion.segundo?.titulo && (
+                        <div className="bg-white p-4 rounded-xl border border-teal-200">
+                          <h4 className="font-bold text-slate-800 text-base leading-snug">{capacitacion.segundo.titulo}</h4>
+                          <p className="text-sm text-slate-700 leading-relaxed mt-1.5">{capacitacion.segundo.contenido}</p>
+                          {capacitacion.segundo.autor && (
+                            <p className="text-xs text-teal-700 font-medium mt-2.5 italic">{capacitacion.segundo.autor}</p>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
+                  ) : cargandoCap ? (
+                    <p className="text-sm text-slate-400 text-center py-6">Buscando un consejo...</p>
                   ) : (
-                    <div className="text-center py-6">
-                      <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-3">
-                        <FileText className="w-7 h-7 text-teal-400" />
-                      </div>
-                      <p className="text-slate-500 text-sm mb-3">Un consejo para dar mejor la actividad de esta semana</p>
-                      <button
-                        type="button"
-                        onClick={() => pedirCapacitacion(false)}
-                        disabled={cargandoCap}
-                        className="text-xs font-semibold px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors disabled:opacity-50"
-                      >
-                        {cargandoCap ? "Buscando..." : "Pedir consejo"}
-                      </button>
-                    </div>
+                    <p className="text-sm text-slate-400 text-center py-6">
+                      Cuando haya una actividad para hoy, ALBA sugiere como darla mejor.
+                    </p>
                   )}
                 </div>
               </div>
@@ -2291,77 +2360,67 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {/* Que trabajamos */}
-              <div>
-                <p className="text-sm font-bold text-slate-800 mb-1.5">Que trabajamos</p>
-                {(() => {
-                  const acts: string[] = []
-                  DIAS.forEach((d) => {
-                    cronograma[d]?.actividades?.forEach((a) => {
-                      const n = (a.nombre || "").trim()
-                      if (n && !acts.includes(n)) acts.push(n)
-                    })
-                  })
-                  return acts.length > 0 ? (
-                    <ul className="text-sm text-slate-700 space-y-0.5">
-                      {acts.map((n, i) => <li key={i}>· {n}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-400">Todavia no hay actividades cargadas esta semana.</p>
-                  )
-                })()}
-              </div>
-
-              {/* Como lo trabajamos */}
-              <div>
-                <p className="text-sm font-bold text-slate-800 mb-1.5">Como lo trabajamos</p>
-                {(() => {
-                  const hechas = DIAS.reduce((n, d) =>
-                    n + (cronograma[d]?.actividades?.filter((a: any) => a.realizada).length || 0), 0)
-                  const total = DIAS.reduce((n, d) =>
-                    n + (cronograma[d]?.actividades?.filter((a) => (a.nombre || "").trim()).length || 0), 0)
-                  const capsTrabajadas = (resumenEval?.porCapacidad || []).filter((c: any) => c.evaluada).length
-                  return (
-                    <p className="text-sm text-slate-700">
-                      {hechas} de {total} actividades realizadas esta semana
-                      {capsTrabajadas > 0 && ` · ${capsTrabajadas} de 5 capacidades observadas`}
+              {cargandoRelato && !relatoGrupo ? (
+                <p className="text-sm text-slate-400 text-center py-8">ALBA esta leyendo la evidencia...</p>
+              ) : relatoGrupo ? (
+                <>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Que trabajamos</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.queTrabajamos}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Como lo trabajamos</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.comoLoTrabajamos}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Que aprendio el grupo</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.queAprendio}</p>
+                  </div>
+                  {relatoGrupo.queSigue && (
+                    <p className="text-sm text-slate-800 leading-relaxed bg-teal-50 border-l-4 border-teal-500 rounded-r-lg px-4 py-3">
+                      {relatoGrupo.queSigue}
                     </p>
-                  )
-                })()}
-              </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-8">
+                  Todavia no hay evidencia suficiente para contar como viene el grupo.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Que aprendio el grupo — por capacidad */}
+      {/* ── Alumnos: como viene cada uno, relatado ─────────────────────── */}
+      {showAlumnos && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAlumnos(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
               <div>
-                <p className="text-sm font-bold text-slate-800 mb-1.5">Que aprendio el grupo</p>
-                <div className="space-y-2">
-                  {(resumenEval?.porCapacidad || []).map((c: any) => {
-                    const col = COLOR_CAPACIDAD[c.key]
-                    if (!c.evaluada) {
-                      return (
-                        <div key={c.key} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                          <p className="text-xs font-bold" style={{ color: col?.text }}>{c.nombre}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">Todavia sin observar</p>
-                        </div>
-                      )
-                    }
-                    return (
-                      <div key={c.key} className="rounded-lg border px-3 py-2"
-                           style={{ backgroundColor: col?.bg, borderColor: col?.border }}>
-                        <p className="text-xs font-bold" style={{ color: col?.text }}>{c.nombre}</p>
-                        <p className="text-xs text-slate-600 mt-0.5">{c.indicador}</p>
-                        <p className="text-sm text-slate-800 mt-1">
-                          <span className="font-bold text-green-700">{c.yaLoHacen}</span> ya lo hacen
-                          {c.empezando > 0 && <> · <span className="font-bold text-amber-600">{c.empezando}</span> empezando</>}
-                          {c.acompanar > 0 && <> · <span className="font-bold text-red-600">{c.acompanar}</span> acompanar</>}
-                        </p>
-                        {c.necesitanAcompanamiento?.length > 0 && (
-                          <p className="text-xs text-red-700 mt-1">{c.necesitanAcompanamiento.join(", ")}</p>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                <p className="text-white font-bold text-base leading-none">Alumnos</p>
+                <p className="text-white/70 text-xs mt-1">Como viene cada uno</p>
               </div>
+              <button type="button" onClick={() => setShowAlumnos(false)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-2">
+              {cargandoRelato && relatoAlumnos.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">ALBA esta leyendo la evidencia...</p>
+              ) : relatoAlumnos.length > 0 ? (
+                relatoAlumnos.map((a: any, i: number) => (
+                  <div key={i} className="py-3 border-b border-slate-100 last:border-0">
+                    <p className="text-sm font-bold text-slate-800">{a.nombre}</p>
+                    <p className="text-sm text-slate-600 leading-relaxed mt-1">{a.relato}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-8">
+                  Todavia no hay evaluaciones registradas.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -2409,46 +2468,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                 </div>
               ))}
 
-              {/* Trayectoria de cada chico */}
-              {(resumenEval?.porAlumno || []).length > 0 && (
-                <div className="pt-2">
-                  <p className="text-sm font-bold text-slate-800 mb-2">Cada nino</p>
-                  <div className="space-y-1">
-                    {resumenEval.porAlumno.map((a: any) => (
-                      <div key={a.id} className="py-2 border-b border-slate-100">
-                        <p className="text-sm font-semibold text-slate-800">{a.nombre}</p>
-                        {a.capacidades?.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {a.capacidades.map((c: any) => {
-                              const col = COLOR_CAPACIDAD[c.key]
-                              const est = c.estado
-                              return (
-                                <span
-                                  key={c.key}
-                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
-                                  title={c.indicador}
-                                  style={
-                                    est === "acompanar"
-                                      ? { backgroundColor: "#fee2e2", borderColor: "#f87171", color: "#991b1b" }
-                                      : est === "empezando"
-                                      ? { backgroundColor: "#fef3c7", borderColor: "#fbbf24", color: "#92400e" }
-                                      : { backgroundColor: col?.bg || "#f1f5f9", borderColor: col?.border || "#e2e8f0", color: col?.text || "#64748b" }
-                                  }
-                                >
-                                  {NOMBRE_CAPACIDAD[c.key] || c.key}
-                                  {est === "acompanar" ? " · acompanar" : est === "empezando" ? " · empezando" : ""}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-[11px] text-slate-400 mt-0.5">Todavia sin evaluar</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* La trayectoria de cada chico vive en el boton "Alumnos",
+                  relatada. Aca solo va como viene el grupo por capacidad. */}
             </div>
           </div>
         </div>
