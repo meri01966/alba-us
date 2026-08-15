@@ -194,6 +194,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
   const [resumenEval, setResumenEval] = useState<any>(null)
   const [showSintesis, setShowSintesis] = useState(false)
+  const [showAvance, setShowAvance] = useState(false)
 
   // Se trae al entrar: la tarjeta tiene que mostrar algo sin abrir nada
   async function traerResumenEval() {
@@ -248,7 +249,10 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }
 
   // Micro capacitacion situada: anclada al proyecto y a la actividad del dia
-  const [capacitacion, setCapacitacion] = useState<{ titulo: string; contenido: string; autor: string; tips: string[] } | null>(null)
+  const [capacitacion, setCapacitacion] = useState<any>(null)
+  // Recuerda para que actividad se pidio el consejo: se renueva solo cuando
+  // cambia la actividad que toca, no en cada render ni con cada cambio suelto.
+  const [capParaActividad, setCapParaActividad] = useState("")
   const [cargandoCap, setCargandoCap] = useState(false)
   const [capVistas, setCapVistas] = useState<string[]>([])
   
@@ -265,15 +269,48 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }
   }, [])
   
-  // Cargar cronograma y proyecto cuando cambia la sala
+  // Las cargas van EN ORDEN, una despues de otra, y solo cuando ya hay sala.
+  // Antes salian las cuatro juntas y se pisaban: la que llegaba ultima
+  // sobrescribia a las demas, y la pantalla quedaba a medias segun el azar.
   useEffect(() => {
     if (!salaActual) return
-    cargarDatos()
-    traerAlumnos()
-    traerResumenEval()
-    generarRecursosCapacitacion()
+    let cancelado = false
+
+    ;(async () => {
+      await cargarDatos()
+      if (cancelado) return
+      await traerAlumnos()
+      if (cancelado) return
+      await traerResumenEval()
+      if (cancelado) return
+      generarRecursosCapacitacion()
+    })()
+
+    // Si la maestra cambia de sala antes de que termine, se descarta lo viejo
+    return () => { cancelado = true }
   }, [salaActual])
   
+  // Que actividad toca HOY, segun el cronograma. Respeta si la maestra la movio
+  // con las flechas. Si hoy no hay actividad, no muestra nada (igual que jardin).
+  const actividadDeHoy = (() => {
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+    for (const d of DIAS) {
+      const dia = cronograma[d]
+      if (!dia || dia.fecha !== hoy) continue
+      const act = dia.actividades?.find((a) => (a.nombre || "").trim())
+      if (!act) return null
+      return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act) }
+    }
+    return null
+  })()
+
+  // El consejo se renueva solo cuando cambia la actividad que toca
+  useEffect(() => {
+    const nombre = actividadDeHoy?.nombre || ""
+    if (!nombre || nombre === capParaActividad || cargandoCap) return
+    pedirCapacitacion(false, nombre)
+  }, [actividadDeHoy?.nombre])
+
   // Inicializar cronograma vacio
   function inicializarCronograma() {
     const lunes = getLunesSemana()
@@ -571,9 +608,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }
 
   // Pide un consejo pedagogico situado. "otro" evita repetir los ya vistos.
-  async function pedirCapacitacion(otro = false) {
-    const primeraAct = DIAS.map((d) => cronograma[d]?.actividades?.find((a) => (a.nombre || "").trim()))
-      .find((a) => a)?.nombre || ""
+  async function pedirCapacitacion(otro = false, actividadNombre?: string) {
+    const primeraAct = actividadNombre ?? (actividadDeHoy?.nombre || "")
     setCargandoCap(true)
     try {
       const res = await fetch("/api/brain", {
@@ -591,6 +627,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       if (data?.ok && data.capacitacion) {
         setCapacitacion(data.capacitacion)
         setCapVistas((prev) => [...prev, data.capacitacion.titulo].slice(-6))
+        setCapParaActividad(primeraAct)
       }
     } catch (e) {
       console.error("[v0] Error pidiendo capacitacion:", e)
@@ -963,6 +1000,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           {/* Acciones del header */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowAvance(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Avance del grupo</span>
+            </button>
+
+            <button
               onClick={abrirPlanificacion}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
             >
@@ -1021,6 +1066,57 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         ) : (
           <div className="space-y-4">
             
+            {/* La actividad de HOY. Si no hay, no se muestra nada. */}
+            {actividadDeHoy && (
+              <div className={`rounded-2xl border-2 overflow-hidden mb-4 ${
+                (actividadDeHoy as any).realizada
+                  ? "bg-green-50 border-green-500"
+                  : diaYaPaso(actividadDeHoy.fecha)
+                  ? "bg-red-50 border-red-400"
+                  : "bg-white border-slate-200"
+              }`}>
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-bold text-slate-800 text-lg leading-none">Hoy en la sala</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">{actividadDeHoy.dia}</p>
+                  </div>
+                  {(actividadDeHoy as any).realizada && (
+                    <span className="text-xs font-bold text-green-700 flex items-center gap-1">
+                      <Check className="w-4 h-4" /> Realizada
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-5">
+                  <p className="text-base font-bold text-slate-800 leading-snug">{actividadDeHoy.nombre}</p>
+                  {actividadDeHoy.desarrollo && (
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line mt-2">{actividadDeHoy.desarrollo}</p>
+                  )}
+                  {actividadDeHoy.materiales && (
+                    <p className="text-sm text-slate-600 mt-2"><span className="font-semibold">Materiales:</span> {actividadDeHoy.materiales}</p>
+                  )}
+                  {actividadDeHoy.capacidades && (
+                    <p className="text-sm bg-violet-50 border border-violet-300 rounded-lg px-3 py-2 mt-3">
+                      <span className="font-bold text-violet-700">Observa si: </span>
+                      <span className="text-slate-800">{actividadDeHoy.capacidades}</span>
+                    </p>
+                  )}
+                  {!(actividadDeHoy as any).realizada && (
+                    <button
+                      type="button"
+                      onClick={() => marcarRealizada(actividadDeHoy.dia, actividadDeHoy.idx)}
+                      className="mt-3 w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors"
+                    >
+                      Marcar como realizada
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Fila superior: Proyecto + Registro del Aula */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
@@ -2163,6 +2259,97 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         </div>
       )}
 
+      {/* ── Avance del grupo: que trabajamos, como, y que aprendio ────── */}
+      {showAvance && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAvance(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#0f766e" }}>
+              <div>
+                <p className="text-white font-bold text-base leading-none">Avance del grupo</p>
+                <p className="text-white/70 text-xs mt-1">{salaActual} — {alumnos.length} alumnos</p>
+              </div>
+              <button type="button" onClick={() => setShowAvance(false)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Que trabajamos */}
+              <div>
+                <p className="text-sm font-bold text-slate-800 mb-1.5">Que trabajamos</p>
+                {(() => {
+                  const acts: string[] = []
+                  DIAS.forEach((d) => {
+                    cronograma[d]?.actividades?.forEach((a) => {
+                      const n = (a.nombre || "").trim()
+                      if (n && !acts.includes(n)) acts.push(n)
+                    })
+                  })
+                  return acts.length > 0 ? (
+                    <ul className="text-sm text-slate-700 space-y-0.5">
+                      {acts.map((n, i) => <li key={i}>· {n}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-400">Todavia no hay actividades cargadas esta semana.</p>
+                  )
+                })()}
+              </div>
+
+              {/* Como lo trabajamos */}
+              <div>
+                <p className="text-sm font-bold text-slate-800 mb-1.5">Como lo trabajamos</p>
+                {(() => {
+                  const hechas = DIAS.reduce((n, d) =>
+                    n + (cronograma[d]?.actividades?.filter((a: any) => a.realizada).length || 0), 0)
+                  const total = DIAS.reduce((n, d) =>
+                    n + (cronograma[d]?.actividades?.filter((a) => (a.nombre || "").trim()).length || 0), 0)
+                  const capsTrabajadas = (resumenEval?.porCapacidad || []).filter((c: any) => c.evaluada).length
+                  return (
+                    <p className="text-sm text-slate-700">
+                      {hechas} de {total} actividades realizadas esta semana
+                      {capsTrabajadas > 0 && ` · ${capsTrabajadas} de 5 capacidades observadas`}
+                    </p>
+                  )
+                })()}
+              </div>
+
+              {/* Que aprendio el grupo — por capacidad */}
+              <div>
+                <p className="text-sm font-bold text-slate-800 mb-1.5">Que aprendio el grupo</p>
+                <div className="space-y-2">
+                  {(resumenEval?.porCapacidad || []).map((c: any) => {
+                    const col = COLOR_CAPACIDAD[c.key]
+                    if (!c.evaluada) {
+                      return (
+                        <div key={c.key} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p className="text-xs font-bold" style={{ color: col?.text }}>{c.nombre}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Todavia sin observar</p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div key={c.key} className="rounded-lg border px-3 py-2"
+                           style={{ backgroundColor: col?.bg, borderColor: col?.border }}>
+                        <p className="text-xs font-bold" style={{ color: col?.text }}>{c.nombre}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">{c.indicador}</p>
+                        <p className="text-sm text-slate-800 mt-1">
+                          <span className="font-bold text-green-700">{c.yaLoHacen}</span> ya lo hacen
+                          {c.empezando > 0 && <> · <span className="font-bold text-amber-600">{c.empezando}</span> empezando</>}
+                          {c.acompanar > 0 && <> · <span className="font-bold text-red-600">{c.acompanar}</span> acompanar</>}
+                        </p>
+                        {c.necesitanAcompanamiento?.length > 0 && (
+                          <p className="text-xs text-red-700 mt-1">{c.necesitanAcompanamiento.join(", ")}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Sintesis de la sala: las cinco capacidades y la trayectoria ── */}
       {showSintesis && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSintesis(false)}>
@@ -2211,20 +2398,34 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   <p className="text-sm font-bold text-slate-800 mb-2">Cada nino</p>
                   <div className="space-y-1">
                     {resumenEval.porAlumno.map((a: any) => (
-                      <div key={a.id} className="flex items-center gap-2 py-1.5 border-b border-slate-100">
-                        <span className="flex-1 text-sm text-slate-800">{a.nombre}</span>
-                        {a.acompanar > 0 && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                            {a.acompanar} acompanar
-                          </span>
-                        )}
-                        {a.empezando > 0 && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                            {a.empezando} empezando
-                          </span>
-                        )}
-                        {a.acompanar === 0 && a.empezando === 0 && (
-                          <span className="text-[11px] text-green-700">viene bien</span>
+                      <div key={a.id} className="py-2 border-b border-slate-100">
+                        <p className="text-sm font-semibold text-slate-800">{a.nombre}</p>
+                        {a.capacidades?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {a.capacidades.map((c: any) => {
+                              const col = COLOR_CAPACIDAD[c.key]
+                              const est = c.estado
+                              return (
+                                <span
+                                  key={c.key}
+                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                                  title={c.indicador}
+                                  style={
+                                    est === "acompanar"
+                                      ? { backgroundColor: "#fee2e2", borderColor: "#f87171", color: "#991b1b" }
+                                      : est === "empezando"
+                                      ? { backgroundColor: "#fef3c7", borderColor: "#fbbf24", color: "#92400e" }
+                                      : { backgroundColor: col?.bg || "#f1f5f9", borderColor: col?.border || "#e2e8f0", color: col?.text || "#64748b" }
+                                  }
+                                >
+                                  {NOMBRE_CAPACIDAD[c.key] || c.key}
+                                  {est === "acompanar" ? " · acompanar" : est === "empezando" ? " · empezando" : ""}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 mt-0.5">Todavia sin evaluar</p>
                         )}
                       </div>
                     ))}
