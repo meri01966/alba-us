@@ -12,6 +12,12 @@ const EJES: { key: string; nombre: string; corto: string; color: string; bg: str
   { key: "CT", nombre: "Comprension de Textos", corto: "Textos",     color: "#10b981", bg: "#ecfdf5" },
   { key: "O",  nombre: "Oralidad",              corto: "Oralidad",   color: "#f59e0b", bg: "#fffbeb" },
   { key: "E",  nombre: "Escritura",             corto: "Escritura",  color: "#8b5cf6", bg: "#f5f3ff" },
+  // Maternal se clasifica por CAPACIDAD, con los colores propios de cada una
+  { key: "COM", nombre: "Comunicacion",              corto: "Comunicacion", color: "#1d4ed8", bg: "#eff6ff" },
+  { key: "AUT", nombre: "Autonomia para aprender",   corto: "Autonomia",    color: "#6d28d9", bg: "#f5f3ff" },
+  { key: "RES", nombre: "Resolucion de problemas",   corto: "Resolucion",   color: "#0f766e", bg: "#f0fdfa" },
+  { key: "COL", nombre: "Compromiso y colaboracion", corto: "Colaboracion", color: "#c2410c", bg: "#fff7ed" },
+  { key: "REF", nombre: "Pensamiento reflexivo",     corto: "Reflexivo",    color: "#be185d", bg: "#fdf2f8" },
 ]
 
 function ejeInfo(key: string | null) {
@@ -106,7 +112,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
   }
 
   async function borrar(id: string) {
-    
+    if (!confirm("Borrar esta actividad de tu repertorio?")) return
     try {
       await fetch(`/api/actividades-docentes?id=${encodeURIComponent(id)}`, { method: "DELETE" })
       setLista((prev: ActividadDocente[]) => prev.filter((a: ActividadDocente) => a.id !== id))
@@ -201,8 +207,29 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
             Todavia no cargaste actividades propias.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {lista.map((a: ActividadDocente) => {
+          <div className="space-y-4">
+            {/* Agrupadas por capacidad: cada grupo con su encabezado, para que
+                se vea de un vistazo que trabaja cada actividad. */}
+            {(() => {
+              const grupos: { key: string; items: ActividadDocente[] }[] = []
+              lista.forEach((a: ActividadDocente) => {
+                const k = a.eje || "sin"
+                const g = grupos.find((x) => x.key === k)
+                if (g) g.items.push(a)
+                else grupos.push({ key: k, items: [a] })
+              })
+              return grupos.map((g) => {
+                const info = ejeInfo(g.key)
+                return (
+                  <div key={g.key}>
+                    <p
+                      className="text-[11px] font-bold uppercase tracking-wide mb-1.5"
+                      style={{ color: info ? info.color : "#94a3b8" }}
+                    >
+                      {info ? info.nombre : "Sin clasificar"} · {g.items.length}
+                    </p>
+                    <ul className="space-y-2">
+                      {g.items.map((a: ActividadDocente) => {
               const info = ejeInfo(a.eje)
               const abiertaEsta = expandida === a.id
               const usada = a.estado !== "propia"
@@ -307,8 +334,13 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                   )}
                 </li>
               )
-            })}
-          </ul>
+                      })}
+                    </ul>
+                  </div>
+                )
+              })
+            })()}
+          </div>
         )}
       </CardContent>
     </Card>
