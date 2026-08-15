@@ -217,6 +217,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
   }
 
+  // PROTECCION: si el cronograma entero llega SIN contenido, se rechaza.
+  // Evita que un guardado vacio —por una carga fallida en la pantalla— borre
+  // toda la semana. Jardin ya tenia esta proteccion; maternal no.
+  const tieneAlgo = DIAS.some((d) => {
+    const dia = cronograma[d]
+    if (!dia) return false
+    if ((dia.intercambio || "").trim()) return true
+    return Array.isArray(dia.actividades) && dia.actividades.some((a: any) => (a?.nombre || "").trim())
+  })
+  if (!tieneAlgo && !body.permitirVacio) {
+    return NextResponse.json({ ok: true, ignorado: "cronograma vacio" })
+  }
+
   // Determinar la semana ACTIVA de la sala (desacoplado del calendario):
   // se guarda en la primera semana cargada que aún no esté finalizada. Si no hay
   // ninguna pendiente, se crea una semana nueva a partir del próximo lunes.
@@ -248,12 +261,22 @@ export async function POST(req: Request) {
     // Buscar si ya existe
     const { data: existente } = await supabase
       .from("cronograma_maternal")
-      .select("id")
+      .select("id, actividades")
       .eq("sala", sala)
       .eq("semana_inicio", lunesStr)
       .eq("dia", dia)
-      .single()
+      .maybeSingle()
     
+    // No pisar un dia que tiene contenido con uno vacio, salvo que se
+    // este vaciando a proposito (borrar o mover una actividad).
+    const nuevoTieneAlgo =
+      (datosDia.intercambio || "").trim() ||
+      (Array.isArray(datosDia.actividades) && datosDia.actividades.some((a: any) => (a?.nombre || "").trim()))
+    const viejoTeniaAlgo =
+      Array.isArray(existente?.actividades) &&
+      existente.actividades.some((a: any) => (a?.nombre || "").trim())
+    if (!nuevoTieneAlgo && viejoTeniaAlgo && !body.permitirVacio) continue
+
     const registro = {
       sala,
       semana_inicio: lunesStr,
