@@ -369,17 +369,37 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       if (!dia || dia.fecha !== hoy) continue
       const act = dia.actividades?.find((a) => (a.nombre || "").trim())
       if (!act) return null
-      return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act) }
+      return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act), esProxima: false }
     }
     return null
   })()
 
+  // Si hoy no hay actividad, se muestra la PROXIMA que viene, con su dia.
+  // Pasa todos los fines de semana, que es cuando muchas maestras planifican:
+  // sin esto la tarjeta y el consejo quedan vacios justo cuando se preparan.
+  const proximaActividad = (() => {
+    if (actividadDeHoy) return null
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+    for (const d of DIAS) {
+      const dia = cronograma[d]
+      if (!dia || !dia.fecha || dia.fecha < hoy) continue
+      const act = dia.actividades?.find((a) => (a.nombre || "").trim())
+      if (act) {
+        return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act), esProxima: true }
+      }
+    }
+    return null
+  })()
+
+  // Lo que se muestra en la tarjeta: la de hoy, o la que viene
+  const actividadEnFoco = actividadDeHoy || proximaActividad
+
   // El consejo se renueva solo cuando cambia la actividad que toca
   useEffect(() => {
-    const nombre = actividadDeHoy?.nombre || ""
+    const nombre = actividadEnFoco?.nombre || ""
     if (!nombre || nombre === capParaActividad || cargandoCap) return
-    pedirCapacitacion(false, nombre, actividadDeHoy?.capacidades || "")
-  }, [actividadDeHoy?.nombre])
+    pedirCapacitacion(false, nombre, actividadEnFoco?.capacidades || "")
+  }, [actividadEnFoco?.nombre])
 
   // Inicializar cronograma vacio
   function inicializarCronograma() {
@@ -694,7 +714,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   // La capacitacion es AUTOMATICA: se pide sola sobre la actividad que toca
   // ese dia y cambia sola cuando cambia la actividad. Sin botones.
   async function pedirCapacitacion(_otro = false, actividadNombre?: string, capacidadAct?: string) {
-    const primeraAct = actividadNombre ?? (actividadDeHoy?.nombre || "")
+    const primeraAct = actividadNombre ?? (actividadEnFoco?.nombre || "")
     if (!primeraAct) return
     setCargandoCap(true)
     try {
@@ -706,7 +726,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           sala: salaActual,
           proyecto: { titulo: proyecto.titulo || "" },
           actividad: primeraAct,
-          capacidad: capacidadAct ?? (actividadDeHoy?.capacidades || ""),
+          capacidad: capacidadAct ?? (actividadEnFoco?.capacidades || ""),
           evitar: capVistas,
         }),
       })
@@ -1163,7 +1183,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             
             {/* La actividad de HOY. La tarjeta esta siempre: si hoy no hay
                 actividad lo dice, en vez de desaparecer. */}
-            {!actividadDeHoy && (
+            {!actividadEnFoco && (
               <div className="rounded-2xl border-2 border-slate-200 bg-white overflow-hidden mb-4">
                 <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-slate-300 flex items-center justify-center">
@@ -1179,11 +1199,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
               </div>
             )}
 
-            {actividadDeHoy && (
+            {actividadEnFoco && (
               <div className={`rounded-2xl border-2 overflow-hidden mb-4 ${
-                (actividadDeHoy as any).realizada
+                (actividadEnFoco as any).realizada
                   ? "bg-green-50 border-green-500"
-                  : diaYaPaso(actividadDeHoy.fecha)
+                  : diaYaPaso(actividadEnFoco.fecha)
                   ? "bg-red-50 border-red-400"
                   : "bg-white border-slate-200"
               }`}>
@@ -1192,10 +1212,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="font-bold text-slate-800 text-lg leading-none">Hoy en la sala</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">{actividadDeHoy.dia}</p>
+                    <h2 className="font-bold text-slate-800 text-lg leading-none">
+                      {actividadEnFoco.esProxima ? "Lo que viene" : "Hoy en la sala"}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">{actividadEnFoco.dia}</p>
                   </div>
-                  {(actividadDeHoy as any).realizada && (
+                  {(actividadEnFoco as any).realizada && (
                     <span className="text-xs font-bold text-green-700 flex items-center gap-1">
                       <Check className="w-4 h-4" /> Realizada
                     </span>
@@ -1203,23 +1225,24 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                 </div>
 
                 <div className="p-5">
-                  <p className="text-base font-bold text-slate-800 leading-snug">{actividadDeHoy.nombre}</p>
-                  {actividadDeHoy.desarrollo && (
-                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line mt-2">{actividadDeHoy.desarrollo}</p>
+                  <p className="text-base font-bold text-slate-800 leading-snug">{actividadEnFoco.nombre}</p>
+                  {actividadEnFoco.desarrollo && (
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line mt-2">{actividadEnFoco.desarrollo}</p>
                   )}
-                  {actividadDeHoy.materiales && (
-                    <p className="text-sm text-slate-600 mt-2"><span className="font-semibold">Materiales:</span> {actividadDeHoy.materiales}</p>
+                  {actividadEnFoco.materiales && (
+                    <p className="text-sm text-slate-600 mt-2"><span className="font-semibold">Materiales:</span> {actividadEnFoco.materiales}</p>
                   )}
-                  {actividadDeHoy.capacidades && (
+                  {actividadEnFoco.capacidades && (
                     <p className="text-sm bg-violet-50 border border-violet-300 rounded-lg px-3 py-2 mt-3">
                       <span className="font-bold text-violet-700">Observa si: </span>
-                      <span className="text-slate-800">{actividadDeHoy.capacidades}</span>
+                      <span className="text-slate-800">{actividadEnFoco.capacidades}</span>
                     </p>
                   )}
-                  {!(actividadDeHoy as any).realizada && (
+                  {/* Solo se marca realizada la de HOY: la que viene todavia no se dio */}
+                  {!actividadEnFoco.esProxima && !(actividadEnFoco as any).realizada && (
                     <button
                       type="button"
-                      onClick={() => marcarRealizada(actividadDeHoy.dia, actividadDeHoy.idx)}
+                      onClick={() => marcarRealizada(actividadEnFoco.dia, actividadEnFoco.idx)}
                       className="mt-3 w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors"
                     >
                       Marcar como realizada
