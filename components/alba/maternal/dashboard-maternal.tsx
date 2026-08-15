@@ -432,7 +432,10 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     setLoading(true)
     const base = typeof window !== "undefined" ? window.location.origin : ""
     
-    // Cargar cronograma
+    // Cargar cronograma.
+    // REGLA: si la carga falla o vuelve vacia, NO se reemplaza lo que ya estaba.
+    // Antes se ponia un cronograma en blanco y borraba lo que ya se veia bien:
+    // de ahi que la pantalla mostrara todo, despues nada, despues bien otra vez.
     try {
       const res = await fetch(`${base}/api/cronograma-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
       if (res.ok) {
@@ -440,14 +443,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         if (data.ok && data.cronograma && Object.keys(data.cronograma).length > 0) {
           setCronograma(data.cronograma)
         } else {
+          // Respuesta valida pero sin cronograma: recien ahi va uno en blanco
           setCronograma(inicializarCronograma())
         }
       } else {
-        setCronograma(inicializarCronograma())
+        console.error("[v0] El cronograma no respondio, se deja lo que ya estaba")
       }
     } catch (e) {
-      console.error("[v0] Error cargando cronograma:", e)
-      setCronograma(inicializarCronograma())
+      console.error("[v0] Error cargando cronograma, se deja lo que ya estaba:", e)
     }
     
     // Cargar proyecto
@@ -689,7 +692,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await fetch(`${base}/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo, permitirVacio: true }),
       })
     } catch (e) {
       console.error("[v0] Error moviendo la actividad:", e)
@@ -710,7 +713,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await fetch(`${base}/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo, permitirVacio: true }),
       })
     } catch (e) {
       console.error("[v0] Error marcando la actividad como realizada:", e)
@@ -831,7 +834,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             duracion: proyecto.duracion || ""
           },
           sala: salaActual,
-          dias: DIAS_ALBA,
+          // Solo los dias que todavia no pasaron: no tiene sentido planificar
+          // el lunes si hoy es miercoles. Si ya pasaron todos, usa los tres.
+          dias: (() => {
+            const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+            const quedan = DIAS_ALBA.filter((d) => {
+              const f = cronograma[d]?.fecha
+              return !f || f >= hoy
+            })
+            return quedan.length > 0 ? quedan : DIAS_ALBA
+          })(),
           actividadesYaSugeridas // Enviar actividades ya aceptadas/rechazadas para no repetir
         })
       })
@@ -1095,7 +1107,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await fetch(`${base}/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo, permitirVacio: true }),
       })
     } catch (e) {
       console.error("[v0] Error eliminando la actividad:", e)
@@ -1116,7 +1128,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await fetch(`${base}/api/cronograma-maternal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo, permitirVacio: true }),
       })
       await fetch(`${base}/api/registro-cierre`, {
         method: "POST",
