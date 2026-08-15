@@ -18,6 +18,13 @@ const NOMBRE_CAPACIDAD: Record<string, string> = {
   COM: "Comunicacion", AUT: "Autonomia", RES: "Resolucion", COL: "Colaboracion", REF: "Reflexivo",
 }
 
+// El dia ya llego: es hoy o ya paso. Antes de eso se esta planificando.
+function diaYaLlego(fecha: string): boolean {
+  if (!fecha) return false
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  return fecha <= hoy
+}
+
 // Un dia se considera pasado si su fecha es anterior a hoy (hora de Argentina)
 function diaYaPaso(fecha: string): boolean {
   if (!fecha) return false
@@ -362,44 +369,44 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   
   // Que actividad toca HOY, segun el cronograma. Respeta si la maestra la movio
   // con las flechas. Si hoy no hay actividad, no muestra nada (igual que jardin).
+  // La actividad de HOY que todavia esta pendiente. Marcar realizada tambien
+  // hace avanzar: si ya la dio, no tiene sentido que la siga mirando.
+  const pendiente = (a: any) => a && (a.nombre || "").trim() && a.realizada !== true && a.noSeHizo !== true
+
   const actividadDeHoy = (() => {
     const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
     for (const d of DIAS) {
       const dia = cronograma[d]
       if (!dia || dia.fecha !== hoy) continue
-      const act = dia.actividades?.find((a) => (a.nombre || "").trim())
+      const act = dia.actividades?.find(pendiente)
       if (!act) return null
       return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act), esProxima: false }
     }
     return null
   })()
 
-  // Si hoy no hay actividad, se muestra la PROXIMA que viene, con su dia.
-  // Pasa todos los fines de semana, que es cuando muchas maestras planifican:
-  // sin esto la tarjeta y el consejo quedan vacios justo cuando se preparan.
+  // Si hoy no hay nada pendiente, se avisa cual es la PROXIMA y que dia.
+  // Solo el dia y el nombre: todavia no se puede dar ni marcar.
   const proximaActividad = (() => {
     if (actividadDeHoy) return null
     const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
     for (const d of DIAS) {
       const dia = cronograma[d]
-      if (!dia || !dia.fecha || dia.fecha < hoy) continue
-      const act = dia.actividades?.find((a) => (a.nombre || "").trim())
-      if (act) {
-        return { ...act, dia: d, fecha: dia.fecha, idx: dia.actividades.findIndex((x) => x === act), esProxima: true }
-      }
+      if (!dia || !dia.fecha || dia.fecha <= hoy) continue
+      const act = dia.actividades?.find(pendiente)
+      if (act) return { nombre: act.nombre, dia: d, fecha: dia.fecha }
     }
     return null
   })()
 
-  // Lo que se muestra en la tarjeta: la de hoy, o la que viene
-  const actividadEnFoco = actividadDeHoy || proximaActividad
+  const actividadEnFoco = actividadDeHoy
 
   // El consejo se renueva solo cuando cambia la actividad que toca
   useEffect(() => {
-    const nombre = actividadEnFoco?.nombre || ""
+    const nombre = actividadEnFoco?.nombre || proximaActividad?.nombre || ""
     if (!nombre || nombre === capParaActividad || cargandoCap) return
     pedirCapacitacion(false, nombre, actividadEnFoco?.capacidades || "")
-  }, [actividadEnFoco?.nombre])
+  }, [actividadEnFoco?.nombre, proximaActividad?.nombre])
 
   // Inicializar cronograma vacio
   function inicializarCronograma() {
@@ -1073,15 +1080,60 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   }
   
   // Eliminar actividad de un dia
-  function eliminarActividad(dia: string, index: number) {
-    if (cronograma[dia].actividades.length <= 1) return
-    setCronograma(prev => {
-      const nuevasActividades = prev[dia].actividades.filter((_, i) => i !== index)
-      return {
-        ...prev,
-        [dia]: { ...prev[dia], actividades: nuevasActividades }
-      }
-    })
+  // Saca una actividad del cronograma y lo GUARDA. Antes solo cambiaba la
+  // pantalla, asi que al recargar volvia; y no borraba si era la unica del dia.
+  async function eliminarActividad(dia: string, index: number) {
+    const actividadVacia = { nombre: "", capacidades: "", contenidos: "", objetivo: "", desarrollo: "", materiales: "" }
+    const restantes = (cronograma[dia]?.actividades || []).filter((_, i) => i !== index)
+    const nuevo = {
+      ...cronograma,
+      [dia]: { ...cronograma[dia], actividades: restantes.length ? restantes : [{ ...actividadVacia }] },
+    }
+    setCronograma(nuevo)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      await fetch(`${base}/api/cronograma-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+      })
+    } catch (e) {
+      console.error("[v0] Error eliminando la actividad:", e)
+    }
+  }
+
+  // Marca una actividad como NO realizada: queda registrada como que no se dio
+  // y ALBA avanza igual. Distinto de borrarla, que no deja ninguna huella.
+  async function marcarNoSeHizo(dia: string, idx: number) {
+    const nuevo = { ...cronograma }
+    const acts = [...(nuevo[dia]?.actividades || [])]
+    if (!acts[idx]) return
+    acts[idx] = { ...acts[idx], noSeHizo: true } as any
+    nuevo[dia] = { ...nuevo[dia], actividades: acts }
+    setCronograma(nuevo)
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      await fetch(`${base}/api/cronograma-maternal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+      })
+      await fetch(`${base}/api/registro-cierre`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sala: salaActual,
+          actividadALBA: acts[idx].nombre,
+          actividadDocente: acts[idx].nombre,
+          eje: (acts[idx] as any).capacidadKey || (acts[idx] as any).eje || "COM",
+          evaluacionGeneral: "no_realizada",
+          observaciones: "La docente marco que la actividad no se realizo.",
+          stats: { green: 0, yellow: 0, red: 0, ausentes: 0 },
+        }),
+      })
+    } catch (e) {
+      console.error("[v0] Error marcando que no se hizo:", e)
+    }
   }
 
   // Contar actividades cargadas en la semana
@@ -1192,9 +1244,18 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   <h2 className="font-bold text-slate-800 text-lg leading-none">Hoy en la sala</h2>
                 </div>
                 <div className="p-5">
-                  <p className="text-sm text-slate-400 text-center py-2">
-                    Hoy no hay actividad de ALBA en el cronograma.
-                  </p>
+                  {proximaActividad ? (
+                    <div className="text-center py-2">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Proxima actividad</p>
+                      <p className="text-sm text-slate-800 mt-1">
+                        <span className="font-semibold">{proximaActividad.dia}:</span> {proximaActividad.nombre}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-2">
+                      Hoy no hay actividad de ALBA en el cronograma.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1212,9 +1273,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="font-bold text-slate-800 text-lg leading-none">
-                      {actividadEnFoco.esProxima ? "Lo que viene" : "Hoy en la sala"}
-                    </h2>
+                    <h2 className="font-bold text-slate-800 text-lg leading-none">Hoy en la sala</h2>
                     <p className="text-xs text-slate-500 mt-0.5">{actividadEnFoco.dia}</p>
                   </div>
                   {(actividadEnFoco as any).realizada && (
@@ -1238,16 +1297,22 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <span className="text-slate-800">{actividadEnFoco.capacidades}</span>
                     </p>
                   )}
-                  {/* Solo se marca realizada la de HOY: la que viene todavia no se dio */}
-                  {!actividadEnFoco.esProxima && !(actividadEnFoco as any).realizada && (
+                  <div className="flex gap-2 mt-3">
                     <button
                       type="button"
                       onClick={() => marcarRealizada(actividadEnFoco.dia, actividadEnFoco.idx)}
-                      className="mt-3 w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors"
+                      className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors"
                     >
-                      Marcar como realizada
+                      Realizada
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => marcarNoSeHizo(actividadEnFoco.dia, actividadEnFoco.idx)}
+                      className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                    >
+                      No se hizo
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1462,7 +1527,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             )}
                             {cronograma[dia].actividades?.filter(a => a.nombre).map((act, i) => {
                               const hecha = (act as any).realizada === true
-                              const vencida = !hecha && diaYaPaso(cronograma[dia].fecha)
+                              const noHecha = (act as any).noSeHizo === true
+                              const vencida = !hecha && !noHecha && diaYaPaso(cronograma[dia].fecha)
                               return (
                                 // En el tablero la tarjeta dice UNA sola cosa: si se hizo o no.
                                 // Gris mientras no llego, verde si se hizo, rojo si paso sin hacerse.
@@ -1473,14 +1539,14 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                   style={
                                     hecha
                                       ? { backgroundColor: "#dcfce7", borderColor: "#22c55e" }
-                                      : vencida
+                                      : (noHecha || vencida)
                                       ? { backgroundColor: "#fee2e2", borderColor: "#f87171" }
                                       : { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" }
                                   }
                                 >
                                   <p className="text-[11px] font-semibold text-slate-800 leading-snug">{act.nombre}</p>
                                   {hecha && <p className="text-[9px] font-bold text-green-700 mt-0.5">Realizada</p>}
-                                  {vencida && <p className="text-[9px] font-bold text-red-700 mt-0.5">Sin hacer</p>}
+                                  {(noHecha || vencida) && <p className="text-[9px] font-bold text-red-700 mt-0.5">No se hizo</p>}
                                 </div>
                               )
                             })}
@@ -1840,14 +1906,20 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                     <button type="button" onClick={() => moverActividadDia(dia, idx, 1)} title="Al dia siguiente"
                                       className="w-5 h-5 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-xs leading-none">›</button>
                                   )}
-                                  <button
-                                    type="button"
-                                    onClick={() => eliminarActividad(dia, idx)}
-                                    className="text-slate-300 hover:text-red-500"
-                                    title="Quitar"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
+                                  {/* La cruz solo mientras se planifica: si el dia
+                                      todavia no llego, la maestra puede sacarla
+                                      por agenda. Despues ya no se saca, se dice
+                                      que paso con ella. */}
+                                  {!diaYaLlego(cronograma[dia]?.fecha) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => eliminarActividad(dia, idx)}
+                                      className="text-slate-300 hover:text-red-500"
+                                      title="Sacar de la semana"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               {act.desarrollo && (
@@ -2080,15 +2152,26 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                               <p className="mt-2 text-xs font-bold text-green-700 flex items-center gap-1">
                                 <Check className="w-3.5 h-3.5" /> Realizada
                               </p>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => marcarRealizada(dia, idxReal)}
-                                className="mt-2 w-full text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
-                              >
-                                Marcar como realizada
-                              </button>
-                            )}
+                            ) : (act as any).noSeHizo ? (
+                              <p className="mt-2 text-xs font-bold text-red-700">No se hizo</p>
+                            ) : diaYaLlego(cronograma[dia]?.fecha) ? (
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => marcarRealizada(dia, idxReal)}
+                                  className="flex-1 text-xs font-semibold py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                >
+                                  Realizada
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => marcarNoSeHizo(dia, idxReal)}
+                                  className="flex-1 text-xs font-semibold py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+                                >
+                                  No se hizo
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                         )
                       })}
