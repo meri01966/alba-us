@@ -2273,11 +2273,13 @@ export async function POST(req: NextRequest) {
     if (action === "tips_planificacion") {
       const evitarTips = Array.isArray(body.evitar) ? body.evitar : []
       const esMatTip = esDeMaternal(String(sala || ""))
+      const actsSemana = Array.isArray(body.actividades) ? body.actividades : []
       const promptTips = `Sos ALBA, asistente pedagogico de nivel inicial.
 
 Escribi 3 tips breves y practicos para la planificacion de esta semana. Uno por linea, sin numerar.
 ${esMatTip ? "Sala de 2 anos: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
 ${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+${actsSemana.length ? `Actividades de esta semana, con lo que se observa en cada una:\n${actsSemana.map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`).join("\n")}\nLos tips tienen que servir para ESTAS actividades, no ser generales.` : ""}
 Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
 ${evitarTips.length ? `NO repitas estos, que ya se los dimos: ${evitarTips.join(" | ")}` : ""}
 
@@ -2295,8 +2297,61 @@ Respondé SOLO con este JSON, sin backticks:
       }
     }
 
+    // Relatos de maternal: como viene el grupo y como viene cada chico.
+    // Redactado, no listas: la evidencia sale del registro por capacidad.
+    if (action === "relato_maternal") {
+      const tipo = String(body.tipo || "grupo")
+      const datos = body.datos || {}
+
+      const promptRelato = tipo === "grupo"
+        ? `Sos ALBA, asistente pedagogico de una sala de 2 anos.
+
+Escribi un relato breve de como viene el grupo, en base a la evidencia real que registro la maestra. No listas ni numeros sueltos: prosa clara que se lea en 30 segundos.
+
+${datos.proyecto ? `Proyecto: "${datos.proyecto}".` : ""}
+Actividades de la semana: ${(datos.actividades || []).join(", ") || "todavia ninguna"}
+Realizadas: ${datos.realizadas ?? 0} de ${datos.total ?? 0}
+
+Evidencia por capacidad (la ultima observacion de cada una):
+${(datos.capacidades || []).map((c: any) => c.evaluada
+  ? `- ${c.nombre} — se observo "${c.indicador}": ${c.yaLoHacen} ya lo hacen, ${c.empezando} empezando, ${c.acompanar} necesitan acompanamiento${c.necesitanAcompanamiento?.length ? ` (${c.necesitanAcompanamiento.join(", ")})` : ""}`
+  : `- ${c.nombre} — todavia sin observar`).join("\n")}
+
+Respondé SOLO con este JSON, sin backticks:
+{
+  "queTrabajamos": "2 o 3 oraciones sobre las propuestas de la semana y el proyecto",
+  "comoLoTrabajamos": "2 o 3 oraciones sobre la forma de trabajo y donde aparecio el lenguaje",
+  "queAprendio": "3 o 4 oraciones sobre como viene el grupo por capacidad: donde esta sostenido y donde cuesta, con nombres solo si hace falta acompanar",
+  "queSigue": "1 o 2 oraciones con que conviene sostener la semana que viene, siempre con foco en el lenguaje"
+}`
+        : `Sos ALBA, asistente pedagogico de una sala de 2 anos.
+
+Para cada nino escribi un relato breve —2 o 3 oraciones— de como viene, en base a la evidencia real. Hablale A LA MAESTRA. Cerra con algo concreto para hacer, siempre referido al LENGUAJE mas alla de la capacidad.
+Si un nino tiene poca evidencia, decilo en vez de inventar un diagnostico.
+
+${(datos.alumnos || []).map((a: any) => `${a.nombre}: ${
+  (a.capacidades || []).length === 0
+    ? "sin evidencia todavia"
+    : (a.capacidades || []).map((c: any) => `${c.nombre} ${c.estado === "ya_lo_hace" ? "ya lo hace" : c.estado === "empezando" ? "esta empezando" : "necesita acompanamiento"} (${c.indicador})`).join("; ")
+}`).join("\n")}
+
+Respondé SOLO con este JSON, sin backticks:
+{ "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones" } ] }`
+
+      try {
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
+        const t = r.text.trim()
+        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
+        return NextResponse.json({ ok: true, ...JSON.parse(j) })
+      } catch (e) {
+        console.error("[v0] Error generando el relato:", e)
+        return NextResponse.json({ ok: false, error: "No se pudo generar el relato" }, { status: 502 })
+      }
+    }
+
     if (action === "micro_capacitacion") {
       const actividad = String(body.actividad || "").trim()
+      const capacidadAct = String(body.capacidad || "").trim()
       const evitar = Array.isArray(body.evitar) ? body.evitar : []
       const esMat = esDeMaternal(String(sala || ""))
 
@@ -2324,6 +2379,7 @@ Escribi UN consejo pedagogico corto y situado para la docente, sobre COMO dar me
 ${esMat ? "SALA DE 2 ANOS (jardin maternal). El consejo tiene que servir para esa edad: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
 ${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
 ${actividad ? `Actividad que va a dar: "${actividad}".` : ""}
+${capacidadAct ? `Lo que se observa en esa actividad: "${capacidadAct}". El consejo tiene que ayudarla a ver justamente eso.` : ""}
 ${evitar.length ? `Ya le dimos estos consejos: ${evitar.join(" | ")}. Deci algo CLARAMENTE DISTINTO y apoyate en OTRO autor de la lista.` : ""}
 
 Podes apoyarte en UNO de estos enfoques, y solo en estos. No inventes titulos de libros, paginas ni citas textuales: nombra al autor y su idea.
