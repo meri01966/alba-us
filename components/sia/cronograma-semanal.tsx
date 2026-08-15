@@ -688,14 +688,14 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                             <Sparkles className="w-3 h-3 text-violet-600" />
                             <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">
                               {sugerencia.actividad.origen === "docente"
-                                ? "Mi actividad"
+                                ? ((sugerencia.actividad as any).esVariante ? "Variante de tu actividad" : "Mi actividad")
                                 : sugerencia.actividad.origen === "red"
                                 ? "De la red"
                                 : "Sugerida por ALBA"}
                             </span>
                           </div>
                           <p className="text-[11px] font-bold text-violet-900 mb-1 leading-tight">{sugerencia.actividad.nombre}</p>
-                          {sugerencia.actividad.origen === "red" && (
+                          {((sugerencia.actividad.origen === "red") || (sugerencia.actividad as any).esVariante) && (
                             <p className="text-[9px] text-violet-700 italic mb-1 leading-snug">
                               {sugerencia.actividad.origenTexto || "Otra docente la uso con buenos resultados"}
                             </p>
