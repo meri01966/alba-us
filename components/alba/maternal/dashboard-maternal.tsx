@@ -338,7 +338,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sala: salaActual,
-          capacidad: datosEval.capacidadSugerida.key,
+          capacidad: datosEval.capacidadSugerida?.key || "COM",
           paso: datosEval.indicador || datosEval.capacidadSugerida.nombre,
           marcados,
         }),
@@ -2689,11 +2689,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
             <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
               <div>
-                <p className="text-white/70 text-[11px] font-semibold uppercase tracking-wide">
-                  {datosEval?.capacidadSugerida?.nombre || "Evaluar"}
+                <p className="text-white font-bold text-lg leading-snug">
+                  {datosEval?.indicador ? `¿${datosEval.indicador}?` : "Evaluar"}
                 </p>
-                <p className="text-white font-bold text-base leading-snug mt-0.5">
-                  {datosEval?.indicador || ""}
+                <p className="text-white/70 text-[11px] mt-1">
+                  {datosEval?.capacidadSugerida?.nombre || ""}
+                  {datosEval?.actividadDeOrigen ? ` · se trabajo en "${datosEval.actividadDeOrigen}"` : ""}
                 </p>
               </div>
               <button type="button" onClick={() => setShowEvaluar(false)} className="text-white/80 hover:text-white">
@@ -2709,7 +2710,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-2">
-              {(datosEval?.alumnos || []).map((al: any) => {
+              {/* Solo se evalua lo que se trabajo: si todavia no se marco
+                  ninguna actividad como realizada, no hay nada que mirar. */}
+              {datosEval && !datosEval.hayQueEvaluar && (
+                <p className="text-sm text-slate-500 text-center py-6 px-4">
+                  Todavia no hay actividades marcadas como realizadas.
+                  Cuando des una y la marques, ALBA te propone evaluar lo que se trabajo en ella.
+                </p>
+              )}
+
+              {datosEval?.hayQueEvaluar && (datosEval?.alumnos || []).map((al: any) => {
                 const estado = marcados[al.id]
                 return (
                   <div key={al.id} className="flex items-center gap-2 py-2 border-b border-slate-100">
@@ -2765,14 +2775,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} sin marcar`,
                     ].filter(Boolean).join(" · ")}
               </p>
-              <button
-                type="button"
-                onClick={guardarEvaluacion}
-                disabled={guardandoEval}
-                className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                {guardandoEval ? "Guardando..." : "Guardar"}
-              </button>
+              {datosEval?.hayQueEvaluar && (
+                <button
+                  type="button"
+                  onClick={guardarEvaluacion}
+                  disabled={guardandoEval}
+                  className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {guardandoEval ? "Guardando..." : "Guardar"}
+                </button>
+              )}
             </div>
           </div>
         </div>
