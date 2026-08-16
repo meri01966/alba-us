@@ -19,11 +19,14 @@ export async function GET(req: NextRequest) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+    // tipo: "grupo" (por defecto) o "alumnos"
+    const tipo = searchParams.get("tipo") || "grupo"
+
     const { data, error } = await supabase
       .from("relatos_maternal")
       .select("id, fecha, contenido, created_at")
       .eq("sala", sala)
-      .eq("tipo", "grupo")
+      .eq("tipo", tipo)
       .order("created_at", { ascending: false })
       .limit(20)
 
