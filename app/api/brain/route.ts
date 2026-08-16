@@ -2386,26 +2386,33 @@ Respondé SOLO con este JSON, sin backticks:
       const tipo = String(body.tipo || "grupo")
       const datos = body.datos || {}
 
+      const anterior = body.relatoAnterior || null
+
       const promptRelato = tipo === "grupo"
         ? `Sos ALBA, asistente pedagogico de una sala de 2 anos.
 
-Escribi un relato breve de como viene el grupo, en base a la evidencia real que registro la maestra. No listas ni numeros sueltos: prosa clara que se lea en 30 segundos.
+Escribi como viene el grupo DESDE QUE EMPEZO, no lo que paso esta semana.
+A los 2 anos lo que se ve en cinco dias es ruido: la senal aparece en meses.
+Habla de TRAYECTORIA: que se consolido, que esta en proceso, que sigue costando.
+Prosa clara que se lea en 30 segundos. Nada de listas ni numeros sueltos.
 
-${datos.proyecto ? `Proyecto: "${datos.proyecto}".` : ""}
-Actividades de la semana: ${(datos.actividades || []).join(", ") || "todavia ninguna"}
-Realizadas: ${datos.realizadas ?? 0} de ${datos.total ?? 0}
+${datos.proyecto ? `Proyecto en curso: "${datos.proyecto}".` : ""}
+Actividades trabajadas: ${(datos.actividades || []).join(", ") || "todavia ninguna"}
 
-Evidencia por capacidad (la ultima observacion de cada una):
+Evidencia por capacidad (lo ultimo observado en cada una):
 ${(datos.capacidades || []).map((c: any) => c.evaluada
-  ? `- ${c.nombre} — se observo "${c.indicador}": ${c.yaLoHacen} ya lo hacen, ${c.empezando} empezando, ${c.acompanar} necesitan acompanamiento${c.necesitanAcompanamiento?.length ? ` (${c.necesitanAcompanamiento.join(", ")})` : ""}`
+  ? `- ${c.nombre} — se observo "${c.indicador}": ${c.yaLoHacen} ya lo hacen, ${c.empezando} empezando, ${c.acompanar} necesitan acompanamiento${c.necesitanAcompanamiento?.length ? ` (${c.necesitanAcompanamiento.join(", ")})` : ""}. Se miraron ${c.indicadoresTrabajados} de ${c.totalIndicadores} indicadores`
   : `- ${c.nombre} — todavia sin observar`).join("\n")}
+
+${anterior ? `RELATO ANTERIOR, del ${anterior.fecha}. Compara contra esto y contá que CAMBIO desde entonces. Si algo mejoro, decilo. Si algo sigue igual, tambien:
+- Como venia: ${anterior.contenido?.comoViene || ""}
+- En que estaba: ${anterior.contenido?.enQueEsta || ""}` : "Es el PRIMER relato de esta sala: no hay con que comparar todavia, asi que solo describi como viene."}
 
 Respondé SOLO con este JSON, sin backticks:
 {
-  "queTrabajamos": "2 o 3 oraciones sobre las propuestas de la semana y el proyecto",
-  "comoLoTrabajamos": "2 o 3 oraciones sobre la forma de trabajo y donde aparecio el lenguaje",
-  "queAprendio": "3 o 4 oraciones sobre como viene el grupo por capacidad: donde esta sostenido y donde cuesta, con nombres solo si hace falta acompanar",
-  "queSigue": "1 o 2 oraciones con que conviene sostener la semana que viene, siempre con foco en el lenguaje"
+  "comoViene": "3 o 4 oraciones sobre la trayectoria del grupo desde que empezo: que se consolido, que esta en proceso, que sigue costando${anterior ? ". Compara explicitamente con el relato anterior: que cambio" : ""}",
+  "enQueEsta": "2 o 3 oraciones sobre lo ultimo que se observo y donde esta parado el grupo ahora, con nombres solo si hace falta acompanar",
+  "queSigue": "2 o 3 oraciones de por donde seguir, concretas y con foco en el lenguaje"
 }`
         : `Sos ALBA, asistente pedagogico de una sala de 2 anos.
 
@@ -2425,7 +2432,24 @@ Respondé SOLO con este JSON, sin backticks:
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
-        return NextResponse.json({ ok: true, ...JSON.parse(j) })
+        const relato = JSON.parse(j)
+
+        // El relato del grupo se GUARDA: asi se acumula la historia de la sala
+        // y el proximo puede comparar contra este. Antes era una foto que se perdia.
+        if (tipo === "grupo") {
+          try {
+            const sb = getSupabase()
+            await sb.from("relatos_maternal").insert([{
+              sala: String(sala || ""),
+              tipo: "grupo",
+              contenido: relato,
+            }])
+          } catch (errGuardar) {
+            console.error("[v0] Error guardando el relato:", errGuardar)
+          }
+        }
+
+        return NextResponse.json({ ok: true, ...relato })
       } catch (e) {
         console.error("[v0] Error generando el relato:", e)
         return NextResponse.json({ ok: false, error: "No se pudo generar el relato" }, { status: 502 })
