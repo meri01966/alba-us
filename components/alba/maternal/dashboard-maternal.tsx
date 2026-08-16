@@ -266,6 +266,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     if (relatoAlumnos.length > 0 || cargandoRelato) return
     setCargandoRelato(true)
     try {
+      // El relato anterior de los mismos chicos, para contar que cambio
+      let relatoAnterior: any = null
+      try {
+        const rAnt = await fetch(`/api/relatos-maternal?sala=${encodeURIComponent(salaActual)}&tipo=alumnos`, { cache: "no-store" })
+        const dAnt = await rAnt.json()
+        if (dAnt?.ok && dAnt.ultimo) relatoAnterior = dAnt.ultimo
+      } catch (e) {
+        console.error("[v0] Error trayendo el relato anterior de alumnos:", e)
+      }
+
       const res = await fetch("/api/brain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -273,6 +283,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           action: "relato_maternal",
           tipo: "alumnos",
           sala: salaActual,
+          relatoAnterior,
           datos: { alumnos: resumenEval?.porAlumno || [] },
         }),
       })
