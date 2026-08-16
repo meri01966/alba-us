@@ -1418,8 +1418,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="font-bold text-slate-800 text-lg">Evaluar</h2>
-                      <p className="text-xs text-blue-600">Como viene cada nino</p>
+                      <h2 className="font-bold text-slate-800 text-lg leading-tight">Seguimiento grupal por capacidades</h2>
+                      <p className="text-xs text-blue-600">Lo ultimo evaluado en cada una</p>
                     </div>
                   </div>
                   <button
@@ -1432,39 +1432,60 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   </button>
                 </div>
                 <div className="p-5">
-                  <p className="text-sm text-slate-600 mb-3">
-                    Ultimo registro:{" "}
-                    {ultimoRegistro.dias === null ? (
-                      <span className="font-semibold text-red-600">todavia sin registros</span>
-                    ) : ultimoRegistro.dias > 15 ? (
-                      <span className="font-semibold text-red-600">hace {ultimoRegistro.dias} dias</span>
-                    ) : (
-                      <span className="font-semibold text-slate-800">
-                        {ultimoRegistro.dias === 0 ? "hoy" : `hace ${ultimoRegistro.dias} dias`}
-                      </span>
-                    )}
-                  </p>
-                  {resumenEval?.ultimo && (
-                    <div className="mb-3 bg-white rounded-xl border border-blue-200 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">
-                        {resumenEval.ultimo.capacidad}
+                  {/* Aviso solo si hace mas de 15 dias que no se registra */}
+                  {(ultimoRegistro.dias === null || ultimoRegistro.dias > 15) && (
+                    <div className="mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <p className="text-xs text-red-700">
+                        {ultimoRegistro.dias === null
+                          ? "Todavia no registraste como van los chicos."
+                          : <><span className="font-semibold">Hace {ultimoRegistro.dias} dias</span> que no registras como van los chicos.</>}
                       </p>
-                      <p className="text-sm font-semibold text-slate-800 leading-snug mt-0.5">
-                        {resumenEval.ultimo.indicador}
-                      </p>
-                      <p className="text-sm text-slate-700 mt-2">
-                        <span className="font-bold text-green-700">{resumenEval.ultimo.yaLoHacen}</span> ya lo hacen
-                        {resumenEval.ultimo.empezando > 0 && <> · <span className="font-bold text-amber-600">{resumenEval.ultimo.empezando}</span> empezando</>}
-                        {resumenEval.ultimo.acompanar > 0 && <> · <span className="font-bold text-red-600">{resumenEval.ultimo.acompanar}</span> acompanar</>}
-                      </p>
-                      {resumenEval.ultimo.necesitanAcompanamiento?.length > 0 && (
-                        <p className="text-xs text-red-700 mt-1.5">
-                          Necesitan acompanamiento: {resumenEval.ultimo.necesitanAcompanamiento.join(", ")}
-                        </p>
-                      )}
                     </div>
                   )}
-                  <div className="flex gap-2">
+
+                  {/* Las cinco capacidades, con lo ultimo evaluado en cada una */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(resumenEval?.porCapacidad || []).map((c: any, i: number) => {
+                      const col = COLOR_CAPACIDAD[c.key]
+                      const sola = i === 4   // la quinta va a lo ancho
+                      return (
+                        <div
+                          key={c.key}
+                          className={`rounded-r-lg px-3 py-2.5 ${sola ? "sm:col-span-2" : ""}`}
+                          style={{
+                            borderLeft: `3px solid ${c.evaluada ? col?.text : "#cbd5e1"}`,
+                            backgroundColor: c.evaluada ? col?.bg : "#f8fafc",
+                          }}
+                        >
+                          <p className="text-[11px] font-semibold" style={{ color: col?.text }}>{c.nombre}</p>
+                          {c.evaluada ? (
+                            <>
+                              <p className="text-[13px] text-slate-800 leading-snug mt-0.5">{c.indicador}</p>
+                              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                <span className="font-semibold text-green-700">{c.yaLoHacen}</span> ya lo hacen
+                                {c.empezando > 0 && <> · <span className="font-semibold text-amber-700">{c.empezando}</span> con ayuda</>}
+                                {c.acompanar > 0 && <> · <span className="font-semibold text-red-700">{c.acompanar}</span> todavia no</>}
+                              </p>
+                              {c.necesitanAcompanamiento?.length > 0 && (
+                                <p className="text-[11px] text-red-700 mt-1">
+                                  Necesita acompanamiento: {c.necesitanAcompanamiento.join(", ")}
+                                </p>
+                              )}
+                              {c.fecha && (
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                  {c.fecha.slice(8, 10)}/{c.fecha.slice(5, 7)}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 italic mt-1">Todavia sin evaluar</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="flex gap-2 mt-3">
                     <button
                       type="button"
                       onClick={abrirEvaluar}
@@ -2703,9 +2724,9 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             </div>
 
             <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="text-xs text-slate-600">
-                Marca solo los que estan empezando o necesitan acompanamiento.
-                El resto queda en <span className="font-semibold">ya lo hace</span>.
+              <p className="text-sm text-slate-700">Marca a los que todavia no lo hacen solos.</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Los que no marques quedan como que <span className="font-semibold text-slate-700">ya lo hacen</span>.
               </p>
             </div>
 
@@ -2737,7 +2758,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         ? { backgroundColor: "#fef3c7", borderColor: "#f59e0b", color: "#92400e" }
                         : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
                     >
-                      Empezando
+                      Lo hace con ayuda
                     </button>
                     <button
                       type="button"
@@ -2752,7 +2773,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         ? { backgroundColor: "#fee2e2", borderColor: "#ef4444", color: "#991b1b" }
                         : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
                     >
-                      Acompanar
+                      Todavia no
                     </button>
                   </div>
                 )
@@ -2764,15 +2785,15 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   todavia no hay evaluacion. Solo se cuenta lo que ella marco. */}
               <p className="text-[11px] text-slate-500">
                 {Object.keys(marcados).length === 0
-                  ? "Marca solo los que se apartan"
+                  ? "Marca a los que todavia no lo hacen solos"
                   : [
+                      `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} ya lo hacen`,
                       Object.values(marcados).filter((v) => v === "empezando").length > 0
-                        ? `${Object.values(marcados).filter((v) => v === "empezando").length} empezando`
+                        ? `${Object.values(marcados).filter((v) => v === "empezando").length} con ayuda`
                         : "",
                       Object.values(marcados).filter((v) => v === "acompanar").length > 0
-                        ? `${Object.values(marcados).filter((v) => v === "acompanar").length} acompanar`
+                        ? `${Object.values(marcados).filter((v) => v === "acompanar").length} todavia no`
                         : "",
-                      `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} sin marcar`,
                     ].filter(Boolean).join(" · ")}
               </p>
               {datosEval?.hayQueEvaluar && (
