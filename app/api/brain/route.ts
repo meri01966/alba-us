@@ -2364,6 +2364,7 @@ ${esMatTip ? "Sala de 2 anos: tiempos breves, cuerpo, objetos reales, la palabra
 ${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
 ${actsSemana.length ? `Actividades de esta semana, con lo que se observa en cada una:\n${actsSemana.map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`).join("\n")}\nLos tips tienen que servir para ESTAS actividades, no ser generales.` : ""}
 Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
+No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son.
 ${evitarTips.length ? `NO repitas estos, que ya se los dimos: ${evitarTips.join(" | ")}` : ""}
 
 Respondé SOLO con este JSON, sin backticks:
@@ -2396,6 +2397,14 @@ A los 2 anos lo que se ve en cinco dias es ruido: la senal aparece en meses.
 Habla de TRAYECTORIA: que se consolido, que esta en proceso, que sigue costando.
 Prosa clara que se lea en 30 segundos. Nada de listas ni numeros sueltos.
 
+REGLA QUE NO SE ROMPE: solo podes hablar de lo que esta en la evidencia de abajo.
+PROHIBIDO inventar personalidad, estado de animo o conductas que nadie registro:
+nada de "entra contento", "es timido", "llega con una sonrisa", "se muestra
+entusiasmado". Nadie observo eso y la maestra podria creer que ALBA lo vio.
+Tu trabajo es ANALIZAR los datos y contarlos en lenguaje claro y amable —eso es
+lo que mejor haces—, no rellenar con literatura. Si un dato no esta, no existe.
+
+
 ${datos.proyecto ? `Proyecto en curso: "${datos.proyecto}".` : ""}
 Actividades trabajadas: ${(datos.actividades || []).join(", ") || "todavia ninguna"}
 
@@ -2421,6 +2430,14 @@ que paso esta semana: a esta edad la senal aparece en meses, no en dias.
 Hablale A LA MAESTRA. Cerra con algo concreto para hacer, siempre referido al
 LENGUAJE mas alla de la capacidad.
 Si un nino tiene poca evidencia, decilo en vez de inventar un diagnostico.
+
+REGLA QUE NO SE ROMPE: solo podes hablar de lo que esta en la evidencia de abajo.
+PROHIBIDO inventar personalidad, estado de animo o conductas que nadie registro:
+nada de "entra contento", "es timido", "llega con una sonrisa", "se muestra
+entusiasmado". Nadie observo eso y la maestra podria creer que ALBA lo vio.
+Tu trabajo es ANALIZAR los datos y contarlos en lenguaje claro y amable —eso es
+lo que mejor haces—, no rellenar con literatura. Si un dato no esta, no existe.
+
 
 ${(datos.alumnos || []).map((a: any) => `${a.nombre}: ${
   (a.capacidades || []).length === 0
@@ -2486,6 +2503,9 @@ Respondé SOLO con este JSON, sin backticks:
       const promptCap = `Sos ALBA, formadora de docentes de nivel inicial.
 
 Escribi UN consejo pedagogico corto y situado para la docente, sobre COMO dar mejor esta actividad concreta. No teoria general: algo que pueda aplicar hoy.
+
+No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son ni como
+reaccionaron. Hablale de la ACTIVIDAD y de como darla, nada mas.
 
 ${esMat ? "SALA DE 2 ANOS (jardin maternal). El consejo tiene que servir para esa edad: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
 ${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
