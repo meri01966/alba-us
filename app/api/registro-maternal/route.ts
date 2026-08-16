@@ -161,8 +161,35 @@ export async function GET(req: NextRequest) {
       console.error("[v0] Error leyendo lo trabajado:", e)
     }
 
+    // Una habilidad tiene que ser una ACCION que el chico hace o no hace.
+    // Hay actividades viejas con el "Observa si" mal escrito ("Conciencia
+    // silabica y fonemica"), que es un contenido y no se puede mirar: en ese
+    // caso se usa el indicador de la capacidad, que si esta bien redactado.
+    const esAccionObservable = (t: string): boolean => {
+      const x = (t || "").trim().toLowerCase()
+      if (x.length < 8) return false
+      // Empieza con sustantivo abstracto en vez de verbo conjugado
+      const arranquesMalos = ["conciencia", "desarrollo", "adquisicion", "comprension", "expresion", "sistema", "nocion", "capacidad", "habilidad", "estimulacion"]
+      if (arranquesMalos.some((m) => x.startsWith(m))) return false
+      // No tiene verbo conjugado en tercera persona
+      return /\b\w+(a|e)\b/.test(x)
+    }
+
     // La mas vieja sin evaluar: se evalua en el orden en que se trabajo
-    const pendiente = trabajadas[trabajadas.length - 1] || null
+    const pendienteBruto = trabajadas[trabajadas.length - 1] || null
+    const pendiente = pendienteBruto && esAccionObservable(pendienteBruto.habilidad)
+      ? pendienteBruto
+      : pendienteBruto
+        ? {
+            ...pendienteBruto,
+            // Se reemplaza por el indicador de esa capacidad que corresponda
+            habilidad:
+              (CAPACIDADES.find((c) => c.key === pendienteBruto.capacidad)?.indicadores || [])
+                .find((i: string) => !yaEvaluados.has(i.toLowerCase()))
+              || sugerida.indicadores.find((i: string) => !yaEvaluados.has(i.toLowerCase()))
+              || sugerida.indicadores[0],
+          }
+        : null
 
     const indicador = pendiente
       ? pendiente.habilidad
