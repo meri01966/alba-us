@@ -2416,7 +2416,10 @@ Respondé SOLO con este JSON, sin backticks:
 }`
         : `Sos ALBA, asistente pedagogico de una sala de 2 anos.
 
-Para cada nino escribi un relato breve —2 o 3 oraciones— de como viene, en base a la evidencia real. Hablale A LA MAESTRA. Cerra con algo concreto para hacer, siempre referido al LENGUAJE mas alla de la capacidad.
+Para cada nino escribi un relato breve —2 o 3 oraciones— de COMO VIENE, no de lo
+que paso esta semana: a esta edad la senal aparece en meses, no en dias.
+Hablale A LA MAESTRA. Cerra con algo concreto para hacer, siempre referido al
+LENGUAJE mas alla de la capacidad.
 Si un nino tiene poca evidencia, decilo en vez de inventar un diagnostico.
 
 ${(datos.alumnos || []).map((a: any) => `${a.nombre}: ${
@@ -2425,8 +2428,11 @@ ${(datos.alumnos || []).map((a: any) => `${a.nombre}: ${
     : (a.capacidades || []).map((c: any) => `${c.nombre} ${c.estado === "ya_lo_hace" ? "ya lo hace" : c.estado === "empezando" ? "esta empezando" : "necesita acompanamiento"} (${c.indicador})`).join("; ")
 }`).join("\n")}
 
+${anterior ? `RELATO ANTERIOR de estos mismos ninos, del ${anterior.fecha}. Compara y deci que CAMBIO en cada uno. Si avanzo, nombralo. Si sigue igual, tambien:
+${(anterior.contenido?.alumnos || []).map((a: any) => `- ${a.nombre}: ${a.relato}`).join("\n")}` : "Es el PRIMER relato de estos ninos: no hay con que comparar, solo desribi como vienen."}
+
 Respondé SOLO con este JSON, sin backticks:
-{ "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones" } ] }`
+{ "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones${anterior ? ", diciendo que cambio desde el relato anterior" : ""}" } ] }`
 
       try {
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
@@ -2436,17 +2442,15 @@ Respondé SOLO con este JSON, sin backticks:
 
         // El relato del grupo se GUARDA: asi se acumula la historia de la sala
         // y el proximo puede comparar contra este. Antes era una foto que se perdia.
-        if (tipo === "grupo") {
-          try {
-            const sb = getSupabase()
-            await sb.from("relatos_maternal").insert([{
-              sala: String(sala || ""),
-              tipo: "grupo",
-              contenido: relato,
-            }])
-          } catch (errGuardar) {
-            console.error("[v0] Error guardando el relato:", errGuardar)
-          }
+        try {
+          const sb = getSupabase()
+          await sb.from("relatos_maternal").insert([{
+            sala: String(sala || ""),
+            tipo,
+            contenido: relato,
+          }])
+        } catch (errGuardar) {
+          console.error("[v0] Error guardando el relato:", errGuardar)
         }
 
         return NextResponse.json({ ok: true, ...relato })
