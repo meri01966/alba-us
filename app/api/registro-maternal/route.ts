@@ -10,6 +10,9 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const TABLA = "registro_maternal"
 
+// Segundo cuatrimestre: no se mira mas atras
+const INICIO_CUATRIMESTRE = "2026-08-03"
+
 // Las cinco capacidades, con su nombre para mostrar
 // Cada capacidad se evalua por un INDICADOR OBSERVABLE concreto, no en abstracto.
 // Son los mismos pasos que trabaja la secuencia del cronograma, sacados de los
@@ -121,21 +124,61 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Que INDICADOR toca: el primero de esa capacidad que todavia no se evaluo.
-    // Asi la evaluacion pregunta por algo concreto y observable, no por la
-    // capacidad en abstracto, y coincide con lo que se viene trabajando.
-    const evaluadosDeEsta = new Set(
-      regs.filter((r: any) => r.capacidad === sugerida.key).map((r: any) => String(r.paso || ""))
-    )
-    const indicador =
-      sugerida.indicadores.find((i: string) => !evaluadosDeEsta.has(i)) || sugerida.indicadores[0]
+    // ── QUE SE EVALUA: solo lo que efectivamente SE TRABAJO ───────────────
+    // Antes ALBA elegia el indicador que hacia mas tiempo que no se miraba, sin
+    // fijarse en que hizo la sala: podia pedir que se evaluara algo que nunca
+    // se dio, y ese dato no significa nada. Ahora sale de las actividades
+    // marcadas como realizadas, con su propio "Observa si".
+    const yaEvaluados = new Set(regs.map((r: any) => String(r.paso || "").trim().toLowerCase()))
+
+    const trabajadas: { habilidad: string; capacidad: string; actividad: string; fecha: string }[] = []
+    try {
+      const { data: crono } = await supabase
+        .from("cronograma_maternal")
+        .select("fecha, actividades")
+        .eq("sala", sala)
+        .gte("fecha", INICIO_CUATRIMESTRE)
+        .order("fecha", { ascending: false })
+        .limit(60)
+
+      ;(crono || []).forEach((fila: any) => {
+        const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+        acts.forEach((a: any) => {
+          if (a?.realizada !== true) return
+          const hab = String(a.capacidades || "").trim()
+          if (!hab) return
+          if (yaEvaluados.has(hab.toLowerCase())) return
+          if (trabajadas.some((t) => t.habilidad.toLowerCase() === hab.toLowerCase())) return
+          trabajadas.push({
+            habilidad: hab,
+            capacidad: String(a.capacidadKey || a.eje || ""),
+            actividad: String(a.nombre || ""),
+            fecha: String(fila.fecha || ""),
+          })
+        })
+      })
+    } catch (e) {
+      console.error("[v0] Error leyendo lo trabajado:", e)
+    }
+
+    // La mas vieja sin evaluar: se evalua en el orden en que se trabajo
+    const pendiente = trabajadas[trabajadas.length - 1] || null
+
+    const indicador = pendiente
+      ? pendiente.habilidad
+      : (sugerida.indicadores.find((i: string) => !yaEvaluados.has(i.toLowerCase())) || sugerida.indicadores[0])
+
+    // Si viene de una actividad, la capacidad es la de esa actividad
+    const capacidadDelIndicador = pendiente?.capacidad
+      ? CAPACIDADES.find((c) => c.key === pendiente.capacidad) || sugerida
+      : sugerida
 
     // Como quedo cada chico la ultima vez que se evaluo ESTA capacidad
     const ultimoEstado: Record<string, string> = {}
-    const fechaCap = ultimaPorCapacidad[sugerida.key]
+    const fechaCap = ultimaPorCapacidad[capacidadDelIndicador.key]
     if (fechaCap) {
       regs
-        .filter((r: any) => r.capacidad === sugerida.key && String(r.fecha) === fechaCap)
+        .filter((r: any) => r.capacidad === capacidadDelIndicador.key && String(r.fecha) === fechaCap)
         .forEach((r: any) => { ultimoEstado[r.alumno_id] = r.estado })
     }
 
@@ -214,8 +257,12 @@ export async function GET(req: NextRequest) {
       ok: true,
       alumnos: alumnos || [],
       capacidades: CAPACIDADES,
-      capacidadSugerida: sugerida,
+      capacidadSugerida: capacidadDelIndicador,
       indicador,
+      // De que actividad sale lo que se va a evaluar
+      actividadDeOrigen: pendiente?.actividad || null,
+      hayQueEvaluar: !!pendiente,
+      pendientesDeEvaluar: trabajadas.length,
       // Los indicadores de cada capacidad: son las HABILIDADES observables que
       // hay que estimular para que la capacidad se adquiera. Sin esto, ALBA
       // habla en general ("ayudalo en su comunicacion") y eso no se puede mirar.
