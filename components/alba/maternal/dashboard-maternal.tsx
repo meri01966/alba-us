@@ -225,6 +225,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           if (!acts.includes(n)) acts.push(n)
         })
       })
+      // El relato anterior, para que el nuevo pueda comparar y contar que cambio
+      let relatoAnterior: any = null
+      try {
+        const rAnt = await fetch(`/api/relatos-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+        const dAnt = await rAnt.json()
+        if (dAnt?.ok && dAnt.ultimo) relatoAnterior = dAnt.ultimo
+      } catch (e) {
+        console.error("[v0] Error trayendo el relato anterior:", e)
+      }
+
       const res = await fetch("/api/brain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -232,6 +242,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           action: "relato_maternal",
           tipo: "grupo",
           sala: salaActual,
+          relatoAnterior,
           datos: {
             proyecto: proyecto.titulo || "",
             actividades: acts,
@@ -2483,21 +2494,20 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
               ) : relatoGrupo ? (
                 <>
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Que trabajamos</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.queTrabajamos}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Como viene el grupo</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.comoViene}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Como lo trabajamos</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.comoLoTrabajamos}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Que aprendio el grupo</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.queAprendio}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">En que esta ahora</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{relatoGrupo.enQueEsta}</p>
                   </div>
                   {relatoGrupo.queSigue && (
-                    <p className="text-sm text-slate-800 leading-relaxed bg-teal-50 border-l-4 border-teal-500 rounded-r-lg px-4 py-3">
-                      {relatoGrupo.queSigue}
-                    </p>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Que conviene sostener</p>
+                      <p className="text-sm text-slate-800 leading-relaxed bg-teal-50 border-l-4 border-teal-500 rounded-r-lg px-4 py-3">
+                        {relatoGrupo.queSigue}
+                      </p>
+                    </div>
                   )}
                 </>
               ) : (
