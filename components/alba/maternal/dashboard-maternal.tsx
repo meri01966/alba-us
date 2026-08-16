@@ -1451,23 +1451,19 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       return (
                         <div
                           key={c.key}
-                          className={`rounded-r-lg px-3 py-2.5 ${sola ? "sm:col-span-2" : ""}`}
-                          style={{
-                            borderLeft: `3px solid ${c.evaluada ? col?.text : "#cbd5e1"}`,
-                            backgroundColor: c.evaluada ? col?.bg : "#f8fafc",
-                          }}
+                          className={`rounded-xl border border-slate-200 bg-white px-3 py-2.5 ${sola ? "sm:col-span-2" : ""}`}
                         >
                           <p className="text-[11px] font-semibold" style={{ color: col?.text }}>{c.nombre}</p>
                           {c.evaluada ? (
                             <>
                               <p className="text-[13px] text-slate-800 leading-snug mt-0.5">{c.indicador}</p>
                               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                                <span className="font-semibold text-green-700">{c.yaLoHacen}</span> ya lo hacen
-                                {c.empezando > 0 && <> · <span className="font-semibold text-amber-700">{c.empezando}</span> con ayuda</>}
-                                {c.acompanar > 0 && <> · <span className="font-semibold text-red-700">{c.acompanar}</span> todavia no</>}
+                                {c.yaLoHacen} ya lo hacen
+                                {c.empezando > 0 && ` · ${c.empezando} con ayuda`}
+                                {c.acompanar > 0 && ` · ${c.acompanar} todavia no`}
                               </p>
                               {c.necesitanAcompanamiento?.length > 0 && (
-                                <p className="text-[11px] text-red-700 mt-1">
+                                <p className="text-[11px] text-slate-600 mt-1">
                                   Necesita acompanamiento: {c.necesitanAcompanamiento.join(", ")}
                                 </p>
                               )}
