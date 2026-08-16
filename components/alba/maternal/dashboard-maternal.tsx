@@ -249,6 +249,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             realizadas,
             total,
             capacidades: resumenEval?.porCapacidad || [],
+            indicadoresPorCapacidad: resumenEval?.indicadoresPorCapacidad || [],
           },
         }),
       })
@@ -284,7 +285,10 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           tipo: "alumnos",
           sala: salaActual,
           relatoAnterior,
-          datos: { alumnos: resumenEval?.porAlumno || [] },
+          datos: {
+            alumnos: resumenEval?.porAlumno || [],
+            indicadoresPorCapacidad: resumenEval?.indicadoresPorCapacidad || [],
+          },
         }),
       })
       const data = await res.json()
