@@ -216,6 +216,12 @@ export async function GET(req: NextRequest) {
       capacidades: CAPACIDADES,
       capacidadSugerida: sugerida,
       indicador,
+      // Los indicadores de cada capacidad: son las HABILIDADES observables que
+      // hay que estimular para que la capacidad se adquiera. Sin esto, ALBA
+      // habla en general ("ayudalo en su comunicacion") y eso no se puede mirar.
+      indicadoresPorCapacidad: CAPACIDADES.map((c) => ({
+        key: c.key, nombre: c.nombre, indicadores: c.indicadores,
+      })),
       ultimoRegistro: ultimoRegistro || null,
       diasSinRegistrar,
       ultimoEstado,
