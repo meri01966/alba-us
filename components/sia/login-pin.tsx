@@ -26,11 +26,11 @@ const PIN_DIRECCION = "7788"
 const PIN_ADMIN = "0000"
 
 // Claves de sesion en el navegador
-const SESION_ROL = "alba_sesion_rol"       // "maestra" | "direccion" | "admin"
+const SESION_ROL = "alba_sesion_rol"       // "maestra" | "maternal" | "direccion" | "admin"
 const SESION_SALA = "alba_sesion_sala"      // nombre de sala (solo maestra)
 
 export interface SesionAlba {
-  rol: "maestra" | "direccion" | "admin"
+  rol: "maestra" | "maternal" | "direccion" | "admin"
   sala: string | null
 }
 
@@ -41,6 +41,11 @@ export function leerSesion(): SesionAlba | null {
     if (rol === "maestra") {
       const sala = localStorage.getItem(SESION_SALA)
       if (sala) return { rol: "maestra", sala }
+      return null
+    }
+    if (rol === "maternal") {
+      const sala = localStorage.getItem(SESION_SALA)
+      if (sala) return { rol: "maternal", sala }
       return null
     }
     if (rol === "direccion") return { rol: "direccion", sala: null }
@@ -95,12 +100,13 @@ export function LoginPin({ onIngreso }: LoginPinProps) {
     const salaMat = PIN_MATERNAL[pinLimpio]
     if (salaMat) {
       try {
-        localStorage.setItem(SESION_ROL, "maestra")
+        // Rol propio: con "maestra" el portero la mandaba a jardin
+        localStorage.setItem(SESION_ROL, "maternal")
         localStorage.setItem(SESION_SALA, salaMat)
         // El dashboard de maternal lee la sala de SU propia clave
         localStorage.setItem("maternal-sala-activa", salaMat)
       } catch {}
-      window.location.href = "/maestra-maternal"
+      onIngreso({ rol: "maternal", sala: salaMat })
       return
     }
 
