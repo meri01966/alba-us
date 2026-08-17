@@ -94,7 +94,13 @@ function formatearFecha(fecha: string): string {
 }
 
 export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) {
-  const [salaActual, setSalaActual] = useState(forzarSala || "Naranjos TM")
+  // Arranca VACIO a proposito: la sala real se lee del localStorage en el
+  // efecto de abajo. Antes el valor inicial era "Naranjos TM" —un nombre que
+  // ya no existe, quedo de antes de pasar todo a mayuscula—, asi que la app
+  // pedia datos de una sala inexistente, volvian vacios, ponia el cronograma
+  // en blanco, y recien despues pedia los correctos. Si esa segunda respuesta
+  // tardaba, ganaba la vacia: de ahi el "muestra vacio, refresco, aparece".
+  const [salaActual, setSalaActual] = useState(forzarSala || "")
   const [showSalaDropdown, setShowSalaDropdown] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensajeGuardado, setMensajeGuardado] = useState("")
@@ -367,9 +373,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       return
     }
     const savedSala = localStorage.getItem("maternal-sala-activa")
-    if (savedSala && SALAS_MATERNAL.includes(savedSala)) {
-      setSalaActual(savedSala)
-    }
+    setSalaActual(savedSala && SALAS_MATERNAL.includes(savedSala) ? savedSala : SALAS_MATERNAL[0])
   }, [])
   
   // Las cargas van EN ORDEN, una despues de otra, y solo cuando ya hay sala.
@@ -1458,12 +1462,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             <>
                               <p className="text-[13px] text-slate-800 leading-snug mt-0.5">{c.indicador}</p>
                               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                                {c.yaLoHacen} ya lo hacen
-                                {c.empezando > 0 && ` · ${c.empezando} con ayuda`}
-                                {c.acompanar > 0 && ` · ${c.acompanar} todavia no`}
+                                <span className="font-semibold text-green-700">{c.yaLoHacen}</span> ya lo hacen
+                                {c.empezando > 0 && <> · <span className="font-semibold text-amber-600">{c.empezando}</span> con ayuda</>}
+                                {c.acompanar > 0 && <> · <span className="font-semibold text-red-600">{c.acompanar}</span> todavia no</>}
                               </p>
                               {c.necesitanAcompanamiento?.length > 0 && (
-                                <p className="text-[11px] text-slate-600 mt-1">
+                                <p className="text-[11px] text-red-600 mt-1">
                                   Necesita acompanamiento: {c.necesitanAcompanamiento.join(", ")}
                                 </p>
                               )}
