@@ -7,9 +7,10 @@ import { LoginPin, leerSesion, cerrarSesion, type SesionAlba } from "@/component
 
 // El Portero envuelve toda la app. Decide segun rol:
 //   - Sin sesion  -> pantalla de PIN
-//   - Maestra     -> su sala (fijada por URL ?sala=), sin acceso a /directora
+//   - Maestra     -> su sala de jardin (fijada por URL ?sala=), sin acceso a /directora
+//   - Maternal    -> /maestra-maternal, que es otra pantalla
 //   - Direccion   -> tablero institucional /directora
-//   - Admin        -> acceso total: entra a las salas con dropdown libre y al tablero
+//   - Admin       -> acceso total: entra a las salas con dropdown libre y al tablero
 // El boton "Cerrar sesion" esta disponible con sesion activa.
 export function PorteroSesion({ children }: { children: React.ReactNode }) {
   const [sesion, setSesion] = useState<SesionAlba | null>(null)
@@ -26,24 +27,35 @@ export function PorteroSesion({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!listo || !sesion) return
     const enDireccion = pathname?.startsWith("/directora")
+    const enMaternal = pathname?.startsWith("/maestra-maternal")
 
     // Direccion: siempre a su tablero
     if (sesion.rol === "direccion" && !enDireccion) {
       router.replace("/directora")
       return
     }
+
+    // Maternal: siempre a su pantalla. Antes el rol era "maestra" y el portero
+    // la mandaba a jardin apenas entraba, pisando el redirect del login.
+    if (sesion.rol === "maternal") {
+      if (!enMaternal) router.replace("/maestra-maternal")
+      return
+    }
+
     // Maestra: no puede ver /directora
     if (sesion.rol === "maestra" && enDireccion) {
       router.replace("/")
       return
     }
+
     // Maestra: asegurar que la URL lleve su sala (fija la sala en el dashboard)
-    if (sesion.rol === "maestra" && sesion.sala && !enDireccion) {
+    if (sesion.rol === "maestra" && sesion.sala && !enDireccion && !enMaternal) {
       const params = new URLSearchParams(window.location.search)
       if (params.get("sala") !== sesion.sala) {
         router.replace(`/?sala=${encodeURIComponent(sesion.sala)}`)
       }
     }
+
     // Admin: no se redirige. Acceso libre a donde quiera.
   }, [listo, sesion, pathname, router])
 
