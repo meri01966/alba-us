@@ -540,15 +540,42 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
         ...(nuevoProgress[s.id] || initProgress(s.id)),
         [ejeDelDia]: anterior !== null ? Math.round((anterior + 100) / 2) : 100,
       }
+    }
+
+    // ── Guardar TODAS las evaluaciones en una sola llamada ────────────────
+    // Antes iba una por alumno: con 27 chicos eran 27 llamadas en fila, y con
+    // internet mala cada una podia fallar sin que la maestra se enterara.
+    // Ahora van juntas, se reintenta si falla, y si igual no sale se avisa.
+    const guardarEvaluaciones = async (intento = 1): Promise<boolean> => {
       try {
-        await fetch("/api/seguimiento", {
+        const res = await fetch("/api/seguimiento", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alumno_id: s.id, eje: ejeDelDia, estado: "green", sala: salaActual, actividad: actividadDelDia }),
+          body: JSON.stringify({
+            sala: salaActual,
+            eje: ejeDelDia,
+            actividad: actividadDelDia,
+            evaluaciones: Object.entries(evaluacionesFinales).map(([alumno_id, estado]) => ({ alumno_id, estado })),
+          }),
         })
+        const data = await res.json()
+        if (data?.ok) return true
+        if (intento < 3) return guardarEvaluaciones(intento + 1)
+        return false
       } catch (e) {
-        console.error("[v0] Error guardando verde:", e)
+        console.error("[v0] Error guardando las evaluaciones:", e)
+        if (intento < 3) return guardarEvaluaciones(intento + 1)
+        return false
       }
+    }
+
+    const seGuardo = await guardarEvaluaciones()
+    if (!seGuardo) {
+      setJornadaToast({
+        tipo: "error",
+        mensaje: "No se pudieron guardar todas las evaluaciones. Revisá la conexión y volvé a finalizar la jornada.",
+      })
+      setTimeout(() => setJornadaToast(null), 8000)
     }
 
     setEvaluaciones(evaluacionesFinales)
