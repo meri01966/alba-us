@@ -620,13 +620,23 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
           console.error("[v0] Error en PATCH:", err)
         }
 
-        // Refrescar brain para obtener siguiente actividad
+        // Refrescar brain para obtener siguiente actividad.
+        // Tambien el CRONOGRAMA: es el que sabe que actividades quedaron
+        // evaluadas, y sin esto la tarjeta no se ponia en verde hasta recargar.
         fetchHistorialMes()
-        globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
-        
+        globalMutate(
+          (key: string) => typeof key === "string" && (key.includes("/api/brain") || key.includes("/api/cronograma-jardin")),
+          undefined,
+          { revalidate: true }
+        )
+
         setTimeout(() => {
           dayPlanningRef.current?.fetchBrain?.()
-          globalMutate((key: string) => typeof key === "string" && key.includes("/api/brain"), undefined, { revalidate: true })
+          globalMutate(
+            (key: string) => typeof key === "string" && (key.includes("/api/brain") || key.includes("/api/cronograma-jardin")),
+            undefined,
+            { revalidate: true }
+          )
         }, 2000)
 
         // Limpiar evaluaciones para la nueva clase
