@@ -6,6 +6,78 @@ export const dynamic = "force-dynamic"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+
+    // ── GUARDADO EN LOTE ──────────────────────────────────────────────────
+    // Antes la pantalla mandaba UNA llamada por alumno: con 27 chicos eran 27
+    // llamadas en fila, y con internet mala cada una podia fallar en silencio.
+    // Ahora vienen todas juntas y se responde cuantas se guardaron.
+    if (Array.isArray(body.evaluaciones)) {
+      const { sala, eje, actividad, evaluaciones } = body
+      if (!sala || !eje || evaluaciones.length === 0) {
+        return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
+      }
+
+      const now = new Date().toISOString()
+      const today = now.split("T")[0]
+      const ids = evaluaciones.map((e: any) => e.alumno_id).filter(Boolean)
+
+      // Los que ya tienen registro hoy en este eje: se actualizan
+      const { data: yaEstan } = await supabase
+        .from("seguimiento")
+        .select("id, alumno_id")
+        .in("alumno_id", ids)
+        .eq("eje", eje)
+        .gte("fecha", `${today}T00:00:00`)
+        .lte("fecha", `${today}T23:59:59`)
+
+      const idPorAlumno: Record<string, string> = {}
+      ;(yaEstan || []).forEach((r: any) => { idPorAlumno[r.alumno_id] = r.id })
+
+      let guardadas = 0
+      const fallidas: string[] = []
+
+      // Los nuevos, todos en una sola insercion
+      const nuevos = evaluaciones
+        .filter((e: any) => e.alumno_id && !idPorAlumno[e.alumno_id])
+        .map((e: any) => ({
+          alumno_id: e.alumno_id,
+          eje,
+          estado: e.estado,
+          sala,
+          actividad: actividad ?? null,
+          fecha: now,
+        }))
+
+      if (nuevos.length > 0) {
+        const { error } = await supabase.from("seguimiento").insert(nuevos)
+        if (error) {
+          console.error("[v0] Error insertando el lote:", error.message)
+          nuevos.forEach((n: any) => fallidas.push(n.alumno_id))
+        } else {
+          guardadas += nuevos.length
+        }
+      }
+
+      // Los que ya existian, se actualizan uno por uno (son pocos)
+      for (const e of evaluaciones) {
+        const id = idPorAlumno[e.alumno_id]
+        if (!id) continue
+        const { error } = await supabase
+          .from("seguimiento")
+          .update({ estado: e.estado, actividad: actividad ?? null, fecha: now })
+          .eq("id", id)
+        if (error) fallidas.push(e.alumno_id)
+        else guardadas += 1
+      }
+
+      return NextResponse.json({
+        ok: fallidas.length === 0,
+        guardadas,
+        fallidas,
+        total: evaluaciones.length,
+      })
+    }
+
     const { alumno_id, eje, estado, sala, actividad } = body
 
     if (!alumno_id || !eje || !estado || !sala) {
