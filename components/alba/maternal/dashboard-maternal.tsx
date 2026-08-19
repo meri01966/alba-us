@@ -958,30 +958,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       })
       
       if (res.ok) {
-        // ALBA genera sugerencias basadas en el cronograma y proyecto
-        const textoCompleto = Object.values(cronograma).map(d => 
-          `${d.recibimiento} ${d.intercambio} ${d.actividades.map(a => `${a.nombre} ${a.desarrollo}`).join(" ")}`
-        ).join(" ").toLowerCase()
-        
-        const sugerencias: string[] = []
-        
-        if (textoCompleto.includes("matematica") || textoCompleto.includes("cantidad") || textoCompleto.includes("dado")) {
-          sugerencias.push("Para reforzar Matematica: Juego de correspondencia uno a uno con objetos cotidianos")
-        }
-        if (textoCompleto.includes("cuento") || textoCompleto.includes("lectura") || textoCompleto.includes("libro")) {
-          sugerencias.push("Para reforzar Lengua: Lectura dialogica con pausas para preguntas abiertas")
-        }
-        if (textoCompleto.includes("arte") || textoCompleto.includes("dibujo") || textoCompleto.includes("pintura")) {
-          sugerencias.push("Para Lenguajes Expresivos: Explorar texturas con materiales naturales")
-        }
-        if (proyecto.titulo) {
-          sugerencias.push(`Relacionar con el proyecto "${proyecto.titulo}": Actividad de indagacion del ambiente`)
-        }
-        if (sugerencias.length === 0) {
-          sugerencias.push("Guarda mas actividades para recibir sugerencias personalizadas de ALBA")
-        }
-        
-        setSugerenciasALBA(sugerencias)
+        // Los tips los escribe ALBA con la evidencia real de la sala.
+        // Antes aca habia una lista fija en el codigo —"Para reforzar
+        // Matematica...", "Guarda mas actividades..."— que los pisaba
+        // cada vez que la maestra guardaba el cronograma.
+        generarTipsALBA()
         setMensajeGuardado("Cronograma guardado")
         setTimeout(() => setMensajeGuardado(""), 3000)
       }
