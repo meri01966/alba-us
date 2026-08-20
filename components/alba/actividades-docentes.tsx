@@ -285,6 +285,19 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                         )}
                       </div>
                     </div>
+                    {/* La maestra elige cual quiere que ALBA use esta semana */}
+                    <button
+                      onClick={() => marcarSemana(a.id, !a.elegida)}
+                      title={a.elegida ? "Quitar de esta semana" : "Que ALBA use esta actividad esta semana"}
+                      className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border shrink-0 transition-colors ${
+                        a.elegida
+                          ? "bg-amber-100 border-amber-400 text-amber-800"
+                          : "bg-white border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600"
+                      }`}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${a.elegida ? "fill-amber-500 text-amber-500" : ""}`} />
+                      Esta semana
+                    </button>
                     <button
                       onClick={() => setExpandida(abiertaEsta ? null : a.id)}
                       className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0"
@@ -361,19 +374,6 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                             {info.corto}
                           </span>
                         )}
-                        {/* La maestra elige cual usa ALBA esta semana */}
-                        <button
-                          onClick={() => marcarSemana(a.id, !a.elegida)}
-                          title={a.elegida ? "Quitar de esta semana" : "Que ALBA use esta actividad esta semana"}
-                          className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full shrink-0 border transition-colors ${
-                            a.elegida
-                              ? "bg-amber-100 border-amber-400 text-amber-800"
-                              : "bg-white border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-600"
-                          }`}
-                        >
-                          <Star className={`w-3 h-3 ${a.elegida ? "fill-amber-500 text-amber-500" : ""}`} />
-                          Esta semana
-                        </button>
                         <button
                           onClick={() => borrar(a.id)}
                           title="Borrar"
