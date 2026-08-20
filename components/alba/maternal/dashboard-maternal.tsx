@@ -323,6 +323,20 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   // Lo que la maestra eligio evaluar. Si no elige nada, va lo que ALBA sugiere.
   const [capElegida, setCapElegida] = useState<string>("")
   const [indElegido, setIndElegido] = useState<string>("")
+  const [avisoEval, setAvisoEval] = useState<string>("")
+
+  // Al cerrar con la cruz se guarda lo que haya quedado marcado, para que
+  // la maestra no pierda lo que ya evaluo por olvidarse de tocar Guardar.
+  async function cerrarEvaluar() {
+    if (indElegido && Object.keys(marcados).length > 0 && !guardandoEval) {
+      await guardarEvaluacion(true)
+    }
+    setShowEvaluar(false)
+    setCapElegida("")
+    setIndElegido("")
+    setMarcados({})
+    setAvisoEval("")
+  }
 
   async function abrirEvaluar() {
     setShowEvaluar(true)
@@ -341,7 +355,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }
   }
 
-  async function guardarEvaluacion() {
+  async function guardarEvaluacion(alCerrar = false) {
     if (!datosEval?.capacidadSugerida) return
     setGuardandoEval(true)
     try {
@@ -355,7 +369,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           marcados,
         }),
       })
-      setShowEvaluar(false)
+      // La ventana queda ABIERTA: la maestra puede seguir con otra capacidad
+      // sin salir. Se limpia lo marcado y se avisa que quedo guardado.
+      if (!alCerrar) {
+        const queGuardo = indElegido || datosEval.indicador || ""
+        setAvisoEval(`Guardado: ${queGuardo}`)
+        setTimeout(() => setAvisoEval(""), 4000)
+        setMarcados({})
+        setIndElegido("")
+        setCapElegida("")
+      }
       await traerResumenEval()
     } catch (e) {
       console.error("[v0] Error guardando la evaluacion:", e)
@@ -2692,153 +2715,155 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           Una capacidad por vez. La docente marca SOLO a los que se apartan;
           el resto queda en "ya lo hace" sin tocar nada. */}
       {showEvaluar && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEvaluar(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3" onClick={cerrarEvaluar}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
 
-            <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
-              <div>
-                <p className="text-white font-bold text-lg leading-snug">
-                  {(indElegido || datosEval?.indicador) ? `¿${indElegido || datosEval.indicador}?` : "Evaluar"}
-                </p>
-                <p className="text-white/70 text-[11px] mt-1">
-                  {capElegida
-                    ? (datosEval?.indicadoresPorCapacidad || []).find((c: any) => c.key === capElegida)?.nombre
-                    : datosEval?.capacidadSugerida?.nombre || ""}
-                  {!capElegida && datosEval?.actividadDeOrigen ? ` · se trabajo en "${datosEval.actividadDeOrigen}"` : ""}
-                </p>
+            {/* Barra azul: las cinco capacidades, cada una en su color.
+                La maestra toca una, elige el indicador y evalua. Puede
+                encadenar todas las que quiera sin cerrar la ventana. */}
+            <div className="px-5 py-4" style={{ backgroundColor: "#1e40af" }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-white font-bold text-lg leading-none">Evaluar la sala</p>
+                  <p className="text-white/60 text-xs mt-1">{salaActual} — {alumnos.length} alumnos</p>
+                </div>
+                <button type="button" onClick={cerrarEvaluar} className="text-white/80 hover:text-white shrink-0">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-              <button type="button" onClick={() => setShowEvaluar(false)} className="text-white/80 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
+
+              <div className="flex flex-wrap gap-2">
+                {(datosEval?.indicadoresPorCapacidad || []).map((c: any) => {
+                  const col = COLOR_CAPACIDAD[c.key]
+                  const activa = capElegida === c.key
+                  return (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => { setCapElegida(activa ? "" : c.key); setIndElegido("") }}
+                      className="text-sm font-semibold px-3.5 py-2 rounded-lg transition-colors"
+                      style={activa
+                        ? { backgroundColor: "#fff", color: col?.text }
+                        : { backgroundColor: "rgba(255,255,255,0.12)", color: "#fff" }}
+                    >
+                      {NOMBRE_CAPACIDAD[c.key] || c.nombre}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* Elegir que evaluar. ALBA sugiere, pero la maestra observa cosas
-                todo el tiempo: en el juego, en las rutinas, en lo que ella armo.
-                Los que ya trabajo aparecen marcados con un punto. */}
-            <div className="px-5 py-3 border-b border-slate-200">
-              <div className="flex flex-wrap gap-1.5">
-                {(datosEval?.indicadoresPorCapacidad || []).map((c: any) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    onClick={() => { setCapElegida(capElegida === c.key ? "" : c.key); setIndElegido("") }}
-                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                      capElegida === c.key
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-slate-200 text-slate-500 hover:border-slate-300"
-                    }`}
-                  >
-                    {NOMBRE_CAPACIDAD[c.key] || c.nombre}
-                  </button>
-                ))}
-              </div>
-
-              {capElegida && (
-                <div className="mt-2 space-y-1">
+            {/* Indicadores de la capacidad elegida */}
+            {capElegida && !indElegido && (
+              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 overflow-y-auto">
+                <p className="text-sm text-slate-600 mb-2">Que vas a evaluar</p>
+                <div className="space-y-1.5">
                   {((datosEval?.indicadoresPorCapacidad || []).find((c: any) => c.key === capElegida)?.indicadores || [])
                     .map((i: any) => (
                       <button
                         key={i.texto}
                         type="button"
                         onClick={() => setIndElegido(i.texto)}
-                        className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-                          indElegido === i.texto
-                            ? "border-blue-500 bg-blue-50 text-blue-800 font-semibold"
-                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                        }`}
+                        className="w-full text-left text-sm px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors"
                       >
-                        {i.trabajado && <span className="text-amber-500 mr-1">•</span>}
+                        {i.trabajado && <span className="text-amber-500 mr-1.5">•</span>}
                         {i.texto}
-                        {i.evaluado && <span className="text-[10px] text-slate-400 ml-1">(ya evaluado)</span>}
+                        {i.evaluado && <span className="text-xs text-slate-400 ml-2">ya evaluado</span>}
                       </button>
                     ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="text-sm text-slate-700">Marca a los que todavia no lo hacen solos.</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Los que no marques quedan como que <span className="font-semibold text-slate-700">ya lo hacen</span>.
-              </p>
-            </div>
+            {/* La lista de chicos: completa y fija, sin achicar */}
+            {indElegido ? (
+              <>
+                <div className="px-5 py-3 border-b border-slate-200">
+                  <p className="text-base font-bold text-slate-800 leading-snug">¿{indElegido}?</p>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    Marca a los que todavia no lo hacen solos. Los que no marques quedan como que ya lo hacen.
+                  </p>
+                </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-2">
-              {/* Solo se evalua lo que se trabajo: si todavia no se marco
-                  ninguna actividad como realizada, no hay nada que mirar. */}
-              {datosEval && !datosEval.hayQueEvaluar && !indElegido && (
-                <p className="text-sm text-slate-500 text-center py-5 px-4">
-                  Elegi arriba que queres evaluar.
+                <div className="flex-1 overflow-y-auto px-5 py-2">
+                  {(datosEval?.alumnos || []).map((al: any) => {
+                    const estado = marcados[al.id]
+                    return (
+                      <div key={al.id} className="flex items-center gap-3 py-2.5 border-b border-slate-100">
+                        <span className="flex-1 text-base text-slate-800">{al.nombre}</span>
+                        <button
+                          type="button"
+                          onClick={() => setMarcados((p) => {
+                            const n = { ...p }
+                            if (n[al.id] === "empezando") delete n[al.id]
+                            else n[al.id] = "empezando"
+                            return n
+                          })}
+                          className="text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors"
+                          style={estado === "empezando"
+                            ? { backgroundColor: "#fef3c7", borderColor: "#f59e0b", color: "#92400e" }
+                            : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
+                        >
+                          Lo hace con ayuda
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMarcados((p) => {
+                            const n = { ...p }
+                            if (n[al.id] === "acompanar") delete n[al.id]
+                            else n[al.id] = "acompanar"
+                            return n
+                          })}
+                          className="text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors"
+                          style={estado === "acompanar"
+                            ? { backgroundColor: "#fee2e2", borderColor: "#ef4444", color: "#991b1b" }
+                            : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
+                        >
+                          Todavia no
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500">
+                    {Object.keys(marcados).length === 0
+                      ? "Marca a los que todavia no lo hacen solos"
+                      : [
+                          `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} ya lo hacen`,
+                          Object.values(marcados).filter((v) => v === "empezando").length > 0
+                            ? `${Object.values(marcados).filter((v) => v === "empezando").length} con ayuda`
+                            : "",
+                          Object.values(marcados).filter((v) => v === "acompanar").length > 0
+                            ? `${Object.values(marcados).filter((v) => v === "acompanar").length} todavia no`
+                            : "",
+                        ].filter(Boolean).join(" · ")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={guardarEvaluacion}
+                    disabled={guardandoEval}
+                    className="px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
+                  >
+                    {guardandoEval ? "Guardando..." : "Guardar y seguir"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center px-8">
+                <p className="text-base text-slate-400 text-center">
+                  {capElegida ? "Elegi que vas a evaluar." : "Toca una capacidad para empezar."}
                 </p>
-              )}
+              </div>
+            )}
 
-              {(datosEval?.hayQueEvaluar || indElegido) && (datosEval?.alumnos || []).map((al: any) => {
-                const estado = marcados[al.id]
-                return (
-                  <div key={al.id} className="flex items-center gap-2 py-2 border-b border-slate-100">
-                    <span className="flex-1 text-sm text-slate-800">{al.nombre}</span>
-                    <button
-                      type="button"
-                      onClick={() => setMarcados((p) => {
-                        const n = { ...p }
-                        if (n[al.id] === "empezando") delete n[al.id]
-                        else n[al.id] = "empezando"
-                        return n
-                      })}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors"
-                      style={estado === "empezando"
-                        ? { backgroundColor: "#fef3c7", borderColor: "#f59e0b", color: "#92400e" }
-                        : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
-                    >
-                      Lo hace con ayuda
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMarcados((p) => {
-                        const n = { ...p }
-                        if (n[al.id] === "acompanar") delete n[al.id]
-                        else n[al.id] = "acompanar"
-                        return n
-                      })}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors"
-                      style={estado === "acompanar"
-                        ? { backgroundColor: "#fee2e2", borderColor: "#ef4444", color: "#991b1b" }
-                        : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
-                    >
-                      Todavia no
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
-              {/* Hasta que no se guarda no se afirma que el resto "ya lo hace":
-                  todavia no hay evaluacion. Solo se cuenta lo que ella marco. */}
-              <p className="text-[11px] text-slate-500">
-                {Object.keys(marcados).length === 0
-                  ? "Marca a los que todavia no lo hacen solos"
-                  : [
-                      `${(datosEval?.alumnos?.length || 0) - Object.keys(marcados).length} ya lo hacen`,
-                      Object.values(marcados).filter((v) => v === "empezando").length > 0
-                        ? `${Object.values(marcados).filter((v) => v === "empezando").length} con ayuda`
-                        : "",
-                      Object.values(marcados).filter((v) => v === "acompanar").length > 0
-                        ? `${Object.values(marcados).filter((v) => v === "acompanar").length} todavia no`
-                        : "",
-                    ].filter(Boolean).join(" · ")}
-              </p>
-              {(datosEval?.hayQueEvaluar || indElegido) && (
-                <button
-                  type="button"
-                  onClick={guardarEvaluacion}
-                  disabled={guardandoEval}
-                  className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
-                >
-                  {guardandoEval ? "Guardando..." : "Guardar"}
-                </button>
-              )}
-            </div>
+            {/* Aviso al guardar, para poder seguir con otra capacidad */}
+            {avisoEval && (
+              <div className="px-5 py-2 bg-green-50 border-t border-green-200">
+                <p className="text-sm text-green-800 text-center">{avisoEval}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
