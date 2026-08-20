@@ -3200,7 +3200,10 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     let esVariante = false
 
     if (propias && propias.length > 0) {
-      elegida = propias[Math.floor(Math.random() * propias.length)]
+      // Si la maestra marco una para esta semana, ALBA usa esa. Ella sabe
+      // mejor que ALBA que le viene bien esta semana.
+      const marcada = propias.find((a: any) => a.elegida === true)
+      elegida = marcada || propias[Math.floor(Math.random() * propias.length)]
     } else {
       // Ya usadas: solo las que anduvieron bien vuelven a proponerse
       const { data: usadas } = await supabase
@@ -3318,9 +3321,11 @@ Respondé SOLO con este JSON, sin backticks:
 
     // Solo la primera vez: si ya era una variante, ya estaba marcada
     if (!vieneDeLaRed && !esVariante) {
+      // Se desmarca en la misma llamada: ya se uso, no tiene sentido que
+      // siga marcada para la semana siguiente.
       await supabase
         .from("actividades_docentes")
-        .update({ estado: "usada" })
+        .update({ estado: "usada", elegida: false })
         .eq("id", elegida.id)
     }
 
