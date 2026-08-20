@@ -3,10 +3,10 @@
 // Los que no toca quedan en "ya lo hace": se guardan igual, porque si no,
 // despues no habria forma de saber si un chico avanzo o si ese dia no se evaluo.
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-
-const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
+// La MISMA conexion que usa el resto del proyecto. Con una clave escrita a
+// mano aca, las consultas a `alumnos` volvian vacias sin dar error, y el
+// endpoint devolvia "la sala no tiene alumnos" cuando si los tenia.
+import { supabase } from "@/lib/supabase"
 
 const TABLA = "registro_maternal"
 
@@ -71,10 +71,6 @@ const CAPACIDADES = [
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_KEY)
-}
-
 // ── GET: que capacidad toca evaluar y como quedo la ultima vez ──────────────
 export async function GET(req: NextRequest) {
   try {
@@ -82,10 +78,16 @@ export async function GET(req: NextRequest) {
     const sala = searchParams.get("sala")
     if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
-    const supabase = getSupabase()
-
-    const { data: alumnos } = await supabase
+        const { data: alumnos, error: errAlumnos } = await supabase
       .from("alumnos").select("id, nombre").eq("sala", sala).order("nombre")
+
+    if (errAlumnos) {
+      console.error("[v0] Error leyendo alumnos:", errAlumnos.message)
+      return NextResponse.json(
+        { ok: false, error: "No se pudieron leer los alumnos" },
+        { status: 500 }
+      )
+    }
 
     const { data: registros } = await supabase
       .from(TABLA).select("*").eq("sala", sala).order("fecha", { ascending: false }).limit(600)
@@ -329,9 +331,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 })
     }
 
-    const supabase = getSupabase()
-
-    const { data: alumnos } = await supabase.from("alumnos").select("id").eq("sala", sala)
+        const { data: alumnos } = await supabase.from("alumnos").select("id").eq("sala", sala)
     if (!alumnos || alumnos.length === 0) {
       return NextResponse.json({ ok: false, error: "La sala no tiene alumnos" }, { status: 400 })
     }
