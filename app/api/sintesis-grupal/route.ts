@@ -3,10 +3,8 @@
 // Segundo cuatrimestre solamente (desde el 3/8/2026).
 // Sin porcentajes: cuenta CHICOS, que es lo que la directora necesita leer.
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
-const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 const INICIO_CUATRIMESTRE = "2026-08-03"
 
@@ -19,10 +17,6 @@ const EJES = [
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
-
-function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_KEY)
-}
 
 // Supabase corta en 1000 filas por consulta: esto trae todo, de a mil por vez.
 async function traerTodo(query: any): Promise<any[]> {
@@ -69,7 +63,6 @@ export async function GET(req: NextRequest) {
     const sala = searchParams.get("sala")
     if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
 
-    const supabase = getSupabase()
 
     // Actividades que quedaron sin realizar en el cuatrimestre, por eje
     const noRealizadasPorEje: Record<string, string[]> = { CF: [], CT: [], O: [], E: [] }
