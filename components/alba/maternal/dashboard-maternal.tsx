@@ -320,9 +320,15 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     }
   }
 
+  // Lo que la maestra eligio evaluar. Si no elige nada, va lo que ALBA sugiere.
+  const [capElegida, setCapElegida] = useState<string>("")
+  const [indElegido, setIndElegido] = useState<string>("")
+
   async function abrirEvaluar() {
     setShowEvaluar(true)
     setMarcados({})
+    setCapElegida("")
+    setIndElegido("")
     try {
       const res = await fetch(`/api/registro-maternal?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
       const data = await res.json()
@@ -344,8 +350,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sala: salaActual,
-          capacidad: datosEval.capacidadSugerida?.key || "COM",
-          paso: datosEval.indicador || datosEval.capacidadSugerida.nombre,
+          capacidad: capElegida || datosEval.capacidadSugerida?.key || "COM",
+          paso: indElegido || datosEval.indicador || datosEval.capacidadSugerida.nombre,
           marcados,
         }),
       })
@@ -2692,16 +2698,62 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: "#1e40af" }}>
               <div>
                 <p className="text-white font-bold text-lg leading-snug">
-                  {datosEval?.indicador ? `¿${datosEval.indicador}?` : "Evaluar"}
+                  {(indElegido || datosEval?.indicador) ? `¿${indElegido || datosEval.indicador}?` : "Evaluar"}
                 </p>
                 <p className="text-white/70 text-[11px] mt-1">
-                  {datosEval?.capacidadSugerida?.nombre || ""}
-                  {datosEval?.actividadDeOrigen ? ` · se trabajo en "${datosEval.actividadDeOrigen}"` : ""}
+                  {capElegida
+                    ? (datosEval?.indicadoresPorCapacidad || []).find((c: any) => c.key === capElegida)?.nombre
+                    : datosEval?.capacidadSugerida?.nombre || ""}
+                  {!capElegida && datosEval?.actividadDeOrigen ? ` · se trabajo en "${datosEval.actividadDeOrigen}"` : ""}
                 </p>
               </div>
               <button type="button" onClick={() => setShowEvaluar(false)} className="text-white/80 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Elegir que evaluar. ALBA sugiere, pero la maestra observa cosas
+                todo el tiempo: en el juego, en las rutinas, en lo que ella armo.
+                Los que ya trabajo aparecen marcados con un punto. */}
+            <div className="px-5 py-3 border-b border-slate-200">
+              <div className="flex flex-wrap gap-1.5">
+                {(datosEval?.indicadoresPorCapacidad || []).map((c: any) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => { setCapElegida(capElegida === c.key ? "" : c.key); setIndElegido("") }}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                      capElegida === c.key
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    {NOMBRE_CAPACIDAD[c.key] || c.nombre}
+                  </button>
+                ))}
+              </div>
+
+              {capElegida && (
+                <div className="mt-2 space-y-1">
+                  {((datosEval?.indicadoresPorCapacidad || []).find((c: any) => c.key === capElegida)?.indicadores || [])
+                    .map((i: any) => (
+                      <button
+                        key={i.texto}
+                        type="button"
+                        onClick={() => setIndElegido(i.texto)}
+                        className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                          indElegido === i.texto
+                            ? "border-blue-500 bg-blue-50 text-blue-800 font-semibold"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {i.trabajado && <span className="text-amber-500 mr-1">•</span>}
+                        {i.texto}
+                        {i.evaluado && <span className="text-[10px] text-slate-400 ml-1">(ya evaluado)</span>}
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
 
             <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
@@ -2714,14 +2766,13 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             <div className="flex-1 overflow-y-auto px-4 py-2">
               {/* Solo se evalua lo que se trabajo: si todavia no se marco
                   ninguna actividad como realizada, no hay nada que mirar. */}
-              {datosEval && !datosEval.hayQueEvaluar && (
-                <p className="text-sm text-slate-500 text-center py-6 px-4">
-                  Todavia no hay actividades marcadas como realizadas.
-                  Cuando des una y la marques, ALBA te propone evaluar lo que se trabajo en ella.
+              {datosEval && !datosEval.hayQueEvaluar && !indElegido && (
+                <p className="text-sm text-slate-500 text-center py-5 px-4">
+                  Elegi arriba que queres evaluar.
                 </p>
               )}
 
-              {datosEval?.hayQueEvaluar && (datosEval?.alumnos || []).map((al: any) => {
+              {(datosEval?.hayQueEvaluar || indElegido) && (datosEval?.alumnos || []).map((al: any) => {
                 const estado = marcados[al.id]
                 return (
                   <div key={al.id} className="flex items-center gap-2 py-2 border-b border-slate-100">
@@ -2777,7 +2828,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                         : "",
                     ].filter(Boolean).join(" · ")}
               </p>
-              {datosEval?.hayQueEvaluar && (
+              {(datosEval?.hayQueEvaluar || indElegido) && (
                 <button
                   type="button"
                   onClick={guardarEvaluacion}
