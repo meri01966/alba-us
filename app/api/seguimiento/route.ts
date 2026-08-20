@@ -13,11 +13,16 @@ export async function POST(request: Request) {
     // Ahora vienen todas juntas y se responde cuantas se guardaron.
     if (Array.isArray(body.evaluaciones)) {
       const { sala, eje, actividad, evaluaciones } = body
+      // Fecha opcional: cuando se evalua una actividad de un dia que ya paso,
+      // el registro tiene que quedar con LA FECHA DE ESE DIA, no la de hoy.
+      const fechaPedida = typeof body.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.fecha)
+        ? body.fecha
+        : null
       if (!sala || !eje || evaluaciones.length === 0) {
         return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
       }
 
-      const now = new Date().toISOString()
+      const now = fechaPedida ? `${fechaPedida}T12:00:00.000Z` : new Date().toISOString()
       const today = now.split("T")[0]
       const ids = evaluaciones.map((e: any) => e.alumno_id).filter(Boolean)
 
