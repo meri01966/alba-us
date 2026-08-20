@@ -3,10 +3,8 @@
 // sala y el relato siguiente puede comparar contra el anterior y contar que
 // cambio. Antes era una foto que se generaba y se perdia.
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
-const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -16,8 +14,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const sala = searchParams.get("sala")
     if (!sala) return NextResponse.json({ ok: false, error: "Falta sala" }, { status: 400 })
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
     // tipo: "grupo" (por defecto) o "alumnos"
     const tipo = searchParams.get("tipo") || "grupo"
