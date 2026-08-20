@@ -4,7 +4,7 @@ import type { ChangeEvent } from "react"
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
-import { Plus, Sparkles, Trash2, ChevronDown, ChevronUp, BookOpen } from "lucide-react"
+import { Plus, Sparkles, Trash2, ChevronDown, ChevronUp, BookOpen, Star } from "lucide-react"
 
 // Vocabulario UNICO de ejes. Mismo que usa la tabla actividades_docentes.
 const EJES: { key: string; nombre: string; corto: string; color: string; bg: string }[] = [
@@ -35,6 +35,7 @@ interface ActividadDocente {
   desarrollo: string | null
   materiales: string | null
   estado: string
+  elegida?: boolean
   created_at: string
 }
 
@@ -111,8 +112,30 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
     }
   }
 
+  // Marca la actividad que ALBA tiene que usar esta semana. Solo una: al
+  // marcar una se desmarca la anterior. La pantalla cambia al instante y el
+  // guardado viaja despues, para que con internet mala no haya espera.
+  async function marcarSemana(id: string, valor: boolean) {
+    const antes = lista
+    setLista((prev: ActividadDocente[]) =>
+      prev.map((a: ActividadDocente) => ({ ...a, elegida: valor && a.id === id }))
+    )
+    try {
+      const res = await fetch("/api/actividades-docentes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, elegida: valor }),
+      })
+      if (!res.ok) throw new Error("no se guardo")
+    } catch (e) {
+      console.error("[v0] Error marcando la actividad de la semana:", e)
+      setLista(antes)   // se revierte: no queda marcada si no se guardo
+      setError("No se pudo marcar. Proba de nuevo.")
+      setTimeout(() => setError(""), 4000)
+    }
+  }
+
   async function borrar(id: string) {
-    if (!confirm("Borrar esta actividad de tu repertorio?")) return
     try {
       await fetch(`/api/actividades-docentes?id=${encodeURIComponent(id)}`, { method: "DELETE" })
       setLista((prev: ActividadDocente[]) => prev.filter((a: ActividadDocente) => a.id !== id))
@@ -361,6 +384,19 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                             {info.corto}
                           </span>
                         )}
+                        {/* La maestra elige cual usa ALBA esta semana */}
+                        <button
+                          onClick={() => marcarSemana(a.id, !a.elegida)}
+                          title={a.elegida ? "Quitar de esta semana" : "Que ALBA use esta actividad esta semana"}
+                          className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full shrink-0 border transition-colors ${
+                            a.elegida
+                              ? "bg-amber-100 border-amber-400 text-amber-800"
+                              : "bg-white border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-600"
+                          }`}
+                        >
+                          <Star className={`w-3 h-3 ${a.elegida ? "fill-amber-500 text-amber-500" : ""}`} />
+                          Esta semana
+                        </button>
                         <button
                           onClick={() => borrar(a.id)}
                           title="Borrar"
