@@ -293,8 +293,18 @@ export async function GET(req: NextRequest) {
       // Los indicadores de cada capacidad: son las HABILIDADES observables que
       // hay que estimular para que la capacidad se adquiera. Sin esto, ALBA
       // habla en general ("ayudalo en su comunicacion") y eso no se puede mirar.
+      // Todos los indicadores de las cinco capacidades, con su estado.
+      // La maestra elige cual evaluar: el aprendizaje no se limita a lo que
+      // ALBA propuso — ella observa en el juego, en las rutinas, en lo suyo.
+      // Los trabajados aparecen marcados para que ALBA siga orientando.
       indicadoresPorCapacidad: CAPACIDADES.map((c) => ({
-        key: c.key, nombre: c.nombre, indicadores: c.indicadores,
+        key: c.key,
+        nombre: c.nombre,
+        indicadores: c.indicadores.map((i: string) => ({
+          texto: i,
+          trabajado: trabajadas.some((t) => t.habilidad.trim().toLowerCase() === i.trim().toLowerCase()),
+          evaluado: yaEvaluados.has(i.trim().toLowerCase()),
+        })),
       })),
       ultimoRegistro: ultimoRegistro || null,
       diasSinRegistrar,
