@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import useSWR, { mutate as globalMutate } from "swr"
-import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen, Eye, Pencil, MessageSquare } from "lucide-react"
+import { Calendar, ChevronRight, Sparkles, Music, Globe, Dumbbell, Monitor, BookOpen, Eye, Pencil, MessageSquare, X } from "lucide-react"
 import { CronogramaVerModal } from "./cronograma-ver-modal"
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
@@ -91,12 +91,64 @@ interface Props {
 export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendientes = 0 }: Props) {
   const [verModalOpen, setVerModalOpen] = useState(false)
 
+  // Evaluar una actividad de un dia que ya paso y quedo sin evaluar.
+  // Es una ventana propia: no toca el panel de evaluacion del dia de hoy.
+  const [pendienteEval, setPendienteEval] = useState<{ nombre: string; eje: string; fecha: string; dia: string } | null>(null)
+  const [alumnosEval, setAlumnosEval] = useState<any[]>([])
+  const [marcasEval, setMarcasEval] = useState<Record<string, string>>({})
+  const [guardandoEval, setGuardandoEval] = useState(false)
+  const [errorEval, setErrorEval] = useState("")
+
+  async function abrirEvaluarPasada(act: any, fechaDia: string, nombreDia: string) {
+    setPendienteEval({ nombre: act.nombre, eje: act.eje || "CF", fecha: fechaDia, dia: nombreDia })
+    setMarcasEval({})
+    setErrorEval("")
+    try {
+      const r = await fetch(`/api/students?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+      const d = await r.json()
+      setAlumnosEval(Array.isArray(d?.students) ? d.students : [])
+    } catch (e) {
+      console.error("[v0] Error trayendo alumnos:", e)
+    }
+  }
+
+  async function guardarEvaluacionPasada() {
+    if (!pendienteEval) return
+    setGuardandoEval(true)
+    setErrorEval("")
+    const evaluaciones = alumnosEval.map((a: any) => ({
+      alumno_id: a.id,
+      estado: marcasEval[a.id] || "green",
+    }))
+    try {
+      const res = await fetch("/api/seguimiento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sala,
+          eje: pendienteEval.eje,
+          actividad: pendienteEval.nombre,
+          fecha: pendienteEval.fecha,   // la fecha del dia que corresponde
+          evaluaciones,
+        }),
+      })
+      const data = await res.json()
+      if (!data?.ok) throw new Error("no se guardo")
+      setPendienteEval(null)
+      mutateCron()
+    } catch (e) {
+      console.error("[v0] Error guardando la evaluacion:", e)
+      setErrorEval("No se pudo guardar. Revisa la conexion y proba de nuevo.")
+    }
+    setGuardandoEval(false)
+  }
+
   // SWR: revalida automaticamente al volver a pestaña y al reconectar
   const cronKey = sala ? `/api/cronograma-jardin?sala=${encodeURIComponent(sala)}` : null
   const clasesKey = sala ? `/api/clases-especiales-maternal?sala=${encodeURIComponent(sala)}` : null
   const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json())
 
-  const { data: cronData, isLoading: cronLoading } = useSWR(cronKey, fetcher, { revalidateOnFocus: true, revalidateOnReconnect: true })
+  const { data: cronData, isLoading: cronLoading, mutate: mutateCron } = useSWR(cronKey, fetcher, { revalidateOnFocus: true, revalidateOnReconnect: true })
   const { data: clasesData } = useSWR(clasesKey, fetcher, { revalidateOnFocus: true })
 
   // Derivar datos del SWR
@@ -262,7 +314,21 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                         {actAlba.nombre}
                       </p>
                     </button>
-                  ) : (
+                  ) : null}
+
+                  {/* Quedo sin evaluar y el dia ya paso: se puede evaluar
+                      ahora, y el registro queda con la fecha de ESE dia. */}
+                  {actAlba && actAlba.evaluada !== true && yaPaso(fecha) && (
+                    <button
+                      type="button"
+                      onClick={() => abrirEvaluarPasada(actAlba, fecha, dia)}
+                      className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold py-1.5 transition-colors"
+                    >
+                      Evaluar ahora
+                    </button>
+                  )}
+
+                  {!actAlba ? (
                     <button
                       type="button"
                       onClick={onAbrirCompleto}
@@ -271,7 +337,7 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
                       <Sparkles className="w-3 h-3 text-violet-300 mx-auto mb-0.5" />
                       <p className="text-[9px] text-violet-400 font-medium">Sin actividad ALBA</p>
                     </button>
-                  )}
+                  ) : null}
 
                   {/* Actividades de la docente — solo titulo */}
                   {actDocente.map((act, i) => (
@@ -329,6 +395,82 @@ export function CronogramaInlinePreview({ sala, onAbrirCompleto, mensajesPendien
         cronograma={cronograma}
         clasesEspeciales={clasesEspeciales}
       />
+
+      {/* Evaluar una actividad de un dia que ya paso. Ventana propia: guarda
+          directo con la fecha de ese dia y no toca el panel de hoy. */}
+      {pendienteEval && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPendienteEval(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-start justify-between gap-3" style={{ backgroundColor: "#1e40af" }}>
+              <div>
+                <p className="text-white font-bold text-base leading-snug">{pendienteEval.nombre}</p>
+                <p className="text-white/65 text-xs mt-1">
+                  {pendienteEval.eje} · {pendienteEval.dia} {pendienteEval.fecha.slice(8,10)}/{pendienteEval.fecha.slice(5,7)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setPendienteEval(null)} className="text-white/80 hover:text-white shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
+              <p className="text-xs text-slate-600">
+                Marca solo a los que necesitaron apoyo o faltaron. El resto queda en logrado.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              {alumnosEval.map((al: any) => {
+                const m = marcasEval[al.id]
+                const boton = (valor: string, texto: string, activo: any) => (
+                  <button
+                    type="button"
+                    onClick={() => setMarcasEval((p) => {
+                      const n = { ...p }
+                      if (n[al.id] === valor) delete n[al.id]
+                      else n[al.id] = valor
+                      return n
+                    })}
+                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors"
+                    style={m === valor ? activo : { backgroundColor: "#fff", borderColor: "#e2e8f0", color: "#64748b" }}
+                  >
+                    {texto}
+                  </button>
+                )
+                return (
+                  <div key={al.id} className="flex items-center gap-1.5 py-2 border-b border-slate-100">
+                    <span className="flex-1 text-sm text-slate-800">{al.nombre}</span>
+                    {boton("yellow", "En proceso", { backgroundColor: "#fef3c7", borderColor: "#f59e0b", color: "#92400e" })}
+                    {boton("red", "Refuerzo", { backgroundColor: "#fee2e2", borderColor: "#ef4444", color: "#991b1b" })}
+                    {boton("blue", "Ausente", { backgroundColor: "#dbeafe", borderColor: "#3b82f6", color: "#1e40af" })}
+                  </div>
+                )
+              })}
+            </div>
+
+            {errorEval && (
+              <p className="px-5 py-2 text-xs text-red-600 bg-red-50 border-t border-red-200">{errorEval}</p>
+            )}
+
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-slate-500">
+                {alumnosEval.length - Object.keys(marcasEval).length} logrado
+                {Object.values(marcasEval).filter((v) => v === "yellow").length > 0 && ` · ${Object.values(marcasEval).filter((v) => v === "yellow").length} en proceso`}
+                {Object.values(marcasEval).filter((v) => v === "red").length > 0 && ` · ${Object.values(marcasEval).filter((v) => v === "red").length} refuerzo`}
+                {Object.values(marcasEval).filter((v) => v === "blue").length > 0 && ` · ${Object.values(marcasEval).filter((v) => v === "blue").length} ausente`}
+              </p>
+              <button
+                type="button"
+                onClick={guardarEvaluacionPasada}
+                disabled={guardandoEval || alumnosEval.length === 0}
+                className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {guardandoEval ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
