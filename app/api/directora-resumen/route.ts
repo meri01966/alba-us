@@ -5,10 +5,8 @@
 // quedan intactos en la base pero no se mezclan, porque arrastran errores viejos.
 // Devuelve CONTEOS, no porcentajes: numeros que se leen de un vistazo.
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
-const SUPABASE_URL = "https://oairchbitlanpzywncua.supabase.co"
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXJjaGJpdGxhbnB6eXduY3VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjM4MzIsImV4cCI6MjA5MzczOTgzMn0.7_f8egxeOn9FUOGkF8Mp-OBhpo2rGaqy-6e2rcCXLiA"
 
 // Arranque del segundo cuatrimestre: el lunes en que las maestras empezaron a
 // registrar en ALBA. Todo lo anterior queda en la base pero no se muestra.
@@ -24,10 +22,6 @@ const EJES = ["CF", "CT", "O", "E"] as const
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
-
-function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_KEY)
-}
 
 // Supabase corta en 1000 filas por consulta. Con mas de mil evaluaciones,
 // cualquier cuenta hecha sobre una consulta suelta queda incompleta.
@@ -87,7 +81,6 @@ interface ResumenEje {
 
 export async function GET(_req: NextRequest) {
   try {
-    const supabase = getSupabase()
     const semana = lunesDeLaSemana()
 
     const [alumnos, seguimiento, crono, cierres] = await Promise.all([
