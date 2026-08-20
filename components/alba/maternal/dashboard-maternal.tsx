@@ -2741,16 +2741,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       key={c.key}
                       type="button"
                       onClick={() => { setCapElegida(activa ? "" : c.key); setIndElegido("") }}
-                      // Cada capacidad con SU color, siempre visible sobre la
-                      // barra azul. La activa se distingue con borde blanco.
-                      className="text-sm font-semibold px-3.5 py-2 rounded-lg transition-all"
-                      style={{
-                        backgroundColor: col?.bg || "#fff",
-                        color: col?.text || "#1e40af",
-                        border: activa ? "2px solid #fff" : "2px solid transparent",
-                        boxShadow: activa ? "0 0 0 2px rgba(255,255,255,0.35)" : "none",
-                        opacity: activa ? 1 : 0.82,
-                      }}
+                      // Sin tocar: fondo pleno del color de la capacidad, letra
+                      // blanca. Al elegirla: fondo blanco y la letra en su color.
+                      className="text-sm font-bold px-3.5 py-2 rounded-lg transition-all"
+                      style={activa
+                        ? { backgroundColor: "#fff", color: col?.text || "#1e40af" }
+                        : { backgroundColor: col?.text || "#1e40af", color: "#fff" }}
                     >
                       {NOMBRE_CAPACIDAD[c.key] || c.nombre}
                     </button>
