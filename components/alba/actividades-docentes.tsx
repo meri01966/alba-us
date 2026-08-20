@@ -98,6 +98,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
     setGuardando(false)
   }
 
+  // Sin uso: el eje lo decide ALBA
   async function cambiarEje(id: string, eje: string) {
     setLista((prev: ActividadDocente[]) => prev.map((a: ActividadDocente) => (a.id === id ? { ...a, eje } : a)))
     try {
@@ -323,31 +324,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
                         </p>
                       )}
 
-                      <div>
-                        <p className="text-[11px] font-semibold text-slate-500 mb-1">
-                          Si el eje no corresponde, tocá el correcto:
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {EJES.map((e) => {
-                            const activo = a.eje === e.key
-                            return (
-                              <button
-                                key={e.key}
-                                onClick={() => cambiarEje(a.id, e.key)}
-                                className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all"
-                                style={
-                                  activo
-                                    ? { backgroundColor: e.color, color: "#fff", borderColor: e.color }
-                                    : { backgroundColor: "#fff", color: e.color, borderColor: `${e.color}55` }
-                                }
-                              >
-                                {e.corto}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-
+                      {/* El eje lo decide ALBA: la docente no necesita corregirlo */}
                       <details>
                         <summary className="text-[11px] text-slate-400 cursor-pointer">
                           Ver lo que escribiste
