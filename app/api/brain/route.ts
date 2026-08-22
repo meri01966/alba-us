@@ -2371,7 +2371,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "tips": ["tip 1", "tip 2", "tip 3"] }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         return NextResponse.json({ ok: true, ...JSON.parse(j) })
@@ -2469,7 +2469,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones${anterior ? ", diciendo que cambio desde el relato anterior" : ""}" } ] }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         const relato = JSON.parse(j)
@@ -2550,7 +2550,7 @@ Respondé SOLO con este JSON, sin backticks:
 }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         return NextResponse.json({ ok: true, capacitacion: JSON.parse(j) })
@@ -2953,7 +2953,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
 
       try {
         const result = await generateText({
-          model: "openai/gpt-4o-mini",
+          model: "anthropic/claude-sonnet-5",
           prompt,
           maxOutputTokens: 2000,
           temperature: 0.85,
@@ -3250,7 +3250,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     if (esVariante) {
       try {
         const r = await generateText({
-          model: "openai/gpt-4o-mini",
+          model: "anthropic/claude-sonnet-5",
           maxOutputTokens: 700,
           temperature: 0.9,
           prompt: `Sos ALBA, asistente pedagogico de nivel inicial.
