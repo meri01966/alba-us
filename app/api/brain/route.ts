@@ -2492,6 +2492,64 @@ Respondé SOLO con este JSON, sin backticks:
       }
     }
 
+    // ── ORDENAR CON ALBA ──────────────────────────────────────────────────
+    // La maestra escribe sus actividades en el cronograma como puede. ALBA no
+    // las reescribe: RESPETA su nombre, su desarrollo y sus materiales, y les
+    // agrega lo que falta —eje, capacidad, "Observa si" y contenidos
+    // condensados—. Muchas todavia estan aprendiendo a planificar con el Diseno
+    // nuevo: al ver su propia actividad bien ordenada, aprenden como se hace.
+    if (action === "ordenar_cronograma") {
+      const acts = Array.isArray(body.actividades) ? body.actividades : []
+      if (acts.length === 0) return NextResponse.json({ ok: true, actividades: [] })
+
+      const salaOrd = String(sala || "")
+      const nivelOrd = nivelDeSala(salaOrd)
+      const esMatOrd = nivelOrd === "2" || nivelOrd === "3"
+
+      const promptOrd = `Sos ALBA, asistente pedagogico de nivel inicial.
+
+La maestra escribio estas actividades en su cronograma. ORDENALAS: no las
+reescribas ni las "mejores". Respeta su nombre, su desarrollo y sus materiales
+tal como los escribio. Lo que agregas es lo que falta para que quede bien
+planificada segun el Diseno Curricular.
+
+${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+Sala de ${nivelOrd} anos.
+
+${acts.map((a: any, i: number) => `--- ACTIVIDAD ${i + 1} ---
+Nombre: ${a.nombre || ""}
+Lo que escribio: ${[a.desarrollo, a.contenidos, a.capacidades, a.objetivo].filter(Boolean).join(" | ")}
+Materiales: ${a.materiales || ""}`).join("\n\n")}
+
+Para CADA una devolve, en el mismo orden y la misma cantidad:
+- El EJE de alfabetizacion que le corresponde${esMatOrd ? "" : " (CF, CT, O o E)"}. Toda actividad de nivel inicial toca el lenguaje de algun modo: encontralo. Una de expresion corporal donde nombran emociones es Oralidad; una donde escriben una palabra es Escritura.
+- La CAPACIDAD del Diseno: el nombre de una de las cinco seguido de dos puntos y lo que esta actividad pone en juego. Formato: "Comunicacion: expresar emociones y ponerles nombre". Las cinco son: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion.
+- El OBSERVA SI: UNA sola accion observable, empezando con verbo en tercera persona, sin escribir las palabras "Observa si". Si la maestra puso cuatro objetivos largos, elegi UNA conducta concreta que se pueda mirar. PROHIBIDO "desarrollar", "reconocer las posibilidades de", "proyectar", "fomentar".
+- Los CONTENIDOS en 1 o 2 lineas. Si escribio cuatro parrafos, condensalos.
+
+Respondé SOLO con este JSON, sin backticks:
+[{ "eje": "CF|CT|O|E", "capacidadDC": "Nombre: lo que pone en juego", "capacidades": "la accion observable", "contenidos": "1 o 2 lineas" }]`
+
+      try {
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptOrd, maxOutputTokens: 3000, temperature: 0.5 })
+        const orden = leerJSONAunqueVengaCortado(r.text.trim())
+        const lista = Array.isArray(orden) ? orden : []
+        // Se devuelve la actividad de la maestra INTACTA, con lo agregado
+        const ordenadas = acts.map((a: any, i: number) => ({
+          ...a,
+          eje: lista[i]?.eje || a.eje || "",
+          capacidadDC: lista[i]?.capacidadDC || a.capacidadDC || "",
+          capacidades: lista[i]?.capacidades || a.capacidades || "",
+          contenidos: lista[i]?.contenidos || a.contenidos || "",
+          alfabetizacion: true,
+        }))
+        return NextResponse.json({ ok: true, actividades: ordenadas })
+      } catch (e) {
+        console.error("[v0] Error ordenando el cronograma:", e)
+        return NextResponse.json({ ok: false, error: "No se pudo ordenar" }, { status: 502 })
+      }
+    }
+
     if (action === "micro_capacitacion") {
       const actividad = String(body.actividad || "").trim()
       const capacidadAct = String(body.capacidad || "").trim()
