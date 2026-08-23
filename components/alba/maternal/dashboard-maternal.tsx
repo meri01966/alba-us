@@ -631,7 +631,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         body: JSON.stringify({
           action: "tips_planificacion",
           sala: salaActual,
-          proyecto: { titulo: proyecto.titulo || "" },
+          proyecto: {
+            titulo: proyecto.titulo || "",
+            objetivoGeneral: proyecto.objetivoGeneral || "",
+            duracion: proyecto.duracion || "",
+          },
           actividades: actsSemana,
           evitar: tipsVistos,
         }),
@@ -802,7 +806,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         body: JSON.stringify({
           action: "ordenar_cronograma",
           sala: salaActual,
-          proyecto: { titulo: proyecto.titulo || "" },
+          proyecto: {
+            titulo: proyecto.titulo || "",
+            objetivoGeneral: proyecto.objetivoGeneral || "",
+            duracion: proyecto.duracion || "",
+          },
           actividades: propias.map((p) => p.act),
         }),
       })
@@ -863,7 +871,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         body: JSON.stringify({
           action: "micro_capacitacion",
           sala: salaActual,
-          proyecto: { titulo: proyecto.titulo || "" },
+          proyecto: {
+            titulo: proyecto.titulo || "",
+            objetivoGeneral: proyecto.objetivoGeneral || "",
+            duracion: proyecto.duracion || "",
+          },
           actividad: primeraAct,
           capacidad: capacidadAct ?? (actividadEnFoco?.capacidades || ""),
           evitar: capVistas,
@@ -1702,7 +1714,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             
             {/* Mis actividades: el repertorio propio de la maestra.
                 ALBA lo clasifica por capacidad y lo suma a sus sugerencias. */}
-            <ActividadesDocentes sala={salaActual} proyecto={proyecto.titulo || ""} />
+            <ActividadesDocentes
+              sala={salaActual}
+              proyecto={proyecto.titulo || ""}
+              proyectoObjetivo={proyecto.objetivoGeneral || ""}
+              proyectoDuracion={proyecto.duracion || ""}
+            />
 
             {/* Fila inferior: Sugerencias ALBA + Capacitacion */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1837,20 +1854,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   )}
                   ALBA sugiere
                 </button>
-                <button
-                  type="button"
-                  onClick={ordenarConAlba}
-                  disabled={ordenando}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-                  title="ALBA ordena las actividades que vos escribiste: les agrega el eje, la capacidad y el Observa si"
-                >
-                  {ordenando ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <BookOpen className="w-4 h-4" />
-                  )}
-                  Ordenar con ALBA
-                </button>
+            {/* "Ordenar con ALBA" se fue a Mis actividades: ahi la maestra
+                LE PIDE a ALBA, en vez de que ALBA le corrija lo que escribio. */}
                 {/* Boton Editar clases especiales */}
                 {editandoClases ? (
                   <button
