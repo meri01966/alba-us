@@ -2371,10 +2371,9 @@ Respondé SOLO con este JSON, sin backticks:
 { "tips": ["tip 1", "tip 2", "tip 3"] }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
         const t = r.text.trim()
-        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
-        return NextResponse.json({ ok: true, ...JSON.parse(j) })
+        return NextResponse.json({ ok: true, ...leerJSONAunqueVengaCortado(t) })
       } catch (e) {
         console.error("[v0] Error generando tips:", e)
         return NextResponse.json({ ok: false, tips: [] }, { status: 502 })
@@ -2469,10 +2468,9 @@ Respondé SOLO con este JSON, sin backticks:
 { "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones${anterior ? ", diciendo que cambio desde el relato anterior" : ""}" } ] }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptRelato, maxOutputTokens: 3000, temperature: 0.7 })
         const t = r.text.trim()
-        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
-        const relato = JSON.parse(j)
+        const relato = leerJSONAunqueVengaCortado(t)
 
         // El relato del grupo se GUARDA: asi se acumula la historia de la sala
         // y el proximo puede comparar contra este. Antes era una foto que se perdia.
@@ -2550,10 +2548,9 @@ Respondé SOLO con este JSON, sin backticks:
 }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptCap, maxOutputTokens: 1200, temperature: 0.95 })
         const t = r.text.trim()
-        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
-        return NextResponse.json({ ok: true, capacitacion: JSON.parse(j) })
+        return NextResponse.json({ ok: true, capacitacion: leerJSONAunqueVengaCortado(t) })
       } catch (e) {
         console.error("[v0] Error generando micro capacitacion:", e)
         return NextResponse.json({ ok: false, error: "No se pudo generar el consejo" }, { status: 502 })
@@ -2991,14 +2988,13 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
         const result = await generateText({
           model: "anthropic/claude-sonnet-5",
           prompt,
-          maxOutputTokens: 2000,
+          maxOutputTokens: 6000,
           temperature: 0.85,
         })
 
         // Parsear JSON
         const texto = result.text.trim()
-        const jsonStr = texto.startsWith("[") ? texto : texto.slice(texto.indexOf("["), texto.lastIndexOf("]") + 1)
-        const sugerenciasIA = JSON.parse(jsonStr)
+        const sugerenciasIA = leerJSONAunqueVengaCortado(texto)
 
         const sugerencias = sugerenciasIA.map((s: { dia: string; eje: string; nivelSecuencia?: string; nombre: string; capacidades: string; contenidos: string; objetivo: string; desarrollo: string; materiales: string }, idx: number) => {
           // El eje y el paso los impone el sistema: si la IA devolvio otra cosa, se ignora.
@@ -3211,6 +3207,53 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
   }
 }
 
+// Repara un JSON que llego cortado. Pasa cuando el modelo llega al tope de
+// tokens y la respuesta termina a la mitad: en vez de perder TODO y caer al
+// fallback, se rescata lo que si esta completo.
+function leerJSONAunqueVengaCortado(texto: string): any {
+  const t = (texto || "").trim()
+  const abre = t.indexOf("[") >= 0 ? "[" : "{"
+  const cierra = abre === "[" ? "]" : "}"
+  const desde = t.indexOf(abre)
+  if (desde < 0) throw new Error("La respuesta no trae JSON")
+
+  // Primero, lo obvio: si esta completo, se lee y listo
+  const hastaUltimo = t.lastIndexOf(cierra)
+  if (hastaUltimo > desde) {
+    try { return JSON.parse(t.slice(desde, hastaUltimo + 1)) } catch {}
+  }
+
+  // Vino cortado: se cierra lo que quedo abierto, contando solo fuera de comillas
+  let dentroDeTexto = false
+  let escapado = false
+  const pila: string[] = []
+  let ultimoCierreCompleto = -1
+
+  for (let i = desde; i < t.length; i++) {
+    const c = t[i]
+    if (escapado) { escapado = false; continue }
+    if (c === "\\") { escapado = true; continue }
+    if (c === '"') { dentroDeTexto = !dentroDeTexto; continue }
+    if (dentroDeTexto) continue
+    if (c === "{" || c === "[") pila.push(c === "{" ? "}" : "]")
+    else if (c === "}" || c === "]") {
+      pila.pop()
+      if (pila.length === 1 && abre === "[") ultimoCierreCompleto = i
+    }
+  }
+
+  // Si es una lista, se corta despues del ultimo elemento entero
+  if (abre === "[" && ultimoCierreCompleto > 0) {
+    try { return JSON.parse(t.slice(desde, ultimoCierreCompleto + 1) + "]") } catch {}
+  }
+
+  // Ultimo intento: cerrar todo lo que quedo abierto
+  let recorte = t.slice(desde)
+  if (dentroDeTexto) recorte += '"'
+  while (pila.length > 0) recorte += pila.pop()
+  return JSON.parse(recorte)
+}
+
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
   try {
     if (!sala || !Array.isArray(sugerencias) || sugerencias.length === 0) return sugerencias
@@ -3287,7 +3330,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       try {
         const r = await generateText({
           model: "anthropic/claude-sonnet-5",
-          maxOutputTokens: 700,
+          maxOutputTokens: 1600,
           temperature: 0.9,
           prompt: `Sos ALBA, asistente pedagogico de nivel inicial.
 
@@ -3308,8 +3351,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "nombre": "titulo nuevo, corto", "desarrollo": "pasos concretos", "materiales": "lista breve" }`,
         })
         const t = r.text.trim()
-        const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
-        const v = JSON.parse(j)
+        const v = leerJSONAunqueVengaCortado(t)
         if (v?.nombre) nombreFinal = String(v.nombre).trim()
         if (v?.desarrollo) desarrolloFinal = String(v.desarrollo).trim()
         if (v?.materiales) materialesFinal = String(v.materiales).trim()
