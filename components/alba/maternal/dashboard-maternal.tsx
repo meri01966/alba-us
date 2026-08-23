@@ -2115,12 +2115,36 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                               placeholder="Nombre de la actividad"
                               className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-300 font-medium"
                             />
+                            {/* Un solo espacio grande: escribe o pega todo y despues
+                                "Ordenar con ALBA" lo separa y lo acomoda */}
                             <textarea
                               value={act.desarrollo}
                               onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
-                              placeholder="Que van a hacer los ninos"
-                              className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none h-16 focus:outline-none focus:ring-1 focus:ring-green-300"
+                              placeholder="Escribi o pega todo aca: que van a hacer, contenidos, materiales. Despues toca Ordenar con ALBA."
+                              className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-y focus:outline-none focus:ring-1 focus:ring-green-300 leading-relaxed"
+                              rows={9}
                             />
+
+                            {/* Lo que ALBA ordeno: se lee, no se edita aca */}
+                            {((act as any).capacidadDC || act.capacidades || act.contenidos || act.materiales) && (
+                              <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-2 py-1.5 space-y-1">
+                                {(act as any).eje && (
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Eje: </span>{(act as any).eje}</p>
+                                )}
+                                {(act as any).capacidadDC && (
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Capacidad: </span>{(act as any).capacidadDC}</p>
+                                )}
+                                {act.capacidades && (
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Observa si: </span>{act.capacidades}</p>
+                                )}
+                                {act.contenidos && (
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Contenidos: </span>{act.contenidos}</p>
+                                )}
+                                {act.materiales && (
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Materiales: </span>{act.materiales}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )
                       })}
