@@ -141,7 +141,13 @@ function CardActividad({ act, origen, fecha }: { act: Actividad; origen: "alba" 
         {/* La capacidad del Diseno y, debajo, la accion observable:
             que va a MIRAR la docente en los chicos durante la actividad. */}
         {act.capacidadDC && (
-          <SeccionDetalle label="Capacidad" texto={act.capacidadDC} />
+          <div className="mt-3">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-0.5">Capacidad</p>
+            <p className="text-sm text-slate-800 leading-relaxed">
+              <span className="font-semibold">{act.capacidadDC.split(":")[0]}:</span>
+              {act.capacidadDC.includes(":") ? act.capacidadDC.slice(act.capacidadDC.indexOf(":") + 1) : ""}
+            </p>
+          </div>
         )}
         {act.capacidades && (
           <div className="mt-3 bg-violet-50 border border-violet-300 rounded-lg px-3 py-2">
