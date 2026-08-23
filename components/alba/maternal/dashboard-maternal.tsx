@@ -359,16 +359,38 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     if (!datosEval?.capacidadSugerida) return
     setGuardandoEval(true)
     try {
-      await fetch("/api/registro-maternal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sala: salaActual,
-          capacidad: capElegida || datosEval.capacidadSugerida?.key || "COM",
-          paso: indElegido || datosEval.indicador || datosEval.capacidadSugerida.nombre,
-          marcados,
-        }),
-      })
+      // Se verifica que HAYA GUARDADO antes de limpiar la pantalla. Antes se
+      // limpiaba siempre, asi que con internet mala la maestra veia "Guardado"
+      // y la evaluacion se habia perdido.
+      const guardar = async (intento = 1): Promise<boolean> => {
+        try {
+          const res = await fetch("/api/registro-maternal", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sala: salaActual,
+              capacidad: capElegida || datosEval.capacidadSugerida?.key || "COM",
+              paso: indElegido || datosEval.indicador || datosEval.capacidadSugerida.nombre,
+              marcados,
+            }),
+          })
+          const d = await res.json()
+          if (d?.ok) return true
+          if (intento < 3) return guardar(intento + 1)
+          return false
+        } catch {
+          if (intento < 3) return guardar(intento + 1)
+          return false
+        }
+      }
+
+      const seGuardo = await guardar()
+      if (!seGuardo) {
+        setAvisoEval("No se pudo guardar. Revisa la conexion y proba de nuevo.")
+        setGuardandoEval(false)
+        return   // NO se limpia: lo marcado sigue ahi para reintentar
+      }
+
       // La ventana queda ABIERTA: la maestra puede seguir con otra capacidad
       // sin salir. Se limpia lo marcado y se avisa que quedo guardado.
       if (!alCerrar) {
@@ -756,6 +778,54 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     } catch (e) {
       console.error("[v0] Error moviendo la actividad:", e)
     }
+  }
+
+  // ── ORDENAR CON ALBA ────────────────────────────────────────────────
+  // ALBA no reescribe lo que puso la maestra: respeta su nombre, su desarrollo
+  // y sus materiales, y les agrega eje, capacidad, "Observa si" y contenidos.
+  const [ordenando, setOrdenando] = useState(false)
+
+  async function ordenarConAlba() {
+    const propias: { dia: string; idx: number; act: any }[] = []
+    DIAS.forEach((dia) => {
+      ;(cronograma[dia]?.actividades || []).forEach((a: any, idx: number) => {
+        if ((a?.nombre || "").trim() && a?.origen !== "alba") propias.push({ dia, idx, act: a })
+      })
+    })
+    if (propias.length === 0) return
+
+    setOrdenando(true)
+    try {
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ordenar_cronograma",
+          sala: salaActual,
+          proyecto: { titulo: proyecto.titulo || "" },
+          actividades: propias.map((p) => p.act),
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && Array.isArray(data.actividades)) {
+        const nuevo = { ...cronograma }
+        propias.forEach((p, i) => {
+          const acts = [...(nuevo[p.dia]?.actividades || [])]
+          acts[p.idx] = data.actividades[i] || acts[p.idx]
+          nuevo[p.dia] = { ...nuevo[p.dia], actividades: acts }
+        })
+        setCronograma(nuevo)
+        const base = typeof window !== "undefined" ? window.location.origin : ""
+        await fetch(`${base}/api/cronograma-maternal`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sala: salaActual, cronograma: nuevo }),
+        })
+      }
+    } catch (e) {
+      console.error("[v0] Error ordenando con ALBA:", e)
+    }
+    setOrdenando(false)
   }
 
   // Marca una actividad como realizada. Un toque y listo: es lo que le dice a
@@ -1766,6 +1836,20 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     <Sparkles className="w-4 h-4" />
                   )}
                   ALBA sugiere
+                </button>
+                <button
+                  type="button"
+                  onClick={ordenarConAlba}
+                  disabled={ordenando}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  title="ALBA ordena las actividades que vos escribiste: les agrega el eje, la capacidad y el Observa si"
+                >
+                  {ordenando ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <BookOpen className="w-4 h-4" />
+                  )}
+                  Ordenar con ALBA
                 </button>
                 {/* Boton Editar clases especiales */}
                 {editandoClases ? (
@@ -2862,8 +2946,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
             {/* Aviso al guardar, para poder seguir con otra capacidad */}
             {avisoEval && (
-              <div className="px-5 py-2 bg-green-50 border-t border-green-200">
-                <p className="text-sm text-green-800 text-center">{avisoEval}</p>
+              <div className={`px-5 py-2 border-t ${avisoEval.startsWith("No se pudo") ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                <p className={`text-sm text-center ${avisoEval.startsWith("No se pudo") ? "text-red-800" : "text-green-800"}`}>{avisoEval}</p>
               </div>
             )}
           </div>
