@@ -2342,6 +2342,27 @@ export async function GET(req: Request) {
 // Timestamp 1779751849
 
 // POST handler para acciones especiales de ALBA
+// El proyecto le dice a ALBA POR DONDE QUIERE IR LA MAESTRA. Antes solo le
+// llegaba el titulo: sabia que el proyecto se llamaba "Los animales marinos"
+// pero no que se proponia lograr con eso. Con el objetivo y el momento del
+// proyecto, las actividades aportan a lo que ella busca en vez de solo
+// compartir el tema.
+function bloqueProyecto(proy: any): string {
+  if (!proy?.titulo) return ""
+  const partes = [`Proyecto de la sala: "${proy.titulo}".`]
+  if (proy.objetivoGeneral) {
+    partes.push(`Lo que la maestra se propone con este proyecto: ${proy.objetivoGeneral}`)
+    partes.push(`La actividad tiene que APORTAR A ESE OBJETIVO, no solo compartir el tema.`)
+  }
+  if (proy.duracion) {
+    partes.push(`Duracion prevista: ${proy.duracion}.`)
+    if (proy.semanaActual) {
+      partes.push(`Va por la semana ${proy.semanaActual}. Al principio del proyecto se explora y se abre; despues se profundiza; al final se cierra y se muestra lo aprendido. Ajusta la propuesta al momento en que esta.`)
+    }
+  }
+  return partes.join("\n")
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -2361,7 +2382,7 @@ export async function POST(req: NextRequest) {
 
 Escribi 3 tips breves y practicos para la planificacion de esta semana. Uno por linea, sin numerar.
 ${esMatTip ? "Sala de 2 anos: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
-${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+${bloqueProyecto(proyecto)}
 ${actsSemana.length ? `Actividades de esta semana, con lo que se observa en cada una:\n${actsSemana.map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`).join("\n")}\nLos tips tienen que servir para ESTAS actividades, no ser generales.` : ""}
 Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
 No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son.
@@ -2508,12 +2529,20 @@ Respondé SOLO con este JSON, sin backticks:
 
       const promptOrd = `Sos ALBA, asistente pedagogico de nivel inicial.
 
-La maestra escribio estas actividades en su cronograma. ORDENALAS: no las
-reescribas ni las "mejores". Respeta su nombre, su desarrollo y sus materiales
-tal como los escribio. Lo que agregas es lo que falta para que quede bien
-planificada segun el Diseno Curricular.
+La maestra escribio estas actividades en su cronograma. ORDENALAS.
 
-${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+QUE SIGNIFICA RESPETAR: respeta SU PROPUESTA, o sea LO QUE ELLA QUIERE HACER.
+Si escribio "hacer una ronda y saltar diciendo el nombre", eso es lo que tiene
+que pasar en la actividad. Lo que NO tenes que respetar es el texto tal cual lo
+tipeo: puede estar hecho un lio, con la capacidad, el objetivo y los pasos todo
+mezclado en un mismo parrafo. Tu trabajo es DESARMAR ese texto y poner cada
+cosa en su lugar.
+
+Si ella misma escribio un eje o una capacidad, tomalos: te esta diciendo que
+quiere trabajar. Si puso "en la ronda saltando" y "capacidad: hacer preguntas",
+usa las dos cosas.
+
+${bloqueProyecto(proyecto)}
 Sala de ${nivelOrd} anos.
 
 ${acts.map((a: any, i: number) => `--- ACTIVIDAD ${i + 1} ---
@@ -2525,10 +2554,11 @@ Para CADA una devolve, en el mismo orden y la misma cantidad:
 - El EJE de alfabetizacion que le corresponde${esMatOrd ? "" : " (CF, CT, O o E)"}. Toda actividad de nivel inicial toca el lenguaje de algun modo: encontralo. Una de expresion corporal donde nombran emociones es Oralidad; una donde escriben una palabra es Escritura.
 - La CAPACIDAD del Diseno: el nombre de una de las cinco seguido de dos puntos y lo que esta actividad pone en juego. Formato: "Comunicacion: expresar emociones y ponerles nombre". Las cinco son: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion.
 - El OBSERVA SI: UNA sola accion observable, empezando con verbo en tercera persona, sin escribir las palabras "Observa si". Si la maestra puso cuatro objetivos largos, elegi UNA conducta concreta que se pueda mirar. PROHIBIDO "desarrollar", "reconocer las posibilidades de", "proyectar", "fomentar".
-- Los CONTENIDOS en 1 o 2 lineas. Si escribio cuatro parrafos, condensalos.
+- Los CONTENIDOS en 1 o 2 lineas: lo que se ENSENA para llegar al objetivo, no el objetivo mismo. Ej: "Vocabulario de las emociones. Intercambio oral guiado". Si escribio cuatro parrafos, condensalos.
+- El DESARROLLO reescrito: SOLO LOS PASOS de lo que se hace, en orden, en segunda persona. Sin repetir la capacidad, el objetivo ni los contenidos, que ya estan en su renglon. Si ella escribio todo pegoteado, quedate con las acciones.
 
 Respondé SOLO con este JSON, sin backticks:
-[{ "eje": "CF|CT|O|E", "capacidadDC": "Nombre: lo que pone en juego", "capacidades": "la accion observable", "contenidos": "1 o 2 lineas" }]`
+[{ "eje": "CF|CT|O|E", "capacidadDC": "Nombre: lo que pone en juego", "capacidades": "la accion observable", "contenidos": "1 o 2 lineas", "desarrollo": "solo los pasos" }]`
 
       try {
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptOrd, maxOutputTokens: 3000, temperature: 0.5 })
@@ -2541,6 +2571,8 @@ Respondé SOLO con este JSON, sin backticks:
           capacidadDC: lista[i]?.capacidadDC || a.capacidadDC || "",
           capacidades: lista[i]?.capacidades || a.capacidades || "",
           contenidos: lista[i]?.contenidos || a.contenidos || "",
+          desarrollo: lista[i]?.desarrollo || a.desarrollo || "",
+          objetivo: "",   // el objetivo ya vive en la capacidad: no se repite
           alfabetizacion: true,
         }))
         return NextResponse.json({ ok: true, actividades: ordenadas })
@@ -2581,7 +2613,7 @@ No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son ni como
 reaccionaron. Hablale de la ACTIVIDAD y de como darla, nada mas.
 
 ${esMat ? "SALA DE 2 ANOS (jardin maternal). El consejo tiene que servir para esa edad: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
-${proyecto?.titulo ? `Proyecto de la sala: "${proyecto.titulo}".` : ""}
+${bloqueProyecto(proyecto)}
 ${actividad ? `Actividad que va a dar: "${actividad}".` : ""}
 ${capacidadAct ? `Lo que se observa en esa actividad: "${capacidadAct}". El consejo tiene que ayudarla a ver justamente eso.` : ""}
 ${evitar.length ? `Ya le dimos estos consejos: ${evitar.join(" | ")}. Deci algo CLARAMENTE DISTINTO y apoyate en OTRO autor de la lista.` : ""}
@@ -2916,29 +2948,103 @@ ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
 `}
 
-EL JUEGO ES EL METODO, no un adorno. En nivel inicial se aprende jugando: una
-consigna correcta pero seca no engancha, y sin enganche no hay aprendizaje.
-Toda actividad necesita un ENVOLTORIO LUDICO. No cambia el contenido: lo envuelve.
+════════════════════════════════════════════════════════════════════
+COMO ENSENA UN DOCENTE DE NIVEL INICIAL
+Esto no son reglas sueltas: es el marco del que se desprende todo lo demas.
+Si una decision no sale de aca, esta mal tomada.
+════════════════════════════════════════════════════════════════════
 
-Recursos que funcionan a esta edad, elegi uno y desarrollalo:
-- La sorpresa: una bolsa, una caja o una tela de la que aparece algo que no se sabe que es
-- Un personaje: un titere o un muneco que se equivoca, que no sabe, que pregunta mal
-  y hay que ayudarlo. A los chicos les encanta corregir a un adulto o a un muneco
-- Aparecer y desaparecer: esconder, tapar, buscar
-- La cancion o el verso que se corta antes de la ultima palabra para que la completen
-- El cuerpo: palmear, saltar, agacharse, moverse cuando pasa algo
-- La repeticion con variacion: el mismo juego que vuelve cambiando un elemento
+1. SE APRENDE HACIENDO. En el nivel inicial el conocimiento se construye con
+   las manos y el cuerpo, no escuchando ni conversando sobre algo. Toda
+   propuesta tiene una ACCION CONCRETA en el centro: plantar, medir, palmear,
+   armar, buscar, repartir, comparar, construir, cocinar, esconder.
+   El lenguaje aparece DENTRO de esa accion, no en lugar de ella.
 
-MAL: "saca un objeto y pregunta de que color es".
-BIEN: "en una bolsa de tela pone cinco objetos de colores. Que cada nino meta la
-mano sin mirar, agarre uno y lo describa antes de sacarlo. El titere adivina y se
-equivoca a proposito: 'ah, es un auto rojo!' cuando es una pelota azul, para que
-lo corrijan."
+   Por eso NUNCA resuelvas una actividad con "observen y cuenten", "dialoguen
+   sobre", "compartan sus experiencias" o "preguntales que sienten". Eso es una
+   charla, no una propuesta de sala. Si la actividad se puede hacer sentados en
+   ronda hablando, esta mal planteada.
+
+   MAL: "invitalos a observar la huerta y preguntales que sienten".
+   BIEN: "que cada uno plante una semilla en su vasito y le ponga una etiqueta
+   con su nombre. Mientras plantan, pregunta que necesita la semilla para
+   crecer. Al terminar, cada uno cuenta que planto y donde lo va a poner."
+
+2. EL JUEGO ES EL METODO. El Diseno lo dice: el juego es la experiencia que
+   articula el desarrollo del lenguaje y la cognicion. No es un adorno que se
+   agrega al final: es la forma en que se ensena a esta edad.
+
+   PROPUESTAS QUE NOMBRA EL DISENO DE SALA DE 4 Y 5 (usalas cuando sea esa edad):
+   - "VEO VEO" y "EL DETECTIVE": para enunciar caracteristicas de un objeto
+     partiendo de lo que se ve y de para que sirve.
+   - "MUESTRO Y CUENTO": cada nino trae un objeto suyo y cuenta de que se trata
+     y por que lo eligio. La maestra ayuda con las primeras preguntas y establece
+     relaciones entre categorias: "es un utensilio de la sala?", "es un juguete?".
+   - FORMULAR O SEGUIR INSTRUCCIONES de pocos pasos: indicar los pasos para
+     preparar una chocolatada, para armar una torre con bloques de distintos
+     tamanos.
+   - EXPLICAR CON SUS PALABRAS las reglas de un juego conocido: la mancha, las
+     escondidas.
+   - ELABORAR EN GRUPO las normas de convivencia o las reglas de la biblioteca,
+     partiendo de preguntas que les hagan ver que hace falta ordenar la sala.
+   - JUEGOS PARA FORMULAR PREGUNTAS abiertas —que, quien, cuando, donde— y
+     respuestas con distintas estructuras. La maestra modela las primeras.
+   - LA RONDA DE INTERCAMBIO: el Diseno la llama "practica comunicativa
+     privilegiada". Pero OJO: no es sentarse a charlar. La maestra organiza los
+     turnos e INTERVIENE — pregunta por lo que falta en el relato ("cuando te
+     caiste?, con quien estabas?"), agrega lo que es importante, reelabora.
+     Sin esa intervencion no hay ensenanza.
+
+   PROPUESTAS QUE NOMBRA EL DISENO DE SALA DE 3 (usalas cuando sea esa edad):
+   - JUEGO DRAMATICO: representar roles —hacer las compras, ir al doctor, servir
+     el te— donde tienen que preguntar, pedir, explicar y variar como hablan.
+   - ADIVINANZAS Y JUEGOS DE PISTAS: para descubrir un objeto o personaje. Salen
+     preguntas cerradas: "es un animal?", "vive en el bosque?".
+   - JUEGOS DE CONSTRUCCION: aparecen las palabras de lugar y tamano: "poné el
+     bloque rojo chico arriba del verde grande".
+   - TEXTOS VERSIFICADOS: poesias y canciones donde se juega con como suenan
+     las palabras.
+
+   EN MATERNAL, sala de 2: la sorpresa (una bolsa o una tela de la que sale
+   algo), un personaje que se equivoca y hay que corregirlo, esconder y buscar,
+   la cancion que se corta para que completen, el cuerpo, y la repeticion con
+   variacion.
+
+   NUNCA mezcles las propuestas de una edad con las de otra.
+
+   Y ATENCION: esas propuestas son UN MODELO, NO UN MENU. El Diseno las da "a
+   modo de orientaciones", no como lista cerrada. Entendé POR QUE funcionan —hay
+   una accion concreta, hay algo que resolver usando el lenguaje, la maestra
+   andamia— e INVENTA otras con esa misma logica. Si todas tus actividades son
+   "Veo veo" y adivinanzas, estas girando sobre lo mismo y la sala se aburre.
+
+   VARIA LA ESTRUCTURA, no solo el tema. Si las ultimas dos actividades de esta
+   sala fueron de adivinar, la que escribas ahora tiene que ser de otra cosa:
+   construir, cocinar, ordenar, dramatizar, salir a buscar, fabricar algo.
+   Cambiar el tema y repetir el formato NO es variar.
+
+3. CONCIENCIA FONOLOGICA: TODO ORAL. El Diseno es explicito: las propuestas de
+   conciencia fonologica reflexionan sobre el lenguaje HABLADO y NO incluyen
+   letras ni palabras escritas. Se empieza reconociendo rimas dentro de poemas
+   o canciones, y despues generandolas.
+
+4. LA BIBLIOTECA Y LOS CARTELES DE LA SALA son el contexto para las
+   convenciones de la escritura: las partes del libro, el titulo, el autor,
+   hacia donde se lee, que lo escrito dice siempre lo mismo.
+
+5. EL DOCENTE ANDAMIA. El Diseno de 4 y 5 lo dice asi: lo que un nino puede
+   hacer HOY con ayuda, manana lo va a poder solo. El tipo y la calidad de las
+   intervenciones de la maestra son clave para el aprendizaje. Y la propuesta
+   tiene que estar en el punto justo: NI MUY FACIL NI MUY DIFICIL, porque en los
+   dos extremos no se aprende nada.
+   Por eso las consignas dicen que hace la maestra MIENTRAS los chicos hacen:
+   que pregunta, que modela, que reelabora, cuando espera. A medida que ellos
+   se sueltan, el acompanamiento baja.
 
 DENTRO DEL MARCO ESCOLAR: con lo que hay en una sala o se consigue en un kiosco.
 Nada de disfraces, producciones ni materiales que la maestra no tenga a mano.
 
-MATERIALES QUE SORPRENDEN Y SE CONSIGUEN. Variá: no todo papel y crayones.
+MATERIALES. Varia: no todo papel y crayones. Se consiguen en una sala o un kiosco.
 - Papel celofan de colores para mirar a traves, linterna, espejo
 - Hielo, agua, espuma de afeitar, esponjas
 - Tubos de carton, cajas, papel burbuja, telas
@@ -2957,18 +3063,12 @@ BIEN: "elegi un cuento con mucha accion y personajes que hablen, asi tienen de
 que preguntar".
 BIEN: "busca una poesia con rima bien marcada, de las que se pueden completar".
 
-El criterio de seleccion es lo valioso: deci que tiene que tener ese texto para
-que la propuesta funcione. Eso es pensar como copiloto de la docente.
+Solo nombra una obra si es MUY conocida y estas seguro de que existe. Ante la
+duda, describi el tipo de texto. NUNCA links ni URLs.
 
-Solo podes nombrar una obra concreta si es MUY conocida y estas seguro de que
-existe (un clasico de la literatura infantil, una cancion tradicional). Ante la
-menor duda, describi el tipo de texto en vez de nombrarlo. NUNCA links ni URLs.
-
-COMO SE ESCRIBE UNA ACTIVIDAD: es una planificacion de aula, no una idea suelta.
-La prueba es esta: si manana la maestra falta y entra una SUPLENTE que no conoce
-al grupo, tiene que poder dar la actividad leyendola una sola vez. Eso obliga a
-nombrar los materiales exactos y las cantidades, decir como se agrupan los chicos,
-cuanto dura, que frases decir textualmente y que hacer si no sale.
+COMO SE ESCRIBE: es una planificacion de aula. La prueba: si manana entra una
+SUPLENTE que no conoce al grupo, tiene que poder darla leyendola una vez.
+Materiales exactos, como se agrupan, cuanto dura, que frases decir.
 
 CAPACIDADES DEL DISENO CURRICULAR DE CABA (son cinco, comunes a todos los niveles).
 Para cada actividad elegi la que MAS se pone en juego, escrita exactamente asi:
@@ -2978,7 +3078,7 @@ Para cada actividad elegi la que MAS se pone en juego, escrita exactamente asi:
 - Resolucion de problemas
 - Compromiso y colaboracion
 
-- Proyecto en curso: "${proyecto?.titulo || "Alfabetizacion inicial"}"
+- ${bloqueProyecto(proyecto) || 'Proyecto en curso: "Alfabetizacion inicial"'}
 - Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
 
@@ -3037,7 +3137,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "capacidadDC": "el NOMBRE de una de las cinco capacidades seguido de dos puntos y LO QUE ESTA ACTIVIDAD PONE EN JUEGO de ella. Formato exacto: 'Comunicacion: formular preguntas sobre el cuento leido'. Las cinco, tal cual estan escritas: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego: casi siempre Comunicacion, y Pensamiento reflexivo y critico cuando se trata de comprender un texto. NO pongas el eje (CF, CT, Oralidad, Escritura) aca: el eje es otra cosa. La capacidad NO decide la actividad: la actividad sale del eje y despues se mira con la capacidad que corresponda",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
-    "desarrollo": "paso a paso concreto. LA PRUEBA: si manana entra una SUPLENTE que no conoce al grupo, tiene que poder dar la actividad leyendo esto una sola vez. TRES REGLAS: (1) ESCRIBILE A LA DOCENTE, en segunda persona: 'deci', 'pone', 'invitalos', 'preguntales', 'espera'. NUNCA 'la docente dice', 'el docente invita' ni 'quien coordine'. (2) CADA PASO CON EJEMPLO CONCRETO: no 'deci una palabra con un sonido', sino 'deci una palabra que empiece con /m/, por ejemplo mama'. Nombra las palabras y los objetos exactos. (3) Que no quede nada librado a la interpretacion: como se agrupan los chicos, cuanto dura, y que frases decir textualmente",
+    "desarrollo": "SOLO LOS PASOS de lo que se hace. Nada de repetir aca la capacidad, el objetivo ni los contenidos: eso ya vive en su renglon. Arranca directo con la primera accion. LA PRUEBA: si manana entra una SUPLENTE que no conoce al grupo, tiene que poder dar la actividad leyendo esto una sola vez. TRES REGLAS: (1) ESCRIBILE A LA DOCENTE, en segunda persona: 'deci', 'pone', 'invitalos', 'preguntales', 'espera'. NUNCA 'la docente dice', 'el docente invita' ni 'quien coordine'. (2) CADA PASO CON EJEMPLO CONCRETO: no 'deci una palabra con un sonido', sino 'deci una palabra que empiece con /m/, por ejemplo mama'. Nombra las palabras y los objetos exactos. (3) Que no quede nada librado a la interpretacion: como se agrupan los chicos, cuanto dura, y que frases decir textualmente",
     "materiales": "lista de materiales necesarios"
   },
   {
@@ -3412,6 +3512,55 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       return sugerencias
     }
 
+    // ── LAS QUE LA MAESTRA MARCO PARA ESTA SEMANA ────────────────────────
+    // Si marco varias, ALBA usa TODAS: ella sabe mejor que ALBA que le viene
+    // bien esta semana, y si armo una secuencia tiene sentido que la de junta.
+    // Van tal cual las escribio: son propias, no se reformulan.
+    const marcadas = (propias || []).filter((a: any) => a.elegida === true)
+
+    if (marcadas.length > 0) {
+      const copiaM = [...sugerencias]
+      const usados = new Set<number>()
+
+      for (const m of marcadas.slice(0, sugerencias.length)) {
+        const ejeM = NOMBRE_EJE[String(m.eje || "")] || String(m.eje || "CF")
+        // Preferimos el dia cuyo eje coincide; si no, el primero libre
+        let i = copiaM.findIndex((s, k) => {
+          if (usados.has(k)) return false
+          const e = String(s?.actividad?.eje || "")
+          return e === ejeM || (e === "EA" && ejeM === "Escritura")
+        })
+        if (i < 0) i = copiaM.findIndex((_, k) => !usados.has(k))
+        if (i < 0) break
+        usados.add(i)
+
+        copiaM[i] = {
+          ...copiaM[i],
+          actividad: {
+            nombre: m.nombre || "Actividad de la sala",
+            capacidades: m.capacidad || "",
+            capacidadDC: m.capacidad_dc || "",
+            contenidos: m.contenidos || "",
+            desarrollo: m.desarrollo || "",
+            materiales: m.materiales || "",
+            eje: ejeM,
+            alfabetizacion: true,
+            origen: "docente",
+            origenTexto: "Mi actividad",
+            actividadDocenteId: m.id,
+          },
+        }
+
+        // Se marca usada y se le saca la estrella: ya se uso esta semana
+        await supabase
+          .from("actividades_docentes")
+          .update({ estado: "usada", elegida: false })
+          .eq("id", m.id)
+      }
+
+      return copiaM
+    }
+
     // Orden: primero las que nunca se usaron, tal cual las escribio la maestra.
     // Si ya se usaron todas, vuelven — pero REFORMULADAS: misma estructura,
     // otros materiales, otro cuento. Asi la version original nunca se pierde
@@ -3421,10 +3570,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     let esVariante = false
 
     if (propias && propias.length > 0) {
-      // Si la maestra marco una para esta semana, ALBA usa esa. Ella sabe
-      // mejor que ALBA que le viene bien esta semana.
-      const marcada = propias.find((a: any) => a.elegida === true)
-      elegida = marcada || propias[Math.floor(Math.random() * propias.length)]
+      elegida = propias[Math.floor(Math.random() * propias.length)]
     } else {
       // Ya usadas: solo las que anduvieron bien vuelven a proponerse
       const { data: usadas } = await supabase
