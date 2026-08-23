@@ -2371,7 +2371,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "tips": ["tip 1", "tip 2", "tip 3"] }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
         const t = r.text.trim()
         return NextResponse.json({ ok: true, ...leerJSONAunqueVengaCortado(t) })
       } catch (e) {
@@ -2468,7 +2468,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones${anterior ? ", diciendo que cambio desde el relato anterior" : ""}" } ] }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptRelato, maxOutputTokens: 3000, temperature: 0.7 })
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 3000, temperature: 0.7 })
         const t = r.text.trim()
         const relato = leerJSONAunqueVengaCortado(t)
 
@@ -2548,7 +2548,7 @@ Respondé SOLO con este JSON, sin backticks:
 }`
 
       try {
-        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptCap, maxOutputTokens: 1200, temperature: 0.95 })
+        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 1200, temperature: 0.95 })
         const t = r.text.trim()
         return NextResponse.json({ ok: true, capacitacion: leerJSONAunqueVengaCortado(t) })
       } catch (e) {
@@ -2986,7 +2986,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
 
       try {
         const result = await generateText({
-          model: "anthropic/claude-sonnet-5",
+          model: "openai/gpt-4o-mini",
           prompt,
           maxOutputTokens: 6000,
           temperature: 0.85,
@@ -3329,7 +3329,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     if (esVariante) {
       try {
         const r = await generateText({
-          model: "anthropic/claude-sonnet-5",
+          model: "openai/gpt-4o-mini",
           maxOutputTokens: 1600,
           temperature: 0.9,
           prompt: `Sos ALBA, asistente pedagogico de nivel inicial.
