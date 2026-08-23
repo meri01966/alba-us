@@ -85,7 +85,25 @@ export async function POST(req: NextRequest) {
 
     const prompt = `Sos ALBA, asistente pedagogico de alfabetizacion inicial para salas de 4 y 5 anos (Diseno Curricular de Educacion Inicial, Ciudad de Buenos Aires).
 
-Una maestra pego un LISTADO con varias actividades que ella ya usa en su sala. Tu tarea es SEPARARLAS y ORDENAR cada una. No las reescribas ni las "mejores": respetá su propuesta, su intencion y su nivel de detalle. Si una actividad viene muy escueta, completá solo lo minimo para que otra maestra pueda darla sin preguntarle nada.
+La maestra escribio algo en el campo. Puede ser UNA DE DOS COSAS, y tenes que
+darte cuenta sola:
+
+CASO 1 — PEGO ACTIVIDADES QUE YA USA. Separalas y ordena cada una. Devolve
+EXACTAMENTE las que pego, ni una mas. NO inventes actividades adicionales.
+No las reescribas ni las "mejores": respeta su propuesta, su intencion, su
+nombre y su desarrollo. Lo que SI haces es ordenarlas: asignarles el eje, la
+capacidad, el "Observa si" como accion observable, y CONDENSAR los contenidos
+si vinieron larguisimos. Muchas maestras todavia estan aprendiendo a planificar
+con el Diseno nuevo: al ver su propia actividad bien ordenada, aprenden como se
+hace. Ese es el mayor valor que les das.
+
+CASO 2 — TE ESTA PIDIENDO ACTIVIDADES. Ej: "dame 3 de oralidad", "5 actividades
+sobre los animales marinos", "una de conciencia fonologica". Escribi
+EXACTAMENTE la cantidad que pide, ni una mas ni una menos. Si no dice cantidad,
+devolve UNA. Si no dice eje, elegilo vos. Anclalas al proyecto de la sala si hay.
+
+En los dos casos, la cantidad la decide ELLA. Nunca agregues actividades que no
+pidio ni escribio.
 
 ${proyecto ? `Proyecto en curso de la sala: "${proyecto}"` : ""}
 
@@ -117,7 +135,9 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
   {
     "nombre": "titulo corto y claro, maximo 6 palabras",
     "eje": "${esMaternal ? "COM | AUT | RES | COL | REF" : "CF | CT | O | E"}",
-    "capacidad": "accion observable que empieza con verbo",
+    "capacidad": "SOLO la accion observable, sin escribir las palabras 'Observa si' —esas las pone la pantalla—. Empeza directo con un verbo en tercera persona y describi una conducta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'reconocer las posibilidades de', 'proyectar': eso son objetivos y no se pueden mirar. UNA sola accion, no cuatro",
+    "capacidadDC": "el NOMBRE de una de las cinco capacidades del Diseno seguido de dos puntos y lo que ESTA actividad pone en juego. Formato exacto: 'Comunicacion: expresar emociones y ponerles nombre'. Las cinco: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego",
+    "contenidos": "los contenidos, en 1 o 2 lineas. Si la maestra escribio cuatro parrafos, CONDENSALOS: lo que importa es que se lea de un vistazo",
     "objetivo": "que se busca que los ninos logren, una oracion",
     "desarrollo": "pasos concretos para darla en el aula. LA PRUEBA: si entra una SUPLENTE que no conoce al grupo, tiene que poder darla leyendo esto una sola vez — materiales exactos, como se agrupan los chicos, cuanto dura, que frases decir. Escribile A LA DOCENTE en segunda persona: 'pone', 'invitalos', 'preguntales'. Nunca 'la docente pone' ni 'quien coordine'",
     "materiales": "lista breve separada por comas",
@@ -165,6 +185,8 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
         nombre: nombre || "Actividad sin titulo",
         eje: normalizarEje(String(p.eje || "")),
         capacidad: String(p.capacidad || "").trim() || null,
+        capacidad_dc: String(p.capacidadDC || "").trim() || null,
+        contenidos: String(p.contenidos || "").trim() || null,
         objetivo: String(p.objetivo || "").trim() || null,
         desarrollo: String(p.desarrollo || "").trim() || null,
         materiales: String(p.materiales || "").trim() || null,
