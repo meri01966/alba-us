@@ -844,23 +844,46 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   placeholder="Nombre de la actividad"
                                   className="w-full mt-1.5 text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-semibold"
                                 />
-                                {[
-                                  { campo: "capacidades" as keyof Actividad, label: "Observa si" },
-                                  { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
-                                  { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
-                                  { campo: "materiales" as keyof Actividad, label: "Materiales" },
-                                ].map(({ campo, label, tall }) => (
-                                  <div key={campo}>
-                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</label>
-                                    <textarea
-                                      value={(act[campo] as string) || ""}
-                                      onChange={(e) => actualizarActividad(dia, idx, campo, e.target.value)}
-                                      placeholder={label}
-                                      className="w-full text-[10px] p-1.5 border border-slate-200 rounded resize-none focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                                      rows={tall ? 3 : 2}
-                                    />
+                                {/* UN SOLO espacio grande para escribir o pegar todo.
+                                    Antes eran cuatro cuadraditos con scroll: incomodos
+                                    y lentos de llenar. La maestra escribe como puede y
+                                    despues "Ordenar con ALBA" lo separa y lo acomoda.
+                                    Si la actividad ya viene ordenada, los campos se
+                                    muestran abajo para leerlos. */}
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+                                    Que van a hacer
+                                  </label>
+                                  <textarea
+                                    value={(act.desarrollo as string) || ""}
+                                    onChange={(e) => actualizarActividad(dia, idx, "desarrollo", e.target.value)}
+                                    onBlur={() => onBlurActividad(dia, idx)}
+                                    placeholder="Escribi o pega todo aca: que van a hacer, contenidos, materiales. Despues toca Ordenar con ALBA."
+                                    className="w-full text-[11px] p-2 border border-slate-200 rounded resize-y focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 leading-relaxed"
+                                    rows={10}
+                                  />
+                                </div>
+
+                                {/* Lo que ALBA ordeno: se lee, no se edita aca */}
+                                {(act.capacidadDC || act.capacidades || act.contenidos || act.materiales) && (
+                                  <div className="rounded border border-violet-200 bg-violet-50/60 px-2 py-1.5 space-y-1">
+                                    {act.eje && (
+                                      <p className="text-[9px] text-violet-900"><span className="font-bold">Eje: </span>{act.eje}</p>
+                                    )}
+                                    {act.capacidadDC && (
+                                      <p className="text-[9px] text-violet-900"><span className="font-bold">Capacidad: </span>{act.capacidadDC}</p>
+                                    )}
+                                    {act.capacidades && (
+                                      <p className="text-[9px] text-violet-900"><span className="font-bold">Observa si: </span>{act.capacidades}</p>
+                                    )}
+                                    {act.contenidos && (
+                                      <p className="text-[9px] text-violet-900"><span className="font-bold">Contenidos: </span>{act.contenidos}</p>
+                                    )}
+                                    {act.materiales && (
+                                      <p className="text-[9px] text-violet-900"><span className="font-bold">Materiales: </span>{act.materiales}</p>
+                                    )}
                                   </div>
-                                ))}
+                                )}
                               </div>
                                 )}         
                             </div>
