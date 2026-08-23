@@ -136,6 +136,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
   const [actividadesYaSugeridas, setActividadesYaSugeridas] = useState<string[]>([])
   const [proyectoTitulo, setProyectoTitulo] = useState("")
   const [proyectoObjetivo, setProyectoObjetivo] = useState("")
+  const [proyectoDuracion, setProyectoDuracion] = useState("")
 
   const tiposDisponibles = clasesPorSala(sala)
 
@@ -222,6 +223,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
         if (dataP.ok && dataP.proyecto) {
           setProyectoTitulo(dataP.proyecto.titulo || "")
           setProyectoObjetivo(dataP.proyecto.objetivo_general || "")
+          setProyectoDuracion(dataP.proyecto.duracion || "")
         }
       }
     } catch (e) {
@@ -333,7 +335,11 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
         body: JSON.stringify({
           action: "ordenar_cronograma",
           sala,
-          proyecto: { titulo: proyectoTitulo || "" },
+          proyecto: {
+            titulo: proyectoTitulo || "",
+            objetivoGeneral: proyectoObjetivo || "",
+            duracion: proyectoDuracion || "",
+          },
           actividades: propias.map((p) => p.act),
         }),
       })
@@ -580,20 +586,8 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
               )}
               ALBA sugiere
             </button>
-            <button
-              type="button"
-              onClick={ordenarConAlba}
-              disabled={ordenando}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-              title="ALBA ordena las actividades que vos escribiste: les agrega el eje, la capacidad y el Observa si"
-            >
-              {ordenando ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <BookOpen className="w-4 h-4" />
-              )}
-              Ordenar con ALBA
-            </button>
+            {/* "Ordenar con ALBA" se fue a Mis actividades: ahi la maestra
+                LE PIDE a ALBA, en vez de que ALBA le corrija lo que escribio. */}
             {editandoClases ? (
               <button
                 type="button"
