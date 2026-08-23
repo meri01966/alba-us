@@ -46,6 +46,7 @@ function colorBadge(tipo: TipoClase, mode: "panel" | "dia"): string {
 interface Actividad {
   nombre: string
   capacidades: string
+  capacidadDC?: string
   contenidos: string
   objetivo: string
   desarrollo: string
@@ -80,6 +81,7 @@ interface SugerenciaAlba {
 const actividadVacia: Actividad = {
   nombre: "",
   capacidades: "",
+  capacidadDC: "",
   contenidos: "",
   objetivo: "",
   desarrollo: "",
@@ -175,6 +177,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
               diaGuardado?.actividades?.map((a: any) => ({
                 nombre:         a?.nombre         ?? "",
                 capacidades:    a?.capacidades     ?? "",
+                capacidadDC:    a?.capacidadDC     ?? "",
                 contenidos:     a?.contenidos      ?? "",
                 objetivo:       a?.objetivo        ?? "",
                 desarrollo:     a?.desarrollo      ?? "",
@@ -700,8 +703,17 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                               {sugerencia.actividad.origenTexto || "Otra docente la uso con buenos resultados"}
                             </p>
                           )}
+                          {/* Cada cosa en su renglon: el eje es de alfabetizacion,
+                              la capacidad es del Diseno, y el "Observa si" es la
+                              accion concreta que la docente va a mirar. */}
+                          {sugerencia.actividad.eje && (
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Eje: </span>{sugerencia.actividad.eje}</p>
+                          )}
+                          {(sugerencia.actividad as any).capacidadDC && (
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Capacidad: </span>{(sugerencia.actividad as any).capacidadDC}</p>
+                          )}
                           {sugerencia.actividad.capacidades && (
-                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Capacidades: </span>{sugerencia.actividad.capacidades}</p>
+                            <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Observa si: </span>{sugerencia.actividad.capacidades}</p>
                           )}
                           {sugerencia.actividad.contenidos && (
                             <p className="text-[9px] text-violet-800 mb-1 leading-snug"><span className="font-semibold">Contenidos: </span>{sugerencia.actividad.contenidos}</p>
@@ -775,7 +787,7 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   className="w-full mt-1.5 text-[10px] p-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40 font-semibold"
                                 />
                                 {[
-                                  { campo: "capacidades" as keyof Actividad, label: "Capacidades" },
+                                  { campo: "capacidades" as keyof Actividad, label: "Observa si" },
                                   { campo: "contenidos" as keyof Actividad, label: "Contenidos" },
                                   { campo: "desarrollo" as keyof Actividad, label: "Desarrollo", tall: true },
                                   { campo: "materiales" as keyof Actividad, label: "Materiales" },
