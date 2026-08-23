@@ -2963,7 +2963,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "eje": "CF",
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
-    "capacidades": "UNA SOLA ACCION OBSERVABLE que completa la frase 'Observa si...'. Es lo que la docente va a MIRAR en los ninos mientras hacen la actividad, no lo que la actividad desarrolla. Empeza con un VERBO en tercera persona del singular y describi una conducta concreta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'favorecer' o 'lograr': eso son objetivos, no se pueden mirar. MAL: 'desarrollar la conciencia fonologica y la segmentacion intrasilabica'. BIEN: 'separa la palabra en golpes de voz al palmear', 'reconoce dos palabras que terminan igual', 'escribe su nombre con letras que reconoce', 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'",
+    "capacidades": "SOLO la accion observable, SIN escribir las palabras 'Observa si' —esas las pone la pantalla—. Empeza directo con el verbo. Es lo que la docente va a MIRAR en los ninos mientras hacen la actividad, no lo que la actividad desarrolla. Empeza con un VERBO en tercera persona del singular y describi una conducta concreta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'favorecer' o 'lograr': eso son objetivos, no se pueden mirar. MAL: 'desarrollar la conciencia fonologica y la segmentacion intrasilabica'. BIEN: 'separa la palabra en golpes de voz al palmear', 'reconoce dos palabras que terminan igual', 'escribe su nombre con letras que reconoce', 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'",
     "capacidadDC": "el NOMBRE de una de las cinco capacidades seguido de dos puntos y LO QUE ESTA ACTIVIDAD PONE EN JUEGO de ella. Formato exacto: 'Comunicacion: formular preguntas sobre el cuento leido'. Las cinco, tal cual estan escritas: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego: casi siempre Comunicacion, y Pensamiento reflexivo y critico cuando se trata de comprender un texto. NO pongas el eje (CF, CT, Oralidad, Escritura) aca: el eje es otra cosa. La capacidad NO decide la actividad: la actividad sale del eje y despues se mira con la capacidad que corresponda",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
@@ -3325,6 +3325,8 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     let nombreFinal = elegida.nombre || "Actividad de la sala"
     let desarrolloFinal = elegida.desarrollo || ""
     let materialesFinal = elegida.materiales || ""
+    let capacidadesFinal = elegida.capacidad || ""
+    let deQueSeTrata = ""
 
     if (esVariante) {
       try {
@@ -3348,13 +3350,21 @@ Escribile A LA DOCENTE en segunda persona ("pone", "invitalos", "preguntales").
 Si entra una suplente que no conoce al grupo, tiene que poder darla leyendola una vez.
 
 Respondé SOLO con este JSON, sin backticks:
-{ "nombre": "titulo nuevo, corto", "desarrollo": "pasos concretos", "materiales": "lista breve" }`,
+{
+  "nombre": "titulo nuevo, corto",
+  "deQueSeTrata": "de que se trata la actividad, en pocas palabras y SIN nombrar el titulo ni el tema puntual de la original. Ej: 'reconstruir oralmente la secuencia de un cuento'",
+  "capacidades": "la accion observable REESCRITA para esta variante, sin arrastrar el tema de la original. Empeza directo con el verbo, sin las palabras 'Observa si'",
+  "desarrollo": "pasos concretos",
+  "materiales": "lista breve"
+}`,
         })
         const t = r.text.trim()
         const v = leerJSONAunqueVengaCortado(t)
         if (v?.nombre) nombreFinal = String(v.nombre).trim()
         if (v?.desarrollo) desarrolloFinal = String(v.desarrollo).trim()
         if (v?.materiales) materialesFinal = String(v.materiales).trim()
+        if (v?.deQueSeTrata) deQueSeTrata = String(v.deQueSeTrata).trim()
+        if (v?.capacidades) capacidadesFinal = String(v.capacidades).trim()
       } catch (e) {
         console.error("[v0] Error reformulando la actividad, se usa tal cual:", e)
       }
@@ -3378,7 +3388,7 @@ Respondé SOLO con este JSON, sin backticks:
       ...copia[idx],
       actividad: {
         nombre: nombreFinal,
-        capacidades: elegida.capacidad || "",
+        capacidades: capacidadesFinal,
         contenidos: elegida.objetivo || "",
         objetivo: elegida.objetivo || "",
         desarrollo: desarrolloFinal,
@@ -3389,7 +3399,7 @@ Respondé SOLO con este JSON, sin backticks:
         origenTexto: vieneDeLaRed
           ? `De la red — funciono en una sala de ${elegida.nivelSala || nivelDeSala(String(elegida.sala || ""))} anos`
           : esVariante
-          ? `Variante de tu actividad "${elegida.nombre}"`
+          ? (deQueSeTrata ? `Variante de tu actividad sobre ${deQueSeTrata}` : "Variante de tu actividad")
           : "Mi actividad",
         alfabetizacionRed: vieneDeLaRed,
         esVariante,
