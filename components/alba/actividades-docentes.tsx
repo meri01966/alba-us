@@ -39,7 +39,17 @@ interface ActividadDocente {
   created_at: string
 }
 
-export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto?: string }) {
+export function ActividadesDocentes({
+  sala,
+  proyecto,
+  proyectoObjetivo,
+  proyectoDuracion,
+}: {
+  sala: string
+  proyecto?: string
+  proyectoObjetivo?: string
+  proyectoDuracion?: string
+}) {
   const [lista, setLista]         = useState<ActividadDocente[]>([])
   const [cargando, setCargando]   = useState(true)
   const [abierto, setAbierto]     = useState(false)
@@ -48,6 +58,31 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
   const [expandida, setExpandida] = useState<string | null>(null)
   const [aviso, setAviso]         = useState("")
   const [error, setError]         = useState("")
+
+  // El proyecto le dice a ALBA por donde quiere ir la maestra. Si el componente
+  // no lo recibe —en jardin no se lo pasan— lo busca solo.
+  const [proy, setProy] = useState<{ titulo: string; objetivo: string; duracion: string }>({
+    titulo: "", objetivo: "", duracion: "",
+  })
+
+  useEffect(() => {
+    if (!sala || proyecto) return
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/proyecto-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        const d = await r.json()
+        if (d?.ok && d.proyecto) {
+          setProy({
+            titulo: d.proyecto.titulo || "",
+            objetivo: d.proyecto.objetivo_general || "",
+            duracion: d.proyecto.duracion || "",
+          })
+        }
+      } catch (e) {
+        console.error("[v0] Error trayendo el proyecto:", e)
+      }
+    })()
+  }, [sala, proyecto])
 
   const cargar = useCallback(async () => {
     if (!sala) return
@@ -76,7 +111,14 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
       const r = await fetch("/api/actividades-docentes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sala, texto, proyecto: proyecto || "" }),
+        // El proyecto COMPLETO: le dice a ALBA por donde quiere ir la maestra
+        body: JSON.stringify({
+          sala,
+          texto,
+          proyecto: proyecto || "",
+          proyectoObjetivo: proyectoObjetivo || "",
+          proyectoDuracion: proyectoDuracion || "",
+        }),
       })
       const d = await r.json()
       if (d?.ok) {
@@ -113,13 +155,15 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
     }
   }
 
-  // Marca la actividad que ALBA tiene que usar esta semana. Solo una: al
-  // marcar una se desmarca la anterior. La pantalla cambia al instante y el
-  // guardado viaja despues, para que con internet mala no haya espera.
+  // Marca las actividades que ALBA tiene que usar esta semana. Puede marcar
+  // VARIAS: si armo una secuencia tiene sentido darla junta. ALBA las pone en
+  // el cronograma y las tres que caen en lunes, martes y viernes son las que
+  // se evaluan. La pantalla cambia al instante y el guardado viaja despues,
+  // para que con internet mala no haya espera.
   async function marcarSemana(id: string, valor: boolean) {
     const antes = lista
     setLista((prev: ActividadDocente[]) =>
-      prev.map((a: ActividadDocente) => ({ ...a, elegida: valor && a.id === id }))
+      prev.map((a: ActividadDocente) => (a.id === id ? { ...a, elegida: valor } : a))
     )
     try {
       const res = await fetch("/api/actividades-docentes", {
@@ -172,7 +216,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
           )}
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          Pegá tu listado de actividades. ALBA las separa, les asigna eje y capacidad, y las suma a sus sugerencias.
+          Tu espacio de trabajo con ALBA. Pedile lo que necesites o pegá tus propias actividades para que las ordene. Después marcá con la estrella las que querés que use esta semana.
         </p>
       </CardHeader>
 
@@ -195,7 +239,7 @@ export function ActividadesDocentes({ sala, proyecto }: { sala: string; proyecto
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setTexto(e.target.value)}
               rows={7}
               autoFocus
-              placeholder={"Pegá acá tu listado, una actividad por parrafo. Por ejemplo:\n\nBuscamos objetos de la sala que empiecen con la misma letra que su nombre y los anotamos en un afiche.\n\nArmamos la lista de los materiales que necesitamos para la huerta.\n\nJugamos al veo veo con sonidos iniciales."}
+              placeholder={"Pedile a ALBA lo que necesites. Por ejemplo:\n\n· Dame 3 actividades de oralidad para el proyecto de la huerta\n· Armame 4 que vayan de menos a mas para trabajar rimas\n· La de las semillas anduvo barbaro, dame dos parecidas pero de conciencia fonologica\n\nO pegá tus propias actividades, una por parrafo, y ALBA las ordena."}
               className="w-full text-sm rounded-lg border border-slate-300 p-3 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
             <p className="text-[11px] text-slate-400 mt-1">
