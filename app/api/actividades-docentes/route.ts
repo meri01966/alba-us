@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { sala, texto, proyecto } = body
+    const { sala, texto, proyecto, proyectoObjetivo, proyectoDuracion } = body
 
     if (!sala || !texto || String(texto).trim().length < 15) {
       return NextResponse.json(
@@ -97,15 +97,30 @@ si vinieron larguisimos. Muchas maestras todavia estan aprendiendo a planificar
 con el Diseno nuevo: al ver su propia actividad bien ordenada, aprenden como se
 hace. Ese es el mayor valor que les das.
 
-CASO 2 — TE ESTA PIDIENDO ACTIVIDADES. Ej: "dame 3 de oralidad", "5 actividades
-sobre los animales marinos", "una de conciencia fonologica". Escribi
-EXACTAMENTE la cantidad que pide, ni una mas ni una menos. Si no dice cantidad,
-devolve UNA. Si no dice eje, elegilo vos. Anclalas al proyecto de la sala si hay.
+CASO 2 — TE ESTA PIDIENDO ACTIVIDADES. Este es un espacio de trabajo: ella te
+pide como le pediria a una colega. Interpretá lo que quiere y dáselo.
+
+Puede pedirte de muchas formas, todas validas:
+- Por cantidad y eje: "dame 3 de oralidad", "una de conciencia fonologica"
+- Por tema: "5 actividades sobre los animales marinos"
+- Una SECUENCIA: "armame 4 que vayan de menos a mas para trabajar rimas".
+  Ahi no son cuatro sueltas: son CUATRO QUE PROGRESAN. Cada una tiene que
+  apoyarse en lo que la anterior dejo instalado, y decilo en el nombre o en el
+  desarrollo para que se entienda el orden. Esto es lo que mas les cuesta a las
+  maestras y es exactamente lo que pide el Diseno.
+- A partir de algo que ya le funciono: "la de las semillas anduvo barbaro, dame
+  dos parecidas pero para conciencia fonologica". Tomá la estructura de esa
+  actividad y llevala al eje nuevo.
+
+Escribi EXACTAMENTE la cantidad que pide. Si no dice cantidad, devolve UNA.
+Si no dice eje, elegilo vos. Anclalas al proyecto de la sala si hay.
 
 En los dos casos, la cantidad la decide ELLA. Nunca agregues actividades que no
 pidio ni escribio.
 
-${proyecto ? `Proyecto en curso de la sala: "${proyecto}"` : ""}
+${proyecto ? `Proyecto en curso de la sala: "${proyecto}"${
+  proyectoObjetivo ? `\nLo que la maestra se propone con este proyecto: ${proyectoObjetivo}\nLas actividades tienen que APORTAR A ESE OBJETIVO, no solo compartir el tema.` : ""
+}${proyectoDuracion ? `\nDuracion prevista: ${proyectoDuracion}.` : ""}` : ""}
 
 ${esMaternal ? `CAPACIDADES (elegi exactamente una por actividad, es una sala de 2 anos):
 - COM: Comunicacion — responder, nombrar, pedir, conversar, escuchar cuentos y canciones
@@ -129,6 +144,21 @@ LISTADO DE LA MAESTRA:
 """
 ${textoCompleto}
 """
+
+COMO SON LAS ACTIVIDADES QUE ESCRIBIS:
+- SE APRENDE HACIENDO: una accion concreta en el centro —plantar, medir,
+  palmear, armar, buscar, repartir, construir— y el lenguaje DENTRO de esa
+  accion. Nunca resuelvas con "observen y cuenten" o "preguntales que sienten".
+- EL JUEGO ES EL METODO. El Diseno nombra propuestas como "Veo veo", "El
+  detective", "Muestro y cuento", seguir instrucciones de pocos pasos, explicar
+  las reglas de un juego, adivinanzas, juego dramatico, juegos de construccion.
+  USALAS COMO MODELO, NO COMO MENU: entendé por que funcionan —hay una accion,
+  hay algo que resolver con lenguaje, la maestra andamia— e INVENTA otras con
+  esa misma logica. Si todas tus actividades son "Veo veo" y adivinanzas, estas
+  girando sobre lo mismo.
+- VARIA LA ESTRUCTURA, no solo el tema. Si ya propusiste dos de adivinar, la
+  tercera tiene que ser de otra cosa: construir, cocinar, ordenar, dramatizar.
+- La maestra andamia: deci que hace ella MIENTRAS los chicos hacen.
 
 Respondé SOLO con un array JSON, sin texto adicional ni backticks:
 [
@@ -233,20 +263,10 @@ export async function PATCH(req: NextRequest) {
       cambios.estado = estado
     }
 
-    // La actividad que la maestra eligio para esta semana. Solo puede haber
-    // UNA por sala: al marcar una se desmarcan las demas en la misma consulta,
-    // asi no hacen falta dos viajes con internet mala.
+    // Las actividades que la maestra eligio para esta semana. Puede marcar
+    // VARIAS: si armo una secuencia tiene sentido darla junta.
     if (typeof elegida === "boolean") {
       cambios.elegida = elegida
-      if (elegida) {
-        const { data: act } = await supabase
-          .from(TABLA).select("sala").eq("id", id).maybeSingle()
-        if (act?.sala) {
-          await supabase
-            .from(TABLA).update({ elegida: false })
-            .eq("sala", act.sala).neq("id", id).eq("elegida", true)
-        }
-      }
     }
 
     if (Object.keys(cambios).length === 0) {
