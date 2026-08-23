@@ -510,7 +510,10 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion, proximaAlf
           {activity.capacidadDC && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Capacidad</p>
-              <p className="text-sm text-foreground leading-relaxed">{activity.capacidadDC}</p>
+              <p className="text-sm text-foreground leading-relaxed">
+                <span className="font-semibold">{activity.capacidadDC.split(":")[0]}:</span>
+                {activity.capacidadDC.includes(":") ? activity.capacidadDC.slice(activity.capacidadDC.indexOf(":") + 1) : ""}
+              </p>
             </div>
           )}
           {activity.capacidades && (
