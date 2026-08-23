@@ -3497,6 +3497,12 @@ function leerJSONAunqueVengaCortado(texto: string): any {
 }
 
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
+  // Declarado aca arriba a proposito: se usa en el bloque de las marcadas,
+  // que corre antes. Estaba mas abajo y rompia con "Cannot access before
+  // initialization" — el servidor no perdona lo que el navegador si.
+  const NOMBRE_EJE: Record<string, string> = {
+    CF: "CF", CT: "CT", O: "O", E: "Escritura",
+  }
   try {
     if (!sala || !Array.isArray(sugerencias) || sugerencias.length === 0) return sugerencias
 
@@ -3660,9 +3666,6 @@ Respondé SOLO con este JSON, sin backticks:
     }
 
     // Traduccion de vocabulario: la tabla usa E, el cronograma usa "Escritura".
-    const NOMBRE_EJE: Record<string, string> = {
-      CF: "CF", CT: "CT", O: "O", E: "Escritura",
-    }
     const ejeCronograma = NOMBRE_EJE[String(elegida.eje || "")] || String(elegida.eje || "CF")
 
     // Preferimos el dia cuyo eje coincide. Si ninguno coincide, uno al azar.
