@@ -22,6 +22,7 @@ const EJE_COLOR: Record<string, { bg: string; text: string; border: string; tag:
 interface Actividad {
   nombre: string
   capacidades?: string
+  capacidadDC?: string
   contenidos?: string
   objetivo?: string
   desarrollo?: string
@@ -137,7 +138,17 @@ function CardActividad({ act, origen, fecha }: { act: Actividad; origen: "alba" 
 
       {/* Detalles completos */}
       <div className="px-4 pb-4">
-        <SeccionDetalle label="Capacidades" texto={act.capacidades || ""} />
+        {/* La capacidad del Diseno y, debajo, la accion observable:
+            que va a MIRAR la docente en los chicos durante la actividad. */}
+        {act.capacidadDC && (
+          <SeccionDetalle label="Capacidad" texto={act.capacidadDC} />
+        )}
+        {act.capacidades && (
+          <div className="mt-3 bg-violet-50 border border-violet-300 rounded-lg px-3 py-2">
+            <p className="text-xs font-bold text-violet-700 uppercase tracking-wide">Observa si</p>
+            <p className="text-sm text-slate-800 mt-0.5">{act.capacidades}</p>
+          </div>
+        )}
         <SeccionDetalle label="Contenidos" texto={act.contenidos || ""} />
         <SeccionDetalle label="Objetivo" texto={act.objetivo || ""} />
         <SeccionDetalle label="Desarrollo" texto={act.desarrollo || ""} />
