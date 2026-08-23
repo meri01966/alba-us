@@ -165,7 +165,7 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
   {
     "nombre": "titulo corto y claro, maximo 6 palabras",
     "eje": "${esMaternal ? "COM | AUT | RES | COL | REF" : "CF | CT | O | E"}",
-    "capacidad": "SOLO la accion observable, sin escribir las palabras 'Observa si' —esas las pone la pantalla—. Empeza directo con un verbo en tercera persona y describi una conducta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'reconocer las posibilidades de', 'proyectar': eso son objetivos y no se pueden mirar. UNA sola accion, no cuatro",
+    "capacidad": "SOLO EL VERBO Y LA ACCION. PROHIBIDO poner adelante el nombre de una capacidad ('Comunicacion:', 'Pensamiento reflexivo:'): eso va SOLO en capacidadDC. Tampoco escribas 'Observa si'. Arranca directo con un verbo en tercera persona y describi una conducta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'reconocer las posibilidades de', 'proyectar': eso son objetivos y no se pueden mirar. UNA sola accion, no cuatro",
     "capacidadDC": "el NOMBRE de una de las cinco capacidades del Diseno seguido de dos puntos y lo que ESTA actividad pone en juego. Formato exacto: 'Comunicacion: expresar emociones y ponerles nombre'. Las cinco: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego",
     "contenidos": "los contenidos, en 1 o 2 lineas. Si la maestra escribio cuatro parrafos, CONDENSALOS: lo que importa es que se lea de un vistazo",
     "objetivo": "que se busca que los ninos logren, una oracion",
