@@ -2371,7 +2371,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "tips": ["tip 1", "tip 2", "tip 3"] }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptTips, maxOutputTokens: 400, temperature: 0.95 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         return NextResponse.json({ ok: true, ...JSON.parse(j) })
@@ -2469,7 +2469,7 @@ Respondé SOLO con este JSON, sin backticks:
 { "alumnos": [ { "nombre": "NOMBRE TAL CUAL", "relato": "2 o 3 oraciones${anterior ? ", diciendo que cambio desde el relato anterior" : ""}" } ] }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptRelato, maxOutputTokens: 1800, temperature: 0.7 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         const relato = JSON.parse(j)
@@ -2550,7 +2550,7 @@ Respondé SOLO con este JSON, sin backticks:
 }`
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
+        const r = await generateText({ model: "anthropic/claude-sonnet-5", prompt: promptCap, maxOutputTokens: 500, temperature: 0.95 })
         const t = r.text.trim()
         const j = t.startsWith("{") ? t : t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)
         return NextResponse.json({ ok: true, capacitacion: JSON.parse(j) })
@@ -2861,6 +2861,42 @@ ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 Esta es una sala de 5 anos: pueden sostener consignas de dos o tres pasos, trabajar en parejas, y aproximarse a la escritura con marcas propias y al analisis de sonidos dentro de la palabra.
 `}
 
+EL JUEGO ES EL METODO, no un adorno. En nivel inicial se aprende jugando: una
+consigna correcta pero seca no engancha, y sin enganche no hay aprendizaje.
+Toda actividad necesita un ENVOLTORIO LUDICO. No cambia el contenido: lo envuelve.
+
+Recursos que funcionan a esta edad, elegi uno y desarrollalo:
+- La sorpresa: una bolsa, una caja o una tela de la que aparece algo que no se sabe que es
+- Un personaje: un titere o un muneco que se equivoca, que no sabe, que pregunta mal
+  y hay que ayudarlo. A los chicos les encanta corregir a un adulto o a un muneco
+- Aparecer y desaparecer: esconder, tapar, buscar
+- La cancion o el verso que se corta antes de la ultima palabra para que la completen
+- El cuerpo: palmear, saltar, agacharse, moverse cuando pasa algo
+- La repeticion con variacion: el mismo juego que vuelve cambiando un elemento
+
+MAL: "saca un objeto y pregunta de que color es".
+BIEN: "en una bolsa de tela pone cinco objetos de colores. Que cada nino meta la
+mano sin mirar, agarre uno y lo describa antes de sacarlo. El titere adivina y se
+equivoca a proposito: 'ah, es un auto rojo!' cuando es una pelota azul, para que
+lo corrijan."
+
+DENTRO DEL MARCO ESCOLAR: con lo que hay en una sala o se consigue en un kiosco.
+Nada de disfraces, producciones ni materiales que la maestra no tenga a mano.
+
+MATERIALES QUE SORPRENDEN Y SE CONSIGUEN. Variá: no todo papel y crayones.
+- Papel celofan de colores para mirar a traves, linterna, espejo
+- Hielo, agua, espuma de afeitar, esponjas
+- Tubos de carton, cajas, papel burbuja, telas
+- Tapitas, broches, arroz o fideos en una bandeja
+- Sal o harina sobre una bandeja oscura para dejar marcas con el dedo
+- Bolsas de tela, canastos, titeres o munecos de la sala
+
+CUENTOS Y CANCIONES: podes sugerir obras conocidas POR TITULO Y AUTOR, en espanol
+o traducidas, o canciones tradicionales del repertorio infantil. NUNCA pongas
+links, URLs ni direcciones de video: no podes verificarlos y mandarias a la
+maestra a un lugar equivocado. Solo el titulo y el autor, que ella lo busca.
+Si no estas seguro de que una obra existe, no la nombres.
+
 COMO SE ESCRIBE UNA ACTIVIDAD: es una planificacion de aula, no una idea suelta.
 La prueba es esta: si manana la maestra falta y entra una SUPLENTE que no conoce
 al grupo, tiene que poder dar la actividad leyendola una sola vez. Eso obliga a
@@ -2931,7 +2967,7 @@ FORMATO DE RESPUESTA — JSON puro, sin markdown, sin explicaciones fuera del JS
     "nivelSecuencia": "paso especifico de la secuencia del eje que se trabaja (ej: 'conciencia silabica - segmentacion')",
     "nombre": "nombre corto y atractivo",
     "capacidades": "UNA SOLA ACCION OBSERVABLE que completa la frase 'Observa si...'. Es lo que la docente va a MIRAR en los ninos mientras hacen la actividad, no lo que la actividad desarrolla. Empeza con un VERBO en tercera persona del singular y describi una conducta concreta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'favorecer' o 'lograr': eso son objetivos, no se pueden mirar. MAL: 'desarrollar la conciencia fonologica y la segmentacion intrasilabica'. BIEN: 'separa la palabra en golpes de voz al palmear', 'reconoce dos palabras que terminan igual', 'escribe su nombre con letras que reconoce', 'responde cuando lo nombran', 'pide con palabras lo que quiere', 'espera su turno'",
-    "capacidadDC": "elegi UNA de estas cinco segun lo que ESTA actividad pone en juego, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. La capacidad NO decide la actividad: la actividad sale del eje y despues se mira con la capacidad que corresponda",
+    "capacidadDC": "elegi UNA de estas cinco segun lo que ESTA actividad pone en juego, tal cual esta escrita: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego: casi siempre Comunicacion, y Pensamiento reflexivo y critico cuando se trata de comprender un texto. La capacidad NO decide la actividad: la actividad sale del eje y despues se mira con la capacidad que corresponda",
     "contenidos": "contenidos curriculares especificos del DC CABA 2025",
     "objetivo": "objetivo especifico de la actividad en una oracion",
     "desarrollo": "paso a paso concreto. LA PRUEBA: si manana entra una SUPLENTE que no conoce al grupo, tiene que poder dar la actividad leyendo esto una sola vez. TRES REGLAS: (1) ESCRIBILE A LA DOCENTE, en segunda persona: 'deci', 'pone', 'invitalos', 'preguntales', 'espera'. NUNCA 'la docente dice', 'el docente invita' ni 'quien coordine'. (2) CADA PASO CON EJEMPLO CONCRETO: no 'deci una palabra con un sonido', sino 'deci una palabra que empiece con /m/, por ejemplo mama'. Nombra las palabras y los objetos exactos. (3) Que no quede nada librado a la interpretacion: como se agrupan los chicos, cuanto dura, y que frases decir textualmente",
@@ -2953,7 +2989,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
 
       try {
         const result = await generateText({
-          model: "openai/gpt-4o-mini",
+          model: "anthropic/claude-sonnet-5",
           prompt,
           maxOutputTokens: 2000,
           temperature: 0.85,
@@ -3250,7 +3286,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     if (esVariante) {
       try {
         const r = await generateText({
-          model: "openai/gpt-4o-mini",
+          model: "anthropic/claude-sonnet-5",
           maxOutputTokens: 700,
           temperature: 0.9,
           prompt: `Sos ALBA, asistente pedagogico de nivel inicial.
