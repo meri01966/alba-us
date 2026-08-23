@@ -3508,7 +3508,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       .eq("estado", "propia")
 
     if (error) {
-      console.error("[v0] Error leyendo repertorio docente:", error.message)
+      console.error("[v0] Error leyendo repertorio docente:", error.message, "| sala:", sala)
       return sugerencias
     }
 
@@ -3517,6 +3517,7 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     // bien esta semana, y si armo una secuencia tiene sentido que la de junta.
     // Van tal cual las escribio: son propias, no se reformulan.
     const marcadas = (propias || []).filter((a: any) => a.elegida === true)
+    console.log(`[v0] repertorio de "${sala}": ${(propias || []).length} propias, ${marcadas.length} marcadas para esta semana`)
 
     if (marcadas.length > 0) {
       const copiaM = [...sugerencias]
