@@ -41,6 +41,7 @@ interface BrainActivity {
   descripcion: string
   objetivo:    string
   capacidades?: string
+  capacidadDC?: string
   contenidos?: string
   materiales?: string[]
   source:      "secuencia" | "alba-ia" | "demo"
@@ -505,10 +506,17 @@ function BrainColumn({ activity, isLoading, stats, microCapacitacion, proximaAlf
               <p className="text-sm text-foreground leading-relaxed">{activity.descripcion}</p>
             </div>
           )}
-          {activity.capacidades && (
+          {/* La capacidad del Diseno y, debajo, la accion observable */}
+          {activity.capacidadDC && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Capacidades</p>
-              <p className="text-sm text-foreground leading-relaxed">{activity.capacidades}</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Capacidad</p>
+              <p className="text-sm text-foreground leading-relaxed">{activity.capacidadDC}</p>
+            </div>
+          )}
+          {activity.capacidades && (
+            <div className="bg-violet-50 border border-violet-300 rounded-lg px-3 py-2">
+              <p className="text-xs font-bold text-violet-700 uppercase tracking-wide">Observa si</p>
+              <p className="text-sm text-foreground leading-relaxed mt-0.5">{activity.capacidades}</p>
             </div>
           )}
           {activity.contenidos && (
@@ -922,6 +930,7 @@ export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(funct
         descripcion: sugerencia.descripcion || "",
         objetivo: sugerencia.objetivo,
         capacidades: sugerencia.capacidades || "",
+        capacidadDC: sugerencia.capacidadDC || "",
         contenidos: sugerencia.contenidos || "",
         materiales: sugerencia.materiales || [],
         razon: sugerencia.razon,
