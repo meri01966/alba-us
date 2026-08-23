@@ -3106,20 +3106,72 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
       .neq("sala", sala)
     if (!deOtrasSalas || deOtrasSalas.length === 0) return null
 
-    // Cierres de toda la red: sirven para saber que funciono y que salas registran
+    // Cierres de toda la red: solo para saber que salas registran con constancia
     const { data: cierres } = await supabase
       .from("registro_cierre")
-      .select("sala, actividad_alba, actividad_docente, evaluacion_general")
+      .select("sala")
       .limit(1000)
 
     const registrosPorSala: Record<string, number> = {}
-    const bienEvaluadas = new Set<string>()
     ;(cierres || []).forEach((c: any) => {
       if (c.sala) registrosPorSala[c.sala] = (registrosPorSala[c.sala] || 0) + 1
-      const buena = c.evaluacion_general === "excelente" || c.evaluacion_general === "buena"
-      if (!buena) return
-      if (c.actividad_alba) bienEvaluadas.add(String(c.actividad_alba).trim().toLowerCase())
-      if (c.actividad_docente) bienEvaluadas.add(String(c.actividad_docente).trim().toLowerCase())
+    })
+
+    // ── QUE HABILITA A UNA ACTIVIDAD A VIAJAR ─────────────────────────────
+    // UN SOLO criterio: EVIDENCIA DE QUE FUNCIONO PARA LA ALFABETIZACION.
+    // No alcanza con que la maestra la haya calificado bien: eso dice que le
+    // gusto, no que los chicos aprendieron. Lo que habilita es que en el EJE
+    // de esa actividad —CF, CT, O o E— los chicos hayan dado resultado.
+    const UMBRAL_VERDE = 70   // porcentaje de chicos en verde en ese eje
+
+    const { data: segRed } = await supabase
+      .from("seguimiento")
+      .select("actividad, eje, estado, sala, fecha")
+      .limit(4000)
+
+    // Por actividad Y eje, separando CADA GRUPO en el que se dio: asi se puede
+    // contar cuantas veces funciono, no solo un promedio de todo junto.
+    type Conteo = { porGrupo: Record<string, { total: number; verdes: number }> }
+    const porActividad: Record<string, Conteo> = {}
+    ;(segRed || []).forEach((r: any) => {
+      const nombre = String(r.actividad || "").trim().toLowerCase()
+      const eje = String(r.eje || "").trim().toUpperCase()
+      if (!nombre || !eje) return
+      // Sin eje de alfabetizacion la actividad no viaja: ese es el criterio
+      if (!["CF", "CT", "O", "E", "EA"].includes(eje)) return
+      const clave = `${nombre}||${eje === "EA" ? "E" : eje}`
+      // Un "grupo" es una sala en una fecha: la misma actividad dada dos veces
+      // en salas distintas cuenta como dos oportunidades de validarse.
+      const grupo = `${String(r.sala || "")}||${String(r.fecha || "").slice(0, 10)}`
+      if (!porActividad[clave]) porActividad[clave] = { porGrupo: {} }
+      if (!porActividad[clave].porGrupo[grupo]) porActividad[clave].porGrupo[grupo] = { total: 0, verdes: 0 }
+      // Los ausentes no cuentan: no dan informacion del aprendizaje
+      if (r.estado === "blue") return
+      porActividad[clave].porGrupo[grupo].total += 1
+      if (r.estado === "green") porActividad[clave].porGrupo[grupo].verdes += 1
+    })
+
+    // Las que superaron el umbral en su eje. Se guarda "nombre||eje" para que
+    // una actividad solo viaje en el eje donde efectivamente funciono.
+    //
+    // CURACION ACUMULATIVA: no basta con un buen resultado. Cada vez que la
+    // actividad supera el umbral en un grupo, suma una marca. Con una ya puede
+    // viajar —necesita circular para juntar evidencia—, pero ALBA prefiere las
+    // que tienen mas, y a las 3 queda VALIDADA por la red. Una actividad que
+    // funciono en tres grupos distintos dice algo del metodo; una sola vez
+    // puede ser suerte o un grupo que ya venia bien.
+    const VECES_PARA_VALIDADA = 3
+    const bienEvaluadas = new Set<string>()
+    const vecesQueFunciono: Record<string, number> = {}
+
+    Object.entries(porActividad).forEach(([clave, d]) => {
+      Object.entries(d.porGrupo).forEach(([, g]) => {
+        if (g.total < 5) return   // muy pocos chicos: el dato no dice nada
+        if (Math.round((g.verdes / g.total) * 100) >= UMBRAL_VERDE) {
+          vecesQueFunciono[clave] = (vecesQueFunciono[clave] || 0) + 1
+        }
+      })
+      if ((vecesQueFunciono[clave] || 0) > 0) bienEvaluadas.add(clave)
     })
 
     // Lo que esta sala ya trabajo, para no mandarle algo repetido
@@ -3143,15 +3195,27 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
       const nombre = String(a.nombre || "").trim().toLowerCase()
       if (!nombre) return false
       if (nivelDeSala(String(a.sala || "")) !== nivelRecibe) return false  // 0. mismo nivel
-      if (!ejesNecesarios.has(String(a.eje || ""))) return false          // 2
+      const ejeAct = String(a.eje || "").trim().toUpperCase()
+      if (!ejesNecesarios.has(ejeAct)) return false                        // 2
       if (yaDadasAqui.has(nombre)) return false                            // 3
-      if (!bienEvaluadas.has(nombre)) return false                         // 1
+      // 1. EVIDENCIA en el eje: es el unico criterio que la habilita a viajar
+      if (!bienEvaluadas.has(`${nombre}||${ejeAct === "EA" ? "E" : ejeAct}`)) return false
       if ((registrosPorSala[a.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return false  // 4
       return true
     })
 
     if (candidatas.length > 0) {
-      return candidatas[Math.floor(Math.random() * candidatas.length)]
+      // Prefiere las que funcionaron mas veces: una actividad probada en tres
+      // grupos distintos dice mas que una que anduvo bien una sola vez.
+      const conVeces = candidatas.map((a: any) => {
+        const ejeA = String(a.eje || "").trim().toUpperCase()
+        const clave = `${String(a.nombre).trim().toLowerCase()}||${ejeA === "EA" ? "E" : ejeA}`
+        return { ...a, veces: vecesQueFunciono[clave] || 1 }
+      })
+      const maximo = Math.max(...conVeces.map((a: any) => a.veces))
+      const mejores = conVeces.filter((a: any) => a.veces === maximo)
+      const elegida = mejores[Math.floor(Math.random() * mejores.length)]
+      return { ...elegida, validada: elegida.veces >= VECES_PARA_VALIDADA }
     }
 
     // ── Segundo pozo: el HISTORIAL de la red ──────────────────────────────
@@ -3193,7 +3257,8 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
         const eje = normEje(a.eje)
         if (!ejesNecesarios.has(eje)) return          // 2. la sala lo necesita
         if (yaDadasAqui.has(clave)) return            // 3. no la dio todavia
-        if (!bienEvaluadas.has(clave)) return         // 1. funciono donde se dio
+        // 1. EVIDENCIA en el eje, igual que en el repertorio
+        if (!bienEvaluadas.has(`${clave}||${eje}`)) return
         if ((registrosPorSala[fila.sala] || 0) < REGISTROS_MINIMOS_ORIGEN) return  // 4. origen confiable
 
         vistos.add(clave)
@@ -3212,7 +3277,14 @@ async function buscarEnLaRed(supabase: any, sala: string, sugerencias: any[]): P
     })
 
     if (delHistorial.length === 0) return null
-    return delHistorial[Math.floor(Math.random() * delHistorial.length)]
+    const histConVeces = delHistorial.map((a: any) => ({
+      ...a,
+      veces: vecesQueFunciono[`${String(a.nombre).trim().toLowerCase()}||${a.eje}`] || 1,
+    }))
+    const maxHist = Math.max(...histConVeces.map((a: any) => a.veces))
+    const mejoresHist = histConVeces.filter((a: any) => a.veces === maxHist)
+    const elegidaHist = mejoresHist[Math.floor(Math.random() * mejoresHist.length)]
+    return { ...elegidaHist, validada: elegidaHist.veces >= VECES_PARA_VALIDADA }
   } catch (e) {
     console.error("[v0] Error buscando en la red:", e)
     return null
@@ -3364,7 +3436,7 @@ Si entra una suplente que no conoce al grupo, tiene que poder darla leyendola un
 Respondé SOLO con este JSON, sin backticks:
 {
   "nombre": "titulo nuevo, corto",
-  "deQueSeTrata": "de que se trata la actividad, en pocas palabras y SIN nombrar el titulo ni el tema puntual de la original. Ej: 'reconstruir oralmente la secuencia de un cuento'",
+  "deQueSeTrata": "EL CONTENIDO PEDAGOGICO que comparten la original y la variante: lo que NO cambia entre las dos. En pocas palabras y empezando con un verbo en infinitivo. Ej: 'reconstruir oralmente la secuencia de un cuento', 'escribir el nombre propio con un modelo a la vista', 'reconocer palabras que riman'. NO describas el tema de ninguna de las dos: ni el de la original (San Martin, las plantas) ni el de la variante (los animales). Solo lo pedagogico, que es lo unico que se mantiene",
   "capacidades": "la accion observable REESCRITA para esta variante, sin arrastrar el tema de la original. Empeza directo con el verbo, sin las palabras 'Observa si'",
   "desarrollo": "pasos concretos",
   "materiales": "lista breve"
@@ -3409,7 +3481,9 @@ Respondé SOLO con este JSON, sin backticks:
         alfabetizacion: true,
         origen: vieneDeLaRed ? "red" : "docente",
         origenTexto: vieneDeLaRed
-          ? `De la red — funciono en una sala de ${elegida.nivelSala || nivelDeSala(String(elegida.sala || ""))} anos`
+          ? (elegida.validada
+              ? `De la red — validada: funciono en ${elegida.veces} grupos distintos`
+              : `De la red — funciono en una sala de ${elegida.nivelSala || nivelDeSala(String(elegida.sala || ""))} anos`)
           : esVariante
           ? (deQueSeTrata ? `Variante de tu actividad sobre ${deQueSeTrata}` : "Variante de tu actividad")
           : "Mi actividad",
