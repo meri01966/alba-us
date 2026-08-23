@@ -309,6 +309,50 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
     }
   }
 
+  // ── ORDENAR CON ALBA ────────────────────────────────────────────────
+  // La maestra escribe sus actividades como puede. ALBA no las reescribe:
+  // respeta lo suyo y les agrega eje, capacidad, "Observa si" y contenidos
+  // condensados. Al ver su propia actividad bien ordenada, aprende como se hace.
+  const [ordenando, setOrdenando] = useState(false)
+
+  async function ordenarConAlba() {
+    // Se juntan todas las actividades propias de la semana, con su ubicacion
+    const propias: { dia: string; idx: number; act: any }[] = []
+    DIAS.forEach((dia) => {
+      ;(cronograma[dia]?.actividades || []).forEach((a: any, idx: number) => {
+        if ((a?.nombre || "").trim() && a?.origen !== "alba") propias.push({ dia, idx, act: a })
+      })
+    })
+    if (propias.length === 0) return
+
+    setOrdenando(true)
+    try {
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ordenar_cronograma",
+          sala,
+          proyecto: { titulo: proyectoTitulo || "" },
+          actividades: propias.map((p) => p.act),
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && Array.isArray(data.actividades)) {
+        const nuevo = { ...cronograma }
+        propias.forEach((p, i) => {
+          const acts = [...(nuevo[p.dia]?.actividades || [])]
+          acts[p.idx] = data.actividades[i] || acts[p.idx]
+          nuevo[p.dia] = { ...nuevo[p.dia], actividades: acts }
+        })
+        setCronograma(nuevo)
+      }
+    } catch (e) {
+      console.error("[v0] Error ordenando con ALBA:", e)
+    }
+    setOrdenando(false)
+  }
+
   // ── ALBA sugiere 3 actividades de alfabetizacion (Lun/Mar/Vie) ──────
   async function generarSugerenciasAlba() {
     setGenerandoSugerencias(true)
@@ -535,6 +579,20 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                 <Sparkles className="w-4 h-4" />
               )}
               ALBA sugiere
+            </button>
+            <button
+              type="button"
+              onClick={ordenarConAlba}
+              disabled={ordenando}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+              title="ALBA ordena las actividades que vos escribiste: les agrega el eje, la capacidad y el Observa si"
+            >
+              {ordenando ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <BookOpen className="w-4 h-4" />
+              )}
+              Ordenar con ALBA
             </button>
             {editandoClases ? (
               <button
