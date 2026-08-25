@@ -1457,6 +1457,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   {actividadEnFoco.materiales && (
                     <p className="text-sm text-slate-600 mt-2"><span className="font-semibold">Materiales:</span> {actividadEnFoco.materiales}</p>
                   )}
+                  {(actividadEnFoco as any).capacidadDC && (
+                    <p className="text-sm text-slate-700 mt-2">
+                      <span className="font-semibold">Capacidad: </span>{(actividadEnFoco as any).capacidadDC}
+                    </p>
+                  )}
                   {actividadEnFoco.capacidades && (
                     <p className="text-sm bg-violet-50 border border-violet-300 rounded-lg px-3 py-2 mt-3">
                       <span className="font-bold text-violet-700">Observa si: </span>
@@ -1768,16 +1773,16 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <p className="text-xs text-purple-600">Tips para tu planificacion</p>
                     </div>
                   </div>
-                  {proyecto.titulo && (
-                    <button
-                      type="button"
-                      onClick={generarTipsALBA}
-                      disabled={loadingSugerencias}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium transition-colors disabled:opacity-50"
-                    >
-                      Nuevos tips
-                    </button>
-                  )}
+                  {/* Siempre disponible: los tips no dependen de que haya
+                      proyecto cargado. Antes el boton desaparecia sin el. */}
+                  <button
+                    type="button"
+                    onClick={() => generarTipsALBA()}
+                    disabled={loadingSugerencias}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium transition-colors disabled:opacity-50"
+                  >
+                    {loadingSugerencias ? "Buscando..." : "Nuevos tips"}
+                  </button>
                 </div>
                 <div className="p-5">
                   {loadingSugerencias ? (
@@ -2045,6 +2050,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             </p>
                           )}
 
+                          {(sug.actividad as any).capacidadDC && (
+                            <p className="text-xs text-slate-700 mb-1">
+                              <span className="font-semibold">Capacidad: </span>{(sug.actividad as any).capacidadDC}
+                            </p>
+                          )}
                           {sug.actividad.capacidades && (
                             <p className="text-xs bg-white border border-violet-300 rounded-lg px-2 py-1.5 mb-2.5">
                               <span className="font-bold text-violet-700">Observa si: </span>
