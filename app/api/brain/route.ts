@@ -2386,6 +2386,7 @@ ${bloqueProyecto(proyecto)}
 ${actsSemana.length ? `Actividades de esta semana, con lo que se observa en cada una:\n${actsSemana.map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`).join("\n")}\nLos tips tienen que servir para ESTAS actividades, no ser generales.` : ""}
 Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
 No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son.
+${esMatTip ? "Uno de los tips puede ser un consejo para FAVORECER EL LENGUAJE en el dia a dia de la sala: como acompanar con palabras lo que el nino hace, como dar lugar a que pida, como aprovechar las rutinas. Aca si tiene sentido, porque es un consejo aparte y no una obligacion de la actividad." : ""}
 ${evitarTips.length ? `NO repitas estos, que ya se los dimos: ${evitarTips.join(" | ")}` : ""}
 
 Respondé SOLO con este JSON, sin backticks:
@@ -2394,9 +2395,20 @@ Respondé SOLO con este JSON, sin backticks:
       try {
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
         const t = r.text.trim()
-        return NextResponse.json({ ok: true, ...leerJSONAunqueVengaCortado(t) })
+        const leido = leerJSONAunqueVengaCortado(t)
+        // Si el JSON vino raro, se rescatan las lineas del texto igual:
+        // antes en ese caso la tarjeta quedaba vacia sin que nadie se enterara.
+        let tips: string[] = Array.isArray(leido?.tips) ? leido.tips : []
+        if (tips.length === 0) {
+          tips = t.split("\n")
+            .map((l: string) => l.replace(/^[-•\d.\s"]+/, "").replace(/"[,]?$/, "").trim())
+            .filter((l: string) => l.length > 25 && !l.includes("{") && !l.includes("}"))
+            .slice(0, 3)
+        }
+        console.log(`[v0] tips para "${sala}": ${tips.length} generados`)
+        return NextResponse.json({ ok: true, tips })
       } catch (e) {
-        console.error("[v0] Error generando tips:", e)
+        console.error("[v0] Error generando tips:", e, "| sala:", sala)
         return NextResponse.json({ ok: false, tips: [] }, { status: 502 })
       }
     }
@@ -2916,13 +2928,16 @@ Adapta TODO a los 3 anos:
 ` : nivel === "2" ? `
 ATENCION — ESTA ES UNA SALA DE 2 ANOS DEL JARDIN MATERNAL.
 
-Los ejes son las CINCO CAPACIDADES del Diseno Curricular, no los ejes de alfabetizacion.
-Pero el objetivo de fondo NO cambia: TODA actividad, sea de la capacidad que sea,
-tiene que hacer trabajar el LENGUAJE. La capacidad es la lente con la que se observa;
-la alfabetizacion es lo que se busca potenciar.
+Los ejes son las CINCO CAPACIDADES del Diseno Curricular, no los ejes de
+alfabetizacion. LA CAPACIDAD ES LO QUE MANDA: cada actividad trabaja la
+capacidad que le toca —autonomia, comunicacion, resolucion de problemas,
+colaboracion o pensamiento reflexivo— y se disena para eso.
 
-En cada actividad tiene que quedar claro QUE SE DICE y QUE SE ESCUCHA: que nombra la
-docente, que palabra se repite, que se pregunta, que se espera que el nino diga o senale.
+NO fuerces el lenguaje en todas las actividades. Si la capacidad de la semana
+es autonomia o resolucion de problemas, la actividad es sobre eso, no sobre
+hablar. Lo que si corresponde siempre es que el adulto ACOMPANE CON PALABRAS
+lo que va pasando —nombra lo que el nino hace, siente y quiere— pero eso es
+la forma de estar del docente, no el objetivo de la propuesta.
 
 Adapta TODO a los 2 anos:
 - Duracion: 5 a 10 minutos. A esta edad la atencion sostenida es muy breve.
@@ -2934,6 +2949,23 @@ Adapta TODO a los 2 anos:
 - El adulto pone en palabras lo que el nino hace, siente y quiere: ese es el motor del lenguaje.
 - No se espera un resultado: se observa un proceso.
 - Estamos a MITAD DE ANO: el grupo ya viene trabajando, no arranca de cero.
+
+QUE CONTENIDO COGNITIVO ES APROPIADO A LOS 2 ANOS (textual del Diseno
+Curricular de Jardin Maternal, area Exploracion del ambiente): a esta edad
+se empieza a COMPARAR objetos por tamano, forma o cantidad; AGRUPAR o
+SEPARAR segun caracteristicas observables (grande/chico, mismo color, va
+junto/no va junto); y construir relaciones espaciales simples (adentro,
+afuera, arriba, abajo). Eso es TODO lo que corresponde de pensamiento
+logico-matematico a esta edad.
+
+PROHIBIDO EN SALA DE 2: sumar, restar, contar mas alla de sesiones muy
+cortas de conteo con objetos concretos (uno, dos, muchos), cualquier
+operacion aritmetica, escribir numeros, usar fichas con numeros. Si la
+maestra o el proyecto traen un tema de "contar" o "matematica", llevalo a
+lo que SI corresponde: agrupar, comparar, separar objetos reales.
+MAL: "lancen dos dados y sumen los puntos".
+BIEN: "junten todas las pelotas grandes en un canasto y las chicas en
+otro, mientras nombras: esta es grande, esta es chica".
 ` : esde4Anios(salaNombre) ? `
 ATENCION — ESTA ES UNA SALA DE 4 ANOS. Adapta TODO a esa edad:
 - Duracion: 10 a 15 minutos como maximo. Los de 4 no sostienen mas.
