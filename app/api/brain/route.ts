@@ -1302,11 +1302,19 @@ function esDeMaternal(sala: string): boolean {
 // ── EJES DE SALA DE 2 (DC maternal, bloque Lengua Oral) ─────────────────
 // El EJE ordena que se ensena; la CAPACIDAD es la lente con la que se observa.
 // La actividad sale del eje, no de la capacidad.
+// Las CINCO AREAS del DC de Jardin Maternal, no solo lenguaje. Los cuatro
+// primeros son de Comunicacion y Expresion (Lengua Oral); los otros cuatro
+// cubren las areas restantes, con sus pasos derivados de los objetivos de
+// aprendizaje de SALA DE 2 del Diseno.
 const EJES_SALA2 = [
   { key: "USO", nombre: "Uso de la lengua" },
   { key: "ORA", nombre: "Oraciones" },
   { key: "VOC", nombre: "Vocabulario" },
   { key: "ESC", nombre: "La escritura comunica" },
+  { key: "JUE", nombre: "Desarrollo del juego" },
+  { key: "COR", nombre: "Desarrollo corporal" },
+  { key: "AMB", nombre: "Exploracion del ambiente" },
+  { key: "PER", nombre: "Desarrollo personal y social" },
 ] as const
 
 const SECUENCIA_SALA2: Record<string, { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string }[]> = {
@@ -1328,6 +1336,31 @@ const SECUENCIA_SALA2: Record<string, { titulo: string; objetivo: string; descri
     { titulo: "Palabras que dicen donde", objetivo: "Comprender arriba, abajo, adentro, afuera", descripcion: "Juegos corporales y con objetos donde la palabra indica el lugar. Deci la palabra y espera que la accion aparezca.", materiales: ["Cajas, tuneles, telas"], dccaba: "DC CABA Maternal - Lengua Oral: vocabulario" },
     { titulo: "Escucha cuentos y canciones", objetivo: "Incorporar vocabulario en situaciones de lectura y canto", descripcion: "Lee y canta con pausas a proposito para que completen. Repeti el mismo cuento o cancion varios dias hasta que anticipen lo que viene.", materiales: ["Libros de imagenes", "Canciones conocidas"], dccaba: "DC CABA Maternal - Lengua Oral: participar de situaciones de lectura" },
   ],
+  // ── Pasos de las otras cuatro areas del DC de Jardin Maternal ────────
+  JUE: [
+    { titulo: "Elige con que jugar", objetivo: "Manifestar gustos y preferencias eligiendo juegos u objetos", descripcion: "Poné al alcance dos o tres canastos con objetos distintos y dejalos elegir. No dirijas: mira que agarra cada uno y cuanto se queda. Nombra lo que eligio: 'agarraste el auto'.", materiales: ["Canastos", "Objetos variados de la sala"], dccaba: "DC CABA Maternal - Juego, sala de 2: manifestar gustos y preferencias" },
+    { titulo: "Juego de imitar", objetivo: "Enriquecer el juego simbolico a partir de la interaccion con otros", descripcion: "Ofrece objetos de la vida diaria —tazas, cucharas, telas, munecos— y sumate al juego imitando: dale de comer al muneco, tapalo. Ellos copian y agregan lo suyo.", materiales: ["Vajilla de juguete", "Munecos", "Telas"], dccaba: "DC CABA Maternal - Juego, sala de 2: juego simbolico" },
+    { titulo: "Como hago que entre", objetivo: "Sortear los desafios que los materiales proponen creando nuevas formas de manipularlos", descripcion: "Da objetos y recipientes de distintos tamanos: algunos entran y otros no. Deja que prueben solos. Cuando no sale, espera antes de ayudar y despues pregunta: 'y si probas con este?'.", materiales: ["Cajas y frascos de distintos tamanos", "Objetos que entren y otros que no"], dccaba: "DC CABA Maternal - Juego, sala de 2: resolver desafios de los materiales" },
+    { titulo: "Guardamos juntos", objetivo: "Participar cooperativamente en rutinas de cuidado y orden de los materiales", descripcion: "Al terminar de jugar, canta siempre la misma cancion de guardar y da a cada uno un objeto para llevar a su lugar. La repeticion diaria es lo que instala la rutina.", materiales: ["Los juguetes de la sala", "Canastos con su lugar fijo"], dccaba: "DC CABA Maternal - Juego, sala de 2: autonomia emergente en el orden" },
+  ],
+  COR: [
+    { titulo: "Todo lo que puedo hacer", objetivo: "Iniciarse en el conocimiento del cuerpo reconociendo posibilidades de movimiento", descripcion: "Arma un recorrido con lo que haya: trepar a un almohadon, pasar por debajo de una mesa, caminar sobre una linea. Hacelo vos primero y que te sigan.", materiales: ["Almohadones", "Telas", "Cinta para marcar el piso"], dccaba: "DC CABA Maternal - Corporal, sala de 2: posibilidades de movimiento" },
+    { titulo: "Rapido y despacio", objetivo: "Desarrollar habilidades motoras explorando distintas posibilidades", descripcion: "Con musica, alterna momentos rapidos y lentos. Cuando para la musica, todos se quedan quietos. Repetilo muchas veces: la anticipacion es lo que los engancha.", materiales: ["Musica", "Espacio libre"], dccaba: "DC CABA Maternal - Corporal, sala de 2: habilidades motoras" },
+    { titulo: "Mi cuerpo dice", objetivo: "Expresar con el cuerpo emociones y sensaciones", descripcion: "Con una tela o una musica, propone moverse como si tuvieran frio, como si estuvieran cansados, como si algo los alegrara. Nombra vos lo que ves: 'te estas estirando'.", materiales: ["Telas livianas", "Musica"], dccaba: "DC CABA Maternal - Corporal, sala de 2: expresar con el cuerpo" },
+    { titulo: "El juego tiene reglas", objetivo: "Iniciarse en la comprension del sentido de las reglas en propuestas ludicas", descripcion: "Juegos con una sola regla clara y repetida: correr cuando suena, parar cuando no suena. La regla tiene que ser una sola y siempre la misma.", materiales: ["Un instrumento o palmas"], dccaba: "DC CABA Maternal - Corporal, sala de 2: sentido de las reglas" },
+  ],
+  AMB: [
+    { titulo: "Que pasa si", objetivo: "Sostener la exploracion de objetos prestando atencion a los cambios que se producen", descripcion: "Poné agua en recipientes y objetos que floten y se hundan. Dejalos probar. Cuando algo cambia, nombralo: 'se hundio', 'se lleno'.", materiales: ["Bateas con agua", "Objetos que floten y se hundan", "Vasos"], dccaba: "DC CABA Maternal - Ambiente, sala de 2: exploracion y cambios" },
+    { titulo: "Junto los que van juntos", objetivo: "Agrupar y separar objetos segun caracteristicas observables", descripcion: "Da una coleccion de objetos de dos tipos bien distintos y dos canastos. Que los repartan. Nombra el criterio mientras lo hacen: 'las pelotas aca, los autos alla'.", materiales: ["Coleccion de objetos de dos tipos", "Dos canastos"], dccaba: "DC CABA Maternal - Ambiente, sala de 2: agrupar y comparar" },
+    { titulo: "Grande y chico", objetivo: "Comparar objetos por tamano", descripcion: "Ofrece objetos iguales en dos tamanos y dos recipientes acordes. Que descubran cual entra donde. Nombra 'grande' y 'chico' cada vez.", materiales: ["Objetos iguales en dos tamanos", "Recipientes"], dccaba: "DC CABA Maternal - Ambiente, sala de 2: comparar por tamano" },
+    { titulo: "Busco otra manera", objetivo: "Explorar diferentes formas de alcanzar un objeto o lograr un proposito", descripcion: "Poné algo deseado a la vista pero fuera de alcance, con elementos cerca que sirvan para conseguirlo. Espera antes de intervenir: el valor esta en que prueben.", materiales: ["Un objeto atractivo", "Un banquito o un palo"], dccaba: "DC CABA Maternal - Ambiente, sala de 2: modificar estrategias" },
+  ],
+  PER: [
+    { titulo: "Puedo solo", objetivo: "Acrecentar la autonomia en los habitos de higiene, orden y alimentacion", descripcion: "En la merienda o el guardado, dales la parte que ya pueden hacer solos: servirse con una jarra chica, llevar su vaso, colgar su toalla. Espera aunque tarde.", materiales: ["Elementos de la rutina, a su altura"], dccaba: "DC CABA Maternal - Personal y social, sala de 2: autonomia en los habitos" },
+    { titulo: "Yo elijo", objetivo: "Tomar decisiones ligadas a la eleccion de juguetes y juegos preferidos", descripcion: "Ofrece siempre dos opciones concretas y visibles, y respeta lo que eligen aunque elijan lo mismo todos los dias. Nombra la eleccion: 'elegiste el rojo'.", materiales: ["Dos opciones a la vista"], dccaba: "DC CABA Maternal - Personal y social, sala de 2: tomar decisiones" },
+    { titulo: "Esperar un poquito", objetivo: "Demostrar interes y concentracion respetando turnos y tolerando la espera", descripcion: "Juegos de a dos donde hay que esperar el turno, muy cortos. Nombra la espera: 'ahora Juan, despues vos'. Los primeros dias la espera dura segundos.", materiales: ["Un objeto que circule"], dccaba: "DC CABA Maternal - Personal y social, sala de 2: turnos y espera" },
+    { titulo: "Como me siento", objetivo: "Iniciarse en la identificacion de algunas emociones dejandose acompanar", descripcion: "Cuando aparece una emocion fuerte, ponele nombre en el momento: 'estas enojado porque se termino'. No se ensena en una actividad aparte: se ensena cuando pasa.", materiales: ["Ninguno"], dccaba: "DC CABA Maternal - Personal y social, sala de 2: identificar emociones" },
+  ],
   ESC: [
     { titulo: "Los libros dicen cosas", objetivo: "Descubrir el libro como objeto que comunica", descripcion: "Ofrece libros para explorar libremente y lee en voz alta senalando. Nombra lo que ves en las imagenes.", materiales: ["Libros resistentes de imagenes"], dccaba: "DC CABA Maternal - Lengua Oral: reconocimiento de la escritura" },
     { titulo: "Su nombre en su lugar", objetivo: "Reconocer su nombre escrito como marca propia", descripcion: "Pone carteles con los nombres en las perchas y las cajas. Leelos en voz alta senalando, para que descubran que esas marcas dicen siempre lo mismo. No se copia ni se traza.", materiales: ["Carteles con los nombres"], dccaba: "DC CABA Maternal - Lengua Oral: la escritura como medio comunicativo" },
@@ -1338,10 +1371,16 @@ const SECUENCIA_SALA2: Record<string, { titulo: string; objetivo: string; descri
 // ── EJES DE SALA DE 3 (DC sala de 3, area Lengua) ───────────────────────
 // Tres bloques, tal como los define el Diseno: Comprension, Produccion,
 // y Precursores y sistema de escritura.
+// Las CINCO AREAS del DC de Sala de 3. Los tres primeros son los bloques de
+// Lengua; los otros cuatro cubren las areas restantes del Diseno.
 const EJES_SALA3 = [
   { key: "COMP", nombre: "Comprension" },
   { key: "PROD", nombre: "Produccion" },
   { key: "PREC", nombre: "Precursores y sistema de escritura" },
+  { key: "MAT", nombre: "Matematica" },
+  { key: "IND", nombre: "Indagacion del ambiente" },
+  { key: "EFI", nombre: "Educacion Fisica" },
+  { key: "EXP", nombre: "Lenguajes expresivos" },
 ] as const
 
 const SECUENCIA_SALA3: Record<string, { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string }[]> = {
@@ -1358,6 +1397,31 @@ const SECUENCIA_SALA3: Record<string, { titulo: string; objetivo: string; descri
     { titulo: "Contar algo que paso", objetivo: "Narrar un hecho propio con inicio y final", descripcion: "Da un espacio fijo para que uno cuente algo que le paso. Ayudalo con preguntas: y despues que paso, quien estaba.", materiales: ["Ninguno"], dccaba: "DC CABA Sala de 3 - Produccion: narracion" },
     { titulo: "Recontar un cuento conocido", objetivo: "Reconstruir oralmente un cuento ya escuchado", descripcion: "Despues de leer el mismo cuento varias veces, pedi que lo cuenten ellos. Usa las imagenes como apoyo del orden.", materiales: ["El cuento y sus imagenes"], dccaba: "DC CABA Sala de 3 - Produccion: recontado" },
     { titulo: "Describir con palabras precisas", objetivo: "Describir objetos y escenas con vocabulario preciso", descripcion: "Juegos de adivinar: uno describe y los demas buscan. Empuja hacia palabras mas exactas que grande o lindo.", materiales: ["Objetos variados o laminas"], dccaba: "DC CABA Sala de 3 - Produccion: vocabulario preciso" },
+  ],
+  // ── Pasos de las otras cuatro areas del DC de Sala de 3 ──────────────
+  MAT: [
+    { titulo: "Contamos la coleccion", objetivo: "Contar colecciones de objetos en situaciones con sentido", descripcion: "Aprovecha una situacion real: cuantos vasos faltan, cuantos somos hoy. Que cuenten senalando cada objeto. Si usan los dedos, dejalos: es una estrategia valida a esta edad.", materiales: ["Objetos de la sala para contar"], dccaba: "DC CABA Sala de 3 - Matematica, bloque Numero: contar colecciones" },
+    { titulo: "Donde hay mas", objetivo: "Comparar grupos de objetos", descripcion: "Presenta dos grupos con cantidades bien distintas y pregunta donde hay mas. Que lo comprueben repartiendo de a uno. Despues acerca las cantidades para que tengan que contar.", materiales: ["Dos colecciones de objetos", "Bandejas"], dccaba: "DC CABA Sala de 3 - Matematica: comparar grupos de objetos" },
+    { titulo: "Cuantos faltan", objetivo: "Anticipar cuantos hay o cuantos faltan", descripcion: "En una situacion real —repartir servilletas, buscar sillas— pediles que anticipen antes de traer: 'cuantas necesitamos?'. Despues comprueban.", materiales: ["Los elementos de la rutina"], dccaba: "DC CABA Sala de 3 - Matematica: anticipar cantidades" },
+    { titulo: "Donde esta y como es", objetivo: "Explorar posiciones, recorridos y formas con el cuerpo y con objetos", descripcion: "Recorridos donde haya que pasar por arriba, por abajo, entre dos cosas. Nombra la posicion mientras pasan. Despues, que lo armen ellos para otro companero.", materiales: ["Aros", "Cajas", "Sillas"], dccaba: "DC CABA Sala de 3 - Matematica, bloque Espacio y formas" },
+  ],
+  IND: [
+    { titulo: "Miramos de cerca", objetivo: "Observar el entorno natural con detalle", descripcion: "Salgan con lupas a mirar una parte chica del patio. Que cada uno traiga o senale algo que le llamo la atencion, y lo describa al grupo.", materiales: ["Lupas", "El patio o una planta de la sala"], dccaba: "DC CABA Sala de 3 - Indagacion del ambiente: observacion del entorno natural" },
+    { titulo: "Que cambio", objetivo: "Registrar cambios en el entorno a lo largo del tiempo", descripcion: "Elijan algo que cambie —una planta, el tiempo, algo que se moja o se seca— y observenlo varios dias seguidos. Registren con dibujos o fotos y comparen.", materiales: ["Una planta o algo que cambie", "Afiche para registrar"], dccaba: "DC CABA Sala de 3 - Indagacion del ambiente: cambios en el entorno" },
+    { titulo: "Como funciona", objetivo: "Explorar objetos del entorno social y sus usos", descripcion: "Traé objetos de uso cotidiano y dejalos explorar: para que sirve, quien lo usa, como funciona. Que prueben antes de que vos expliques.", materiales: ["Objetos de uso cotidiano seguros"], dccaba: "DC CABA Sala de 3 - Indagacion del ambiente: entorno social" },
+    { titulo: "Nos preguntamos", objetivo: "Formular preguntas sobre lo que pasa alrededor", descripcion: "A partir de algo que los sorprendio, anota en un afiche las preguntas que van saliendo. No las contestes todas: elegi una y busquen juntos como averiguarlo.", materiales: ["Afiche", "Marcador"], dccaba: "DC CABA Sala de 3 - Indagacion del ambiente: hacerse preguntas" },
+  ],
+  EFI: [
+    { titulo: "Me muevo de muchas formas", objetivo: "Explorar las posibilidades de movimiento del propio cuerpo", descripcion: "Propone desplazarse de distintas maneras: gateando, en puntas de pie, como si pesaran mucho. Que cada uno invente una y los demas la copien.", materiales: ["Espacio libre"], dccaba: "DC CABA Sala de 3 - Educacion Fisica: posibilidades de movimiento" },
+    { titulo: "El equilibrio", objetivo: "Desarrollar el equilibrio y la coordinacion", descripcion: "Caminar sobre una linea en el piso, pasar por arriba de algo bajo, llevar un objeto sin que se caiga. Aumenta la dificultad de a poco.", materiales: ["Cinta para marcar el piso", "Objetos para transportar"], dccaba: "DC CABA Sala de 3 - Educacion Fisica: equilibrio y coordinacion" },
+    { titulo: "Juegos con otros", objetivo: "Participar en juegos grupales respetando reglas simples", descripcion: "Juegos tradicionales con una sola regla clara: la mancha, las estatuas. Antes de empezar, que expliquen ellos la regla con sus palabras.", materiales: ["Espacio libre"], dccaba: "DC CABA Sala de 3 - Educacion Fisica: juegos grupales" },
+    { titulo: "Manos que pueden", objetivo: "Desarrollar la motricidad fina", descripcion: "Enhebrar, embocar, trasvasar con cuchara, abrochar. Ofrece varias opciones al mismo tiempo y dejalos elegir cual quieren.", materiales: ["Cuentas y cordones", "Recipientes", "Cucharas"], dccaba: "DC CABA Sala de 3 - Educacion Fisica: motricidad fina" },
+  ],
+  EXP: [
+    { titulo: "Dejamos marcas", objetivo: "Explorar las posibilidades expresivas de la plastica", descripcion: "Ofrece un material por vez y en formato grande: pintura con las manos, tiza mojada, crayones sobre papel afiche. Que exploren antes de pedirles que hagan algo.", materiales: ["Papel grande", "Pintura o tizas", "Crayones gruesos"], dccaba: "DC CABA Sala de 3 - Lenguajes expresivos: plastica" },
+    { titulo: "Sonidos y silencio", objetivo: "Explorar el sonido, el ritmo y el silencio", descripcion: "Con instrumentos o con el cuerpo, alterna sonido y silencio. Que sigan un ritmo simple y despues propongan ellos uno.", materiales: ["Instrumentos simples o palmas"], dccaba: "DC CABA Sala de 3 - Lenguajes expresivos: musica" },
+    { titulo: "Como si fuera", objetivo: "Participar de situaciones de juego dramatico", descripcion: "Arma un rincon con objetos de un contexto —la verduleria, el doctor— y sumate al juego dando pie: 'buenas tardes, que tiene hoy?'. Salite cuando el juego se sostiene solo.", materiales: ["Objetos del contexto elegido", "Telas"], dccaba: "DC CABA Sala de 3 - Lenguajes expresivos: juego dramatico" },
+    { titulo: "Mi cuerpo cuenta", objetivo: "Expresar con el cuerpo ideas y emociones", descripcion: "Con musica de climas distintos, propone moverse como lo que la musica sugiere. Nombra lo que ves sin corregir: no hay una forma correcta.", materiales: ["Musica de distintos climas", "Telas livianas"], dccaba: "DC CABA Sala de 3 - Lenguajes expresivos: expresion corporal" },
   ],
   PREC: [
     { titulo: "Cuantas palabras tiene", objetivo: "Reconocer palabras dentro de la cadena hablada", descripcion: "Deci una oracion corta y que pongan una ficha por cada palabra. Compara oraciones largas y cortas: lo que se cuenta son las palabras, no lo que dura decirlas.", materiales: ["Fichas o tapitas"], dccaba: "DC CABA Sala de 3 - Precursores: reconocimiento de palabras en la cadena hablada" },
@@ -3373,6 +3437,9 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
               desarrollo: s.desarrollo,
               materiales: s.materiales,
               eje: ejeFinal,
+              // El nombre legible del eje: en maternal "eje" es una clave como
+              // "JUE" o "COR", que no le dice nada a la maestra.
+              ejeNombre: nombreEjeFinal,
               paso: pasoNombre,
               pasoNumero: decidido ? decidido.indice + 1 : null,
               // En maternal la actividad NO es de alfabetizacion: trabaja la
