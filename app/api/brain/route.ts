@@ -2374,32 +2374,81 @@ export async function POST(req: NextRequest) {
     // cerrada a proposito: sin ella la IA inventa titulos y paginas que no existen.
     // Tips de planificacion: se generan cada vez, anclados al proyecto.
     // Antes eran una lista fija en el codigo y salian siempre los mismos.
+    // ── TIPS DE LA SEMANA ─────────────────────────────────────────────────
+    // NUNCA quedan vacios: en una sala siempre se esta ensenando, haya o no
+    // actividad cargada hoy. Si hay actividades, los tips hablan de ellas.
+    // Si no hay, son consejos para ensenar en esa sala y esa edad. Y si la IA
+    // falla, hay consejos de respaldo del Diseno para que la tarjeta nunca
+    // quede en blanco por un problema tecnico.
     if (action === "tips_planificacion") {
       const evitarTips = Array.isArray(body.evitar) ? body.evitar : []
-      const esMatTip = esDeMaternal(String(sala || ""))
       const actsSemana = Array.isArray(body.actividades) ? body.actividades : []
+      const nivelTip = nivelDeSala(String(sala || ""))
+      const esMatTip = nivelTip === "2" || nivelTip === "3"
+
+      const edadTexto =
+        nivelTip === "2" ? "sala de 2 anos (jardin maternal)"
+        : nivelTip === "3" ? "sala de 3 anos"
+        : nivelTip === "4" ? "sala de 4 anos"
+        : "sala de 5 anos"
+
       const promptTips = `Sos ALBA, asistente pedagogico de nivel inicial.
 
-Escribi 3 tips breves y practicos para la planificacion de esta semana. Uno por linea, sin numerar.
-${esMatTip ? "Sala de 2 anos: tiempos breves, cuerpo, objetos reales, la palabra del adulto acompanando la accion." : "Sala de 4 o 5 anos."}
+Escribi 3 consejos breves y practicos para la maestra de una ${edadTexto}.
+Cada uno: UNA sola idea concreta, aplicable esta semana, escrita A ELLA en
+segunda persona. Entre 15 y 40 palabras cada uno.
+
 ${bloqueProyecto(proyecto)}
-${actsSemana.length ? `Actividades de esta semana, con lo que se observa en cada una:\n${actsSemana.map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`).join("\n")}\nLos tips tienen que servir para ESTAS actividades, no ser generales.` : ""}
-Cada tip: una sola idea, concreta, que se pueda aplicar esta semana. Escribile A LA MAESTRA en segunda persona.
-No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son.
-${esMatTip ? "Uno de los tips puede ser un consejo para FAVORECER EL LENGUAJE en el dia a dia de la sala: como acompanar con palabras lo que el nino hace, como dar lugar a que pida, como aprovechar las rutinas. Aca si tiene sentido, porque es un consejo aparte y no una obligacion de la actividad." : ""}
+${actsSemana.length
+  ? `Actividades cargadas en el cronograma de esta semana:\n${actsSemana
+      .map((a: any) => `- "${a.nombre}"${a.capacidad ? ` (se observa: ${a.capacidad})` : ""}`)
+      .join("\n")}\nAl menos dos de los tres consejos tienen que servir para ESTAS actividades.`
+  : `Todavia no hay actividades cargadas en el cronograma. Da consejos generales para ensenar en ${edadTexto}: como sostener la atencion, como organizar el grupo, como aprovechar las rutinas, que observar en los chicos.`}
+${esMatTip ? "Uno de los tres puede ser sobre como FAVORECER EL LENGUAJE en el dia a dia: acompanar con palabras lo que el nino hace, dar lugar a que pida, aprovechar las rutinas." : ""}
 ${evitarTips.length ? `NO repitas estos, que ya se los dimos: ${evitarTips.join(" | ")}` : ""}
 
-Respondé SOLO con este JSON, sin backticks:
-{ "tips": ["tip 1", "tip 2", "tip 3"] }`
+No inventes datos sobre el grupo ni sobre ningun nino: no sabes como son.
+
+Respondé SOLO con un array JSON de 3 textos, sin backticks ni nada mas.
+Ejemplo del formato exacto que espero:
+["Primer consejo completo aca.","Segundo consejo completo aca.","Tercer consejo completo aca."]`
+
+      // Respaldo por edad, del Diseno. Solo se usa si la IA no devuelve nada.
+      const RESPALDO: Record<string, string[]> = {
+        "2": [
+          "Repeti la misma propuesta varios dias seguidos: a los 2 anos la repeticion es lo que consolida el aprendizaje, no la variedad.",
+          "Poné en palabras lo que cada nino hace mientras lo hace: 'estas metiendo la pelota en la caja'. Esa voz del adulto es el motor del lenguaje.",
+          "Trabaja en grupos muy chicos o en ronda con toda la sala, nunca sentados en mesa de a uno: a esta edad se aprende con el cuerpo y con otros.",
+        ],
+        "3": [
+          "Da consignas de un solo paso y acompanalas con el gesto: a los 3 anos entender dos ordenes seguidas todavia cuesta.",
+          "Antes de leer un cuento, mostra la tapa y pregunta de que creen que se trata. Al terminar, volve a esa prediccion y comparen.",
+          "Aprovecha los momentos de rutina —la merienda, el guardado— para nombrar, contar y comparar: ahi el lenguaje aparece solo.",
+        ],
+        "4": [
+          "Modela vos la primera pregunta antes de pedirles que pregunten ellos: necesitan escuchar el ejemplo para animarse.",
+          "En la ronda de intercambio no alcanza con escuchar: pregunta por lo que falta en el relato, 'cuando fue?', 'con quien estabas?'.",
+          "Elegi propuestas que no sean ni muy faciles ni muy dificiles: en los dos extremos los chicos se desenganchan.",
+        ],
+        "5": [
+          "Deja que primero intenten solos y recien despues acompana: lo que hoy hacen con ayuda, manana lo van a poder solos.",
+          "Registra en un afiche lo que dicen los chicos: ver sus palabras escritas les muestra para que sirve la escritura.",
+          "Cuando trabajen en parejas, dales roles distintos: uno dicta y el otro escribe, y despues cambian.",
+        ],
+      }
 
       try {
-        const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
-        const t = r.text.trim()
-        // El modelo puede contestar de varias formas y antes solo se entendia
-        // una: si venia distinta, la tarjeta quedaba vacia sin aviso. Ahora se
-        // aceptan todas y, como ultimo recurso, se rescatan las lineas del texto.
-        let tips: string[] = []
+        const r = await generateText({
+          model: "openai/gpt-4o-mini",
+          prompt: promptTips,
+          maxOutputTokens: 900,
+          temperature: 0.9,
+        })
+        const t = (r.text || "").trim()
 
+        // Se acepta cualquier forma de respuesta: array suelto, objeto con
+        // tips, lista de objetos, o texto plano por lineas.
+        let tips: string[] = []
         try {
           const leido = leerJSONAunqueVengaCortado(t)
           const crudo = Array.isArray(leido) ? leido : (leido?.tips ?? leido?.sugerencias ?? [])
@@ -2407,7 +2456,7 @@ Respondé SOLO con este JSON, sin backticks:
             tips = crudo
               .map((x: any) => (typeof x === "string" ? x : x?.tip ?? x?.texto ?? x?.contenido ?? ""))
               .map((x: string) => String(x).trim())
-              .filter((x: string) => x.length > 10)
+              .filter((x: string) => x.length > 15)
           }
         } catch {
           // sigue al rescate por lineas
@@ -2418,24 +2467,25 @@ Respondé SOLO con este JSON, sin backticks:
             .split("\n")
             .map((l: string) => l.replace(/^[\s\-•*\d.)\[\]"']+/, "").replace(/["',\]]+$/, "").trim())
             .filter((l: string) => l.length > 20 && !/^\{|^\}|tips"?\s*:/.test(l))
-            .slice(0, 3)
         }
 
         tips = tips.slice(0, 3)
+
         if (tips.length === 0) {
-          console.error(`[v0] tips vacios para "${sala}". El modelo devolvio:`, t.slice(0, 300))
+          console.error(`[v0] tips vacios para "${sala}", se usa respaldo. El modelo devolvio:`, t.slice(0, 300))
+          tips = RESPALDO[nivelTip] || RESPALDO["4"]
         } else {
           console.log(`[v0] tips para "${sala}": ${tips.length} generados`)
         }
+
         return NextResponse.json({ ok: true, tips })
       } catch (e) {
         console.error("[v0] Error generando tips:", e, "| sala:", sala)
-        return NextResponse.json({ ok: false, tips: [] }, { status: 502 })
+        // Nunca se devuelve vacio: la maestra siempre ve algo util
+        return NextResponse.json({ ok: true, tips: RESPALDO[nivelTip] || RESPALDO["4"] })
       }
     }
 
-    // Relatos de maternal: como viene el grupo y como viene cada chico.
-    // Redactado, no listas: la evidencia sale del registro por capacidad.
     if (action === "relato_maternal") {
       const tipo = String(body.tipo || "grupo")
       const datos = body.datos || {}
@@ -2524,7 +2574,17 @@ Respondé SOLO con este JSON, sin backticks:
       try {
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptRelato, maxOutputTokens: 3000, temperature: 0.7 })
         const t = r.text.trim()
-        const relato = leerJSONAunqueVengaCortado(t)
+        const leidoRel = leerJSONAunqueVengaCortado(t)
+        // Se acepta cualquier forma: objeto, o array suelto de alumnos.
+        const relato = Array.isArray(leidoRel) ? { alumnos: leidoRel } : leidoRel
+        if (tipo === "alumnos") {
+          const n = Array.isArray(relato?.alumnos) ? relato.alumnos.length : 0
+          if (n === 0) {
+            console.error(`[v0] relato de alumnos vacio para "${sala}". El modelo devolvio:`, t.slice(0, 300))
+          } else {
+            console.log(`[v0] relato de alumnos para "${sala}": ${n} chicos`)
+          }
+        }
 
         // El relato del grupo se GUARDA: asi se acumula la historia de la sala
         // y el proximo puede comparar contra este. Antes era una foto que se perdia.
