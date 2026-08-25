@@ -3335,7 +3335,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
               // la usa la tarjeta del cronograma para su color
               capacidadKey: decidido && esMaternal ? decidido.eje : "",
               contenidos: pasoNombre ? `${s.contenidos} · Estamos trabajando: ${pasoNombre}` : s.contenidos,
-              objetivo: s.objetivo,
+              objetivo: "",   // ya vive en la capacidad: no se repite
               desarrollo: s.desarrollo,
               materiales: s.materiales,
               eje: ejeFinal,
@@ -3772,7 +3772,15 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
     let desarrolloFinal = elegida.desarrollo || ""
     let materialesFinal = elegida.materiales || ""
     let capacidadesFinal = elegida.capacidad || ""
+    let capacidadDCFinal = elegida.capacidad_dc || ""
+    // Arranca VACIO a proposito: si la IA no lo reescribe, es preferible que
+    // no aparezca antes que mostrar los contenidos de la actividad original.
+    let contenidosFinal = ""
     let deQueSeTrata = ""
+    // Si la IA no logra reformular, la actividad queda igual a la original:
+    // en ese caso NO se la anuncia como variante ni se le vacian los
+    // contenidos, para que no quede una mezcla incoherente.
+    let seReformulo = false
 
     if (esVariante) {
       try {
@@ -3800,17 +3808,22 @@ Respondé SOLO con este JSON, sin backticks:
   "nombre": "titulo nuevo, corto",
   "deQueSeTrata": "EL CONTENIDO PEDAGOGICO que comparten la original y la variante: lo que NO cambia entre las dos. En pocas palabras y empezando con un verbo en infinitivo. Ej: 'reconstruir oralmente la secuencia de un cuento', 'escribir el nombre propio con un modelo a la vista', 'reconocer palabras que riman'. NO describas el tema de ninguna de las dos: ni el de la original (San Martin, las plantas) ni el de la variante (los animales). Solo lo pedagogico, que es lo unico que se mantiene",
   "capacidades": "la accion observable REESCRITA para esta variante, sin arrastrar el tema de la original. Empeza directo con el verbo, sin las palabras 'Observa si'",
+  "capacidadDC": "el nombre de una de las cinco capacidades del Diseno seguido de dos puntos y lo que ESTA variante pone en juego. Formato: 'Comunicacion: escribir frases sobre lo que observaron'. Las cinco: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion",
+  "contenidos": "los contenidos de ESTA variante, en 1 o 2 lineas. NO copies los de la original: si la original era de San Martin y la variante es de animales, los contenidos son de la variante",
   "desarrollo": "pasos concretos",
   "materiales": "lista breve"
 }`,
         })
         const t = r.text.trim()
         const v = leerJSONAunqueVengaCortado(t)
+        if (v?.nombre || v?.desarrollo) seReformulo = true
         if (v?.nombre) nombreFinal = String(v.nombre).trim()
         if (v?.desarrollo) desarrolloFinal = String(v.desarrollo).trim()
         if (v?.materiales) materialesFinal = String(v.materiales).trim()
         if (v?.deQueSeTrata) deQueSeTrata = String(v.deQueSeTrata).trim()
         if (v?.capacidades) capacidadesFinal = String(v.capacidades).trim()
+        if (v?.capacidadDC) capacidadDCFinal = String(v.capacidadDC).trim()
+        if (v?.contenidos) contenidosFinal = String(v.contenidos).trim()
       } catch (e) {
         console.error("[v0] Error reformulando la actividad, se usa tal cual:", e)
       }
@@ -3832,8 +3845,9 @@ Respondé SOLO con este JSON, sin backticks:
       actividad: {
         nombre: nombreFinal,
         capacidades: capacidadesFinal,
-        contenidos: elegida.objetivo || "",
-        objetivo: elegida.objetivo || "",
+        capacidadDC: capacidadDCFinal,
+        contenidos: contenidosFinal || (seReformulo ? "" : elegida.contenidos || ""),
+        objetivo: "",   // el objetivo ya vive en la capacidad: no se repite
         desarrollo: desarrolloFinal,
         materiales: materialesFinal,
         eje: ejeCronograma,
@@ -3843,7 +3857,7 @@ Respondé SOLO con este JSON, sin backticks:
           ? (elegida.validada
               ? `De la red — validada: funciono en ${elegida.veces} grupos distintos`
               : `De la red — funciono en una sala de ${elegida.nivelSala || nivelDeSala(String(elegida.sala || ""))} anos`)
-          : esVariante
+          : (esVariante && seReformulo)
           ? (deQueSeTrata ? `Variante de tu actividad sobre ${deQueSeTrata}` : "Variante de tu actividad")
           : "Mi actividad",
         alfabetizacionRed: vieneDeLaRed,
