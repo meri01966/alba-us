@@ -1777,9 +1777,17 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
                         <Sparkles className="w-7 h-7 text-purple-400" />
                       </div>
-                      <p className="text-slate-500 text-sm">
-                        Cuando haya actividades en el cronograma, ALBA sugiere como aprovecharlas.
+                      <p className="text-slate-500 text-sm mb-3">
+                        ALBA sugiere consejos para tu semana.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => generarTipsALBA()}
+                        disabled={loadingSugerencias}
+                        className="text-xs font-semibold px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-50"
+                      >
+                        {loadingSugerencias ? "Buscando..." : "Pedir tips"}
+                      </button>
                     </div>
                   )}
                 </div>
