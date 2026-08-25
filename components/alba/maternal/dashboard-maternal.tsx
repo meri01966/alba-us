@@ -1009,13 +1009,25 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           sala: salaActual,
           // Solo los dias que todavia no pasaron: no tiene sentido planificar
           // el lunes si hoy es miercoles. Si ya pasaron todos, usa los tres.
+          // ALBA propone SIEMPRE TRES actividades. Los dias preferidos son
+          // lunes, martes y viernes, pero no se sugiere para un dia que ya
+          // paso: si alguno vencio, se completa con otro dia de la semana
+          // que quede libre. Antes se descartaban y volvia con menos de tres.
           dias: (() => {
             const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
-            const quedan = DIAS_ALBA.filter((d) => {
+            const noVencio = (d: string) => {
               const f = cronograma[d]?.fecha
               return !f || f >= hoy
-            })
-            return quedan.length > 0 ? quedan : DIAS_ALBA
+            }
+            const elegidos = DIAS_ALBA.filter(noVencio)
+            // Se completa hasta tres con los dias que queden disponibles
+            for (const d of DIAS) {
+              if (elegidos.length >= 3) break
+              if (elegidos.includes(d as any)) continue
+              if (!noVencio(d)) continue
+              elegidos.push(d as any)
+            }
+            return elegidos.length > 0 ? elegidos : DIAS_ALBA
           })(),
           actividadesYaSugeridas // Enviar actividades ya aceptadas/rechazadas para no repetir
         })
@@ -1052,7 +1064,8 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     nuevoCronograma[dia].actividades.push({
       ...sugerencia.actividad,
       origen: "alba",
-      alfabetizacion: true,
+      // En maternal la actividad NO es de alfabetizacion: trabaja la capacidad
+      // que le toca. Se respeta lo que decidio el brain segun la edad.
       capacidadKey: (sugerencia.actividad as any).capacidadKey || "",
     } as any)
 
@@ -1456,6 +1469,12 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   )}
                   {actividadEnFoco.materiales && (
                     <p className="text-sm text-slate-600 mt-2"><span className="font-semibold">Materiales:</span> {actividadEnFoco.materiales}</p>
+                  )}
+                  {((actividadEnFoco as any).ejeNombre || (actividadEnFoco as any).eje) && (
+                    <p className="text-sm text-slate-700 mt-2">
+                      <span className="font-semibold">Eje: </span>
+                      {(actividadEnFoco as any).ejeNombre || (actividadEnFoco as any).eje}
+                    </p>
                   )}
                   {(actividadEnFoco as any).capacidadDC && (
                     <p className="text-sm text-slate-700 mt-2">
@@ -2050,6 +2069,13 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             </p>
                           )}
 
+                          {/* Eje, capacidad y despues el indicador a observar */}
+                          {((sug.actividad as any).ejeNombre || sug.actividad.eje) && (
+                            <p className="text-xs text-slate-700 mb-1">
+                              <span className="font-semibold">Eje: </span>
+                              {(sug.actividad as any).ejeNombre || sug.actividad.eje}
+                            </p>
+                          )}
                           {(sug.actividad as any).capacidadDC && (
                             <p className="text-xs text-slate-700 mb-1">
                               <span className="font-semibold">Capacidad: </span>{(sug.actividad as any).capacidadDC}
@@ -2186,7 +2212,13 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                 {(act as any).eje && (
                                   <p className="text-[10px] text-violet-900"><span className="font-bold">Eje: </span>{(act as any).eje}</p>
                                 )}
-                                {(act as any).capacidadDC && (
+                                {((act as any).ejeNombre || (act as any).eje) && (
+                                <p className="text-xs text-slate-700 mb-1">
+                                  <span className="font-semibold">Eje: </span>
+                                  {(act as any).ejeNombre || (act as any).eje}
+                                </p>
+                              )}
+                              {(act as any).capacidadDC && (
                                   <p className="text-[10px] text-violet-900"><span className="font-bold">Capacidad: </span>{(act as any).capacidadDC}</p>
                                 )}
                                 {act.capacidades && (
