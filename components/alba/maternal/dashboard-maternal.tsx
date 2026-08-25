@@ -298,7 +298,26 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
         }),
       })
       const data = await res.json()
-      if (data?.ok && Array.isArray(data.alumnos)) setRelatoAlumnos(data.alumnos)
+      if (data?.ok && Array.isArray(data.alumnos) && data.alumnos.length > 0) {
+        setRelatoAlumnos(data.alumnos)
+      } else {
+        // Si la IA no devolvio nada, se arma el reporte con la evidencia
+        // registrada. Nunca queda vacio habiendo evaluaciones.
+        console.error("[v0] El relato de alumnos vino vacio, se arma con la evidencia")
+        const nombreEstado = (e: string) =>
+          e === "ya_lo_hace" ? "ya lo hace" : e === "empezando" ? "lo hace con ayuda" : "todavia no"
+        const armado = (resumenEval?.porAlumno || []).map((a: any) => {
+          const caps = a.capacidades || []
+          if (caps.length === 0) {
+            return { nombre: a.nombre, relato: "Todavia sin evaluaciones registradas." }
+          }
+          const detalle = caps
+            .map((c: any) => `en ${c.nombre.toLowerCase()}, ${nombreEstado(c.estado)}${c.indicador ? ` (${c.indicador.toLowerCase()})` : ""}`)
+            .join("; ")
+          return { nombre: a.nombre, relato: `Segun lo registrado: ${detalle}.` }
+        })
+        setRelatoAlumnos(armado)
+      }
     } catch (e) {
       console.error("[v0] Error pidiendo el relato de los alumnos:", e)
     }
@@ -489,6 +508,9 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
 
   useEffect(() => {
     if (!salaActual) return
+    // Se limpian primero: si no, quedan a la vista los tips de la sala
+    // anterior mientras llegan los nuevos.
+    setSugerenciasALBA([])
     generarTipsALBA()
   }, [salaActual, nombresSemana])
 
@@ -2871,7 +2893,13 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                     <button
                       key={c.key}
                       type="button"
-                      onClick={() => { setCapElegida(activa ? "" : c.key); setIndElegido("") }}
+                      onClick={() => {
+                        // Se limpian las marcas: si no, quedan pegadas las de
+                        // la capacidad anterior y se guardan mal.
+                        setCapElegida(activa ? "" : c.key)
+                        setIndElegido("")
+                        setMarcados({})
+                      }}
                       // Sin tocar: fondo pleno del color de la capacidad, letra
                       // blanca. Al elegirla: fondo blanco y la letra en su color.
                       className="text-sm font-bold px-3.5 py-2 rounded-lg transition-all"
@@ -2896,7 +2924,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                       <button
                         key={i.texto}
                         type="button"
-                        onClick={() => setIndElegido(i.texto)}
+                        onClick={() => { setIndElegido(i.texto); setMarcados({}) }}
                         className="w-full text-left text-sm px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors"
                       >
                         {i.trabajado && <span className="text-amber-500 mr-1.5">•</span>}
