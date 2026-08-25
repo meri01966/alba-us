@@ -67,21 +67,26 @@ export function ActividadesDocentes({
 
   useEffect(() => {
     if (!sala || proyecto) return
+    // Se LIMPIA al cambiar de sala. Antes solo se reemplazaba si la sala nueva
+    // tenia proyecto: si no tenia, quedaba el de la sala anterior y ALBA
+    // proponia actividades del proyecto equivocado.
+    setProy({ titulo: "", objetivo: "", duracion: "" })
+    let cancelado = false
     ;(async () => {
       try {
         const r = await fetch(`/api/proyecto-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         const d = await r.json()
-        if (d?.ok && d.proyecto) {
-          setProy({
-            titulo: d.proyecto.titulo || "",
-            objetivo: d.proyecto.objetivo_general || "",
-            duracion: d.proyecto.duracion || "",
-          })
-        }
+        if (cancelado) return
+        setProy({
+          titulo: d?.proyecto?.titulo || "",
+          objetivo: d?.proyecto?.objetivo_general || "",
+          duracion: d?.proyecto?.duracion || "",
+        })
       } catch (e) {
         console.error("[v0] Error trayendo el proyecto:", e)
       }
     })()
+    return () => { cancelado = true }
   }, [sala, proyecto])
 
   const cargar = useCallback(async () => {
@@ -97,7 +102,13 @@ export function ActividadesDocentes({
     setCargando(false)
   }, [sala])
 
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => {
+    // Limpiar antes de traer: si no, se ven las actividades de la sala anterior
+    setLista([])
+    setTexto("")
+    setError("")
+    cargar()
+  }, [cargar])
 
   async function enviar() {
     if (texto.trim().length < 15) {
@@ -360,14 +371,22 @@ export function ActividadesDocentes({
 
                   {abiertaEsta && (
                     <div className="px-3 pb-3 pt-1 bg-slate-50 border-t border-slate-200 space-y-2">
-                      {a.capacidad && (
+                      {/* Mismo orden que en el cronograma: Eje, Capacidad,
+                          Observa si, Contenidos, Desarrollo, Materiales.
+                          El objetivo no va: ya esta dicho en la capacidad. */}
+                      {(a as any).capacidad_dc && (
                         <p className="text-xs text-slate-700">
-                          <span className="font-semibold">Capacidad: </span>{a.capacidad}
+                          <span className="font-semibold">Capacidad: </span>{(a as any).capacidad_dc}
                         </p>
                       )}
-                      {a.objetivo && (
+                      {a.capacidad && (
+                        <p className="text-xs text-violet-800 bg-violet-50 border border-violet-200 rounded px-2 py-1">
+                          <span className="font-semibold">Observa si: </span>{a.capacidad}
+                        </p>
+                      )}
+                      {(a as any).contenidos && (
                         <p className="text-xs text-slate-600">
-                          <span className="font-semibold">Objetivo: </span>{a.objetivo}
+                          <span className="font-semibold">Contenidos: </span>{(a as any).contenidos}
                         </p>
                       )}
                       {a.desarrollo && (
