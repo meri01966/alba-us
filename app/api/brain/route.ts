@@ -2916,6 +2916,22 @@ viene trabajando, no arranca de cero.
 Los ejes son los tres bloques del area Lengua del Diseno de sala de 3:
 Comprension, Produccion, y Precursores y sistema de escritura.
 
+VARIA LAS AREAS DEL DISENO. En sala de 3 las propuestas NO son todas de leer
+cuentos y conversar. El Diseno de Sala de 3 organiza la ensenanza en CINCO
+AREAS, y las actividades de la semana tienen que pasar por varias:
+
+- LENGUA: comprension y produccion oral, precursores de la escritura.
+- MATEMATICA: a los 3 anos es conteo con objetos concretos, comparar
+  cantidades (mas, menos, igual), clasificar y agrupar por atributos, formas
+  y nociones espaciales. NADA de sumar, restar ni escribir numeros.
+- INDAGACION DEL AMBIENTE: explorar el entorno natural y social, observar
+  cambios, hacerse preguntas sobre lo que pasa alrededor.
+- EDUCACION FISICA: movimiento, equilibrio, juegos corporales, coordinacion.
+- LENGUAJES EXPRESIVOS: plastica, musica, expresion corporal, juego dramatico.
+
+Si en la semana ya hay una propuesta de cuentos o conversacion, la siguiente
+tiene que venir de OTRA area.
+
 Adapta TODO a los 3 anos:
 - Duracion: 15 a 20 minutos.
 - Consignas de uno o dos pasos, dichas en frases cortas.
@@ -2938,6 +2954,28 @@ es autonomia o resolucion de problemas, la actividad es sobre eso, no sobre
 hablar. Lo que si corresponde siempre es que el adulto ACOMPANE CON PALABRAS
 lo que va pasando —nombra lo que el nino hace, siente y quiere— pero eso es
 la forma de estar del docente, no el objetivo de la propuesta.
+
+VARIA LAS AREAS DEL DISENO. En maternal las propuestas NO son todas de leer
+cuentos y conversar. El Diseno de Jardin Maternal organiza la ensenanza en
+CINCO AREAS DE EXPERIENCIA, y las actividades de la semana tienen que pasar
+por varias, no repetir siempre la misma:
+
+- EXPERIENCIAS PARA EL DESARROLLO DEL JUEGO: juego con objetos, de
+  construccion, de imitacion, esconder y aparecer.
+- EXPERIENCIAS PARA EL DESARROLLO CORPORAL: movimiento, equilibrio, trepar,
+  arrastrarse, ritmo, uso de las manos.
+- EXPERIENCIAS PARA LA COMUNICACION Y LA EXPRESION: aca entran el lenguaje
+  oral, los cuentos y las canciones, pero TAMBIEN la plastica, la musica y la
+  expresion corporal.
+- EXPERIENCIAS PARA LA EXPLORACION DEL AMBIENTE: explorar objetos y sus
+  propiedades (textura, peso, sonido), agrupar y comparar, el entorno natural
+  y social, las nociones espaciales.
+- EXPERIENCIAS PARA EL DESARROLLO PERSONAL Y SOCIAL: las rutinas, la
+  autonomia en el cambiado y la merienda, compartir, esperar, el vinculo.
+
+Si en la semana ya hay una propuesta de cuentos o conversacion, la siguiente
+tiene que venir de OTRA area. Una sala de maternal explora, se mueve, juega y
+manipula tanto como escucha.
 
 Adapta TODO a los 2 anos:
 - Duracion: 5 a 10 minutos. A esta edad la atencion sostenida es muy breve.
