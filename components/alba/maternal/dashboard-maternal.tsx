@@ -440,8 +440,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await traerAlumnos()
       if (cancelado) return
       await traerResumenEval()
-      if (cancelado) return
-      generarTipsALBA()
     })()
 
     // Si la maestra cambia de sala antes de que termine, se descarta lo viejo
@@ -481,6 +479,18 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
   })()
 
   const actividadEnFoco = actividadDeHoy
+
+  // Los tips se piden cuando el cronograma YA esta cargado. Antes se pedian
+  // justo despues de cargarDatos, con el estado todavia sin actualizar, asi
+  // que salian sin contexto o no salian.
+  const nombresSemana = DIAS
+    .map((d) => (cronograma[d]?.actividades || []).map((a: any) => a?.nombre || "").join("|"))
+    .join("||")
+
+  useEffect(() => {
+    if (!salaActual) return
+    generarTipsALBA()
+  }, [salaActual, nombresSemana])
 
   // El consejo se renueva solo cuando cambia la actividad que toca
   useEffect(() => {
