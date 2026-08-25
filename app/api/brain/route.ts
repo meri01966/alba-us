@@ -2395,17 +2395,38 @@ Respondé SOLO con este JSON, sin backticks:
       try {
         const r = await generateText({ model: "openai/gpt-4o-mini", prompt: promptTips, maxOutputTokens: 900, temperature: 0.95 })
         const t = r.text.trim()
-        const leido = leerJSONAunqueVengaCortado(t)
-        // Si el JSON vino raro, se rescatan las lineas del texto igual:
-        // antes en ese caso la tarjeta quedaba vacia sin que nadie se enterara.
-        let tips: string[] = Array.isArray(leido?.tips) ? leido.tips : []
+        // El modelo puede contestar de varias formas y antes solo se entendia
+        // una: si venia distinta, la tarjeta quedaba vacia sin aviso. Ahora se
+        // aceptan todas y, como ultimo recurso, se rescatan las lineas del texto.
+        let tips: string[] = []
+
+        try {
+          const leido = leerJSONAunqueVengaCortado(t)
+          const crudo = Array.isArray(leido) ? leido : (leido?.tips ?? leido?.sugerencias ?? [])
+          if (Array.isArray(crudo)) {
+            tips = crudo
+              .map((x: any) => (typeof x === "string" ? x : x?.tip ?? x?.texto ?? x?.contenido ?? ""))
+              .map((x: string) => String(x).trim())
+              .filter((x: string) => x.length > 10)
+          }
+        } catch {
+          // sigue al rescate por lineas
+        }
+
         if (tips.length === 0) {
-          tips = t.split("\n")
-            .map((l: string) => l.replace(/^[-•\d.\s"]+/, "").replace(/"[,]?$/, "").trim())
-            .filter((l: string) => l.length > 25 && !l.includes("{") && !l.includes("}"))
+          tips = t
+            .split("\n")
+            .map((l: string) => l.replace(/^[\s\-•*\d.)\[\]"']+/, "").replace(/["',\]]+$/, "").trim())
+            .filter((l: string) => l.length > 20 && !/^\{|^\}|tips"?\s*:/.test(l))
             .slice(0, 3)
         }
-        console.log(`[v0] tips para "${sala}": ${tips.length} generados`)
+
+        tips = tips.slice(0, 3)
+        if (tips.length === 0) {
+          console.error(`[v0] tips vacios para "${sala}". El modelo devolvio:`, t.slice(0, 300))
+        } else {
+          console.log(`[v0] tips para "${sala}": ${tips.length} generados`)
+        }
         return NextResponse.json({ ok: true, tips })
       } catch (e) {
         console.error("[v0] Error generando tips:", e, "| sala:", sala)
