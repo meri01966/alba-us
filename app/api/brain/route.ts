@@ -2985,7 +2985,13 @@ Respondé SOLO con este JSON, sin backticks:
       // Se conserva para el fallback si la IA falla
       const EJES = ejesDeLaSemana.map((e) => (e === "EA" ? "Escritura" : e))
 
-      const prompt = `Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos) de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
+      const prompt = `${
+  nivel === "2"
+    ? "Eres ALBA, el asistente pedagogico de una SALA DE 2 ANOS del jardin maternal. Tu marco es el Diseno Curricular de Jardin Maternal y las CINCO CAPACIDADES. NO sos un asistente de alfabetizacion: a esta edad se aprende con el cuerpo, los objetos y el juego, no hablando."
+    : nivel === "3"
+    ? "Eres ALBA, el asistente pedagogico de una SALA DE 3 ANOS. Tu marco es el Diseno Curricular de Sala de 3 y sus cinco areas. NO sos un asistente de alfabetizacion: a esta edad se aprende con el cuerpo, los objetos y el juego."
+    : "Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos)"
+} de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
@@ -3012,6 +3018,15 @@ AREAS, y las actividades de la semana tienen que pasar por varias:
 
 Si en la semana ya hay una propuesta de cuentos o conversacion, la siguiente
 tiene que venir de OTRA area.
+
+EL CUERPO Y LOS OBJETOS SON EL METODO tambien a los 3 anos. La propuesta
+tiene a los chicos HACIENDO: buscar, construir, clasificar, trasladar,
+mezclar, plantar, embocar, dramatizar. Si la actividad se resuelve sentados
+en ronda conversando, esta mal planteada. La conversacion aparece MIENTRAS
+hacen o despues de hacer, nunca en lugar de hacer.
+MAL: "conversen sobre las plantas que conocen".
+BIEN: "salgan al patio con una lupa a buscar tres hojas distintas. Al volver,
+que cada uno cuente donde la encontro y como es."
 
 Adapta TODO a los 3 anos:
 - Duracion: 15 a 20 minutos.
@@ -3068,6 +3083,24 @@ Adapta TODO a los 2 anos:
 - El adulto pone en palabras lo que el nino hace, siente y quiere: ese es el motor del lenguaje.
 - No se espera un resultado: se observa un proceso.
 - Estamos a MITAD DE ANO: el grupo ya viene trabajando, no arranca de cero.
+
+PROHIBIDO EN SALA DE 2, ademas de lo aritmetico:
+- RIMAS, trabalenguas, adivinanzas, jugar con los sonidos de las palabras.
+  Eso es conciencia fonologica y es de sala de 4 y 5. A los 2 anos NO.
+- Conversar sentados en ronda como propuesta principal. A esta edad la
+  atencion sostenida hablando es de segundos: si la actividad se resuelve
+  charlando, esta mal planteada.
+- Cualquier propuesta donde los chicos esten quietos escuchando.
+
+EL CUERPO Y LOS OBJETOS SON EL METODO. Toda actividad de sala de 2 tiene a
+los chicos MOVIENDOSE Y MANIPULANDO: meter y sacar, llenar y vaciar, apilar,
+trasladar, esconder y buscar, embocar, arrastrar, trepar, amasar, chapotear,
+envolver, abrir y cerrar. El adulto acompana con palabras lo que va pasando,
+pero la propuesta es la accion, no la conversacion.
+MAL: "sentados en ronda, conversen sobre los animales que conocen".
+BIEN: "pone en una batea objetos de distintas texturas tapados con una tela.
+Que cada nino meta la mano, saque uno y lo lleve hasta el canasto del otro
+lado de la sala. Mientras lo hacen, nombra lo que sacaron."
 
 QUE CONTENIDO COGNITIVO ES APROPIADO A LOS 2 ANOS (textual del Diseno
 Curricular de Jardin Maternal, area Exploracion del ambiente): a esta edad
@@ -3233,7 +3266,7 @@ Para cada actividad elegi la que MAS se pone en juego, escrita exactamente asi:
 - Objetivo del proyecto: "${proyecto?.objetivoGeneral || "Aproximacion a la lengua escrita"}"
 - Semana del año: ${semanaAnio} (${semanaAnio >= 20 ? "segunda mitad del año — trabajar los 3 ejes completos CF/CT/Escritura" : "primera mitad — foco en CF y CT, aproximacion a Escritura"})
 
-MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
+${(nivel === "4" || nivel === "5") ? `MARCO CURRICULAR: DC CABA 2025 — Practicas del Lenguaje, Nivel Inicial Salas 4 y 5.
 Ejes de trabajo: CF (Conciencia Fonologica), Oralidad, CT (Comprension Textual), Escritura inicial.
 
 FUNDAMENTO METODOLOGICO — basate en la evidencia de los sistemas de alfabetizacion mas efectivos a nivel mundial y adaptalos al contexto argentino:
@@ -3248,6 +3281,7 @@ SECUENCIAS PROGRESIVAS (clave para NO repetir y para que cada semana AVANCE de n
 - Oralidad: escucha comprensiva → relato y descripcion → vocabulario y categorias → narracion estructurada (inicio-nudo-desenlace) → argumentacion y conversacion.
 - CT — Comprension Textual: anticipacion por paratexto → comprension literal → secuencia temporal → inferencias → reconstruccion y recontado.
 - Escritura inicial: trazos y nombre propio como modelo estable → escritura de palabras significativas → escritura de listas y rotulos → escritura de frases → produccion con sentido comunicativo.
+` : ""}
 
 REGLA DE PROGRESION: la progresion NO la decidis vos. El sistema ya calculo, con la evidencia real de esta sala, que eje y que paso corresponde a cada dia. Tu tarea es ESCRIBIR la actividad de ese paso, adaptada al proyecto del grupo. No cambies el eje ni el paso indicado.
 
@@ -3341,7 +3375,9 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
               eje: ejeFinal,
               paso: pasoNombre,
               pasoNumero: decidido ? decidido.indice + 1 : null,
-              alfabetizacion: true,
+              // En maternal la actividad NO es de alfabetizacion: trabaja la
+              // capacidad que le toca. Solo en jardin 4/5 va tildada.
+              alfabetizacion: nivel === "4" || nivel === "5",
               origen: "alba" as const,
             }
           }
@@ -3645,6 +3681,167 @@ function leerJSONAunqueVengaCortado(texto: string): any {
   if (dentroDeTexto) recorte += '"'
   while (pila.length > 0) recorte += pila.pop()
   return JSON.parse(recorte)
+}
+
+// ── EL MUESTRARIO ─────────────────────────────────────────────────────────
+// Actividades que la red YA VALIDO: funcionaron en 3 grupos distintos.
+// No se usan para copiar ni para mandar a otra sala: se le muestran a ALBA
+// como EJEMPLO DE COMO ESCRIBE UNA MAESTRA de esa edad, para que aprenda el
+// oficio en vez de seguir reglas. Un buen ejemplo ensena mas que diez
+// instrucciones, y permite sacar reglas del prompt en vez de sumarlas.
+//
+// Se recalcula cada 30 DIAS, no en cada sugerencia: es una consulta pesada
+// cuyo resultado cambia lento. Un mes es el ciclo natural de la planificacion
+// escolar y filtra solo el ruido de una semana floja.
+const DIAS_ENTRE_CALCULOS = 30
+const EJEMPLOS_MINIMOS = 3
+
+async function traerMuestrario(nivel: string, ejeQueVaAEscribir: string): Promise<any[]> {
+  try {
+    const supabase = getSupabase()
+
+    // Que tan viejo es lo guardado
+    const { data: guardado } = await supabase
+      .from("muestrario_alba")
+      .select("*")
+      .eq("nivel", nivel)
+      .order("calculado_at", { ascending: false })
+      .limit(50)
+
+    const ultimo = guardado?.[0]?.calculado_at
+    const diasDesde = ultimo
+      ? (Date.now() - new Date(ultimo).getTime()) / 86400000
+      : Infinity
+
+    if (diasDesde < DIAS_ENTRE_CALCULOS && guardado && guardado.length > 0) {
+      return guardado
+    }
+
+    // Toca recalcular: se rehace el muestrario de este nivel
+    await recalcularMuestrario(nivel)
+
+    const { data: fresco } = await supabase
+      .from("muestrario_alba")
+      .select("*")
+      .eq("nivel", nivel)
+      .order("veces_funciono", { ascending: false })
+      .limit(50)
+
+    return fresco || []
+  } catch (e) {
+    // Si algo falla, ALBA escribe como siempre: el muestrario nunca puede
+    // romper una sugerencia.
+    console.error("[v0] Error trayendo el muestrario:", e)
+    return []
+  }
+}
+
+async function recalcularMuestrario(nivel: string): Promise<void> {
+  try {
+    const supabase = getSupabase()
+
+    const { data: seg } = await supabase
+      .from("seguimiento")
+      .select("actividad, eje, estado, sala, fecha")
+      .limit(4000)
+
+    // Por actividad y eje, separando cada grupo: cuantas veces funciono
+    const porActividad: Record<string, Record<string, { total: number; verdes: number }>> = {}
+    ;(seg || []).forEach((r: any) => {
+      const nombre = String(r.actividad || "").trim().toLowerCase()
+      const eje = String(r.eje || "").trim().toUpperCase()
+      if (!nombre || !eje) return
+      if (!["CF", "CT", "O", "E", "EA"].includes(eje)) return
+      if (nivelDeSala(String(r.sala || "")) !== nivel) return
+      const clave = `${nombre}||${eje === "EA" ? "E" : eje}`
+      const grupo = `${String(r.sala || "")}||${String(r.fecha || "").slice(0, 10)}`
+      if (!porActividad[clave]) porActividad[clave] = {}
+      if (!porActividad[clave][grupo]) porActividad[clave][grupo] = { total: 0, verdes: 0 }
+      if (r.estado === "blue") return
+      porActividad[clave][grupo].total += 1
+      if (r.estado === "green") porActividad[clave][grupo].verdes += 1
+    })
+
+    // Las que superaron el umbral en 3 grupos distintos
+    const validadas: { clave: string; veces: number }[] = []
+    Object.entries(porActividad).forEach(([clave, grupos]) => {
+      let veces = 0
+      Object.values(grupos).forEach((g) => {
+        if (g.total >= 5 && Math.round((g.verdes / g.total) * 100) >= 70) veces += 1
+      })
+      if (veces >= 3) validadas.push({ clave, veces })
+    })
+
+    if (validadas.length === 0) return
+
+    // El texto completo sale del historial del cronograma
+    const { data: crono } = await supabase
+      .from("cronograma_jardin")
+      .select("sala, actividades")
+      .limit(400)
+
+    const filas: any[] = []
+    const vistos = new Set<string>()
+    ;(crono || []).forEach((fila: any) => {
+      if (nivelDeSala(String(fila.sala || "")) !== nivel) return
+      const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+      acts.forEach((a: any) => {
+        const nombre = String(a?.nombre || "").trim()
+        if (!nombre) return
+        const eje = String(a?.eje || "").trim().toUpperCase()
+        const clave = `${nombre.toLowerCase()}||${eje === "EA" ? "E" : eje}`
+        if (vistos.has(clave)) return
+        const v = validadas.find((x) => x.clave === clave)
+        if (!v) return
+        const desarrollo = String(a?.desarrollo || "").trim()
+        if (desarrollo.length < 40) return
+        vistos.add(clave)
+        filas.push({
+          nivel,
+          eje: eje === "EA" ? "E" : eje,
+          nombre,
+          desarrollo,
+          materiales: Array.isArray(a?.materiales) ? a.materiales.join(", ") : String(a?.materiales || ""),
+          veces_funciono: v.veces,
+        })
+      })
+    })
+
+    if (filas.length === 0) return
+
+    // Se reemplaza el muestrario de este nivel
+    await supabase.from("muestrario_alba").delete().eq("nivel", nivel)
+    await supabase.from("muestrario_alba").insert(filas)
+    console.log(`[v0] muestrario recalculado para nivel ${nivel}: ${filas.length} actividades validadas`)
+  } catch (e) {
+    console.error("[v0] Error recalculando el muestrario:", e)
+  }
+}
+
+// Arma el bloque de ejemplos para el prompt. Si no hay material suficiente
+// devuelve vacio y ALBA escribe exactamente como hoy.
+function bloqueEjemplos(muestrario: any[], ejeQueVaAEscribir: string): string {
+  if (!muestrario || muestrario.length < EJEMPLOS_MINIMOS) return ""
+
+  // A proposito se prefieren ejemplos de OTRO eje: si le muestro una del
+  // mismo eje y tema, copia el tema en vez de aprender el estilo.
+  const otros = muestrario.filter((m) => m.eje !== ejeQueVaAEscribir)
+  const elegidos = (otros.length >= EJEMPLOS_MINIMOS ? otros : muestrario).slice(0, 3)
+
+  return `
+COMO ESCRIBEN LAS MAESTRAS DE ESTA EDAD. Estas actividades fueron dadas en
+aulas reales y funcionaron con al menos tres grupos distintos. Miralas para
+aprender EL OFICIO: como se plantea una consigna, cuanto se explica, que
+materiales se usan de verdad, como se acompana a los chicos.
+
+NO copies el tema ni la estructura de estas: son de otro contenido. Lo que
+tenes que tomar es la FORMA de escribir una propuesta que de verdad se puede
+dar en una sala.
+
+${elegidos.map((m: any, i: number) => `Ejemplo ${i + 1} — "${m.nombre}"
+${m.desarrollo}
+Materiales: ${m.materiales || "los de la sala"}`).join("\n\n")}
+`
 }
 
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
