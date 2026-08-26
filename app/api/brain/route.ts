@@ -2928,10 +2928,70 @@ Respondé SOLO con este JSON, sin backticks:
         return Math.min(dias, 60) * 3 + (100 - promedioPorEje[e]) + Math.max(0, 20 - cobertura * 2)
       }
 
-      // Un eje por dia, sin repetir eje en la misma semana
-      const ejesDeLaSemana = [...ejesPosibles]
-        .sort((a, b) => prioridadSemanal(b) - prioridadSemanal(a))
-        .slice(0, diasArray.length)
+      // ── QUE EJES TRABAJA LA SEMANA ──────────────────────────────────────
+      //
+      // Dos problemas resueltos aca:
+      //
+      // 1. EL EMPATE. En una sala sin evaluaciones todos los ejes dan la misma
+      //    prioridad (250) y el ordenamiento conservaba el orden en que estan
+      //    escritos: como los primeros de maternal son los de lenguaje, salian
+      //    siempre esos tres. Por eso el desempate va al azar.
+      //
+      // 2. EL DESBALANCE. En el Diseno de maternal "Comunicacion y expresion"
+      //    es UN area, pero la partimos en cuatro ejes (uso de la lengua,
+      //    oraciones, vocabulario, escritura). Las otras cuatro areas tienen un
+      //    eje cada una. Elegir eje por eje le da al lenguaje cuatro chances
+      //    contra una. Por eso se elige por AREA: cada una pesa igual, como en
+      //    el Diseno, y la semana recorre areas distintas.
+      const AREA_DEL_EJE: Record<string, string> = {
+        // Sala de 2 — las cinco areas del DC de Jardin Maternal
+        USO: "comunicacion", ORA: "comunicacion", VOC: "comunicacion", ESC: "comunicacion",
+        JUE: "juego", COR: "corporal", AMB: "ambiente", PER: "personal",
+        // Sala de 3 — las cinco areas de su Diseno
+        COMP: "lengua", PROD: "lengua", PREC: "lengua",
+        MAT: "matematica", IND: "indagacion", EFI: "fisica", EXP: "expresivos",
+      }
+
+      const barajar = <T,>(xs: T[]): T[] => {
+        const a = [...xs]
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[a[i], a[j]] = [a[j], a[i]]
+        }
+        return a
+      }
+
+      // Esto aplica SOLO A MATERNAL. Jardin conserva exactamente la logica
+      // que ya tenia y funciona bien: sin barajado, sin agrupar por area.
+      const esMaternalEjes = nivel === "2" || nivel === "3"
+
+      const ejesDeLaSemana: string[] = []
+
+      if (!esMaternalEjes) {
+        // ── JARDIN 4/5: identico a como venia ────────────────────────────
+        const ordenJardin = [...ejesPosibles]
+          .sort((a, b) => prioridadSemanal(b) - prioridadSemanal(a))
+          .slice(0, diasArray.length)
+        ejesDeLaSemana.push(...ordenJardin)
+      } else {
+        const ordenados = barajar(ejesPosibles)
+          .sort((a, b) => prioridadSemanal(b) - prioridadSemanal(a))
+
+        // Un eje por area, en orden de prioridad. Si no alcanzan las areas,
+        // recien ahi se repite area con otro eje.
+        const areasUsadas = new Set<string>()
+        for (const e of ordenados) {
+          if (ejesDeLaSemana.length >= diasArray.length) break
+          const area = AREA_DEL_EJE[e] || e
+          if (areasUsadas.has(area)) continue
+          areasUsadas.add(area)
+          ejesDeLaSemana.push(e)
+        }
+        for (const e of ordenados) {
+          if (ejesDeLaSemana.length >= diasArray.length) break
+          if (!ejesDeLaSemana.includes(e)) ejesDeLaSemana.push(e)
+        }
+      }
       while (ejesDeLaSemana.length < diasArray.length) {
         ejesDeLaSemana.push(ejesPosibles[ejesDeLaSemana.length % ejesPosibles.length])
       }
