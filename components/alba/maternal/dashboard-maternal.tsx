@@ -868,6 +868,75 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     setOrdenando(false)
   }
 
+  // ── CHAT CON DIRECCION ──────────────────────────────────────────────
+  // Maternal no lo tenia: la maestra no podia escribirle a direccion ni ver
+  // lo que direccion le mandaba. Mismo circuito que en jardin.
+  const [chatAbierto, setChatAbierto] = useState(false)
+  const [mensajes, setMensajes] = useState<any[]>([])
+  const [nuevoMensaje, setNuevoMensaje] = useState("")
+  const [enviandoMensaje, setEnviandoMensaje] = useState(false)
+
+  async function traerMensajes() {
+    if (!salaActual) return
+    try {
+      const r = await fetch(`/api/mensajes-directora?sala=${encodeURIComponent(salaActual)}`, { cache: "no-store" })
+      const d = await r.json()
+      if (d?.ok) setMensajes(d.mensajes || [])
+    } catch (e) {
+      console.error("[v0] Error trayendo mensajes:", e)
+    }
+  }
+
+  useEffect(() => {
+    if (!salaActual) return
+    setMensajes([])
+    traerMensajes()
+    // Se revisa cada 30 segundos, como en jardin
+    const t = setInterval(traerMensajes, 30000)
+    return () => clearInterval(t)
+  }, [salaActual])
+
+  const mensajesSinLeer = mensajes.filter((m: any) => !m.leido && m.autor !== salaActual).length
+
+  async function enviarMensaje() {
+    if (!nuevoMensaje.trim() || !salaActual) return
+    setEnviandoMensaje(true)
+    try {
+      const r = await fetch("/api/mensajes-directora", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala: salaActual, mensaje: nuevoMensaje.trim(), autor: salaActual }),
+      })
+      const d = await r.json()
+      if (d?.ok) {
+        setNuevoMensaje("")
+        await traerMensajes()
+      }
+    } catch (e) {
+      console.error("[v0] Error enviando el mensaje:", e)
+    }
+    setEnviandoMensaje(false)
+  }
+
+  async function marcarLeidos() {
+    const pendientes = mensajes.filter((m: any) => !m.leido && m.autor !== salaActual)
+    if (pendientes.length === 0) return
+    try {
+      await Promise.all(
+        pendientes.map((m: any) =>
+          fetch("/api/mensajes-directora", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: m.id }),
+          })
+        )
+      )
+      await traerMensajes()
+    } catch (e) {
+      console.error("[v0] Error marcando leidos:", e)
+    }
+  }
+
   // Marca una actividad como realizada. Un toque y listo: es lo que le dice a
   // ALBA que ese paso se trabajo y puede proponer el siguiente.
   async function marcarRealizada(dia: string, idx: number) {
@@ -3067,6 +3136,86 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                 <p className={`text-sm text-center ${avisoEval.startsWith("No se pudo") ? "text-red-800" : "text-green-800"}`}>{avisoEval}</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── CHAT CON DIRECCION ────────────────────────────────────────── */}
+      {!chatAbierto && (
+        <button
+          type="button"
+          onClick={() => { setChatAbierto(true); marcarLeidos() }}
+          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center transition-colors"
+          title="Escribirle a Direccion"
+        >
+          <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
+          </svg>
+          {mensajesSinLeer > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
+              {mensajesSinLeer}
+            </span>
+          )}
+        </button>
+      )}
+
+      {chatAbierto && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setChatAbierto(false)}>
+          <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-green-500 px-5 py-4 rounded-t-2xl flex items-center justify-between gap-3">
+              <div>
+                <p className="text-white font-bold text-base">Mensaje a Direccion</p>
+                <p className="text-white/70 text-xs mt-0.5">Direccion lo vera en su panel</p>
+              </div>
+              <button type="button" onClick={() => setChatAbierto(false)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-slate-50">
+              {mensajes.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8">
+                  Todavia no hay mensajes. Escribile a Direccion lo que necesites.
+                </p>
+              ) : (
+                mensajes.map((m: any) => {
+                  const mio = m.autor === salaActual
+                  return (
+                    <div key={m.id} className={`flex ${mio ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-xl px-3 py-2 ${mio ? "bg-green-100 border border-green-200" : "bg-white border border-slate-200"}`}>
+                        <p className={`text-[11px] font-bold mb-0.5 ${mio ? "text-green-800" : "text-blue-700"}`}>
+                          {mio ? "Vos" : "Direccion"}
+                        </p>
+                        <p className="text-sm text-slate-800 leading-snug">{m.mensaje}</p>
+                        {m.created_at && (
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {new Date(m.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 bg-white rounded-b-2xl">
+              <textarea
+                value={nuevoMensaje}
+                onChange={(e) => setNuevoMensaje(e.target.value)}
+                placeholder="Escribi tu mensaje para Direccion..."
+                rows={3}
+                className="w-full text-sm p-3 border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-1 focus:ring-green-400"
+              />
+              <button
+                type="button"
+                onClick={enviarMensaje}
+                disabled={enviandoMensaje || !nuevoMensaje.trim()}
+                className="mt-2 w-full py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold text-sm disabled:opacity-40 transition-colors"
+              >
+                {enviandoMensaje ? "Enviando..." : "Enviar"}
+              </button>
+            </div>
           </div>
         </div>
       )}
