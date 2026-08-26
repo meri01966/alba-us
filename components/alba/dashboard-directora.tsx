@@ -161,6 +161,9 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   const [resumenSalas, setResumenSalas] = useState<Record<string, any>>({})
   const [totalesReales, setTotalesReales] = useState<{ alumnos?: number; evaluaciones?: number }>({})
   const [registroMaternal, setRegistroMaternal] = useState<Record<string, any>>({})
+  // Seguimiento completo de la sala de maternal que la directora esta mirando
+  const [sintesisMaternal, setSintesisMaternal] = useState<any>(null)
+  const [relatoMaternalDir, setRelatoMaternalDir] = useState<any>(null)
   const [chatSala, setChatSala] = useState<string | null>(null)
   const [nuevoMensaje, setNuevoMensaje] = useState("")
   const [enviandoMensaje, setEnviandoMensaje] = useState(false)
@@ -375,6 +378,8 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     setModalTipo(tipo)
     setLoadingModal(true)
     setSintesisData(null)
+    setSintesisMaternal(null)
+    setRelatoMaternalDir(null)
     setPlanificacionData(null)
     setCronogramaActivoData(null)
     setHistorialSemanas([])
@@ -656,6 +661,22 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     ) : (
                       <p className="text-[11px] text-red-600 font-semibold">Sin registros todavia</p>
                     )
+                  )}
+
+                  {/* Maternal tambien muestra si la sala esta planificando,
+                      igual que jardin: sin eso la directora no sabe si la
+                      maestra esta usando ALBA. */}
+                  {esMateral(sala) && resumenSalas[sala] && (
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5">
+                      <span>
+                        <span className="font-semibold text-foreground">{resumenSalas[sala].diasPlanificados}</span> dias planificados
+                      </span>
+                      {registroMaternal[sala]?.pendientesDeEvaluar > 0 && (
+                        <span>
+                          <span className="font-semibold text-amber-600">{registroMaternal[sala].pendientesDeEvaluar}</span> sin evaluar
+                        </span>
+                      )}
+                    </div>
                   )}
 
                   {/* Estado de la sala en conteos, sin porcentajes */}
@@ -953,8 +974,97 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                   {modalTipo === "sintesis" && (
                     <div className="space-y-4">
                       {esMateral(modalSala) ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-blue-800">La síntesis grupal no está disponible para Maternal porque aún no se realizan evaluaciones de alumnos en este nivel.</p>
+                        <div className="space-y-4">
+                          {/* Lo mismo que ve la maestra: como viene el grupo por
+                              capacidad, el relato del avance y cada chico. */}
+                          {!sintesisMaternal ? (
+                            <p className="text-sm text-muted-foreground text-center py-6">
+                              Todavia no hay registros en esta sala.
+                            </p>
+                          ) : (
+                            <>
+                              {relatoMaternalDir?.contenido && (
+                                <div className="rounded-lg border border-teal-200 bg-teal-50/60 p-4 space-y-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-wide text-teal-700">
+                                    Como viene el grupo
+                                  </p>
+                                  {relatoMaternalDir.contenido.comoViene && (
+                                    <p className="text-sm text-slate-800 leading-relaxed">{relatoMaternalDir.contenido.comoViene}</p>
+                                  )}
+                                  {relatoMaternalDir.contenido.enQueEsta && (
+                                    <p className="text-sm text-slate-800 leading-relaxed">{relatoMaternalDir.contenido.enQueEsta}</p>
+                                  )}
+                                  {relatoMaternalDir.contenido.queSigue && (
+                                    <p className="text-sm text-slate-700 leading-relaxed border-l-4 border-teal-500 pl-3">
+                                      {relatoMaternalDir.contenido.queSigue}
+                                    </p>
+                                  )}
+                                  {relatoMaternalDir.fecha && (
+                                    <p className="text-[10px] text-muted-foreground">Registrado el {relatoMaternalDir.fecha}</p>
+                                  )}
+                                </div>
+                              )}
+
+                              <div>
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                                  Las cinco capacidades
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {(sintesisMaternal.porCapacidad || []).map((c: any, i: number) => (
+                                    <div
+                                      key={c.key}
+                                      className={`rounded-lg border border-slate-200 bg-white px-3 py-2.5 ${i === 4 ? "sm:col-span-2" : ""}`}
+                                    >
+                                      <p className="text-[11px] font-semibold text-slate-700">{c.nombre}</p>
+                                      {c.evaluada ? (
+                                        <>
+                                          <p className="text-[13px] text-slate-800 leading-snug mt-0.5">{c.indicador}</p>
+                                          <p className="text-xs text-slate-600 mt-1">
+                                            <span className="font-semibold text-green-700">{c.yaLoHacen}</span> ya lo hacen
+                                            {c.empezando > 0 && <> · <span className="font-semibold text-amber-600">{c.empezando}</span> con ayuda</>}
+                                            {c.acompanar > 0 && <> · <span className="font-semibold text-red-600">{c.acompanar}</span> todavia no</>}
+                                          </p>
+                                          {c.necesitanAcompanamiento?.length > 0 && (
+                                            <p className="text-[11px] text-red-600 mt-1">
+                                              Necesita acompanamiento: {c.necesitanAcompanamiento.join(", ")}
+                                            </p>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <p className="text-[11px] text-muted-foreground italic mt-1">Todavia sin evaluar</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {(sintesisMaternal.porAlumno || []).length > 0 && (
+                                <div>
+                                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                                    Cada nino
+                                  </p>
+                                  <div className="space-y-1.5">
+                                    {sintesisMaternal.porAlumno.map((a: any) => (
+                                      <div key={a.id} className="border-b border-slate-100 pb-1.5">
+                                        <p className="text-sm font-semibold text-slate-800">{a.nombre}</p>
+                                        {a.capacidades?.length > 0 ? (
+                                          <p className="text-[11px] text-slate-600 mt-0.5">
+                                            {a.capacidades
+                                              .map((c: any) =>
+                                                `${c.nombre}: ${c.estado === "ya_lo_hace" ? "ya lo hace" : c.estado === "empezando" ? "con ayuda" : "todavia no"}`
+                                              )
+                                              .join(" · ")}
+                                          </p>
+                                        ) : (
+                                          <p className="text-[11px] text-muted-foreground italic mt-0.5">Sin evaluaciones</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       ) : sintesisData && (
                         <>
