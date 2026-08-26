@@ -389,6 +389,27 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     
     const base = typeof window !== "undefined" ? window.location.origin : ""
     
+    // Maternal tiene su propio seguimiento: por capacidades, no por ejes de
+    // alfabetizacion. Se traen los mismos datos que ve la maestra.
+    if (tipo === "sintesis" && esMateral(sala)) {
+      try {
+        const res = await fetch(`${base}/api/registro-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        const data = await res.json()
+        if (data?.ok) setSintesisMaternal(data)
+      } catch (e) {
+        console.error("[v0] Error trayendo el seguimiento de maternal:", e)
+      }
+      try {
+        const r = await fetch(`${base}/api/relatos-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
+        const d = await r.json()
+        if (d?.ok) setRelatoMaternalDir(d.ultimo || null)
+      } catch (e) {
+        console.error("[v0] Error trayendo el relato de maternal:", e)
+      }
+      setLoadingModal(false)
+      return
+    }
+
     if (tipo === "sintesis") {
       try {
         const res = await fetch(`${base}/api/sintesis-grupal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
