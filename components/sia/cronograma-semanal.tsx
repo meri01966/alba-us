@@ -453,6 +453,27 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
 
   // Mover una actividad al dia anterior o al siguiente.
   // La maestra ordena la semana como le queda mejor sin tener que rehacer nada.
+  // Decide si se muestra la flecha. Dos reglas, las que definio la escuela:
+  // 1. Una actividad YA EVALUADA no se mueve: su evidencia quedo con esa fecha.
+  // 2. No se mueve a un dia que YA PASO. Si hoy es martes, nada vuelve al lunes.
+  //    Hacia adelante siempre se puede.
+  function puedeMover(dia: string, act: any, direccion: -1 | 1): boolean {
+    if ((act?.nombre || "").trim() === "") return false
+    if (act?.evaluada === true) return false
+
+    const i = DIAS.indexOf(dia as (typeof DIAS)[number])
+    const destino = DIAS[i + direccion]
+    if (!destino) return false
+
+    if (direccion === 1) return true
+
+    // Hacia atras: solo si el dia destino todavia no paso
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+    const fechaDestino = cronograma[destino]?.fecha
+    if (!fechaDestino) return true
+    return fechaDestino >= hoy
+  }
+
   async function moverActividad(dia: string, idx: number, direccion: -1 | 1) {
     const i = DIAS.indexOf(dia as (typeof DIAS)[number])
     const destino = DIAS[i + direccion]
@@ -807,14 +828,16 @@ export function CronogramaSemanal({ isOpen, onClose, sala, students = [] }: Cron
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                  {/* No se mueve nada de un dia ya cerrado: esa evidencia
-                                      quedo guardada con esa fecha. */}
-                                  {!cronograma[dia]?.diaFinalizado && DIAS.indexOf(dia as (typeof DIAS)[number]) > 0 && (act.nombre || "").trim() !== "" && (
+                                  {/* Se puede mover mientras la actividad NO este
+                                      evaluada. Hacia atras, solo si ese dia
+                                      todavia no paso: no se manda evidencia a
+                                      una fecha que ya quedo cerrada. */}
+                                  {puedeMover(dia, act, -1) && (
                                     <button type="button" title="Mover al dia anterior" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, -1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
                                       <ChevronLeft className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>
                                   )}
-                                  {!cronograma[dia]?.diaFinalizado && DIAS.indexOf(dia as (typeof DIAS)[number]) < DIAS.length - 1 && (act.nombre || "").trim() !== "" && (
+                                  {puedeMover(dia, act, 1) && (
                                     <button type="button" title="Mover al dia siguiente" onClick={(e) => { e.stopPropagation(); moverActividad(dia, idx, 1) }} className="flex items-center justify-center w-5 h-5 rounded border border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200 hover:border-violet-400 transition-colors">
                                       <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
                                     </button>
