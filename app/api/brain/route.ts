@@ -3503,6 +3503,29 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
           const pasoNombre = decidido ? decidido.paso.titulo : (s.nivelSecuencia || "")
           // Se separan aca: la IA los mezcla seguido
           const limpio = separarCapacidadYObservaSi(s.capacidades, (s as any).capacidadDC)
+
+          // ── RED DE SEGURIDAD PARA MATERNAL ──────────────────────────────
+          // El modelo tiene la edad y el marco en el prompt, pero asocia igual:
+          // ve "verduleria" y escribe "negociar precios". Como ese campo tiene
+          // forma fija, el codigo lo revisa. Si trae vocabulario que no va a
+          // esa edad, se reemplaza por el OBJETIVO DEL PASO, que ya esta
+          // escrito desde el Diseno. Si no, se deja lo que escribio la IA:
+          // asi hay variedad cuando acierta y un piso que no se rompe.
+          if (esMaternal && decidido?.paso) {
+            const capNombre = String(limpio.capacidadDC || "").split(":")[0].trim()
+            let loQuePoneEnJuego = String(limpio.capacidadDC || "").split(":").slice(1).join(":").trim()
+
+            if (!loQuePoneEnJuego || tieneVocabularioFueraDeEdad(loQuePoneEnJuego, nivel)) {
+              loQuePoneEnJuego = String(decidido.paso.objetivo || "").trim()
+            }
+            if (capNombre && loQuePoneEnJuego) {
+              limpio.capacidadDC = `${capNombre}: ${ajustarVocabularioDeEdad(loQuePoneEnJuego, nivel)}`
+            }
+
+            if (tieneVocabularioFueraDeEdad(limpio.capacidades, nivel)) {
+              limpio.capacidades = ajustarVocabularioDeEdad(limpio.capacidades, nivel)
+            }
+          }
           return {
             dia: diasArray[idx] || s.dia,
             actividad: {
@@ -4007,6 +4030,54 @@ const NOMBRES_CAPACIDAD = [
 // lo que siente" dentro del "Observa si" y deja la capacidad vacia. El prompt
 // se lo prohibe pero igual pasa, asi que el codigo lo separa: es determinista y
 // no depende de que el modelo obedezca.
+// Palabras que NO corresponden a maternal. El modelo las asocia solo: ve
+// "verduleria" y completa con "negociar precios", ve "contar" y completa con
+// "sumar". Tiene el marco y la edad en el prompt, pero asociar es lo que hace.
+// Por eso el corte va en codigo: es determinista y no se le escapa.
+//
+// OJO: a los 2 y 3 anos SI se trabaja la cantidad, pero con otras palabras y
+// sobre objetos reales: AGREGAR y QUITAR, poner mas, sacar, ver que quedan
+// menos. Lo que no va es el vocabulario del calculo.
+const PALABRAS_FUERA_DE_EDAD: { palabra: RegExp; reemplazo?: string }[] = [
+  { palabra: /\bsumar\b/gi, reemplazo: "agregar" },
+  { palabra: /\bsuma\b/gi, reemplazo: "agregado" },
+  { palabra: /\brestar\b/gi, reemplazo: "quitar" },
+  { palabra: /\bresta\b/gi, reemplazo: "quitado" },
+  { palabra: /\bnegociar\b/gi },
+  { palabra: /\bregatear\b/gi },
+  { palabra: /\bprecios?\b/gi },
+  { palabra: /\bdinero\b/gi },
+  { palabra: /\bleer\b/gi },
+  { palabra: /\bescribir\b/gi },
+  { palabra: /\bdeletrear\b/gi },
+  { palabra: /\bsilabas?\b/gi },
+  { palabra: /\bfonemas?\b/gi },
+  { palabra: /\brimas?\b/gi },
+]
+
+// Devuelve true si el texto trae algo que no corresponde a esa edad.
+function tieneVocabularioFueraDeEdad(texto: string, nivel: string): boolean {
+  if (nivel !== "2" && nivel !== "3") return false
+  return PALABRAS_FUERA_DE_EDAD.some(({ palabra }) => {
+    palabra.lastIndex = 0
+    return palabra.test(String(texto || ""))
+  })
+}
+
+// Cambia el vocabulario del calculo por el de la accion, que es como se
+// trabaja la cantidad a esta edad.
+function ajustarVocabularioDeEdad(texto: string, nivel: string): string {
+  if (nivel !== "2" && nivel !== "3") return texto
+  let t = String(texto || "")
+  PALABRAS_FUERA_DE_EDAD.forEach(({ palabra, reemplazo }) => {
+    if (reemplazo) {
+      palabra.lastIndex = 0
+      t = t.replace(palabra, reemplazo)
+    }
+  })
+  return t
+}
+
 function separarCapacidadYObservaSi(capacidades: string, capacidadDC: string): { capacidades: string; capacidadDC: string } {
   let obs = String(capacidades || "").trim()
   let cap = String(capacidadDC || "").trim()
