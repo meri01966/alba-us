@@ -258,12 +258,20 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { id, eje, estado, elegida } = body
+    const { id, eje, estado, elegida, nombre, desarrollo, materiales } = body
 
     if (!id) return NextResponse.json({ ok: false, error: "Falta id" }, { status: 400 })
 
     const supabase = getSupabase()
     const cambios: Record<string, unknown> = {}
+
+    // La maestra puede ajustar lo suyo: si ALBA propuso ensalada de frutas y
+    // ella prefiere trufas de avena, lo cambia. El area, la capacidad y el
+    // "Observa si" NO se tocan: los decide la secuencia y sostienen la
+    // evaluacion.
+    if (typeof nombre === "string" && nombre.trim()) cambios.nombre = nombre.trim()
+    if (typeof desarrollo === "string") cambios.desarrollo = desarrollo.trim() || null
+    if (typeof materiales === "string") cambios.materiales = materiales.trim() || null
 
     if (typeof eje === "string") {
       const ejeOk = normalizarEje(eje)
