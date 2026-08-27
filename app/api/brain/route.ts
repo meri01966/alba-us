@@ -3481,14 +3481,16 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
           const ejeFinal = decidido ? (decidido.eje === "EA" ? "Escritura" : decidido.eje) : s.eje
           const nombreEjeFinal = NOMBRE_EJE_LARGO[String(decidido?.eje || "")] || ejeFinal
           const pasoNombre = decidido ? decidido.paso.titulo : (s.nivelSecuencia || "")
+          // Se separan aca: la IA los mezcla seguido
+          const limpio = separarCapacidadYObservaSi(s.capacidades, (s as any).capacidadDC)
           return {
             dia: diasArray[idx] || s.dia,
             actividad: {
               nombre: s.nombre,
-              capacidades: s.capacidades,
+              capacidades: limpio.capacidades,
               // Capacidad del Diseno Curricular de CABA (cinco posibles).
               // Permite agrupar despues las actividades por capacidad.
-              capacidadDC: (s as any).capacidadDC || "",
+              capacidadDC: limpio.capacidadDC,
               // Clave de la capacidad en maternal (COM/AUT/RES/COL/REF):
               // la usa la tarjeta del cronograma para su color
               capacidadKey: decidido && esMaternal ? decidido.eje : "",
@@ -3499,7 +3501,7 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
               eje: ejeFinal,
               // El nombre legible del eje: en maternal "eje" es una clave como
               // "JUE" o "COR", que no le dice nada a la maestra.
-              ejeNombre: nombreEjeFinal,
+              ejeNombre: nombreEjeFinal || ejeFinal || "",
               paso: pasoNombre,
               pasoNumero: decidido ? decidido.indice + 1 : null,
               // En maternal la actividad NO es de alfabetizacion: trabaja la
@@ -3969,6 +3971,52 @@ ${elegidos.map((m: any, i: number) => `Ejemplo ${i + 1} — "${m.nombre}"
 ${m.desarrollo}
 Materiales: ${m.materiales || "los de la sala"}`).join("\n\n")}
 `
+}
+
+// Las cinco capacidades del Diseno, para reconocerlas cuando la IA las mete
+// donde no van.
+const NOMBRES_CAPACIDAD = [
+  "Autonomia para aprender", "Autonomía para aprender",
+  "Comunicacion", "Comunicación",
+  "Pensamiento reflexivo y critico", "Pensamiento reflexivo y crítico",
+  "Resolucion de problemas", "Resolución de problemas",
+  "Compromiso y colaboracion", "Compromiso y colaboración",
+]
+
+// El modelo confunde seguido dos campos parecidos: mete "Comunicacion: expresa
+// lo que siente" dentro del "Observa si" y deja la capacidad vacia. El prompt
+// se lo prohibe pero igual pasa, asi que el codigo lo separa: es determinista y
+// no depende de que el modelo obedezca.
+function separarCapacidadYObservaSi(capacidades: string, capacidadDC: string): { capacidades: string; capacidadDC: string } {
+  let obs = String(capacidades || "").trim()
+  let cap = String(capacidadDC || "").trim()
+
+  // "Comunicacion: expresa lo que siente" dentro del Observa si
+  for (const nombre of NOMBRES_CAPACIDAD) {
+    const prefijo = nombre + ":"
+    if (obs.toLowerCase().startsWith(prefijo.toLowerCase())) {
+      const resto = obs.slice(prefijo.length).trim()
+      if (!cap) cap = `${nombre}: ${resto}`
+      obs = resto
+      break
+    }
+  }
+
+  // Al reves: la accion observable quedo en el campo de la capacidad
+  if (cap && !cap.includes(":")) {
+    const esSoloNombre = NOMBRES_CAPACIDAD.some((n) => n.toLowerCase() === cap.toLowerCase())
+    if (!esSoloNombre && !obs) {
+      obs = cap
+      cap = ""
+    }
+  }
+
+  // El Observa si nunca lleva esas palabras adentro
+  obs = obs.replace(/^observ[aá]\s+si:?\s*/i, "").trim()
+  // Ni termina en punto: es una accion, no una oracion
+  obs = obs.replace(/\.$/, "")
+
+  return { capacidades: obs, capacidadDC: cap }
 }
 
 async function incorporarActividadDocente(sugerencias: any[], sala: string): Promise<any[]> {
