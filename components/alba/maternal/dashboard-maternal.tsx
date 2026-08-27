@@ -1406,6 +1406,24 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
           
           {/* Acciones del header */}
           <div className="flex items-center gap-2">
+            {/* Chat con Direccion, en la barra como en jardin */}
+            <button
+              type="button"
+              onClick={() => { setChatAbierto(true); marcarLeidos() }}
+              className="relative flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 rounded-xl transition-colors"
+              title="Escribirle a Direccion"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
+              </svg>
+              <span className="text-sm font-medium hidden sm:inline">Direccion</span>
+              {mensajesSinLeer > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-[#1e3a5f]">
+                  {mensajesSinLeer}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={abrirAvance}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
@@ -1541,7 +1559,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                   )}
                   {((actividadEnFoco as any).ejeNombre || (actividadEnFoco as any).eje) && (
                     <p className="text-sm text-slate-700 mt-2">
-                      <span className="font-semibold">Eje: </span>
+                      <span className="font-semibold">Area: </span>
                       {(actividadEnFoco as any).ejeNombre || (actividadEnFoco as any).eje}
                     </p>
                   )}
@@ -2141,7 +2159,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                           {/* Eje, capacidad y despues el indicador a observar */}
                           {((sug.actividad as any).ejeNombre || sug.actividad.eje) && (
                             <p className="text-xs text-slate-700 mb-1">
-                              <span className="font-semibold">Eje: </span>
+                              <span className="font-semibold">Area: </span>
                               {(sug.actividad as any).ejeNombre || sug.actividad.eje}
                             </p>
                           )}
@@ -2279,11 +2297,11 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             {((act as any).capacidadDC || act.capacidades || act.contenidos || act.materiales) && (
                               <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-2 py-1.5 space-y-1">
                                 {(act as any).eje && (
-                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Eje: </span>{(act as any).eje}</p>
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Area: </span>{(act as any).eje}</p>
                                 )}
                                 {((act as any).ejeNombre || (act as any).eje) && (
                                 <p className="text-xs text-slate-700 mb-1">
-                                  <span className="font-semibold">Eje: </span>
+                                  <span className="font-semibold">Area: </span>
                                   {(act as any).ejeNombre || (act as any).eje}
                                 </p>
                               )}
@@ -3138,25 +3156,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             )}
           </div>
         </div>
-      )}
-
-      {/* ── CHAT CON DIRECCION ────────────────────────────────────────── */}
-      {!chatAbierto && (
-        <button
-          type="button"
-          onClick={() => { setChatAbierto(true); marcarLeidos() }}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center transition-colors"
-          title="Escribirle a Direccion"
-        >
-          <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
-          </svg>
-          {mensajesSinLeer > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
-              {mensajesSinLeer}
-            </span>
-          )}
-        </button>
       )}
 
       {chatAbierto && (
