@@ -171,6 +171,31 @@ export function ActividadesDocentes({
   // el cronograma y las tres que caen en lunes, martes y viernes son las que
   // se evaluan. La pantalla cambia al instante y el guardado viaja despues,
   // para que con internet mala no haya espera.
+  // Se guarda al salir del campo, sin boton: menos cosas que tocar. El aviso
+  // "Guardado" aparece un segundo y se va solo, para que sepa que quedo.
+  const [guardadoOk, setGuardadoOk] = useState<string | null>(null)
+
+  async function guardarEdicion(id: string, campo: string, valor: string, anterior: string) {
+    if (valor.trim() === (anterior || "").trim()) return   // no cambio nada
+    try {
+      const r = await fetch("/api/actividades-docentes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, [campo]: valor }),
+      })
+      const d = await r.json()
+      if (d?.ok) {
+        setLista((prev: ActividadDocente[]) =>
+          prev.map((x: ActividadDocente) => (x.id === id ? { ...x, [campo]: valor } : x))
+        )
+        setGuardadoOk(id)
+        setTimeout(() => setGuardadoOk(null), 2000)
+      }
+    } catch (e) {
+      console.error("[v0] Error guardando el cambio:", e)
+    }
+  }
+
   async function marcarSemana(id: string, valor: boolean) {
     const antes = lista
     setLista((prev: ActividadDocente[]) =>
@@ -389,15 +414,37 @@ export function ActividadesDocentes({
                           <span className="font-semibold">Contenidos: </span>{(a as any).contenidos}
                         </p>
                       )}
-                      {a.desarrollo && (
-                        <p className="text-xs text-slate-600 whitespace-pre-line">
-                          <span className="font-semibold">Desarrollo: </span>{a.desarrollo}
-                        </p>
-                      )}
-                      {a.materiales && (
-                        <p className="text-xs text-slate-600">
-                          <span className="font-semibold">Materiales: </span>{a.materiales}
-                        </p>
+                      {/* El desarrollo y los materiales SE PUEDEN EDITAR: si
+                          ALBA propuso ensalada de frutas y ella prefiere
+                          trufas de avena, lo cambia. Guarda sola al salir del
+                          campo, sin boton. El area, la capacidad y el
+                          "Observa si" no se tocan: los decide la secuencia. */}
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                          Desarrollo
+                        </label>
+                        <textarea
+                          defaultValue={a.desarrollo || ""}
+                          onBlur={(e) => guardarEdicion(a.id, "desarrollo", e.target.value, a.desarrollo || "")}
+                          placeholder="Que van a hacer"
+                          rows={5}
+                          className="w-full text-xs p-2 border border-slate-200 rounded resize-y focus:outline-none focus:ring-1 focus:ring-violet-300 leading-relaxed mt-0.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                          Materiales
+                        </label>
+                        <textarea
+                          defaultValue={a.materiales || ""}
+                          onBlur={(e) => guardarEdicion(a.id, "materiales", e.target.value, a.materiales || "")}
+                          placeholder="Que hace falta"
+                          rows={2}
+                          className="w-full text-xs p-2 border border-slate-200 rounded resize-y focus:outline-none focus:ring-1 focus:ring-violet-300 mt-0.5"
+                        />
+                      </div>
+                      {guardadoOk === a.id && (
+                        <p className="text-[11px] text-green-700 font-semibold">Guardado</p>
                       )}
 
                       {/* El eje lo decide ALBA: la docente no necesita corregirlo */}
