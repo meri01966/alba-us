@@ -2943,6 +2943,19 @@ Respondé SOLO con este JSON, sin backticks:
       //    eje cada una. Elegir eje por eje le da al lenguaje cuatro chances
       //    contra una. Por eso se elige por AREA: cada una pesa igual, como en
       //    el Diseno, y la semana recorre areas distintas.
+      // Como se LLAMA el area en el Diseno. Es lo que ve la maestra.
+      const AREA_DEL_EJE_NOMBRE: Record<string, string> = {
+        // Sala de 2 — las cinco areas del DC de Jardin Maternal
+        USO: "Comunicacion y expresion", ORA: "Comunicacion y expresion",
+        VOC: "Comunicacion y expresion", ESC: "Comunicacion y expresion",
+        JUE: "Desarrollo del juego", COR: "Desarrollo corporal",
+        AMB: "Exploracion del ambiente", PER: "Desarrollo personal y social",
+        // Sala de 3 — las cinco areas de su Diseno
+        COMP: "Lengua", PROD: "Lengua", PREC: "Lengua",
+        MAT: "Matematica", IND: "Indagacion del ambiente",
+        EFI: "Educacion Fisica", EXP: "Lenguajes expresivos",
+      }
+
       const AREA_DEL_EJE: Record<string, string> = {
         // Sala de 2 — las cinco areas del DC de Jardin Maternal
         USO: "comunicacion", ORA: "comunicacion", VOC: "comunicacion", ESC: "comunicacion",
@@ -3479,7 +3492,14 @@ Sé creativa, variada, pedagógicamente fundamentada. No repitas actividades que
           // El eje y el paso los impone el sistema: si la IA devolvio otra cosa, se ignora.
           const decidido = pasosDeLaSemana[idx]
           const ejeFinal = decidido ? (decidido.eje === "EA" ? "Escritura" : decidido.eje) : s.eje
-          const nombreEjeFinal = NOMBRE_EJE_LARGO[String(decidido?.eje || "")] || ejeFinal
+          // En MATERNAL se planifica por AREAS DEL DISENO, no por ejes de
+          // alfabetizacion. El eje es una clave interna para elegir el paso;
+          // lo que ve la maestra es el area: "Exploracion del ambiente",
+          // "Desarrollo corporal", "Comunicacion y expresion".
+          const claveEje = String(decidido?.eje || "")
+          const nombreEjeFinal = esMaternal
+            ? (AREA_DEL_EJE_NOMBRE[claveEje] || NOMBRE_EJE_LARGO[claveEje] || ejeFinal)
+            : (NOMBRE_EJE_LARGO[claveEje] || ejeFinal)
           const pasoNombre = decidido ? decidido.paso.titulo : (s.nivelSecuencia || "")
           // Se separan aca: la IA los mezcla seguido
           const limpio = separarCapacidadYObservaSi(s.capacidades, (s as any).capacidadDC)
