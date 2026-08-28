@@ -3122,6 +3122,10 @@ Respondé SOLO con este JSON, sin backticks:
       // Se conserva para el fallback si la IA falla
       const EJES = ejesDeLaSemana.map((e) => (e === "EA" ? "Escritura" : e))
 
+      // La impronta de las docentes de esta edad: como escriben ellas. Si no
+      // hay material devuelve vacio y el prompt queda igual que hoy.
+      const impronta = await traerImpronta(nivel)
+
       const prompt = `${
   nivel === "2"
     ? "Eres ALBA, el asistente pedagogico de una SALA DE 2 ANOS del jardin maternal. Tu marco es el Diseno Curricular de Jardin Maternal y las CINCO CAPACIDADES. NO sos un asistente de alfabetizacion: a esta edad se aprende con el cuerpo, los objetos y el juego, no hablando."
@@ -3435,6 +3439,7 @@ ${(actividadesYaSugeridas || []).join(", ") || "Ninguna."}
 ACTIVIDADES QUE ESTA SALA YA TRABAJO (no repetir ninguna, ni con otro nombre):
 ${listaYaDadas}
 
+${bloqueImpronta(impronta)}
 TAREA: Genera exactamente ${diasArray.length} actividades de alfabetizacion, UNA por cada dia, respetando el eje y el paso indicados:
 
 ${instruccionesDias}
@@ -3853,6 +3858,136 @@ function leerJSONAunqueVengaCortado(texto: string): any {
   if (dentroDeTexto) recorte += '"'
   while (pila.length > 0) recorte += pila.pop()
   return JSON.parse(recorte)
+}
+
+// ── LA IMPRONTA DE LAS DOCENTES ───────────────────────────────────────────
+// Distinto del muestrario, y por eso son dos cosas separadas:
+//
+//   El MUESTRARIO junta actividades VALIDADAS POR EVIDENCIA —70% de verdes en
+//   tres grupos— y sirve para saber QUE FUNCIONA. Es un estandar alto y tarda
+//   meses en poblarse.
+//
+//   La IMPRONTA junta lo que las maestras ESCRIBEN, sin esperar evidencia, y
+//   sirve para otra cosa: para que ALBA aprenda COMO SE ESCRIBE EN ESTA
+//   ESCUELA. El tono, el nivel de detalle, que materiales se usan de verdad.
+//
+// Se toman solo las BIEN ESCRITAS: si una maestra escribe escueto, ALBA
+// aprenderia a escribir escueto. Y se filtran por NIVEL: lo que escribe una
+// maestra de PINITOS (2 anos) nunca influye en una sala de 5.
+const LARGO_MINIMO_DESARROLLO = 120
+const DIAS_ENTRE_RECOPILACIONES = 30
+
+async function traerImpronta(nivel: string): Promise<any[]> {
+  try {
+    const supabase = getSupabase()
+
+    const { data: guardado } = await supabase
+      .from("impronta_docente")
+      .select("*")
+      .eq("nivel", nivel)
+      .order("calculado_at", { ascending: false })
+      .limit(30)
+
+    const ultimo = guardado?.[0]?.calculado_at
+    const dias = ultimo ? (Date.now() - new Date(ultimo).getTime()) / 86400000 : Infinity
+
+    if (dias < DIAS_ENTRE_RECOPILACIONES && guardado && guardado.length > 0) {
+      return guardado
+    }
+
+    await recopilarImpronta(nivel)
+
+    const { data: fresco } = await supabase
+      .from("impronta_docente")
+      .select("*")
+      .eq("nivel", nivel)
+      .limit(30)
+
+    return fresco || []
+  } catch (e) {
+    // Nunca puede romper una sugerencia
+    console.error("[v0] Error trayendo la impronta docente:", e)
+    return []
+  }
+}
+
+async function recopilarImpronta(nivel: string): Promise<void> {
+  try {
+    const supabase = getSupabase()
+    const esMat = nivel === "2" || nivel === "3"
+    const tabla = esMat ? "cronograma_maternal" : "cronograma_jardin"
+
+    const { data: crono } = await supabase
+      .from(tabla)
+      .select("sala, actividades")
+      .order("fecha", { ascending: false })
+      .limit(400)
+
+    const filas: any[] = []
+    const vistos = new Set<string>()
+
+    ;(crono || []).forEach((fila: any) => {
+      if (nivelDeSala(String(fila.sala || "")) !== nivel) return
+      const acts = Array.isArray(fila.actividades) ? fila.actividades : []
+      acts.forEach((a: any) => {
+        // Solo lo que escribio la DOCENTE, no lo que propuso ALBA
+        if (a?.origen === "alba") return
+
+        const nombre = String(a?.nombre || "").trim()
+        const desarrollo = String(a?.desarrollo || a?.descripcion || "").trim()
+        if (!nombre || desarrollo.length < LARGO_MINIMO_DESARROLLO) return
+
+        const clave = nombre.toLowerCase()
+        if (vistos.has(clave)) return
+        vistos.add(clave)
+
+        filas.push({
+          nivel,
+          area: String(a?.ejeNombre || a?.eje || "").trim() || null,
+          nombre,
+          desarrollo,
+          materiales: Array.isArray(a?.materiales) ? a.materiales.join(", ") : String(a?.materiales || "").trim() || null,
+          capacidad_dc: String(a?.capacidadDC || "").trim() || null,
+          sala_origen: fila.sala,
+        })
+      })
+    })
+
+    if (filas.length === 0) return
+
+    await supabase.from("impronta_docente").delete().eq("nivel", nivel)
+    await supabase.from("impronta_docente").insert(filas.slice(0, 30))
+    console.log(`[v0] impronta recopilada para nivel ${nivel}: ${filas.length} actividades de docentes`)
+  } catch (e) {
+    console.error("[v0] Error recopilando la impronta:", e)
+  }
+}
+
+// Arma el bloque para el prompt. Si no hay material, devuelve vacio y ALBA
+// escribe exactamente como hoy.
+function bloqueImpronta(impronta: any[]): string {
+  if (!impronta || impronta.length < 2) return ""
+
+  // Al azar, para que no salgan siempre las mismas
+  const mezcladas = [...impronta]
+  for (let i = mezcladas.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[mezcladas[i], mezcladas[j]] = [mezcladas[j], mezcladas[i]]
+  }
+  const elegidas = mezcladas.slice(0, 3)
+
+  return `
+COMO ESCRIBEN LAS MAESTRAS DE ESTA ESCUELA. Estas actividades las escribieron
+ellas para esta misma edad. Miralas para tomar SU FORMA de escribir: el tono,
+cuanto detalle dan, que materiales usan de verdad, como le hablan al grupo.
+
+NO copies el tema ni la propuesta: son de otro contenido. Lo que tomas es la
+manera de escribir, para que tu actividad se parezca a las de la escuela y no
+a un texto generico.
+
+${elegidas.map((m: any, i: number) => `Ejemplo ${i + 1} — "${m.nombre}"
+${m.desarrollo}${m.materiales ? `\nMateriales: ${m.materiales}` : ""}`).join("\n\n")}
+`
 }
 
 // ── EL MUESTRARIO ─────────────────────────────────────────────────────────
