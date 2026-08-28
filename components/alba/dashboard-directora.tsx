@@ -622,11 +622,20 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
             No es un modal: queda a la vista mientras el caso exista. */}
         {(() => {
           const paraAcompanar = Object.values(resumenSalas).filter((r: any) => r?.necesitaAcompanamiento)
-          if (paraAcompanar.length === 0) return null
+
+          // Las salas de maternal que TODAVIA NO ARRANCARON se avisan aca, no
+          // como alertas en su tarjeta: no hay nada mal, simplemente no
+          // empezaron a usar ALBA. Con el nombre alcanza para que la
+          // directora sepa a quien acompanar.
+          const sinArrancar = Object.values(resumenMaternal).filter((r: any) => r && !r.arranco)
+
+          if (paraAcompanar.length === 0 && sinArrancar.length === 0) return null
           return (
             <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3">
               <p className="text-sm font-semibold text-amber-900 mb-1.5">
-                {paraAcompanar.length === 1 ? "Una sala puede necesitar acompanamiento" : `${paraAcompanar.length} salas pueden necesitar acompanamiento`}
+                {paraAcompanar.length + sinArrancar.length === 1
+                  ? "Una sala puede necesitar acompanamiento"
+                  : `${paraAcompanar.length + sinArrancar.length} salas pueden necesitar acompanamiento`}
               </p>
               <ul className="space-y-0.5">
                 {paraAcompanar.map((r: any) => (
@@ -635,6 +644,12 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     {r.ultimaVezQueRegistro
                       ? ` — sin registrar hace ${r.diasSinRegistrar} dias`
                       : " — sin registros en el cuatrimestre"}
+                  </li>
+                ))}
+                {sinArrancar.map((r: any) => (
+                  <li key={r.sala} className="text-sm text-amber-800">
+                    <span className="font-semibold">{r.sala}</span>
+                    {" — todavia no empezo a usar ALBA"}
                   </li>
                 ))}
               </ul>
