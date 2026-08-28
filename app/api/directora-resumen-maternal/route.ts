@@ -66,9 +66,18 @@ export async function GET() {
     const [alumnosRes, registrosRes, cronoRes, proyectosRes] = await Promise.all([
       supabase.from("alumnos").select("id, nombre, sala").in("sala", SALAS_MATERNAL),
       supabase.from("registro_maternal").select("*").in("sala", SALAS_MATERNAL),
-      supabase.from("cronograma_maternal").select("sala, dia, fecha, actividades, dia_finalizado, semana_inicio").in("sala", SALAS_MATERNAL),
+      // La columna se llama "finalizado" en maternal, no "dia_finalizado" como en
+      // jardin. Pedir una columna que no existe hace fallar la consulta ENTERA.
+      supabase.from("cronograma_maternal").select("sala, dia, fecha, actividades, finalizado, semana_inicio").in("sala", SALAS_MATERNAL),
       supabase.from("proyectos_maternal").select("sala, titulo, estado, duracion, objetivo_general, created_at").in("sala", SALAS_MATERNAL),
     ])
+
+    // Si una consulta falla, se registra: antes devolvia vacio en silencio y
+    // la directora veia "todavia no hay semanas cargadas" con datos en la base.
+    ;[["alumnos", alumnosRes], ["registros", registrosRes], ["cronograma", cronoRes], ["proyectos", proyectosRes]]
+      .forEach(([nombre, res]: any) => {
+        if (res?.error) console.error(`[v0] directora-resumen-maternal, ${nombre}:`, res.error.message)
+      })
 
     const alumnos = alumnosRes.data || []
     const registros = registrosRes.data || []
@@ -174,7 +183,7 @@ export async function GET() {
             semana: sem,
             activa: sem === semana,
             diasPlanificados: conActividades.length,
-            finalizada: dias.length > 0 && dias.every((c: any) => c.dia_finalizado === true),
+            finalizada: dias.length > 0 && dias.every((c: any) => c.finalizado === true),
           }
         })
 
