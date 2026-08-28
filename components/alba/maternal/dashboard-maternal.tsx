@@ -925,10 +925,17 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
       await Promise.all(
         pendientes.map((m: any) =>
           fetch("/api/mensajes-directora", {
-            method: "PUT",
+            method: "PATCH",   // el endpoint usa PATCH, igual que en jardin
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: m.id }),
           })
+        )
+      )
+      // El contador baja al instante: si se espera a la proxima consulta,
+      // el numero rojo queda un rato aunque ya los haya visto.
+      setMensajes((prev: any[]) =>
+        prev.map((m: any) =>
+          pendientes.some((p: any) => p.id === m.id) ? { ...m, leido: true } : m
         )
       )
       await traerMensajes()
@@ -2297,7 +2304,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                             {((act as any).capacidadDC || act.capacidades || act.contenidos || act.materiales) && (
                               <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-2 py-1.5 space-y-1">
                                 {(act as any).eje && (
-                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Area: </span>{(act as any).eje}</p>
+                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Area: </span>{(act as any).ejeNombre || (act as any).eje}</p>
                                 )}
                                 {((act as any).ejeNombre || (act as any).eje) && (
                                 <p className="text-xs text-slate-700 mb-1">
