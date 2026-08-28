@@ -163,6 +163,9 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   const [registroMaternal, setRegistroMaternal] = useState<Record<string, any>>({})
   // Seguimiento completo de la sala de maternal que la directora esta mirando
   const [sintesisMaternal, setSintesisMaternal] = useState<any>(null)
+  // Resumen de todas las salas de maternal: viene de su propio endpoint,
+  // separado del de jardin porque el seguimiento es por capacidades y areas.
+  const [resumenMaternal, setResumenMaternal] = useState<Record<string, any>>({})
   const [relatoMaternalDir, setRelatoMaternalDir] = useState<any>(null)
   const [chatSala, setChatSala] = useState<string | null>(null)
   const [nuevoMensaje, setNuevoMensaje] = useState("")
@@ -189,6 +192,20 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
   async function cargarMensajes() {
     try {
       const base = typeof window !== "undefined" ? window.location.origin : ""
+      // Resumen completo de maternal, de su endpoint propio: dias planificados,
+      // areas trabajadas, cronogramas, proyectos y alertas.
+      try {
+        const rm = await fetch(`${base}/api/directora-resumen-maternal`, { cache: "no-store" })
+        const dm = await rm.json()
+        if (dm?.ok && Array.isArray(dm.salas)) {
+          const mapa: Record<string, any> = {}
+          dm.salas.forEach((x: any) => { mapa[x.sala] = x })
+          setResumenMaternal(mapa)
+        }
+      } catch (e) {
+        console.error("[v0] Error trayendo el resumen de maternal:", e)
+      }
+
       // Registro de las salas de maternal: como quedo la ultima evaluacion
       try {
         const mats = SALAS.filter((sa) => esMateral(sa))
@@ -205,6 +222,19 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
 
       // Resumen por sala (planificacion y registro de la semana)
       try {
+        // Maternal: su propio resumen
+        try {
+          const resM = await fetch(`${base}/api/directora-resumen-maternal`, { cache: "no-store" })
+          const dataM = await resM.json()
+          if (dataM?.ok) {
+            const porSala: Record<string, any> = {}
+            ;(dataM.salas || []).forEach((s: any) => { porSala[s.sala] = s })
+            setResumenMaternal(porSala)
+          }
+        } catch (e) {
+          console.error("[v0] Error trayendo el resumen de maternal:", e)
+        }
+
         const resR = await fetch(`${base}/api/directora-resumen`, { cache: "no-store" })
         const dataR = await resR.json()
         if (dataR?.ok && Array.isArray(dataR.salas)) {
@@ -391,7 +421,7 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
     
     // Maternal tiene su propio seguimiento: por capacidades, no por ejes de
     // alfabetizacion. Se traen los mismos datos que ve la maestra.
-    if (tipo === "sintesis" && esMateral(sala)) {
+    if ((tipo === "sintesis" || tipo === "alertas") && esMateral(sala)) {
       try {
         const res = await fetch(`${base}/api/registro-maternal?sala=${encodeURIComponent(sala)}`, { cache: "no-store" })
         const data = await res.json()
@@ -687,14 +717,17 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                   {/* Maternal tambien muestra si la sala esta planificando,
                       igual que jardin: sin eso la directora no sabe si la
                       maestra esta usando ALBA. */}
-                  {esMateral(sala) && resumenSalas[sala] && (
-                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5">
+                  {esMateral(sala) && resumenMaternal[sala] && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground mt-1.5 pt-1.5 border-t border-slate-100">
                       <span>
-                        <span className="font-semibold text-foreground">{resumenSalas[sala].diasPlanificados}</span> dias planificados
+                        <span className="font-semibold text-foreground">{resumenMaternal[sala].diasPlanificados}</span> dias planificados
                       </span>
-                      {registroMaternal[sala]?.pendientesDeEvaluar > 0 && (
-                        <span>
-                          <span className="font-semibold text-amber-600">{registroMaternal[sala].pendientesDeEvaluar}</span> sin evaluar
+                      <span>
+                        <span className="font-semibold text-foreground">{resumenMaternal[sala].areasTrabajadas.length}</span> de {resumenMaternal[sala].areasDelNivel.length} areas
+                      </span>
+                      {resumenMaternal[sala].capacidadesSinEvaluar > 0 && (
+                        <span className="text-amber-700">
+                          <span className="font-semibold">{resumenMaternal[sala].capacidadesSinEvaluar}</span> capacidades sin evaluar
                         </span>
                       )}
                     </div>
@@ -741,8 +774,16 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                     </div>
                   )}
                   
-                  {/* Indicador de alertas */}
-                  {data.alertasCount > 0 && (
+                  {/* Indicador de alertas. En maternal las cuenta su propio
+                      endpoint: jardin no tiene las de capacidades. */}
+                  {esMateral(sala) && (resumenMaternal[sala]?.alertas || []).length > 0 && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 px-2 py-1.5 rounded">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                      {resumenMaternal[sala].alertas.length} alerta{resumenMaternal[sala].alertas.length > 1 ? "s" : ""}
+                    </div>
+                  )}
+
+                  {!esMateral(sala) && data.alertasCount > 0 && (
                     <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                       {data.alertasCount} alerta{data.alertasCount > 1 ? "s" : ""} pedagogica{data.alertasCount > 1 ? "s" : ""}
@@ -847,8 +888,99 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                 </div>
               ) : (
                 <>
+                  {/* Planificacion de MATERNAL: cronogramas con su estado y
+                      los proyectos, activos y finalizados. */}
+                  {modalTipo === "planificacion" && esMateral(modalSala) && (
+                    <div className="space-y-5">
+                      {!resumenMaternal[modalSala] ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">
+                          Todavia no hay planificacion en esta sala.
+                        </p>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                              Cronogramas
+                            </p>
+                            {(resumenMaternal[modalSala].historial || []).length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Todavia no hay semanas cargadas.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {resumenMaternal[modalSala].historial.map((h: any) => (
+                                  <div
+                                    key={h.semana}
+                                    className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${
+                                      h.activa ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"
+                                    }`}
+                                  >
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-800">
+                                        Semana del {h.semana.slice(8, 10)}/{h.semana.slice(5, 7)}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {h.diasPlanificados} {h.diasPlanificados === 1 ? "dia planificado" : "dias planificados"}
+                                      </p>
+                                    </div>
+                                    <span
+                                      className={`shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                                        h.activa
+                                          ? "bg-green-600 text-white"
+                                          : h.finalizada
+                                          ? "bg-slate-200 text-slate-700"
+                                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                                      }`}
+                                    >
+                                      {h.activa ? "En curso" : h.finalizada ? "Finalizada" : "Sin cerrar"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                              Proyectos
+                            </p>
+                            {(resumenMaternal[modalSala].proyectos || []).length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Todavia no hay proyectos cargados.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {resumenMaternal[modalSala].proyectos.map((pr: any, i: number) => (
+                                  <div
+                                    key={i}
+                                    className={`rounded-lg border px-3 py-2.5 ${
+                                      pr.estado === "activo" ? "border-green-300 bg-green-50" : "border-slate-200 bg-white"
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <p className="text-sm font-semibold text-slate-800 leading-snug">{pr.titulo}</p>
+                                      <span
+                                        className={`shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                                          pr.estado === "activo" ? "bg-green-600 text-white" : "bg-slate-200 text-slate-700"
+                                        }`}
+                                      >
+                                        {pr.estado === "activo" ? "Activo" : "Finalizado"}
+                                      </span>
+                                    </div>
+                                    {pr.objetivo && (
+                                      <p className="text-[12px] text-slate-600 mt-1 leading-snug">{pr.objetivo}</p>
+                                    )}
+                                    {pr.duracion && (
+                                      <p className="text-[10px] text-muted-foreground mt-1">Duracion: {pr.duracion}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* Planificacion */}
-                  {modalTipo === "planificacion" && (
+                  {modalTipo === "planificacion" && !esMateral(modalSala) && (
                     <div className="space-y-4">
                       {/* Cronograma activo de la semana: abre la vista completa de 5 columnas */}
                       {cronogramaActivoData?.cronograma && (
@@ -1059,31 +1191,6 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                                 </div>
                               </div>
 
-                              {(sintesisMaternal.porAlumno || []).length > 0 && (
-                                <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
-                                    Cada nino
-                                  </p>
-                                  <div className="space-y-1.5">
-                                    {sintesisMaternal.porAlumno.map((a: any) => (
-                                      <div key={a.id} className="border-b border-slate-100 pb-1.5">
-                                        <p className="text-sm font-semibold text-slate-800">{a.nombre}</p>
-                                        {a.capacidades?.length > 0 ? (
-                                          <p className="text-[11px] text-slate-600 mt-0.5">
-                                            {a.capacidades
-                                              .map((c: any) =>
-                                                `${c.nombre}: ${c.estado === "ya_lo_hace" ? "ya lo hace" : c.estado === "empezando" ? "con ayuda" : "todavia no"}`
-                                              )
-                                              .join(" · ")}
-                                          </p>
-                                        ) : (
-                                          <p className="text-[11px] text-muted-foreground italic mt-0.5">Sin evaluaciones</p>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
                             </>
                           )}
                         </div>
@@ -1184,7 +1291,90 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                   )}
                   
                   {/* Alertas */}
-                  {modalTipo === "alertas" && (
+                  {/* Maternal tiene sus propias alertas: por capacidad y por
+                      chico, no por los ejes de alfabetizacion de jardin. */}
+                  {/* ALERTAS DE MATERNAL. No se lista a todos los chicos:
+                      solo lo que necesita mirada. Mismo criterio que jardin,
+                      adaptado a como se evalua aca. */}
+                  {modalTipo === "alertas" && esMateral(modalSala) && (
+                    <div className="space-y-3">
+                      {(() => {
+                        const res = resumenMaternal[modalSala]
+                        const sint = sintesisMaternal
+                        const alertas: { texto: string; urgencia: "alta" | "media" | "info" }[] = []
+
+                        // 1. Las que calcula el endpoint: sin evaluar, sin
+                        //    planificar, capacidades nunca miradas.
+                        ;(res?.alertas || []).forEach((a: any) => {
+                          alertas.push({
+                            texto: a.mensaje,
+                            urgencia: a.tipo === "sin_evaluar" || a.tipo === "sin_registros" ? "alta" : "media",
+                          })
+                        })
+
+                        if (sint) {
+                          const caps = sint.porCapacidad || []
+                          const total = (sint.porAlumno || []).length
+
+                          // 2. PATRON GRUPAL: si en una capacidad mas de un
+                          //    tercio esta en "todavia no", el problema es la
+                          //    propuesta, no los chicos.
+                          caps.forEach((c: any) => {
+                            if (!c.evaluada || total === 0) return
+                            if (c.acompanar > total / 3) {
+                              alertas.push({
+                                texto: `${c.acompanar} de ${total} necesitan acompanamiento en ${c.nombre}. Conviene revisar como se esta proponiendo.`,
+                                urgencia: "alta",
+                              })
+                            }
+                          })
+
+                          // 3. PERSISTENCIA: un chico en "todavia no" en dos o
+                          //    mas capacidades no esta avanzando en varios
+                          //    frentes a la vez.
+                          const conteo: Record<string, string[]> = {}
+                          caps.forEach((c: any) => {
+                            (c.necesitanAcompanamiento || []).forEach((n: string) => {
+                              if (!conteo[n]) conteo[n] = []
+                              conteo[n].push(c.nombre)
+                            })
+                          })
+                          Object.entries(conteo)
+                            .filter(([, cs]) => cs.length >= 2)
+                            .forEach(([nombre, cs]) => {
+                              alertas.push({
+                                texto: `${nombre} necesita acompanamiento en ${cs.length} capacidades: ${cs.join(", ")}.`,
+                                urgencia: "alta",
+                              })
+                            })
+                        }
+
+                        if (alertas.length === 0) {
+                          return (
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
+                              <p className="text-sm text-green-800">
+                                Sin alertas: la sala viene registrando y no hay chicos con dificultad en varias capacidades.
+                              </p>
+                            </div>
+                          )
+                        }
+
+                        const color = (u: string) =>
+                          u === "alta"
+                            ? "border-red-200 bg-red-50 text-red-900"
+                            : u === "media"
+                            ? "border-amber-200 bg-amber-50 text-amber-900"
+                            : "border-slate-200 bg-slate-50 text-slate-700"
+
+                        return alertas.map((a, i) => (
+                          <div key={i} className={`rounded-lg border p-3 ${color(a.urgencia)}`}>
+                            <p className="text-sm leading-snug">{a.texto}</p>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  )}
+                  {modalTipo === "alertas" && !esMateral(modalSala) && (
                     <div className="space-y-3">
                       {salasData[modalSala]?.alertas.length === 0 ? (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
@@ -1361,31 +1551,76 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
                   {/* Barra de actividades por habilidades - MATERNAL */}
                   {modalTipo === "barraActividades" && (
                     <div className="space-y-4">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-sm font-semibold text-green-900 mb-3">Cantidad de actividades por habilidades</p>
-                        <p className="text-xs text-green-700 mb-4">Las barras muestran cuántas actividades se trabajaron en cada habilidad/capacidad durante las semanas realizadas.</p>
-                        
-                        {/* Placeholder: mientras no hay datos reales, mostrar estructura de barras vacía */}
-                        <div className="grid grid-cols-2 gap-3">
-                          {["Motricidad Fina", "Motricidad Gruesa", "Lenguaje", "Socioemocional", "Cognitiva", "Autonomía"].map((hab) => (
-                            <div key={hab} className="bg-white rounded-lg p-3 border border-green-100">
-                              <div className="flex items-end gap-2 mb-2">
-                                <div 
-                                  className="flex-1 bg-green-500 rounded-t transition-all" 
-                                  style={{ height: "40px" }}
-                                />
-                              </div>
-                              <p className="text-xs font-medium text-foreground">{hab}</p>
-                              <p className="text-[10px] text-muted-foreground">0 actividades</p>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-xs font-semibold text-blue-800 mb-1">Nota:</p>
-                          <p className="text-xs text-blue-700">Este gráfico se actualiza automáticamente conforme la maestra carga actividades en Maternal.</p>
-                        </div>
-                      </div>
+                      {/* Actividades de la semana, agrupadas POR CAPACIDAD, con
+                          el area al lado del titulo y la marca de si se hizo. */}
+                      {!resumenMaternal[modalSala] ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">
+                          Todavia no hay actividades cargadas esta semana.
+                        </p>
+                      ) : (
+                        (() => {
+                          const acts = resumenMaternal[modalSala].actividadesSemana || []
+                          if (acts.length === 0) {
+                            return (
+                              <p className="text-sm text-muted-foreground text-center py-6">
+                                La semana todavia no esta planificada.
+                              </p>
+                            )
+                          }
+                          // Agrupar por la capacidad del Diseno
+                          const grupos: Record<string, any[]> = {}
+                          acts.forEach((a: any) => {
+                            const cap = (a.capacidadDC || "").split(":")[0].trim() || "Sin capacidad asignada"
+                            if (!grupos[cap]) grupos[cap] = []
+                            grupos[cap].push(a)
+                          })
+                          return (
+                            <>
+                              {Object.entries(grupos).map(([cap, lista]) => (
+                                <div key={cap}>
+                                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                                    {cap}
+                                  </p>
+                                  <div className="space-y-2">
+                                    {lista.map((a: any, i: number) => (
+                                      <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-slate-800 leading-snug">{a.nombre}</p>
+                                            {a.area && (
+                                              <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                                {a.area}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span
+                                            className={`shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full ${
+                                              a.realizada
+                                                ? "bg-green-100 text-green-800 border border-green-300"
+                                                : "bg-red-100 text-red-800 border border-red-300"
+                                            }`}
+                                          >
+                                            {a.realizada ? "Realizada" : "Sin realizar"}
+                                          </span>
+                                        </div>
+                                        {a.capacidades && (
+                                          <p className="text-[11px] text-violet-800 mt-1.5">
+                                            <span className="font-semibold">Observa si: </span>{a.capacidades}
+                                          </p>
+                                        )}
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                          {a.dia}
+                                          {a.origen === "alba" ? " · Sugerida por ALBA" : " · De la maestra"}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </>
+                          )
+                        })()
+                      )}
                     </div>
                   )}
                   
