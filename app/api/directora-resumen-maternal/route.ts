@@ -200,14 +200,15 @@ export async function GET() {
         }))
 
       // ── 7. Alertas ────────────────────────────────────────────────────
+      // Las alertas de la tarjeta son sobre EL PROCESO DE LOS CHICOS, no
+      // sobre gestion. Y una sala que TODAVIA NO ARRANCO no genera ninguna:
+      // si no empezo a usar ALBA no hay nada que alertar. Que no haya
+      // empezado se avisa aparte, arriba del tablero.
       const alertas: { tipo: string; mensaje: string }[] = []
-      if (diasSinEvaluar === null) {
-        alertas.push({ tipo: "sin_registros", mensaje: "Todavia no hay evaluaciones en esta sala" })
-      } else if (diasSinEvaluar >= DIAS_SIN_EVALUAR_ALERTA) {
+      const arranco = diasSinEvaluar !== null || diasPlanificados > 0
+
+      if (arranco && diasSinEvaluar !== null && diasSinEvaluar >= DIAS_SIN_EVALUAR_ALERTA) {
         alertas.push({ tipo: "sin_evaluar", mensaje: `Hace ${diasSinEvaluar} dias que no se registra una evaluacion` })
-      }
-      if (sinEvaluar > 0 && diasSinEvaluar !== null) {
-        alertas.push({ tipo: "capacidades", mensaje: `${sinEvaluar} de las cinco capacidades todavia sin evaluar` })
       }
       // Chicos que necesitan acompanamiento en mas de una capacidad
       const conteoAcompanar: Record<string, number> = {}
@@ -223,7 +224,9 @@ export async function GET() {
           mensaje: `Necesitan acompanamiento en varias capacidades: ${variasCapacidades.join(", ")}`,
         })
       }
-      if (diasPlanificados === 0) {
+      // Solo si la sala ya viene usando ALBA: si nunca planifico, no es una
+      // alerta, es que todavia no arranco.
+      if (arranco && diasPlanificados === 0) {
         alertas.push({ tipo: "sin_planificar", mensaje: "La semana todavia no esta planificada" })
       }
 
@@ -236,6 +239,9 @@ export async function GET() {
         porCapacidad,
         capacidadesSinEvaluar: sinEvaluar,
         diasPlanificados,
+        // Para el aviso de arriba del tablero: una sala que nunca planifico ni
+        // evaluo todavia no empezo a usar ALBA.
+        arranco,
         areasDelNivel,
         areasTrabajadas: [...areasTrabajadas],
         actividadesSemana,
