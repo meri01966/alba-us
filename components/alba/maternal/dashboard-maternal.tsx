@@ -918,30 +918,30 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
     setEnviandoMensaje(false)
   }
 
-  async function marcarLeidos() {
-    const pendientes = mensajes.filter((m: any) => !m.leido && m.autor !== salaActual)
-    if (pendientes.length === 0) return
+  // Se marca de a UNO, con el boton en cada mensaje, igual que en jardin.
+  // Asi la maestra decide cual ya atendio, en vez de que se borren todos
+  // apenas abre el chat.
+  const [marcandoLeido, setMarcandoLeido] = useState<string | null>(null)
+
+  async function marcarLeido(id: string) {
+    setMarcandoLeido(id)
     try {
-      await Promise.all(
-        pendientes.map((m: any) =>
-          fetch("/api/mensajes-directora", {
-            method: "PATCH",   // el endpoint usa PATCH, igual que en jardin
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: m.id }),
-          })
+      const r = await fetch("/api/mensajes-directora", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      const d = await r.json()
+      if (d?.ok) {
+        // El contador baja al instante, sin esperar la proxima consulta
+        setMensajes((prev: any[]) =>
+          prev.map((m: any) => (m.id === id ? { ...m, leido: true, leido_at: new Date().toISOString() } : m))
         )
-      )
-      // El contador baja al instante: si se espera a la proxima consulta,
-      // el numero rojo queda un rato aunque ya los haya visto.
-      setMensajes((prev: any[]) =>
-        prev.map((m: any) =>
-          pendientes.some((p: any) => p.id === m.id) ? { ...m, leido: true } : m
-        )
-      )
-      await traerMensajes()
+      }
     } catch (e) {
-      console.error("[v0] Error marcando leidos:", e)
+      console.error("[v0] Error marcando leido:", e)
     }
+    setMarcandoLeido(null)
   }
 
   // Marca una actividad como realizada. Un toque y listo: es lo que le dice a
@@ -1416,7 +1416,7 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
             {/* Chat con Direccion, en la barra como en jardin */}
             <button
               type="button"
-              onClick={() => { setChatAbierto(true); marcarLeidos() }}
+              onClick={() => setChatAbierto(true)}
               className="relative flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 rounded-xl transition-colors"
               title="Escribirle a Direccion"
             >
@@ -3193,11 +3193,30 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                           {mio ? "Vos" : "Direccion"}
                         </p>
                         <p className="text-sm text-slate-800 leading-snug">{m.mensaje}</p>
-                        {m.created_at && (
-                          <p className="text-[10px] text-slate-400 mt-1">
-                            {new Date(m.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        )}
+                        <div className="flex items-center justify-between gap-3 mt-1">
+                          {m.created_at ? (
+                            <p className="text-[10px] text-slate-400">
+                              {new Date(m.created_at).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          ) : <span />}
+
+                          {/* Solo en los que manda Direccion: la maestra marca
+                              cual ya atendio, de a uno, como en jardin. */}
+                          {!mio && (
+                            m.leido ? (
+                              <span className="text-[11px] text-green-600 font-semibold whitespace-nowrap">Leido</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => marcarLeido(m.id)}
+                                disabled={marcandoLeido === m.id}
+                                className="text-[10px] font-semibold px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 whitespace-nowrap"
+                              >
+                                {marcandoLeido === m.id ? "..." : "Marcar leido"}
+                              </button>
+                            )
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
