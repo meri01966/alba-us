@@ -2754,7 +2754,9 @@ Respondé SOLO con este JSON, sin backticks:
         "Malaguzzi y Reggio Emilia (los cien lenguajes, la documentacion, el ambiente como tercer maestro)",
         "Goldschmied (cesto de los tesoros, juego heuristico, exploracion con objetos cotidianos)",
         "Calmels (el cuerpo y el gesto como primer lenguaje, juegos de crianza)",
-        "Borzone (alfabetizacion temprana, vocabulario e intercambio oral con el adulto)",
+        "Borzone (programa Queremos Aprender: ensenanza explicita y sistematica, conciencia fonologica desde el nivel inicial, la narracion de experiencias como punto de partida. Es el enfoque que Mendoza adopto como politica educativa)",
+        "Diuk (programa DALE: alfabetizacion en contextos vulnerables, ensenanza explicita de las correspondencias, sin dar por sabido lo que no se enseno)",
+        "Isabel Beck (vocabulario robusto y preguntas que profundizan un texto: no alcanza con decodificar, hay que entender)",
         "Devetach (la poesia y el juego con las palabras desde muy chicos)",
         "Furman (preguntas que abren la exploracion y el pensamiento)",
         "Malajovich (el juego como contenido y como forma de ensenar en el nivel inicial)",
@@ -3192,27 +3194,9 @@ hablar. Lo que si corresponde siempre es que el adulto ACOMPANE CON PALABRAS
 lo que va pasando —nombra lo que el nino hace, siente y quiere— pero eso es
 la forma de estar del docente, no el objetivo de la propuesta.
 
-VARIA LAS AREAS DEL DISENO. En maternal las propuestas NO son todas de leer
-cuentos y conversar. El Diseno de Jardin Maternal organiza la ensenanza en
-CINCO AREAS DE EXPERIENCIA, y las actividades de la semana tienen que pasar
-por varias, no repetir siempre la misma:
-
-- EXPERIENCIAS PARA EL DESARROLLO DEL JUEGO: juego con objetos, de
-  construccion, de imitacion, esconder y aparecer.
-- EXPERIENCIAS PARA EL DESARROLLO CORPORAL: movimiento, equilibrio, trepar,
-  arrastrarse, ritmo, uso de las manos.
-- EXPERIENCIAS PARA LA COMUNICACION Y LA EXPRESION: aca entran el lenguaje
-  oral, los cuentos y las canciones, pero TAMBIEN la plastica, la musica y la
-  expresion corporal.
-- EXPERIENCIAS PARA LA EXPLORACION DEL AMBIENTE: explorar objetos y sus
-  propiedades (textura, peso, sonido), agrupar y comparar, el entorno natural
-  y social, las nociones espaciales.
-- EXPERIENCIAS PARA EL DESARROLLO PERSONAL Y SOCIAL: las rutinas, la
-  autonomia en el cambiado y la merienda, compartir, esperar, el vinculo.
-
-Si en la semana ya hay una propuesta de cuentos o conversacion, la siguiente
-tiene que venir de OTRA area. Una sala de maternal explora, se mueve, juega y
-manipula tanto como escucha.
+EL AREA DE CADA DIA YA ESTA DECIDIDA (te la damos abajo, dia por dia). No la
+elijas vos: escribi la actividad que corresponde a esa area. Una sala de
+maternal explora, se mueve, juega y manipula tanto como escucha.
 
 Adapta TODO a los 2 anos:
 - Duracion: 5 a 10 minutos. A esta edad la atencion sostenida es muy breve.
@@ -4279,7 +4263,26 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
       const usados = new Set<number>()
 
       for (const m of marcadas.slice(0, sugerencias.length)) {
-        const ejeM = NOMBRE_EJE[String(m.eje || "")] || String(m.eje || "CF")
+        // En maternal el "eje" ES EL AREA del Diseno, con su nombre completo.
+        // Las actividades guardadas antes traen claves viejas de capacidad
+        // (COM, AUT, RES...): se traducen para que se vean bien igual.
+        const CLAVE_VIEJA_A_AREA: Record<string, string> = {
+          COM: "Comunicacion y expresion", AUT: "Desarrollo personal y social",
+          RES: "Exploracion del ambiente", COL: "Desarrollo personal y social",
+          REF: "Exploracion del ambiente",
+          USO: "Comunicacion y expresion", ORA: "Comunicacion y expresion",
+          VOC: "Comunicacion y expresion", ESC: "Comunicacion y expresion",
+          JUE: "Desarrollo del juego", COR: "Desarrollo corporal",
+          AMB: "Exploracion del ambiente", PER: "Desarrollo personal y social",
+          COMP: "Lengua", PROD: "Lengua", PREC: "Lengua",
+          MAT: "Matematica", IND: "Indagacion del ambiente",
+          EFI: "Educacion Fisica", EXP: "Lenguajes expresivos",
+        }
+        const crudoM = String(m.eje || "")
+        const esMatM = nivelDeSala(sala) === "2" || nivelDeSala(sala) === "3"
+        const ejeM = esMatM
+          ? (crudoM.length > 4 ? crudoM : (CLAVE_VIEJA_A_AREA[crudoM.toUpperCase()] || crudoM))
+          : (NOMBRE_EJE[crudoM] || crudoM || "CF")
         // Preferimos el dia cuyo eje coincide; si no, el primero libre
         let i = copiaM.findIndex((s, k) => {
           if (usados.has(k)) return false
@@ -4300,7 +4303,12 @@ async function incorporarActividadDocente(sugerencias: any[], sala: string): Pro
             desarrollo: m.desarrollo || "",
             materiales: m.materiales || "",
             eje: ejeM,
-            alfabetizacion: true,
+            // El nombre legible: en maternal es el area del Diseno
+            ejeNombre: ejeM,
+            // En maternal la alfabetizacion NO es el marco: lo que ordena son
+            // las areas y las capacidades. Se trabaja la lengua cuando toca
+            // esa area, igual que la matematica cuando toca la suya.
+            alfabetizacion: !esMatM,
             origen: "docente",
             origenTexto: "Mi actividad",
             actividadDocenteId: m.id,
