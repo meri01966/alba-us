@@ -28,8 +28,52 @@ function esDeMaternalAD(sala: string): boolean {
   return SALAS_MATERNAL_AD.some((ref) => s.includes(ref))
 }
 
+// Las AREAS del Diseno de maternal, tal como se guardan y se muestran.
+const AREAS_MATERNAL = [
+  "Comunicacion y expresion",
+  "Desarrollo del juego",
+  "Desarrollo corporal",
+  "Exploracion del ambiente",
+  "Desarrollo personal y social",
+  // Sala de 3
+  "Lengua",
+  "Matematica",
+  "Indagacion del ambiente",
+  "Educacion Fisica",
+  "Lenguajes expresivos",
+]
+
+const sinTildes = (t: string) =>
+  (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
+
+// De lo que devuelve la IA al AREA del Diseno. La decision la toma el codigo:
+// el modelo solo dice de que se trata en una palabra, y aca se traduce. Asi el
+// area no depende de que el modelo recuerde los cinco nombres exactos.
+const PALABRA_A_AREA: Record<string, string> = {
+  lenguaje:"Comunicacion y expresion", lengua:"Comunicacion y expresion",
+  comunicacion:"Comunicacion y expresion", expresion:"Comunicacion y expresion",
+  juego:"Desarrollo del juego", jugar:"Desarrollo del juego",
+  cuerpo:"Desarrollo corporal", corporal:"Desarrollo corporal",
+  movimiento:"Desarrollo corporal", fisica:"Desarrollo corporal",
+  ambiente:"Exploracion del ambiente", exploracion:"Exploracion del ambiente",
+  naturaleza:"Exploracion del ambiente", matematica:"Exploracion del ambiente",
+  convivencia:"Desarrollo personal y social", social:"Desarrollo personal y social",
+  personal:"Desarrollo personal y social", autonomia:"Desarrollo personal y social",
+}
+
 function normalizarEje(valor: string): string | null {
   const e = (valor || "").trim().toUpperCase()
+
+  // Si ya vino el area completa, se toma tal cual
+  const area = AREAS_MATERNAL.find((a) => sinTildes(a) === sinTildes(valor))
+  if (area) return area
+
+  // Si vino una palabra suelta, la traduce el codigo
+  const porPalabra = PALABRA_A_AREA[sinTildes(valor)]
+  if (porPalabra) return porPalabra
+
+  // Se conservan las claves viejas de capacidad por compatibilidad con lo
+  // que ya esta guardado
   if (["COM", "AUT", "RES", "COL", "REF"].includes(e)) return e
   if (e === "CF") return "CF"
   if (e === "CT") return "CT"
@@ -150,14 +194,14 @@ LISTADO DE LA MAESTRA:
 ${textoCompleto}
 """
 
-REGLA QUE NO SE ROMPE: ALBA es una herramienta de ALFABETIZACION. Toda
-actividad que escribas tiene que trabajar el LENGUAJE —hablar, escuchar,
+${esMaternal ? `Actividades RICAS Y LUDICAS, propias de la edad: con el cuerpo, con objetos, con juego.` : `REGLA QUE NO SE ROMPE: en jardin ALBA es una herramienta de ALFABETIZACION. Toda
+actividad que escribas tiene que trabajar el LENGUAJE`} —hablar, escuchar,
 comprender, escribir, jugar con los sonidos de las palabras—. Si la maestra te
 pide algo de matematica, ciencias o arte, tomá ese tema como CONTEXTO pero la
 propuesta tiene que hacer trabajar el lenguaje.
-MAL: "lanza los dados y conta los puntos" (eso es matematica pura).
+${esMaternal ? "" : `MAL: "lanza los dados y conta los puntos" (eso es matematica pura).
 BIEN: "lanza el dado y busca en la sala esa cantidad de objetos. Despues
-contale al grupo que juntaste y por que elegiste esos."
+contale al grupo que juntaste y por que elegiste esos."`}
 
 COMO SON LAS ACTIVIDADES QUE ESCRIBIS:
 - SE APRENDE HACIENDO: una accion concreta en el centro —plantar, medir,
@@ -178,7 +222,7 @@ Respondé SOLO con un array JSON, sin texto adicional ni backticks:
 [
   {
     "nombre": "titulo corto y claro, maximo 6 palabras",
-    "eje": "${esMaternal ? "COM | AUT | RES | COL | REF" : "CF | CT | O | E"}",
+    "eje": "${esMaternal ? "de que se trata la actividad en una palabra: lenguaje, juego, cuerpo, ambiente o convivencia" : "CF | CT | O | E"}",
     "capacidad": "SOLO EL VERBO Y LA ACCION. PROHIBIDO poner adelante el nombre de una capacidad ('Comunicacion:', 'Pensamiento reflexivo:'): eso va SOLO en capacidadDC. Tampoco escribas 'Observa si'. Arranca directo con un verbo en tercera persona y describi una conducta que se pueda ver o escuchar. PROHIBIDO empezar con 'desarrollar', 'fomentar', 'estimular', 'trabajar', 'promover', 'reconocer las posibilidades de', 'proyectar': eso son objetivos y no se pueden mirar. UNA sola accion, no cuatro",
     "capacidadDC": "el NOMBRE de una de las cinco capacidades del Diseno seguido de dos puntos y lo que ESTA actividad pone en juego. Formato exacto: 'Comunicacion: expresar emociones y ponerles nombre'. Las cinco: Autonomia para aprender | Comunicacion | Pensamiento reflexivo y critico | Resolucion de problemas | Compromiso y colaboracion. PRIORIZA la que la alfabetizacion pone en juego",
     "contenidos": "los contenidos, en 1 o 2 lineas. Si la maestra escribio cuatro parrafos, CONDENSALOS: lo que importa es que se lea de un vistazo",
