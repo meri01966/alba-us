@@ -2250,13 +2250,40 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                   )}
                                 </div>
                               </div>
-                              {act.desarrollo && (
-                                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">{act.desarrollo}</p>
+                              {/* Los seis renglones de la actividad, en orden:
+                                  Area (que se ensena) · Capacidad (con que
+                                  mirada) · Observa si (como se comprueba) ·
+                                  Contenidos · Desarrollo · Materiales. */}
+                              {((act as any).ejeNombre || (act as any).eje) && (
+                                <p className="text-xs text-slate-700 mb-1">
+                                  <span className="font-semibold">Area: </span>
+                                  {(act as any).ejeNombre || (act as any).eje}
+                                </p>
+                              )}
+                              {(act as any).capacidadDC && (
+                                <p className="text-xs text-slate-700 mb-1">
+                                  <span className="font-semibold">Capacidad: </span>{(act as any).capacidadDC}
+                                </p>
                               )}
                               {act.capacidades && (
-                                <p className="text-xs bg-violet-50 border border-violet-300 rounded-lg px-2 py-1.5">
+                                <p className="text-xs bg-violet-50 border border-violet-300 rounded-lg px-2 py-1.5 mb-2">
                                   <span className="font-bold text-violet-700">Observa si: </span>
                                   <span className="text-slate-800">{act.capacidades}</span>
+                                </p>
+                              )}
+                              {act.contenidos && (
+                                <p className="text-xs text-slate-700 mb-2">
+                                  <span className="font-semibold">Contenidos: </span>{act.contenidos}
+                                </p>
+                              )}
+                              {act.desarrollo && (
+                                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">
+                                  <span className="font-semibold">Desarrollo: </span>{act.desarrollo}
+                                </p>
+                              )}
+                              {act.materiales && (
+                                <p className="text-xs text-slate-700 mb-2">
+                                  <span className="font-semibold">Materiales: </span>{act.materiales}
                                 </p>
                               )}
                               {/* "Marcar como realizada" vive en la vista Ver:
