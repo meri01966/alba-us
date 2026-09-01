@@ -2271,11 +2271,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                   <span className="text-slate-800">{act.capacidades}</span>
                                 </p>
                               )}
-                              {act.contenidos && (
-                                <p className="text-xs text-slate-700 mb-2">
-                                  <span className="font-semibold">Contenidos: </span>{act.contenidos}
-                                </p>
-                              )}
                               {act.desarrollo && (
                                 <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line mb-2">
                                   <span className="font-semibold">Desarrollo: </span>{act.desarrollo}
@@ -2344,9 +2339,6 @@ export function DashboardMaternal({ forzarSala }: { forzarSala?: string } = {}) 
                                 )}
                                 {act.capacidades && (
                                   <p className="text-[10px] text-violet-900"><span className="font-bold">Observa si: </span>{act.capacidades}</p>
-                                )}
-                                {act.contenidos && (
-                                  <p className="text-[10px] text-violet-900"><span className="font-bold">Contenidos: </span>{act.contenidos}</p>
                                 )}
                                 {act.materiales && (
                                   <p className="text-[10px] text-violet-900"><span className="font-bold">Materiales: </span>{act.materiales}</p>
