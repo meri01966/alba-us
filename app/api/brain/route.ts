@@ -11,7 +11,7 @@ function getSupabase() {
 }
 
 // Tipo de micro-capacitacion
-type MicroCap = { titulo: string; contenido: string; tips: string[]; cancion?: string; poesia?: string; referencia?: string }
+type MicroCap = { titulo: string; contenido: string; tips: string[]; cancion?: string; poesia?: string; referencia?: string; observar?: string[] }
 
 // ── MARCO CURRICULAR DC INICIAL BUENOS AIRES 2025 ──────────────────────────
 // Diseño Curricular para la Educacion Inicial - Salas de 4 y 5 años
@@ -254,53 +254,307 @@ const IMPACTO_PROMEDIO = {
 }
 
 // Mapa completo sincronizado con TODOS los titulos de SECUENCIA
+// Micro capacitacion just in time. Una entrada por cada titulo de SECUENCIA.
+// Es el "Before you teach": la teoria de dos minutos sobre lo que se va a
+// ensenar, los recursos que mas rinden, el autor que lo respalda y los
+// indicadores concretos para observar durante la clase. Esos indicadores
+// son los mismos que la maestra despues marca, asi formar y medir son el
+// mismo movimiento.
 const MICRO_CAPS: Record<string, MicroCap> = {
-  "Sonidos del entorno": { titulo: "Escucha activa en el aula", contenido: "Pida que cierren los ojos 30 segundos en silencio total. Luego pregunte uno por uno: que sonido escuchaste? Espere que respondan en oracion completa: Yo escuche el sonido de... Muestre tarjetas con imagenes de fuentes sonoras y pida que las asocien con lo que oyeron.", tips: ["Baje la voz tambien para que los ninos agudicen la escucha", "Si un nino dice solo una palabra, modele: Muy bien, el viento. Digamos todos: yo escuche el sonido del viento", "Use el triangulo para contrastar sonidos fuertes y suaves", "Registre en el pizarron todos los sonidos nombrados"], cancion: "Cancion sugerida: Cierra tus ojos y escucha el entorno, el viento los pasos el canto del torno. Uno por uno diremos que oimos, jugando a escuchar es lo que seguimos.", poesia: "Poesia sugerida: El mundo hace ruido de mil maneras. El nino que escucha aprende a nombrar, y en cada sonido hay un mundo a encontrar." },
-  "Rimas con nombres": { titulo: "Rimas con los nombres del grupo", contenido: "Cante rimas usando los nombres de los ninos. Empiece con el suyo: Mi nombre es y rima con. Luego invite a cada nino a buscar una palabra que rime con su nombre.", tips: ["Aplauda una vez por cada silaba del nombre y una vez por la rima", "Si un nino propone una rima inventada, celebrela: las rimas inventadas tambien desarrollan conciencia fonologica", "Haga un cartel con los nombres y sus rimas para dejarlo a la vista", "Repita la rima de cada nino en coro antes de pasar al siguiente"], cancion: "Cancion sugerida: Vamos a rimar, vamos a jugar. El nombre de Maria rima con alegria. El nombre de Juan rima con capitan. Cada nombre tiene su par, solo hay que escuchar y cantar.", poesia: "Poesia sugerida: Mi nombre es especial, suena de una manera, y tiene una palabra amiga que siempre lo espera. Si me llamo Luna, me espera fortuna. Si me llamo Sol, me espera caracol." },
-  "Separacion en silabas": { titulo: "Palmadas por silabas con movimiento", contenido: "Muestre una imagen, diga la palabra y de palmadas por silabas. Los ninos repiten. Use circulos de cartulina para representar cada silaba. Comparen longitudes.", tips: ["Empiece con los nombres de los ninos: son palabras que conocen bien", "Agregue movimiento: un paso por silaba o golpe en la mesa", "No corrija si un nino da palmadas de mas: repita lento y exagere la separacion", "Cuente en voz alta: una, dos, tres palmadas. Cuantas tiene esta palabra?"], cancion: "Cancion sugerida: Vamos a palmear las silabas del dia, una por una con mucha alegria. Ca-sa tiene dos, ma-ri-po-sa cuatro, si contamos juntos aprendemos tanto.", poesia: "Poesia sugerida: Cada silaba es un golpe, cada golpe una voz. Las palabras se dividen y las contamos dos a dos." },
-  "Sonido inicial /a/": { titulo: "La vocal A: boca bien abierta", contenido: "Diga el sonido /a/ de forma prolongada: aaaaaa. Muestre imagenes variadas. Los ninos levantan la mano SOLO cuando la imagen empieza con /a/. Incluya imagenes que NO empiezan con A para practicar discriminacion.", tips: ["Exagere la posicion de la boca: la A se dice con la boca bien abierta. Muestresela en el espejo", "Gesto de A: brazos en triangulo hacia arriba", "Pida que busquen en la sala objetos que empiecen con A antes de mostrar tarjetas", "Diga tambien palabras que NO empiezan con A para que practiquen discriminar"], cancion: "Cancion sugerida: La A es redonda y abierta, la A es la primera. Avion, arbol, araña, la A nos espera. Aaaaaa decimos todos con la boca abierta, la A es nuestra amiga y siempre nos despierta.", poesia: "Poesia sugerida: A de avion que vuela alto, A de arbol verde y sano. A de agua que refresca, A de amor que nunca cesa. La A es la primera, la mas grande y verdadera." },
-  "Sonido inicial /e/": { titulo: "La E: buscar y encontrar en el aula", contenido: "Explique el sonido /e/ con la boca casi cerrada: eeeeee. Envie a los ninos a recorrer el aula buscando objetos cuyo nombre empiece con /e/. Cuando encuentren uno lo muestran al grupo.", tips: ["Anticipe colocando objetos con E en lugares visibles antes de la actividad", "Si un nino trae un objeto que no empieza con E diga: A ver, escuchamos... empieza con otra letra", "Liste en el pizarron todo lo que encontraron", "Haga enfasis en el espejo del aula: espejo empieza con E"], cancion: "Cancion sugerida: La E sale a explorar, la E va a caminar. Escalera, elefante, estrella y el mar. Eeeee decimos todos buscando sin parar.", poesia: "Poesia sugerida: El elefante Eduardo es enorme y especial. La E de Eduardo empieza su nombre, la E de elefante es la letra del hombre." },
-  "Sonido inicial /i/": { titulo: "La I con el cuerpo entero", contenido: "La I se hace con el cuerpo: brazos estirados hacia arriba, cuerpo derecho. Cuando escuchen una palabra que empieza con /i/ hacen la postura de I. Cuando no empieza con /i/ se sientan.", tips: ["Haga usted la postura de I con exageracion para que los ninos imiten", "Palabras con I: iglesia, isla, iglu, iguana, imitar", "El dictado grafico funciona bien: diga una palabra con I y pida que la dibujen", "Si un nino confunde I con otra vocal, repita frente al espejo"], cancion: "Cancion sugerida: La I es un palito con un punto arriba, la I de imitar y de iguana viva. Iiiii decimos todos parados muy derechos.", poesia: "Poesia sugerida: La I es igualita, alta y derechita. Iguana, iglesia, isla e imitar, todas empiezan con I al hablar." },
-  "Sonido inicial /o/": { titulo: "La O: labios redondos como un circulo", contenido: "La O se dice con los labios redondos: ooooo. Los ninos aplauden UNA VEZ si una palabra empieza con /o/ y se quedan quietos si no. Luego cada nino dibuja una cosa que empiece con /o/.", tips: ["Gesto: haga el circulo con los dedos indice y pulgar para recordar la O", "Incluya palabras que suenan parecido pero empiezan diferente: hormiga empieza con H", "El dibujo da prueba de comprension", "Pregunte: como sabes que esa palabra empieza con O?"], cancion: "Cancion sugerida: La O es redondita como el sol. La O de oso, oveja y caracol. Ooooo decimos todos con la boca en O.", poesia: "Poesia sugerida: El oso Osvaldo sale en otono, recorre el oceano y mira el redondo. La O de Osvaldo empieza su nombre." },
-  "Sonido inicial /u/": { titulo: "La U: juego de memoria en parejas", contenido: "Tarjetas de memoria: imagen que empieza con /u/ y tarjeta con la letra U. En parejas las dan vuelta de a dos. Si emparejan imagen con letra U, ganan el par.", tips: ["Palabras con U: uva, uno, uniforme, unicornio, ukelele", "Mientras juegan, pregunte: esa imagen como se llama? Con que sonido empieza?", "Celebre cada emparejamiento correcto: La U de uva!", "Si un nino no sabe el nombre de la imagen, nombrela y repita el sonido inicial"], cancion: "Cancion sugerida: La U tiene uvas, la U tiene uno. La U de unicornio que salta con truno. Uuuuu decimos todos jugando el juego.", poesia: "Poesia sugerida: La U es la ultima pero no es menor, tiene uva, uniforme y unicornio de honor." },
-  "Vocales - Repaso": { titulo: "Ruleta de vocales: consolidar todas", contenido: "Ruleta de vocales. La docente la gira y cae en una vocal. El grupo tiene 30 segundos para decir TRES palabras que empiecen con esa vocal. Al final cuentan cual vocal tuvo mas palabras.", tips: ["Si cae una vocal dificil como U, de pista: piensen en frutas, en animales", "Hagan el gesto de cada vocal con el cuerpo", "El registro visual muestra cuales vocales necesitan mas practica", "Cierren cantando la cancion de las vocales para consolidar"], cancion: "Cancion sugerida: A-E-I-O-U, el burro sabe mas que tu. La A de avion, la E de elefante, la I de imitar, la O de oso grande, la U de uva dulce y especial.", poesia: "Poesia sugerida: Somos cinco hermanas, vivimos en las palabras. Sin nosotras nada suena, nada vive, nada encarna." },
-  "Sonido inicial /m/": { titulo: "La M: labios juntos y vibrar", contenido: "Pida que junten los labios y digan mmmm. Sientan la vibracion con los dedos. Muestren laminas y los ninos senalan las que empiezan con /m/. Construyan oraciones orales.", tips: ["La M es bilabial: se produce juntando los labios", "Palabras con M: mama, mano, mapa, mariposa, mono, mesa", "Pida que pongan los dedos en los labios para sentir la vibracion", "Construir oraciones orales desarrolla vocabulario y sintaxis"], cancion: "Cancion sugerida: La M de mama que nos da amor. La M de mano, de mapa y de flor. Mmmm decimos todos juntando los labios.", poesia: "Poesia sugerida: La M es una montana con dos picos, tiene mama, mano, mono y chicos." },
-  "Sonido inicial /p/": { titulo: "Pesca de palabras con P", contenido: "Tarjetas en el piso como peces. Los ninos pescan con cana de carton. Clasifican: canasto VERDE si empieza con /p/, canasto ROJO si no.", tips: ["La P es explosiva: el aire sale de golpe. Pongan la mano frente a la boca y sientan el soplo", "Palabras con P: pelota, pato, pan, papa, pez, paloma, piedra", "Si un nino clasifica mal, pregunte al grupo si estan de acuerdo", "La actividad motora de pescar mantiene la atencion"], cancion: "Cancion sugerida: El pato Pedro pesca en el rio, pesca palabras con mucho frio. P de pelota, P de paloma, P de pan dulce que huele y nos toma.", poesia: "Poesia sugerida: La P es pescadora que pesca palabras, pato, pelota, puerta y ventanas." },
-  "Sonido inicial /s/": { titulo: "La S en parejas: pulgar arriba o abajo", contenido: "En parejas, un nino dice una palabra y el otro decide: si empieza con /s/ sube el pulgar, si no lo baja. Se intercambian. Arman lista colectiva.", tips: ["La S es como la serpiente: ssssss. Hagan el gesto con el brazo", "Palabras con S: sopa, sol, silla, sapo, semilla, serpiente", "El trabajo en parejas desarrolla habilidades sociales", "Si un nino se equivoca, pida que diga la palabra muy lento"], cancion: "Cancion sugerida: La serpiente Susana dice ssss, busca palabras de su cancion mas. Sol y sapo, silla y salon, la S nos llena de palabras con sabor.", poesia: "Poesia sugerida: La S silba suave como el viento suena. Sol, semilla, sapo, serpiente y nena." },
-  "Sonido inicial /l/": { titulo: "La L: cuento con bandera levantada", contenido: "Un cuento breve con muchas palabras que empiezan con /l/. Cada nino tiene una tarjeta con la L. La levantan CADA VEZ que escuchan una palabra que empieza con /l/.", tips: ["La L se produce con la lengua tocando el paladar", "Palabras con L: luna, llave, loba, limon, lazo, leche, loro, luz", "El conteo de levantadas da datos sobre atencion sostenida", "Invencion breve de 10 oraciones con luna y leon funciona muy bien"], cancion: "Cancion sugerida: La luna le habla al loro en la laguna, el loro le responde con luna y fortuna. L de luna, L de loro, L de lazo de oro.", poesia: "Poesia sugerida: La L es larga como la luna llena. La leche del loro, la luz que nos llena. La lengua toca el paladar." },
-  "Sonido inicial /t/": { titulo: "Dado de imagenes con T", contenido: "Dado con imagenes. El nino lo tira y si la imagen empieza con /t/ suma un punto. Equipos de 3, cinco rondas.", tips: ["La T es dental: la lengua toca los dientes", "Palabras con T: taza, tigre, tren, tambor, tomate, tortuga", "Si la imagen no empieza con T, el nino no suma puntos: trabaja discriminacion", "Despues del juego armen lista colectiva"], cancion: "Cancion sugerida: El tigre Tomas toca el tambor, toca y toca con mucho fervor. T de tigre, T de tambor, T de tomate y de todo el fervor.", poesia: "Poesia sugerida: La T es tamboritera que golpea sin cesar. Tigre, tren y tortuga la hacen sonar." },
-  "Sonido inicial /n/": { titulo: "Busqueda de objetos con N en el aula", contenido: "Los ninos recorren el aula buscando objetos cuyo nombre empiece con /n/. Los muestran al grupo. Armen un grafico de barras colectivo.", tips: ["La N es nasal: el sonido sale por la nariz. Sientan la vibracion", "Palabras con N: nariz, nube, nino, nido, naranja, nuez, noche", "El grafico de barras introduce matematicas de representacion", "Si un nino no encuentra nada, ayudelo: tu nombre empieza con N?"], cancion: "Cancion sugerida: La nube Nora nada en el cielo, la naranja Nina rueda en el suelo. N de nariz, N de nido y de noche.", poesia: "Poesia sugerida: La N es naricera, el sonido vibra en la nariz entera. Nube, nino, nido y naranja." },
-  "Consonantes - Repaso": { titulo: "Bingo de sonidos iniciales", contenido: "Cada nino recibe un cartero con consonantes trabajadas. La docente dice palabras. El nino marca la consonante inicial. Gana el primero en completar una fila.", tips: ["Diga las palabras lentamente estirando el sonido inicial: mmmesa, ppperro", "Si un nino marca mal, pida al grupo que repitan el sonido inicial juntos", "El bingo mantiene alta la motivacion por la competencia amistosa", "Despues del juego repase cada consonante con su gesto corporal"], cancion: "Cancion sugerida: M de mama, P de papa, S de sol brillante, L de luna y lapa. T de tortuga, N de nido blanco, el bingo de las letras lo jugamos todos." },
-  "Sonido final": { titulo: "Atrapar el sonido final", contenido: "Diga palabras estirando el ultimo sonido: sooolll, paaan. Los ninos cierran la mano atrapando ese sonido. Luego abren la mano y dicen que sonido atraparon.", tips: ["Estire exageradamente el sonido final", "Palabras buenas: sol, pan, mar, flor, tos, luz, red, sal", "Es mas dificil que el sonido inicial: celebre cada identificacion", "Registre con una ficha de color en un tablero"] },
-  "Sonidos medios": { titulo: "Inicio, medio y final con las manos", contenido: "Mano izquierda = inicio, centro del pecho = medio, mano derecha = final. Digan el sonido de cada posicion mientras hacen el gesto.", tips: ["El gesto corporal ancla la posicion espacial del sonido en la memoria", "Haga la actividad varias veces antes de pedir que lo hagan solos", "El sonido medio es el mas dificil: priorice inicio y final primero"] },
-  "Sintesis de fonemas": { titulo: "El robot que habla lento", contenido: "La docente actua como un robot separando cada fonema: /s/... /o/... /l/. Los ninos juntan los sonidos y adivinan la palabra. Luego los ninos turnan de ser el robot.", tips: ["Empiece con palabras de 2 fonemas y aumente la dificultad", "Mantenga el juego con movimientos roboticos para sostener la atencion", "Esta habilidad es base para la lectura"], cancion: "Cancion sugerida: Soy el robot lector que habla muy lento, /s/... /o/... /l/... adivina el cuento." },
-  "Analisis de fonemas": { titulo: "Cubos para contar fonemas", contenido: "Con cubos o fichas los ninos representan cada fonema en fila. Cuentan cuantos tiene la palabra y comparan longitudes.", tips: ["Un fonema = un cubo. Diga la palabra muy lento", "Distinga entre letra y sonido: ch tiene dos letras pero un fonema", "Esta habilidad es predictora de exito lector"] },
-  "Sustitucion de fonemas": { titulo: "Cambiar un fonema para crear palabras nuevas", contenido: "La docente propone cambiar el primer sonido: pato con /g/ queda gato. Use letras moviles para mostrar el cambio visualmente.", tips: ["Empiece cambiando solo el sonido inicial: es el mas facil", "Palabras ideales: pato-gato, mesa-pesa, sol-col", "Las letras moviles hacen visible el proceso abstracto"] },
-  "Omision de fonemas": { titulo: "Que queda sin el primer sonido", contenido: "Se quita el sonido inicial. Sol sin /s/ queda ol. Una ficha que se cubre representa el fonema quitado.", tips: ["Use apoyo visual: dos fichas, cubra la primera y lean lo que queda", "Es actividad avanzada: asegurese que dominen analisis antes", "Celebre los intentos aunque sean incorrectos"] },
-  "Adicion de fonemas": { titulo: "Agregar sonidos para crear palabras nuevas", contenido: "Los ninos agregan un fonema al inicio o al final de palabras cortas para crear palabras nuevas.", tips: ["Use letras moviles para visualizar el agregado", "Priorice la adicion al final por ser mas sencilla", "No importa si la palabra creada no existe: el proceso es el objetivo"] },
-  "Manipulacion avanzada": { titulo: "Desafio fonologico en equipos", contenido: "La docente da operaciones con fonemas en serie. Los ninos en equipos descifran la palabra resultante.", tips: ["Esta actividad es para ninos con solido dominio de las anteriores", "Trabaje en equipos para que los ninos se apoyen", "Si hay ninos sin dominio basico, asigneles operaciones mas simples"] },
-  "Evaluacion CF": { titulo: "Estaciones de evaluacion de CF", contenido: "Cuatro estaciones: rimas, segmentacion silabica, sonido inicial, manipulacion. La docente rota registrando individualmente con rubrica.", tips: ["Prepare la rubrica antes: que espera ver en cada nino segun el nivel", "Asigne actividad autonoma en cada estacion", "Use esta informacion para planificar las proximas actividades con ALBA"] },
-  // ── COMPRENSION TEXTUAL ───────────────────────�����������──────────────────────────
-  "Exploracion del libro": { titulo: "Antes de abrir el libro", contenido: "Presente el libro CERRADO 2 minutos. Los ninos observan la tapa y responden en ronda. Registre TODAS las hipotesis en el pizarron sin juzgar ninguna.", tips: ["No abra el libro hasta que todos hayan hablado: la anticipacion construye comprension", "Pida que justifiquen: como lo sabes? que te hizo pensar eso?", "Vuelva a estas hipotesis al terminar la lectura"], cancion: "Cancion sugerida: El libro me habla desde la portada, con colores e imagenes y una historia guardada. Antes de abrirlo yo ya imagino que pasara adentro en este camino.", poesia: "Poesia sugerida: La tapa del cuento me guina el ojo, me dice que adentro hay un mundo de antojo. Miro el titulo, miro el autor, y ya mi cabeza empieza a sonar." },
-  "Antes de leer: Predicciones": { titulo: "Predicciones con post-its antes de leer", contenido: "Cada nino dice su prediccion. Escriba o dibuje en post-it y peguelo en el pizarron. Al finalizar vuelvan: acertada, parcialmente acertada, o no acertada.", tips: ["Modele la estructura: Yo creo que... porque en la tapa veo...", "Acepte TODAS las predicciones sin evaluarlas antes de leer", "El momento de verificar es tan importante como el momento de predecir"] },
-  "Lectura dialogica: Pausas": { titulo: "Pausas estrategicas con el titere preguntador", contenido: "Lea en voz alta con pausas planificadas. El titere hace una pregunta en cada pausa. Los ninos responden y luego continuan para verificar.", tips: ["Planifique las pausas antes de la clase: marque donde se detendra", "Las mejores pausas son antes de un momento clave o despues de una sorpresa", "Si los ninos responden con una sola palabra, amplie la respuesta"] },
-  "Vocabulario en contexto": { titulo: "El muro de palabras nuevas", contenido: "Al encontrar una palabra dificil, detenerse: Esta palabra es nueva. Infieran juntos el significado por el contexto. Agreguen al MURO DE PALABRAS.", tips: ["No de el significado inmediatamente: el proceso de inferencia es el aprendizaje", "Use pistas del texto: las imagenes, las palabras anteriores", "Vuelva a las palabras del muro en otras actividades"] },
-  "Recontar la historia": { titulo: "Recontado en cadena con imagenes", contenido: "Imagenes de secuencia en el pizarron. Los ninos recontan en cadena: cada uno agrega UN fragmento en orden.", tips: ["Use palabras de secuencia: primero, despues, luego, finalmente", "Si un nino se salta un evento importante, pregunte al grupo que ayude", "Despues del recontado colectivo, pida que reconten en pareja"] },
-  "Conexiones texto-vida": { titulo: "Esto me paso a mi tambien", contenido: "Proponga preguntas de conexion personal. Los ninos comparten en parejas primero, luego con el grupo.", tips: ["Modele una conexion personal propia: a mi me paso algo parecido cuando...", "Las conexiones texto-vida profundizan la comprension y generan empatia", "No fuerce: si un nino dice que no le paso, pregunte a alguien que conozcas"] },
-  "Cruz de comprension: QUIEN": { titulo: "Quien aparece en el cuento", contenido: "El brazo QUIEN de la cruz. Los ninos responden citando el texto y colocan siluetas de personajes.", tips: ["Distinga entre personaje principal y secundarios", "Pida que describan fisica y emocionalmente a cada personaje", "Las siluetas visuales ayudan a los ninos con dificultades de memoria"] },
-  "Cruz de comprension: QUE": { titulo: "Que sucede en el cuento", contenido: "Identifican las 3 acciones mas importantes y las ordenan por relevancia.", tips: ["Distinga entre TODAS las cosas que pasan y las 3 MAS IMPORTANTES", "Pida justificacion: por que esa es mas importante?", "Las 3 acciones deben contar la historia si se leen solas"] },
-  "Cruz de comprension: DONDE": { titulo: "Donde ocurre la historia", contenido: "Los ninos buscan frases que indican el lugar. Anotan en la cruz y dibujan el escenario principal.", tips: ["El DONDE puede cambiar a lo largo del cuento: identifiquen todos los lugares", "Busquen evidencia textual", "Pregunte: como se habrian sentido los personajes en otro lugar?"] },
-  "Cruz de comprension: CUANDO": { titulo: "Cuando sucede la historia", contenido: "Los ninos identifican indicadores de tiempo y los ubican en una linea temporal.", tips: ["Indicadores tipicos: de manana, en invierno, habia una vez", "La linea temporal desarrolla comprension de secuencia narrativa", "Contrasten el tiempo del cuento con el tiempo real"] },
-  "Cruz: Integracion literal": { titulo: "Los 4 brazos en equipo", contenido: "Divida en 4 grupos, cada uno trabaja un brazo. Presentan y completan la cruz colectiva.", tips: ["Cada grupo tiene 5 minutos para preparar su brazo", "La presentacion grupal desarrolla oralidad y pensamiento colaborativo", "Lean los 4 brazos como resumen de la historia"] },
-  "Cruz: POR QUE - causa y efecto": { titulo: "Por que suceden las cosas", contenido: "Los ninos infieren causas que el texto no dice explicitamente. Como lo sabemos si no esta escrito?", tips: ["El POR QUE inferencial es mas dificil: prepare un ejemplo para modelar", "Use flechas causa-efecto en el pizarron", "Celebre las respuestas razonadas aunque no sean exactas"] },
-  "Cruz: COMO sucede": { titulo: "Como ocurren los eventos", contenido: "Los ninos explican los procesos usando vocabulario de secuencia: primero... luego... al final.", tips: ["El COMO implica proceso y secuencia: use flecha que va de una cosa a otra", "Las diferentes versiones son validas si tienen base en el texto", "Conecte con procesos que los ninos conocen de su vida"] },
-  "Cruz: QUE OPINAS": { titulo: "Yo opino porque...", contenido: "Los ninos expresan opinion usando la estructura: Yo opino que... porque en el texto dice...", tips: ["Modele la estructura completa antes de pedir que la usen", "Una opinion sin fundamento no es valida: exija el porque", "El debate muestra que el texto admite multiples lecturas"] },
-  "Integracion LD + Cruz": { titulo: "El ciclo completo: antes durante y despues", contenido: "Ciclo completo: Antes, Durante, Despues. Los ninos lideran cada fase con la docente facilitando.", tips: ["Asigne roles: lider de predicciones, lider de preguntas, lider de cruz", "El ciclo completo toma una sesion entera: no lo apure", "Cuando los ninos lideran, el aprendizaje se profundiza"] },
-  "Texto informativo": { titulo: "Antes durante y despues con texto informativo", contenido: "Antes: que sabemos. Durante: datos nuevos. Despues: comparamos con tarjetas KWL.", tips: ["El texto informativo no tiene personajes ni trama: adapte las preguntas", "Las imagenes en libros informativos son informacion, no decoracion", "La comparacion antes-despues muestra el aprendizaje que ocurrio"] },
-  // ── ORALIDAD ──────────────────────────────────────────────────────────
-  "ECO-E: Sonidos del entorno": { titulo: "Escucha y respuesta en oracion completa", contenido: "Los ninos cierran los ojos y escuchan 30 segundos. Responden en ORACION COMPLETA: Yo escuche el sonido de...", tips: ["Modele la oracion completa antes: Yo escuche el sonido de los pasos", "Si un nino dice solo la palabra, repita la oracion y pida que la repita", "El silencio previo es parte de la actividad: no lo llene con su voz"] },
-  "ECO-E: Escucha de voces": { titulo: "Reconocer voces y responder", contenido: "Grabe voces de personas conocidas. Los ninos escuchan y responden: Esa es la voz de... porque...", tips: ["Conseguir las grabaciones toma tiempo: planifique con anticipacion", "La motivacion es alta cuando reconocen una voz conocida", "El porque desarrolla argumentacion oral basica"] },
-  "ECO-E: Instrucciones simples": { titulo: "Seguir instrucciones y verbalizar", contenido: "De instrucciones simples. El nino ejecuta la accion y luego la verbaliza. No pase a la siguiente hasta que el nino haya verbalizado.", tips: ["La verbalizacion posterior a la accion ancla el vocabulario de accion", "Progrese de instrucciones simples a instrucciones de dos pasos", "La demora entre accion y verbalizacion desarrolla memoria de trabajo"] },
+  "Sound Detectives": {
+    titulo: "Auditory discrimination",
+    contenido: "Before children can hear a phoneme they have to notice that sound is something you can attend to on purpose. This is the floor of every phonological skill and it is often skipped because it looks like play.",
+    tips: ["Lower your own voice so they sharpen their listening instead of competing with you", "If a child answers with one word, model the full sentence and have the group repeat it", "Contrast two sounds at a time before asking for one alone"],
+    referencia: "Adams (1990); California PTKLF, Phonological Awareness",
+    observar: ["Names a sound without a visual clue", "Uses a full sentence unprompted", "Distinguishes two similar sounds"],
+  },
+  "Rhyme Basket": {
+    titulo: "Rhyme recognition",
+    contenido: "Rhyme is the earliest window into the sound structure of words and one of the strongest early predictors of later reading. Invented words count: what matters is that the child is manipulating sound, not vocabulary.",
+    tips: ["Accept nonsense rhymes with enthusiasm, they show the skill is there", "Do recognition before production: judging is easier than making", "Use their own names first, it is the word every child owns"],
+    referencia: "Goswami & Bryant (1990); Yopp",
+    observar: ["Judges a rhyming pair correctly", "Produces a rhyme, real or invented", "Completes the rhyme in a song without help"],
+  },
+  "Clap the Beats": {
+    titulo: "Syllable segmentation",
+    contenido: "The syllable is the easiest unit to hear because it has a beat you can feel in your body. Moving while segmenting is not decoration: the physical beat is what makes the abstract unit perceivable.",
+    tips: ["Start with two-syllable names, never with one-syllable words", "Say the word at normal speed first, then segmented, never only segmented", "Watch for the child who claps randomly: they need your hands on theirs"],
+    referencia: "California PTKLF, Phonological Awareness",
+    observar: ["Claps two-syllable words accurately", "Claps three-syllable words accurately", "Coordinates the clap with the syllable, not the beat of the music"],
+  },
+  "My Name Starts With": {
+    titulo: "Initial sound isolation",
+    contenido: "The child's own name is the first word they own as an object, not just as a label. Isolating its first sound is usually the first phoneme a child can hold in their head, which is why every phonemic sequence starts there.",
+    tips: ["Say the sound, never the letter name: it is mmm, not em", "Hold the sound out loud so it is audible: mmmmoon", "If a child cannot isolate it, say the name and the sound together three times before asking"],
+    referencia: "Ehri (2005); California PTKLF",
+    observar: ["Produces the first sound of own name alone", "Matches another word with the same first sound", "Says the sound rather than the letter name"],
+  },
+  "Syllable Clap Parade": {
+    titulo: "Syllable blending and segmenting",
+    contenido: "Blending and segmenting are the same skill in two directions, and children usually get one before the other. Teaching both from the start prevents the child who can take words apart but cannot put them together.",
+    tips: ["Always pair segmenting with blending in the same session", "Use words the children already understand: this is about sound, not vocabulary", "Three syllables is the ceiling at this stage, do not push to four"],
+    referencia: "California CCSS RF.K.2b; Adams (1990)",
+    observar: ["Blends two syllables into a word", "Blends three syllables into a word", "Segments a word without a physical cue"],
+  },
+  "Onset and Rime Puppets": {
+    titulo: "Onset-rime blending",
+    contenido: "Onset and rime is the bridge between the syllable and the phoneme. It is easier than full phoneme blending because the rime stays whole, and it sets up word families, which is where decoding will start.",
+    tips: ["Keep the rime constant across a whole round so the pattern becomes audible", "The puppet does the slow talking, not you: children correct a puppet more freely", "Move to full phonemes only after two consecutive successful rounds"],
+    referencia: "Goswami & Bryant (1990); Cunningham (1999)",
+    observar: ["Blends onset and rime into a word", "Splits a word at the onset", "Notices the shared rime in a word family"],
+  },
+  "First Sound Sort": {
+    titulo: "Initial phoneme isolation",
+    contenido: "Isolating the initial phoneme is the first true phonemic skill and the one that most reliably separates children who will need extra support. Continuant sounds like /m/ and /s/ are easier than stops like /b/ and /t/ because you can hold them.",
+    tips: ["Start with continuants, /m/ /s/ /f/, before stops", "Insist on the sound in isolation, not the letter name and not the whole word", "A child who says the whole word instead of the sound has not got it yet, even if the card is in the right hoop"],
+    referencia: "Ehri (2005); Castiglioni-Spalten & Ehri (2003)",
+    observar: ["Produces the isolated first sound", "Sorts correctly without saying the whole word", "Handles a stop consonant, not only continuants"],
+  },
+  "Say It, Move It": {
+    titulo: "Phoneme segmentation",
+    contenido: "The medial vowel is where most children stall, because it is the least perceptible position. Making the sound physical, one counter per phoneme, turns an invisible sequence into something the child can see and correct.",
+    tips: ["Use only CVC words, never blends, at this stage", "Say the word once at normal speed before segmenting", "If a child pushes two counters for three sounds, it is almost always the vowel they dropped"],
+    referencia: "Ehri & McCormick (1998); California CCSS RF.K.2d",
+    observar: ["Pushes one counter per sound", "Identifies the medial vowel", "Sweeps back to the whole word without losing it"],
+  },
+  "Sound Swap Songs": {
+    titulo: "Phoneme substitution",
+    contenido: "Substitution requires holding a word in memory, removing a sound and inserting another, all at once. It is the most demanding phonemic skill and the clearest sign that the earlier steps are consolidated. If a group fails here, the answer is to go back, not to repeat this.",
+    tips: ["Do not attempt this until segmentation is solid, it will only frustrate", "Whole group first, individuals later: the song carries the ones who are not there yet", "Failing here is data about the previous step, not about this one"],
+    referencia: "California CCSS RF.K.2e; Brady (2012)",
+    observar: ["Substitutes the initial sound in a known word", "Keeps the rest of the word intact", "Can do it without the song's rhythm carrying them"],
+  },
+  "Letter Sound Anchors": {
+    titulo: "Letter-sound correspondence",
+    contenido: "This is where phonological awareness becomes reading: the moment the child maps a sound they can already hear onto a symbol. If the sound is not secure in the ear first, the letter is just a shape to memorize.",
+    tips: ["Never teach the letter before the sound is audible to the child", "Two letters per week is enough; more looks like progress and is not", "Let the group pick the anchor word, they will remember their own"],
+    referencia: "Ehri (2005); Moats (2012)",
+    observar: ["Produces the sound when shown the letter", "Finds the letter in connected text", "Uses the anchor word to retrieve the sound"],
+  },
+  "High Frequency Word Wall": {
+    titulo: "Sight word recognition",
+    contenido: "Sight recognition is not memorization of shapes: it is what happens when a word has been decoded enough times to become automatic. Words met in sentences become sight words faster than words drilled on cards.",
+    tips: ["Always in context, never as an isolated list", "Five per cycle is the ceiling for kindergarten", "If a child guesses from the first letter, cover it and ask them to read the rest"],
+    referencia: "Ehri (2005); California CCSS RF.K.3c",
+    observar: ["Reads the word without sounding out", "Finds it in connected text", "Uses it correctly in an invented sentence"],
+  },
+  "Long or Short Vowel Sort": {
+    titulo: "Vowel discrimination",
+    contenido: "English vowels carry most of the decoding difficulty. Hearing the difference before seeing the spelling prevents the child from guessing from the consonants, which is the most common compensatory habit.",
+    tips: ["Ear before eye, always: signal first, write second", "Use minimal pairs so the vowel is the only variable", "A child who guesses from consonants will do well on the list and fail on new words"],
+    referencia: "California CCSS RF.1.2a; Moats (2012)",
+    observar: ["Signals correctly before seeing the word", "Handles a minimal pair", "Explains the difference in their own words"],
+  },
+  "Blend the Blends": {
+    titulo: "Blending with consonant clusters",
+    contenido: "Consonant blends are the single most common stalling point between kindergarten and first grade. Children insert a vowel, saying suh-top, because holding two consonants is physically hard. It is not a comprehension problem, it is a motor and perceptual one.",
+    tips: ["Listen for the inserted vowel, suh-top, it is the tell", "Have the child feel their own mouth between the two consonants", "Do not move to written blends until the oral blend is clean"],
+    referencia: "California CCSS RF.1.2b; Spear-Swerling (2011)",
+    observar: ["Blends a two-consonant onset without inserting a vowel", "Blends a final cluster", "Self-corrects when they hear the inserted vowel"],
+  },
+  "Digraph Detectives": {
+    titulo: "Consonant digraphs",
+    contenido: "A digraph is the first time a child meets two letters making one sound, which breaks the one-to-one rule they just learned. Naming that contradiction out loud helps more than drilling it.",
+    tips: ["Say out loud that this breaks the rule they learned, do not hide it", "One digraph per session, they interfere with each other", "Build the chart from words they found, not from your list"],
+    referencia: "California CCSS RF.1.3a",
+    observar: ["Reads a digraph as one sound", "Finds digraphs in new text", "Does not try to sound the two letters separately"],
+  },
+  "Every Syllable Has a Vowel": {
+    titulo: "Syllable structure in print",
+    contenido: "This is the first strategy that lets a child attack a word nobody taught them. It converts decoding from recall into a procedure, which is what makes independent reading possible.",
+    tips: ["The rule is stated once and then used, not re-explained every session", "Apply it to words from their own reading, never to a prepared list", "When they get stuck on a long word later, point at the vowels rather than telling them the word"],
+    referencia: "California CCSS RF.1.3d",
+    observar: ["Marks the vowels correctly", "Splits between syllables", "Uses the strategy on an unfamiliar word without prompting"],
+  },
+  "Vowel Team Teams": {
+    titulo: "Vowel teams",
+    contenido: "Vowel teams are where English stops being reliable, and children notice. Letting them collect the exceptions themselves, instead of hiding them, builds the flexibility that good decoders have and poor ones lack.",
+    tips: ["Ask for the exceptions on purpose, they will find them anyway", "Groups teach each other: explaining the pattern consolidates it", "Keep the collected words visible for the rest of the year"],
+    referencia: "California CCSS RF.2.3b",
+    observar: ["Reads the vowel team as one sound", "Finds new examples independently", "Notices and flags an exception"],
+  },
+  "Prefix and Suffix Builders": {
+    titulo: "Morphological decoding",
+    contenido: "Morphology is the highest-yield decoding strategy after the alphabetic principle, because affixes are stable in both sound and meaning. A child who owns twenty affixes can attack thousands of words.",
+    tips: ["Always ask what the affix did to the meaning, never only how it sounds", "Start with affixes that do not change the base spelling", "Keep a running journal, the collection is the learning"],
+    referencia: "California CCSS RF.2.3d; Moats (2012)",
+    observar: ["Reads the built word fluently", "Explains the meaning change", "Applies a known affix to an unfamiliar base"],
+  },
+  "Latin Suffix Lab": {
+    titulo: "Latin morphology",
+    contenido: "From third grade on, most new words a child meets are multisyllabic and academic, and they arrive in science and social studies, not in stories. Teaching morphology inside content is what makes it transfer.",
+    tips: ["Pull the words from content class, that is where they actually appear", "Predict the meaning before checking, the prediction is the thinking", "Three suffixes is enough for a whole unit"],
+    referencia: "California CCSS RF.3.3b; Graves (2009)",
+    observar: ["Splits a multisyllabic word at the suffix", "Predicts meaning from the parts", "Transfers the strategy to a content text without prompting"],
+  },
+  "Picture Walk Predictions": {
+    titulo: "Prediction from illustration",
+    contenido: "Coming back to the prediction is what makes it comprehension rather than guessing. Children learn that being wrong and noticing it is part of reading, not a failure.",
+    tips: ["Always come back to the sticky notes, that is the whole point", "Write their words, not your improved version", "Two predictions is enough, more and you lose the return"],
+    referencia: "California PTKLF, Comprehension and Analysis",
+    observar: ["Makes a prediction grounded in the picture", "Notices when the story differed", "Revises without being told they were wrong"],
+  },
+  "What Happened First": {
+    titulo: "Sequencing",
+    contenido: "Sequence is the scaffold of narrative comprehension. Using a story they already know removes the memory load so all the effort goes into the ordering itself.",
+    tips: ["Only stories they know by heart, never a new one", "Three cards first, five much later", "Let them tell each part, not just place the card"],
+    referencia: "California PTKLF, Comprehension and Analysis",
+    observar: ["Orders three events correctly", "Tells what happens in each part", "Uses a temporal connector while telling"],
+  },
+  "Ask Me Three": {
+    titulo: "Questioning with evidence",
+    contenido: "Pointing to the page is what separates comprehension from recall of the general vibe. It is also the first move of citing evidence, which is the spine of every later reading standard.",
+    tips: ["The page has to be pointed at, not just remembered", "Children who answer from memory alone need the book back in their hands", "Record who points and who does not, that is your group"],
+    referencia: "California CCSS RL.K.1",
+    observar: ["Asks a question about a key detail", "Points to the page that supports the answer", "Answers a classmate's question accurately"],
+  },
+  "Story Retell Ropes": {
+    titulo: "Retelling structure",
+    contenido: "Children almost always drop the middle, because the beginning and the end are the most memorable. The rope makes the missing part physically obvious to the child, not just to you.",
+    tips: ["Watch for the jump from beginning to end, it is the most common gap", "The rope stays in their hands, do not hold it for them", "Second turn with cards, not with your prompting"],
+    referencia: "California CCSS RL.K.2; McGee & Schickedanz (2007)",
+    observar: ["Includes the middle without prompting", "Retells in order", "Includes at least one key detail"],
+  },
+  "Character Feelings Map": {
+    titulo: "Character analysis with evidence",
+    contenido: "Feelings are where children first make an inference, and where they are most tempted to answer from their own experience instead of the text. Demanding the page is what keeps it a reading task.",
+    tips: ["Ask how do we know, every single time", "Supply the feeling vocabulary, they cannot infer with two words", "An answer from personal experience is not wrong, it is just not the task"],
+    referencia: "California CCSS RL.1.3",
+    observar: ["Names a feeling with a text-based reason", "Points to the supporting page", "Distinguishes what the text says from what they imagine"],
+  },
+  "Two Books, One Topic": {
+    titulo: "Text type awareness",
+    contenido: "Knowing what kind of text you are holding changes how you read it. Children who read informational text as if it were a story miss the structure that carries the information.",
+    tips: ["Same topic in both books, otherwise they sort by subject not by type", "End with a real question so the choice has a purpose", "Diagrams and headings are the giveaways, name them"],
+    referencia: "California CCSS RL.1.5; Duke (2000)",
+    observar: ["Sorts features correctly", "Chooses the right text for a question", "Names a structural feature"],
+  },
+  "What Does the Author Want": {
+    titulo: "Author's purpose",
+    contenido: "Purpose is the first properly interpretive move. Allowing two defensible answers, as long as each is supported, teaches that evidence is what settles a reading claim, not authority.",
+    tips: ["Keep the disagreement if both sides have a line from the text", "One line of evidence, not a summary", "Use short texts, purpose is easier to see in a page than in a chapter"],
+    referencia: "California CCSS RI.2.6",
+    observar: ["Chooses a purpose and defends it", "Cites one line as evidence", "Accepts a different answer that is also supported"],
+  },
+  "Two Texts, One Question": {
+    titulo: "Cross-text comparison",
+    contenido: "The difference between two sources is where a child first meets the idea that texts are written by people who chose what to include. That is the beginning of critical reading.",
+    tips: ["Short texts, the comparison is the work, not the reading volume", "Focus the discussion on what only one says", "Ask why the author chose to include it, not just what it says"],
+    referencia: "California CCSS RI.3.9",
+    observar: ["Fills both columns accurately", "Identifies what only one text says", "Offers a reason for the difference"],
+  },
+  "Mystery Bag Talk": {
+    titulo: "Descriptive language",
+    contenido: "Young children default to naming. Pushing for a second and third descriptor is what turns a label into description, and description is the seed of every later explanation.",
+    tips: ["Hold the guessing back until two descriptors are out", "Model the words they lack: rough, bumpy, cold, they cannot describe with words they do not have", "Let the quiet ones go with an easy object first"],
+    referencia: "California PTKLF, Listening and Speaking; Beck & McKeown (2013)",
+    observar: ["Gives two descriptors before guessing", "Uses a word modeled earlier in the week", "Waits for their turn to speak"],
+  },
+  "Tell Me Your Morning": {
+    titulo: "Narrative sequencing",
+    contenido: "Temporal connectors are the first grammar of narrative. A child who can say first and then is building the structure they will later need to retell a story and to write one.",
+    tips: ["Keep the frame visible even when they no longer need it", "Do not correct grammar mid-sentence, it stops the narration", "Two connected sentences is the target, not more"],
+    referencia: "California PTKLF, Listening and Speaking",
+    observar: ["Uses a temporal connector", "Sustains two connected sentences", "Narrates in the order things happened"],
+  },
+  "Morning Meeting Turn and Talk": {
+    titulo: "Conversational turn-taking",
+    contenido: "Reporting the partner's idea instead of your own is what turns talking into listening. It is a small change in the instruction that changes what the activity actually trains.",
+    tips: ["Have them report the partner's idea, not their own, that is the whole trick", "The physical listening card matters, it gives the listener a job", "Two pairs is enough, more and the group loses the thread"],
+    referencia: "California CCSS SL.K.1a",
+    observar: ["Waits for their turn", "Reports the partner's idea accurately", "Speaks audibly to the whole group"],
+  },
+  "Ask to Understand": {
+    titulo: "Clarifying questions",
+    contenido: "Children who do not ask when they do not understand fall behind silently. Making the question the goal, rather than the answer, gives permission to the ones who never ask.",
+    tips: ["Celebrate the question out loud, name it as the thing that was hard", "Deliberately leave out something they need, not something trivial", "Watch who never asks, that is your data"],
+    referencia: "California CCSS SL.K.3",
+    observar: ["Asks a question that completes the instruction", "Asks without being prompted", "Asks when genuinely confused, not only in the game"],
+  },
+  "Describe So I Can Draw It": {
+    titulo: "Precision in description",
+    contenido: "The gap between what the speaker said and what the listener drew makes vagueness visible without anyone correcting anyone. Children fix their own language when they see the result.",
+    tips: ["First round without questions, that is what creates the gap", "Compare the drawings, do not evaluate the speaker", "Three questions in the second round, not unlimited"],
+    referencia: "California CCSS SL.1.4",
+    observar: ["Gives details that change the drawing", "Adjusts their language after seeing the gap", "Asks a useful question in the second round"],
+  },
+  "Build on What They Said": {
+    titulo: "Building on others' ideas",
+    contenido: "Most classroom discussion is a series of unrelated statements aimed at the teacher. The starters force the children to listen to each other, which is the actual standard and the harder skill.",
+    tips: ["Track how long the chain runs, not how many spoke", "The starters are compulsory at first and drop away later", "If every child talks to you, the chain is broken, sit down"],
+    referencia: "California CCSS SL.1.1b",
+    observar: ["Uses a starter correctly", "Refers to what a classmate actually said", "Sustains a chain of three exchanges"],
+  },
+  "Partner Reading Check": {
+    titulo: "Listening and reflecting",
+    contenido: "Self-correction is the visible sign that a reader is monitoring meaning. Having a peer notice it, rather than a teacher correct it, keeps the reader in charge of their own reading.",
+    tips: ["The listener never corrects, that is the rule that makes it work", "Talk about what made the spot hard, not about the mistake", "Collect the marking strips, they are assessment"],
+    referencia: "California CCSS SL.2.1b; Samuels (1979)",
+    observar: ["Marks a genuine self-correction", "Explains what made the word hard", "Listens without interrupting"],
+  },
+  "Say It Again, Better": {
+    titulo: "Elaborated reporting",
+    contenido: "The first version of anything is a draft, including spoken language. Making the second attempt the one that counts teaches revision as a habit before it is ever asked for in writing.",
+    tips: ["Only the second version is assessed, say so beforehand", "One request for more detail, not a barrage", "Model the two versions yourself first"],
+    referencia: "California CCSS SL.3.4",
+    observar: ["Adds a relevant fact in the second version", "Keeps an understandable pace", "Uses vocabulary from the text"],
+  },
+  "Sign In Every Morning": {
+    titulo: "Name writing",
+    contenido: "This is the highest-yield routine in an early years classroom and it costs no instructional time. The child's name is the first word they write with meaning, and the kept sheets are the cleanest developmental record you will ever have.",
+    tips: ["Never correct at the door, it turns a routine into a test", "Keep every sheet in date order, that pile is your evidence", "The name model goes at their eye level, not yours"],
+    referencia: "California PTKLF, Writing; Clay (1991)",
+    observar: ["Makes a mark with intent", "Produces the first letter of the name", "Writes the whole name recognizably"],
+  },
+  "Draw It, Tell It": {
+    titulo: "Emergent composition",
+    contenido: "Writing down what the child just said, in front of them, is how they discover that speech can be captured. It is the single most important demonstration in the year and it takes fifteen seconds per child.",
+    tips: ["Write their words exactly, not a corrected version", "Say each word as you write it so they see the match", "Do it in front of the child, never afterwards at your desk"],
+    referencia: "California PTKLF, Writing; Ferreiro & Teberosky (1979)",
+    observar: ["Tells about their own drawing", "Watches the words being written", "Points at their drawing while telling"],
+  },
+  "Draw, Label, Tell": {
+    titulo: "Informative composition",
+    contenido: "Invented spelling is not a mistake to tolerate, it is direct evidence of the child's phonemic analysis. A label written as KT for cat tells you the child hears the first and last sound but not the vowel.",
+    tips: ["Read their invented spelling as data, it tells you which phonemes they hear", "Do not correct spelling at this stage, it stops the analysis", "One label is enough to start, more comes on its own"],
+    referencia: "California CCSS W.K.2; Ehri (2005)",
+    observar: ["Writes a label with at least the initial sound", "Includes the final sound", "Explains the drawing using the label"],
+  },
+  "Letter Formation Trays": {
+    titulo: "Letter formation",
+    contenido: "The verbal path is what makes formation automatic, and automatic formation is what frees attention for composing. A child fighting to make a letter has nothing left for what they wanted to say.",
+    tips: ["Say the path out loud every time, they will say it to themselves later", "Only letters whose sound they already know", "Two per session, formation fatigues faster than you think"],
+    referencia: "California CCSS L.K.1a",
+    observar: ["Starts the letter in the right place", "Says the path while writing", "Forms it without the model in front"],
+  },
+  "Sentence of the Day": {
+    titulo: "Sentence expansion",
+    contenido: "Expanding a sentence together makes visible that writing is choosing, not transcribing. The child's one added word is a low-risk entry into authorship for the ones who freeze at a blank page.",
+    tips: ["The added word is the part that matters, share those", "Grow it word by word, do not jump to the finished sentence", "The frozen ones can copy and add one word, that counts"],
+    referencia: "California CCSS W.1.2",
+    observar: ["Copies the sentence accurately", "Adds a word that fits", "Explains why they chose that word"],
+  },
+  "Opinion with a Reason": {
+    titulo: "Opinion with support",
+    contenido: "Separating the opinion from the reason is the move that makes argument teachable. The opinion is never wrong, which removes the risk, and it puts all the attention on the quality of the justification.",
+    tips: ["Never touch the opinion, only work the reason", "Read the reasons aloud without naming the author", "Because is the word to teach here, explicitly"],
+    referencia: "California CCSS W.1.1",
+    observar: ["States an opinion clearly", "Gives a reason connected to the book", "Uses because or an equivalent"],
+  },
+  "Opinion with Linking Words": {
+    titulo: "Cohesion in argument",
+    contenido: "Linking words are where an opinion becomes an argument. They are also the easiest thing to teach explicitly and the fastest visible gain in second grade writing.",
+    tips: ["Partner marks the gaps, teacher does not", "Keep the poster of linking words up during writing, not only during teaching", "Revise on the marks, that is the second draft"],
+    referencia: "California CCSS W.2.1",
+    observar: ["Uses at least two linking words", "Connects each reason to the opinion", "Revises after the partner's marks"],
+  },
+  "Paragraph with a Spine": {
+    titulo: "Structured informative writing",
+    contenido: "Requiring the page for every fact turns writing into reading. It is also the habit that prevents the paragraph that sounds informative and says nothing, which is the standard third grade failure mode.",
+    tips: ["Strike out unsourced facts, consistently, from the first day", "The organiser stays until the structure is internal", "Three facts, not more, the structure is the target not the volume"],
+    referencia: "California CCSS W.3.2; Donovan & Smolkin (2011)",
+    observar: ["Writes a topic sentence that frames the paragraph", "Sources each fact with a page", "Closes the paragraph rather than stopping"],
+  },
 }
 
 function getMicroCapacitacion(titulo: string): MicroCap {
@@ -332,963 +586,387 @@ function getMicroCapacitacion(titulo: string): MicroCap {
 // El cerebro de ALBA usa esta secuencia como NORTE y la ajusta segun el desempenio real del grupo
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; dccaba?: string; sala?: "4" | "5" | "ambas"; prerequisito?: boolean }[]> = {
-  // ── CONCIENCIA FONOLOGICA ────────────────────────────────────────────────
-  // DC CABA 2025: sala 4 trabaja escucha, rimas, silabas y vocales.
-  // Sala 5 profundiza fonemas consonanticos, blending y segmentacion fonemica.
+const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; objetivo: string; descripcion: string; materiales: string[]; ccss?: string; nivel?: "TK" | "K" | "1" | "2" | "3"; prerequisito?: boolean }[]> = {
+  // ── FOUNDATIONAL SKILLS - phonological awareness, phonics, morphology 
+  // Progresion TK → Grade 3. Cada paso citado al estandar oficial que lo
+  // fundamenta: CCSS ELA de California, o PTKLF para TK.
   CF: [
-    // BLOQUE 0 - CONCIENCIA LEXICA: el paso previo a la silaba y al fonema.
-    // El nino descubre que el habla se puede cortar: la oracion en palabras.
-    // Marcadas como prerequisito: si una sala no las trabajo, van primero
-    // aunque el grupo ya este mas adelante en la secuencia.
     {
-      titulo: "La oracion dice algo",
-      objetivo: "Reconocer que una oracion cuenta algo completo sobre alguien o algo",
-      descripcion: "La docente dice enunciados usando nombres del grupo: algunos completos (Tomas trajo su mochila) y otros incompletos (Los chicos). Los ninos deciden con pulgar arriba o abajo si dice algo entero. Cuando falta, entre todos lo completan en voz alta. Se cierra pidiendo que tres o cuatro ninos inventen su propia oracion sobre un companero.",
-      materiales: ["Ninguno", "Opcional: laminas con escenas para inventar oraciones"],
-      dccaba: "DC CABA 2025 - Practicas del Lenguaje: reflexion sobre el lenguaje como objeto. Conciencia lexica, primer nivel de la conciencia fonologica.",
-      sala: "ambas",
-      prerequisito: true
+      titulo: "Sound Detectives",
+      objetivo: "Attend to and discriminate sounds in the environment and in speech.",
+      descripcion: "Children close their eyes for thirty seconds of silence, then name what they heard in a full sentence: I heard the sound of. The teacher plays contrasting sounds, loud and soft, near and far, and children sort them. Ends by listening for a sound inside a word.",
+      materiales: ["Recorded environmental sounds", "Sound picture cards", "Triangle and bell"],
+      ccss: "PTKLF.LL.PA.1",
+      nivel: "TK",
+      prerequisito: true,
     },
     {
-      titulo: "Las palabras se separan",
-      objetivo: "Descubrir que una oracion esta formada por palabras que se pueden separar",
-      descripcion: "Se toma una oracion corta de dos o tres palabras. Un nino representa cada palabra: se paran en fila y cada uno dice la suya, dando un paso adelante. Despues se representa en el piso con un tarjeton por palabra, respetando el orden de izquierda a derecha. Se repite con una oracion mas larga y se compara cuantos tarjetones hacen falta.",
-      materiales: ["Tarjetones de cartulina", "Espacio libre en el piso"],
-      dccaba: "DC CABA 2025 - Practicas del Lenguaje: la palabra como unidad. Representacion concreta y direccionalidad de la escritura.",
-      sala: "ambas",
-      prerequisito: true
+      titulo: "Rhyme Basket",
+      objetivo: "Recognize and enjoy rhyme in songs, verses and language play.",
+      descripcion: "Pull two objects from the basket and say the names aloud. Children signal thumbs up when the words rhyme. Then sing a known rhyming song stopping before the last word so the group completes the pair. Each child offers one rhyming word for their own name, real or invented.",
+      materiales: ["Basket with 12 familiar objects", "Song chart", "Name cards"],
+      ccss: "PTKLF.LL.PA.2",
+      nivel: "TK",
     },
     {
-      titulo: "Cuantas palabras tiene",
-      objetivo: "Contar las palabras de una oracion y distinguir la longitud de la palabra de la longitud de la oracion",
-      descripcion: "La docente dice oraciones de distinta extension y los ninos colocan una ficha por cada palabra que escuchan, despues cuentan. Se contrastan a proposito casos que confunden: una oracion de dos palabras largas frente a una de cuatro palabras cortas. Se conversa sobre que lo que se cuenta son las palabras, no lo que dura decirlas.",
-      materiales: ["Fichas, tapitas o cubos", "Pizarron para registrar los conteos"],
-      dccaba: "DC CABA 2025 - Practicas del Lenguaje: segmentacion de la cadena hablada. Prerequisito de la segmentacion silabica.",
-      sala: "ambas",
-      prerequisito: true
+      titulo: "Clap the Beats",
+      objetivo: "Segment spoken words into syllables with physical support.",
+      descripcion: "Children walk in a line saying classmates names, clapping once per syllable and taking one step per clap. Then move to picture cards of two and three syllables. Children who clap every sound instead of the syllable get a second round with the teacher's hands over theirs.",
+      materiales: ["Name cards", "Picture cards, two and three syllables", "Open floor space"],
+      ccss: "PTKLF.LL.PA.3",
+      nivel: "TK",
     },
     {
-      titulo: "El orden cambia el sentido",
-      objetivo: "Descubrir que las palabras tienen un orden que sostiene el significado",
-      descripcion: "Se elige un verso de una poesia o cancion que el grupo ya conoce. Cada nino recibe una palabra y se ubican en fila para que, al decir cada uno la suya, el verso quede recitado. Despues se desordenan y vuelven a decirlo: los ninos escuchan que ya no significa lo mismo. Como cierre, un grupo se guarda su palabra sin decirla y conversan sobre que pasa cuando una palabra falta.",
-      materiales: ["Una poesia o cancion conocida por el grupo", "Opcional: tarjetas con las palabras"],
-      dccaba: "DC CABA 2025 - Practicas del Lenguaje: orden de las palabras y sentido. Conciencia sintactica inicial.",
-      sala: "ambas",
-      prerequisito: true
-    },
-    // BLOQUE 1 - SALA 4 Y 5: Discriminacion auditiva y juego con el lenguaje
-    {
-      titulo: "Escucha activa: sonidos del entorno",
-      objetivo: "Discriminar y nombrar sonidos ambientales en oracion completa",
-      descripcion: "Los ninos cierran los ojos 30 segundos en silencio. Al abrirlos nombran lo que oyeron en oracion completa: Yo escuche el sonido de... La docente muestra tarjetas con fuentes sonoras y los ninos las asocian. Se reproducen sonidos grabados (lluvia, palmas, instrumentos) para ampliar el repertorio.",
-      materiales: ["Grabadora con sonidos del entorno", "Tarjetas con fuentes sonoras", "Triangulo y campana", "Antifaz opcional"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Escucha y discriminacion de sonidos del entorno. Base del desarrollo fonologico segun Goswami (1990).",
-      sala: "ambas"
+      titulo: "My Name Starts With",
+      objetivo: "Identify the initial sound of familiar words, beginning with proper names.",
+      descripcion: "The name song runs each morning. When a child's name comes up the group says the first sound before saying the whole name. Then the teacher holds up two picture cards and children choose the one that starts like their name. Sound only, no letters yet.",
+      materiales: ["Name cards with photographs", "Picture cards", "Song chart"],
+      ccss: "PTKLF.LL.PA.4",
+      nivel: "TK",
     },
     {
-      titulo: "Juego con el lenguaje: canciones y rimas",
-      objetivo: "Explorar el lenguaje oral a traves del ritmo, la rima y la musica",
-      descripcion: "Cantar canciones rimadas del repertorio de la sala. La docente se detiene en el ultimo verso y los ninos completan el par rimado. Luego se juega a rimar los nombres del grupo: cada nino busca una palabra que rime con su nombre. Se arma un cartel de rimas de nombres para dejar a la vista.",
-      materiales: ["Cancionero ilustrado de la sala", "Titere rimador", "Tarjetas con nombres", "Cartel colectivo"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Juego con el lenguaje - rimas, canciones, trabalenguas. Las rimas son el predictor mas fuerte de exito lector en pre-escolar (Goswami & Bryant, 1990).",
-      sala: "ambas"
+      titulo: "Syllable Clap Parade",
+      objetivo: "Count, pronounce, blend and segment syllables in spoken words.",
+      descripcion: "Children segment and then blend: the teacher says a word in syllables and children join it back into a whole word, then reverse roles. Words come from the week's read aloud so meaning is already there. Record who can blend three syllables without support.",
+      materiales: ["Word list from the read aloud", "Counters", "Whiteboard"],
+      ccss: "RF.K.2b",
+      nivel: "K",
     },
     {
-      titulo: "Trabalenguas y poesias: sensibilidad fonemica",
-      objetivo: "Desarrollar sensibilidad hacia los sonidos del lenguaje a traves de la literatura oral",
-      descripcion: "La docente presenta un trabalenguas o poesia breve. Lo dicen en coro primero lento, luego rapido. Luego identifican que sonido se repite mucho. Se anota en el pizarron y se decora con dibujos alusivos. Los ninos aprenden de memoria al menos dos trabalenguas en el ano.",
-      materiales: ["Cartel con trabalenguas ilustrado", "Microfono de juguete", "Libros de poesia"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Juego con el lenguaje. La repeticion de sonidos en el texto literario desarrolla conciencia fonemica sin instruccion directa.",
-      sala: "ambas"
-    },
-    // BLOQUE 2 - AMBAS SALAS: Segmentacion silabica
-    {
-      titulo: "Segmentacion silabica con palmadas",
-      objetivo: "Separar palabras en silabas usando palmadas y representacion con fichas",
-      descripcion: "La docente muestra una imagen, dice la palabra exagerando las silabas y da palmadas. Los ninos repiten. Se usan circulos de cartulina para representar cada silaba: uno por silaba, alineados en el pizarron. Se comparan palabras cortas (sol, pan) con largas (mariposa, helicoptero).",
-      materiales: ["Tarjetas con imagenes variadas", "Circulos de cartulina", "Tamborcito"],
-      dccaba: "DC CABA 2025 - CF Sala 4 y 5: Segmentacion de palabras en silabas con apoyo de palmadas y movimiento. Cuba y Francia: punto de entrada obligatorio al sistema de escritura.",
-      sala: "ambas"
+      titulo: "Onset and Rime Puppets",
+      objetivo: "Blend and segment onsets and rimes of single-syllable spoken words.",
+      descripcion: "The puppet talks slowly and says a word split at the onset: /c/ - at. Children blend it and say the whole word. Then children split words for the puppet. Word families keep the rime constant so children hear the pattern: cat, hat, sat, mat.",
+      materiales: ["Hand puppet", "Word family list", "Small whiteboard"],
+      ccss: "RF.K.2c",
+      nivel: "K",
     },
     {
-      titulo: "Silabas con movimiento corporal",
-      objetivo: "Consolidar la segmentacion silabica con el cuerpo en movimiento",
-      descripcion: "Un paso por silaba al caminar por el salon. La docente dice una palabra, los ninos caminan dando un paso por cada silaba y se detienen. Luego vuelven al piso y se cuentan las fichas. Se trabaja con nombres de animales, frutas y nombres de los ninos del grupo.",
-      materiales: ["Cinta adhesiva en el piso para marcar espacios", "Imagenes de animales y frutas"],
-      dccaba: "DC CABA 2025 - CF: El movimiento corporal asociado a cada silaba aumenta la retencion y es recomendado por el enfoque didactico oficial.",
-      sala: "ambas"
-    },
-    // BLOQUE 3 - AMBAS SALAS: Vocales (sonido inicial)
-    {
-      titulo: "Vocal /a/: sonido inicial con imagen y gesto",
-      objetivo: "Identificar palabras que comienzan con /a/ a traves de imagen, sonido y gesto",
-      descripcion: "La docente prolonga el sonido /a/ con la boca bien abierta. Gesto corporal: brazos en triangulo hacia arriba. Se muestran imagenes variadas (incluyendo distractores) y los ninos hacen el gesto de /a/ SOLO cuando la imagen empieza con ese sonido. Luego buscan en la sala objetos que empiecen con /a/.",
-      materiales: ["Tarjetas con imagenes (A y no-A)", "Espejo pequeno", "Mural colectivo letra A"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Identificacion del sonido inicial de las vocales en palabras conocidas. Las vocales primero porque son los sonidos mas perceptibles en espanol.",
-      sala: "ambas"
+      titulo: "First Sound Sort",
+      objetivo: "Isolate and pronounce the initial sound in spoken words.",
+      descripcion: "Three hoops on the floor, each with an anchor picture for a target sound. Children take a picture card, say the word slowly, isolate the first sound and place the card in the matching hoop. Each child says the sound in isolation before placing.",
+      materiales: ["3 hoops", "24 picture cards", "Anchor pictures"],
+      ccss: "RF.K.2d",
+      nivel: "K",
     },
     {
-      titulo: "Vocal /e/: buscar y encontrar en el aula",
-      objetivo: "Identificar palabras que comienzan con /e/ en el entorno real",
-      descripcion: "Los ninos recorren el aula buscando objetos cuyo nombre empiece con /e/. Cuando encuentran uno lo muestran al grupo y lo dicen en voz alta: Este es el espejo, empieza con /e/. Se lista en el pizarron. Si un nino trae un objeto que no empieza con E se trabaja juntos: a ver, escuchamos...",
-      materiales: ["Sala preparada con objetos E visibles", "Tarjetas con imagenes E"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Sonido inicial vocal /e/. El aprendizaje situado en el aula real favorece la retencion a largo plazo.",
-      sala: "ambas"
+      titulo: "Say It, Move It",
+      objetivo: "Isolate and pronounce initial, medial vowel and final sounds in CVC words.",
+      descripcion: "Each child has three counters and a strip. The teacher says a CVC word; the child pushes one counter per sound while saying it, then sweeps and says the whole word. The medial vowel is the hardest and the one to watch: mark who skips it.",
+      materiales: ["Three counters per child", "Sound strips", "CVC word list"],
+      ccss: "RF.K.2d",
+      nivel: "K",
     },
     {
-      titulo: "Vocal /i/: el cuerpo hace la letra",
-      objetivo: "Identificar palabras que comienzan con /i/ con apoyo kinestesico",
-      descripcion: "Los ninos forman la I con el cuerpo: de pie, brazos estirados hacia arriba. Cuando escuchan una palabra con /i/ hacen la postura, cuando no emppieza con /i/ se sientan. Luego el dictado grafico: la docente dice una palabra con /i/ y cada nino la dibuja.",
-      materiales: ["Espejo largo", "Tarjetas de imagen I", "Hojas para dibujo"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /i/. La kinestesia fonetica (Uruguay, Plan CEIBAL) aumenta la retencion en ninos con distintos estilos de aprendizaje.",
-      sala: "ambas"
+      titulo: "Sound Swap Songs",
+      objetivo: "Add or substitute individual sounds in one-syllable words to make new words.",
+      descripcion: "Sing a known song replacing the first sound of every word with the sound of the day. Then children choose the sound. This is the last and hardest step of the phonemic sequence and only works once segmentation is secure with the whole group.",
+      materiales: ["Song chart", "Pointer", "Sound of the day card"],
+      ccss: "RF.K.2e",
+      nivel: "K",
     },
     {
-      titulo: "Vocal /o/: labios redondos y clasificacion",
-      objetivo: "Identificar palabras que comienzan con /o/ y discriminar de otras vocales",
-      descripcion: "La O se dice con los labios redondos: ooooo. Gesto: hacer el circulo con indice y pulgar. Los ninos aplauden una sola vez si la imagen empieza con /o/ y se quedan quietos si no. Incluir distractores con otras vocales. Cada nino dibuja una cosa que empiece con /o/.",
-      materiales: ["Tarjetas con imagenes O", "Espejo"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /o/. Discriminar de otras vocales refuerza la conciencia de contraste fonetico.",
-      sala: "ambas"
+      titulo: "Letter Sound Anchors",
+      objetivo: "Produce the primary sound for each consonant.",
+      descripcion: "One letter per session, with a verbal path for the shape and an anchor word chosen by the group. Children find that letter in the week's text and add the word they found to the anchor chart. Sound first, name second, always in that order.",
+      materiales: ["Letter cards", "Anchor chart", "Decodable text"],
+      ccss: "RF.K.3a",
+      nivel: "K",
     },
     {
-      titulo: "Vocal /u/: juego de memoria en parejas",
-      objetivo: "Identificar palabras que comienzan con /u/ a traves del juego colaborativo",
-      descripcion: "Tarjetas de memoria: imagen con /u/ + tarjeta con la letra. En parejas dan vuelta de a dos. Si emparejan imagen con letra U ganan el par. Mientras juegan la docente pregunta: esa imagen como se llama? Con que sonido empieza? Al final arman un mural con todos los pares encontrados.",
-      materiales: ["Juego de memoria con imagenes y letras U", "Mural colectivo"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Vocal /u/. El juego colaborativo en parejas desarrolla autonomia y lenguaje oral simultaneamente.",
-      sala: "ambas"
+      titulo: "High Frequency Word Wall",
+      objetivo: "Read common high-frequency words by sight.",
+      descripcion: "Five words per cycle, always in a sentence, never as a list. Children find them in the week's text, mark them, and use each one in a sentence they invent. The wall grows with words they found themselves.",
+      materiales: ["Word wall", "Highlighting tape", "Decodable text"],
+      ccss: "RF.K.3c",
+      nivel: "K",
     },
     {
-      titulo: "Repaso de vocales: ruleta y clasificacion",
-      objetivo: "Consolidar el reconocimiento de las 5 vocales por sonido inicial",
-      descripcion: "Ruleta de vocales: al girar cae en una vocal y los ninos dicen 3 palabras que empiecen con ella. Luego se clasifican tarjetas de imagen en 5 columnas (una por vocal). Al final se cuenta cual vocal tuvo mas palabras y se debate por que.",
-      materiales: ["Ruleta de vocales", "Dado con vocales", "Cajas de clasificacion rotuladas", "Set completo de tarjetas"],
-      dccaba: "DC CABA 2025 - CF Sala 4: Consolidacion de vocales antes de pasar a consonantes (secuencia cubana: 98% de alfabetizacion).",
-      sala: "ambas"
-    },
-    // BLOQUE 4 - SALA 5: Consonantes de alta frecuencia
-    {
-      titulo: "Consonante /m/: la primera consonante",
-      objetivo: "Identificar palabras que comienzan con /m/ con estrategia visual y kinestesica",
-      descripcion: "Los ninos imitan el sonido /m/ cerrando los labios: mmmmm. Frente al espejo se observa como se hacen los labios. Se muestran laminas y los ninos senalan las que empiezan con /m/ mientras hacen el gesto. Finalmente construyen una oracion oral con una de esas palabras.",
-      materiales: ["Tarjetas con imagenes M", "Espejo", "Letra M en grande"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Sonido inicial de consonantes frecuentes. /m/ es bilabial, visible y de alta frecuencia en espanol (First Steps Australia).",
-      sala: "5"
+      titulo: "Long or Short Vowel Sort",
+      objetivo: "Distinguish long from short vowel sounds in spoken single-syllable words.",
+      descripcion: "Two columns on the board. The teacher says a single-syllable word and children signal long or short before it is written. Only then does the word go up, so the ear leads the eye. Contrast pairs that differ only in the vowel: hop and hope.",
+      materiales: ["Word list", "Whiteboard", "Signal cards"],
+      ccss: "RF.1.2a",
+      nivel: "1",
     },
     {
-      titulo: "Consonante /p/: juego de pesca",
-      objetivo: "Identificar y clasificar palabras que comienzan con /p/",
-      descripcion: "Juego de pesca: tarjetas en el piso, cana de carton con iman. Los ninos pescan y clasifican en canasto verde las que empiezan con /p/ y rojo las que no. Cada vez que pescan lo dicen en voz alta: pesca, empieza con /p/. Al final cuentan cuantas palabras con /p/ encontraron.",
-      materiales: ["Tarjetas plastificadas con iman", "Cana de carton", "Canastos de colores"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Discriminacion fonema-no fonema objetivo, habilidad base para decodificacion (First Steps + LEE Chile).",
-      sala: "5"
+      titulo: "Blend the Blends",
+      objetivo: "Orally produce single-syllable words by blending sounds, including consonant blends.",
+      descripcion: "The teacher segments a word with a blend, /s/ /t/ /o/ /p/, and children blend and say it whole. Blends are where most of the group slows down because two consonants must be held without a vowel between them. Stay here longer than feels necessary.",
+      materiales: ["Blend word list", "Counters"],
+      ccss: "RF.1.2b",
+      nivel: "1",
     },
     {
-      titulo: "Consonante /s/: trabajo en parejas",
-      objetivo: "Identificar palabras con /s/ inicial en intercambio oral con un par",
-      descripcion: "En parejas con turno alternado: un nino dice una palabra, el otro decide si empieza con /s/ levantando o bajando el pulgar. Luego intercambian. Al final presentan al grupo las palabras con /s/ que encontraron. Se anota en el pizarron.",
-      materiales: ["Tarjetas con imagenes S", "Serpiente de peluche como objeto de turno"],
-      dccaba: "DC CABA 2025 - CF Sala 5: /s/. El trabajo en parejas desarrolla argumentacion oral y metacognicion fonetica (Letters and Sounds, UK DfE 2007).",
-      sala: "5"
+      titulo: "Digraph Detectives",
+      objetivo: "Know the spelling-sound correspondences for common consonant digraphs.",
+      descripcion: "Hunt for sh, ch, th and wh in the week's text. Each digraph found goes on the anchor chart with the word it came from, so the chart is built from their own reading, not handed to them. One digraph per session.",
+      materiales: ["Anchor chart", "Decodable text", "Markers"],
+      ccss: "RF.1.3a",
+      nivel: "1",
     },
     {
-      titulo: "Consonante /l/: cuento y tarjeta de alerta",
-      objetivo: "Identificar el fonema /l/ en contexto de texto oral",
-      descripcion: "La docente presenta un cuento breve con muchas palabras con /l/. Antes de leer, cada nino recibe una tarjeta L. La levantan cada vez que escuchan una palabra con /l/. Al terminar se listan todas las palabras encontradas y se cuentan.",
-      materiales: ["Cuento con palabras L", "Tarjetas letra L", "Lista colectiva"],
-      dccaba: "DC CABA 2025 - CF Sala 5: /l/. La identificacion en contexto de texto oral refuerza la comprension de que el fonema aparece dentro de palabras reales.",
-      sala: "5"
+      titulo: "Every Syllable Has a Vowel",
+      objetivo: "Use knowledge that every syllable must have a vowel sound to determine the number of syllables in a printed word.",
+      descripcion: "Children mark the vowels in a written word with a pencil dot, then split between them and read each part. The rule is stated once and used every time: if there is no vowel, it is not a syllable. Applied to words from their own reading.",
+      materiales: ["Word cards", "Pencils", "Content texts"],
+      ccss: "RF.1.3d",
+      nivel: "1",
     },
     {
-      titulo: "Consonante /t/: dado de fonemas",
-      objetivo: "Identificar y producir palabras con /t/ en juego grupal",
-      descripcion: "Dado con imagenes en sus caras. Al girar, si la imagen empieza con /t/ el nino suma un punto. Se juega en equipos de 3. El equipo con mas puntos al cabo de 5 rondas gana. Luego cada nino dice una oracion con la imagen que le toco.",
-      materiales: ["Dado con imagenes T y no-T", "Tablero de puntos"],
-      dccaba: "DC CABA 2025 - CF Sala 5: /t/. DIBELS: los juegos de dado con fonemas objetivo tienen alta correlacion con desempeno lector a fin del primer grado.",
-      sala: "5"
+      titulo: "Vowel Team Teams",
+      objetivo: "Know spelling-sound correspondences for additional common vowel teams.",
+      descripcion: "Small groups each get a vowel team, ai, ea, oa, ee, and hunt for it in the week's text. Each team teaches its pattern to the class with three examples they found themselves, and adds the exceptions they could not explain.",
+      materiales: ["Decodable and content texts", "Team charts"],
+      ccss: "RF.2.3b",
+      nivel: "2",
     },
     {
-      titulo: "Consonante /n/: recorrido por el aula",
-      objetivo: "Identificar palabras con /n/ en el entorno real de la sala",
-      descripcion: "Los ninos recorren el aula buscando objetos cuyo nombre empiece con /n/. Los muestran al grupo. Se registra en un grafico de barras colectivo cuantas cosas encontro cada uno. Al final la docente agrega palabras no encontradas para completar el repertorio.",
-      materiales: ["Grafico de barras en pizarron", "Tarjetas N para refuerzo"],
-      dccaba: "DC CABA 2025 - CF Sala 5: /n/. El recorrido genera aprendizaje situado y amplia vocabulario en contexto real (Plan CEIBAL + PNEA Argentina).",
-      sala: "5"
+      titulo: "Prefix and Suffix Builders",
+      objetivo: "Decode words with common prefixes and suffixes.",
+      descripcion: "Base words on one color of card, affixes on another. Children build words, read them, and say what the affix did to the meaning. Reading and meaning happen in the same move, which is the point: an affix is a unit of sense, not just of sound.",
+      materiales: ["Two-color word cards", "Word journals"],
+      ccss: "RF.2.3d",
+      nivel: "2",
     },
     {
-      titulo: "Repaso de consonantes: bingo de sonidos",
-      objetivo: "Consolidar las consonantes trabajadas en formato de juego",
-      descripcion: "Bingo de sonidos iniciales: cada nino recibe un carton con consonantes trabajadas. La docente dice palabras y el nino marca la consonante si su carton la tiene. Gana el primero en completar. Al verificar el bingo, el ganador dice una palabra por cada consonante marcada.",
-      materiales: ["Cartones de bingo personalizados", "Bolsa con tarjetas de palabras"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Consolidacion de consonantes frecuentes. El bingo tiene alta motivacion intrinseca (Cuba/Australia).",
-      sala: "5"
-    },
-    // BLOQUE 5 - SALA 5: Nivel fonetico avanzado (DC CABA: analisis y sintesis)
-    {
-      titulo: "Sonido final: atrapar el ultimo sonido",
-      objetivo: "Identificar el sonido final de palabras de dos silabas",
-      descripcion: "La docente dice palabras de dos silabas estirando el ultimo sonido. Los ninos cierran la mano para atrapar el sonido final y dicen que atraparon. Se registra con fichas de colores. Luego se agrupan las palabras por sonido final identico.",
-      materiales: ["Tarjetas con imagenes bisillabas", "Fichas de colores", "Tablero de sonidos finales"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Identificacion de sonidos medios y finales. BPAL Canada: predictor de comprension ortografica.",
-      sala: "5"
-    },
-    {
-      titulo: "Analisis posicional: inicio-medio-final",
-      objetivo: "Identificar la posicion de sonidos dentro de palabras trisllabas",
-      descripcion: "Con palabras de tres silabas, los ninos abren la palabra con el cuerpo: mano izquierda=inicio, pecho=medio, mano derecha=final. Dicen el sonido de cada posicion. Se usan cajas de tres compartimentos con fichas de colores para representar cada posicion.",
-      materiales: ["Cajas de tres compartimentos", "Fichas de tres colores distintos", "Tarjetas CVC"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Analisis posicional validado en programas canadienses de intervencion temprana (BPAL).",
-      sala: "5"
-    },
-    {
-      titulo: "Sintesis de fonemas: el robot habla lento",
-      objetivo: "Unir fonemas separados para formar palabras (blending)",
-      descripcion: "La docente actua como un robot que habla lento pronunciando fonemas separados: /m/-/a/-/r/. Los ninos juntan los sonidos y adivinan la palabra. Luego los ninos turnan de ser el robot mientras el grupo adivina. Se usan palabras del entorno cotidiano.",
-      materiales: ["Tarjetas con imagenes de palabras cortas", "Fichas para representar fonemas"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Sintesis de fonemas (blending). Jolly Phonics UK: LA habilidad central para decodificar. Estrategia mas replicada internacionalmente.",
-      sala: "5"
-    },
-    {
-      titulo: "Analisis de fonemas: cubos de Elkonin",
-      objetivo: "Descomponer palabras en sus fonemas individuales (segmentacion fonemica)",
-      descripcion: "Los ninos reciben una palabra y con cubos de Elkonin (uno por fonema) los colocan en una fila empujando cada cubo a medida que dicen cada sonido. Cuentan cuantos fonemas tiene la palabra. Se comparan palabras largas y cortas. La docente registra individualmente.",
-      materiales: ["Set de cubos de Elkonin", "Tarjetas con imagenes de palabras 2-4 fonemas"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Analisis de fonemas. NRP (2000): estrategia con mas evidencia de impacto en conciencia fonemica. Efecto tamaño d=0.86.",
-      sala: "5"
-    },
-    {
-      titulo: "Sustitucion de fonemas: letras moviles",
-      objetivo: "Cambiar un fonema para crear palabras nuevas",
-      descripcion: "La docente propone cambiar el primer sonido: pato cambiamos /p/ por /g/ y queda gato. Los ninos descubren la nueva palabra. Se usan letras moviles para mostrar el cambio visualmente en el franelografo. Luego los ninos proponen sus propios cambios.",
-      materiales: ["Letras moviles magneticas", "Franelografo o pizarra magnetica"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Manipulacion de fonemas (sustitucion). Wilson Reading System + Reading Recovery: estrategia de intervencion temprana de alta evidencia.",
-      sala: "5"
-    },
-    {
-      titulo: "Omision y adicion de fonemas",
-      objetivo: "Quitar y agregar fonemas para crear nuevas palabras",
-      descripcion: "OMISION: sol sin /s/ queda ol. Se usa una ficha que se cubre para representar el fonema quitado. ADICION: a la palabra mar agregamos /c/ al inicio y queda cama. Los ninos dicen lo que queda o resulta en cada caso. Trabajo con letras moviles.",
-      materiales: ["Tarjetas de letras", "Fichas para tapar sonidos", "Letras moviles"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Manipulacion de fonemas (omision y adicion). BPAL Canada: nivel avanzado de conciencia fonemica.",
-      sala: "5"
-    },
-    // ── ACTIVIDADES NUEVAS CF: del sonido a la sílaba (correspondencias) ──
-    {
-      titulo: "Presentacion de la letra: mayuscula y minuscula",
-      objetivo: "Asociar una letra (en sus dos formas) con su sonido a partir de imagenes",
-      descripcion: "La docente pega en el pizarron la letra en mayuscula y minuscula juntas (por ejemplo S y s) y alrededor coloca varios dibujos cuyos nombres empiezan con ese sonido: semaforo, sirena, sapo, serrucho, sol. Nombra cada dibujo prolongando el sonido inicial e invita a los ninos a hacerlo igual. Explicita que todos empiezan con sssss, que es como suena la letra. Luego buscan otros dibujos con la misma letra para consolidar.",
-      materiales: ["Letra en mayuscula y minuscula grande", "Dibujos con el sonido inicial trabajado", "Cinta o iman"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Relacion sonido-letra. Presentar ambas formas (mayuscula/minuscula) junto al sonido facilita el reconocimiento en distintos portadores.",
-      sala: "5"
-    },
-    {
-      titulo: "La caja de las letras",
-      objetivo: "Asociar el sonido inicial de un objeto real con la letra que lo representa",
-      descripcion: "Se presenta una caja con objetos familiares (manzana, taza, regla). Un nino saca uno, lo nombra en voz alta y el grupo escucha el sonido inicial: que sonido escuchamos al principio de manzana? Se prolonga el sonido mmm y se muestra la letra correspondiente. Se repite con otros objetos. Para complejizar, agrupan objetos que empiezan con el mismo sonido o buscan en la sala palabras con ese sonido inicial.",
-      materiales: ["Caja con objetos familiares", "Tarjetas con letras moviles o carteles de letras"],
-      dccaba: "DC CABA 2025 - CF Sala 4 y 5: Asociar sonido inicial con su representacion escrita. El objeto real refuerza el vinculo entre oralidad y sistema de escritura.",
-      sala: "ambas"
-    },
-    {
-      titulo: "Letras en movimiento: correr al sonido inicial",
-      objetivo: "Asociar el sonido inicial de una palabra con su letra mediante el juego corporal",
-      descripcion: "Se distribuyen tarjetas con letras en imprenta minuscula en distintos rincones del aula o el patio. La docente dice una palabra en voz alta (por ejemplo sol) y los ninos caminan o corren hacia la letra que representa el sonido inicial (la s). Al llegar dicen en voz alta el sonido y una palabra que empiece igual: sss, sol, serpiente, silla. Variante: correr a la letra con la que NO empieza la palabra.",
-      materiales: ["Tarjetas con letras grandes", "Espacio libre en aula o patio"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Asociacion sonido-letra desde el movimiento. La kinestesia integra lo corporal con lo linguistico y favorece la escucha activa.",
-      sala: "5"
-    },
-    {
-      titulo: "Pescando letras: combinar consonante y vocal",
-      objetivo: "Combinar dos letras para formar y leer una silaba",
-      descripcion: "Se usan tarjetas con vocales y consonantes ya trabajadas, mezcladas en dos bolsas separadas. La docente pesca una letra de cada bolsa y las acerca lentamente: que pasa si la s (ssss) se encuentra con la a? Las une y lee la silaba sssaaa, sa. Indica con el dedo para que el grupo haga sonar las letras juntas. Luego los ninos por turnos pescan dos letras, las unen y el grupo dice que silaba formaron y que palabra empieza asi.",
-      materiales: ["Tarjetas de vocales y consonantes", "Dos bolsas"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Combinacion de correspondencias en unidades mayores (silabas). Paso clave hacia la lectura y escritura de palabras.",
-      sala: "5"
-    },
-    {
-      titulo: "La expendedora de letras: armar silabas",
-      objetivo: "Formar silabas combinando consonante y vocal en orden",
-      descripcion: "Una maquina expendedora de carton (o caja) arroja un par de letras, siempre en orden consonante-vocal, por ejemplo n y a. Se pregunta: como suenan estas letras? nnnn y aaaa. Y juntas? nnnaaaa. Que palabra empieza con naaa? Naranja. Entre todos enumeran palabras que empiezan con esa silaba. Variante en grupos: gana el que nombra mas palabras con la silaba.",
-      materiales: ["Caja-expendedora de carton", "Tarjetas con vocales y consonantes en dos pilas"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Combinacion de correspondencias en silabas con apoyo visual del orden consonante-vocal.",
-      sala: "5"
-    },
-    {
-      titulo: "La varita magica: unir sonidos",
-      objetivo: "Hacer sonar juntas dos letras para leer la silaba",
-      descripcion: "La docente toca con una varita magica una letra y los ninos dicen como suena: esta suena mmmm. Y si se encuentra con la e? Acerca las tarjetas m y e hasta juntarlas: meee. Se vuelven a tocar con la varita para que los ninos lean la silaba en voz alta. La docente va tocando distintos pares y los ninos los hacen sonar juntos. Luego pasa la varita a los ninos por turnos.",
-      materiales: ["Varita magica", "Tarjetas de consonantes y vocales trabajadas"],
-      dccaba: "DC CABA 2025 - CF Sala 5: Sintesis de correspondencias en silabas, de caracter ludico. Antesala de la lectura de palabras.",
-      sala: "5"
-    },
-    {
-      titulo: "Evaluacion CF: estaciones de fonologia",
-      objetivo: "Evaluar el dominio de la conciencia fonologica por nivel",
-      descripcion: "Cuatro estaciones rotativas (5 min cada una): 1) Rimas: el nino dice si dos palabras riman. 2) Silabas: segmentar con palmadas. 3) Sonido inicial: identificar en imagen. 4) Sintesis/Analisis: robot lento y cubos. La docente rota y registra individualmente con rubrica.",
-      materiales: ["Rubrica de evaluacion CF", "Material por estacion", "Registro individual"],
-      dccaba: "DC CABA 2025 - CF: Evaluacion continua y formativa al servicio del aprendizaje. DIBELS + PALS: formato de estaciones para obtener datos sin interrumpir el ritmo grupal.",
-      sala: "ambas"
+      titulo: "Latin Suffix Lab",
+      objetivo: "Decode words with common Latin suffixes.",
+      descripcion: "Take -tion, -sion and -able. Children collect words from science and social studies texts, split them, and predict the meaning from the base plus the suffix before checking. The words come from content class, not from a reading list.",
+      materiales: ["Content area texts", "Word journals", "Wall chart"],
+      ccss: "RF.3.3b",
+      nivel: "3",
     },
   ],
-
-  // ── COMPRENSION DE TEXTOS ────────────────────────────────────────────────
-  // DC CABA 2025: sala 4 trabaja comprension literal con textos narrativos breves y explorados en voz alta.
-  // Sala 5 profundiza inferencias, secuencia narrativa, vocabulario y comprension critica.
-  // El eje literario tiene valor en si mismo: no es pretexto para la ensenanza (DC CABA, enfoque didactico).
+  // ── COMPREHENSION OF TEXT - literature and informational ────
+  // Progresion TK → Grade 3. Cada paso citado al estandar oficial que lo
+  // fundamenta: CCSS ELA de California, o PTKLF para TK.
   CT: [
-    // BLOQUE 1 - AMBAS SALAS: Aproximacion al libro y al texto
     {
-      titulo: "El libro como objeto: exploracion libre",
-      objetivo: "Explorar el libro como portador de texto y desarrollar actitud lectora",
-      descripcion: "Se presenta el libro cerrado en el atril. Los ninos observan tapa, contratapa, titulo, autor, ilustrador. En ronda responden: de que creen que trata? quienes apareceran? La docente registra las predicciones visibles en el pizarron. Se enfatiza que el libro fue escrito por alguien para ser leido.",
-      materiales: ["Libro con portada atractiva", "Atril", "Post-its o tarjetas para predicciones"],
-      dccaba: "DC CABA 2025 - CT Sala 4: Exploracion de portadores de texto. El libro como objeto cultural con valor propio (enfoque didactico DC).",
-      sala: "ambas"
+      titulo: "Picture Walk Predictions",
+      objetivo: "Predict and comment on the content of a text using the illustrations.",
+      descripcion: "Walk through the pictures of a new book without reading the words. Children say what they think happens. Write two predictions on sticky notes and revisit them after the read aloud to confirm or revise.",
+      materiales: ["Picture book", "Sticky notes", "Marker"],
+      ccss: "PTKLF.LL.CA.1",
+      nivel: "TK",
+      prerequisito: true,
     },
     {
-      titulo: "Antes de leer: predicciones e hipotesis",
-      objetivo: "Formular hipotesis sobre el contenido a partir de la portada",
-      descripcion: "Antes de abrir el libro, cada nino dice en voz alta su prediccion. Se registran en el pizarron. Al terminar la lectura se vuelve a las predicciones: cuales fueron acertadas? Cuales no? Por que nos confundimos? El error es parte del aprendizaje lector.",
-      materiales: ["Libro seleccionado", "Pizarron para predicciones", "Tapa ampliada si es posible"],
-      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Anticipacion del contenido a partir de imagenes. Las predicciones generan 'cognitive engagement' (CEIBAL/MINEDUC Chile).",
-      sala: "ambas"
+      titulo: "What Happened First",
+      objetivo: "Retell, with support, the main events of a familiar story.",
+      descripcion: "Three picture cards from a story the group knows well, placed out of order on the floor. Children arrange them and tell each part. The story must already be familiar: this is about sequence, not about comprehension of new material.",
+      materiales: ["Three story cards per group", "Floor space"],
+      ccss: "PTKLF.LL.CA.2",
+      nivel: "TK",
     },
     {
-      titulo: "Lectura en voz alta con pausas dialogicas",
-      objetivo: "Participar activamente durante la lectura respondiendo preguntas",
-      descripcion: "La docente lee en voz alta con pausas estrategicas para preguntar: que creen que pasara? por que hizo eso el personaje? como se siente? Un titere preguntador formula las preguntas para motivar. Se acepta toda respuesta y se vuelve al texto para verificar.",
-      materiales: ["Libro con marcadores de pausa", "Titere preguntador", "Campana para pausas"],
-      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Lectura dialogica en voz alta diaria por el docente. Mayor impacto en grupos vulnerables (Vygotsky/Flecha, Lectura Dialogica).",
-      sala: "ambas"
+      titulo: "Ask Me Three",
+      objetivo: "With prompting and support, ask and answer questions about key details in a text.",
+      descripcion: "After reading, children generate three questions for a classmate using question cards: who, where, what happened. The partner answers pointing to the page that proves it. The teacher records who supports the answer with evidence.",
+      materiales: ["Read aloud book", "Question cards"],
+      ccss: "RL.K.1",
+      nivel: "K",
     },
     {
-      titulo: "Vocabulario en contexto: muro de palabras",
-      objetivo: "Inferir el significado de palabras nuevas en el contexto de la lectura",
-      descripcion: "Al encontrar una palabra dificil la docente se detiene: esta palabra es nueva, vamos a adivinar que significa por lo que leimos. El grupo infiere y luego se escribe en el muro de palabras de la sala con una imagen. Se revisa al inicio de la clase siguiente.",
-      materiales: ["Libro con vocabulario nuevo", "Muro de palabras en la sala", "Tarjetas de vocabulario con imagen"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Vocabulario en contexto. Beck & McKeown: la inferencia en contexto es mas efectiva que la definicion directa para la retencion.",
-      sala: "ambas"
-    },
-    // BLOQUE 2 - AMBAS SALAS: Comprension literal (QUIEN, QUE, DONDE, CUANDO)
-    {
-      titulo: "QUIEN: personajes principales",
-      objetivo: "Identificar y describir a los personajes principales con evidencia del texto",
-      descripcion: "La docente pregunta: quienes son los personajes? Los ninos responden citando el texto. Se colocan siluetas en la cruz de comprension (brazo QUIEN). Para sala 4: solo nombrar los personajes. Para sala 5: agregar como son fisicamente y como son en su personalidad.",
-      materiales: ["Cruz de comprension en pizarron", "Siluetas de personajes", "Cuento con personajes claros"],
-      dccaba: "DC CABA 2025 - CT Sala 4: Reconocimiento de personajes principales. Sala 5: descripcion con atributos. Cruz de Comprension MINEDUC Chile: validada en todos los niveles educativos.",
-      sala: "ambas"
+      titulo: "Story Retell Ropes",
+      objetivo: "With prompting and support, retell familiar stories, including key details.",
+      descripcion: "Each child holds a rope with three knots: beginning, middle, end. They move their hand along the rope as they retell. Children who skip the middle get a second turn with the picture cards visible in front of them.",
+      materiales: ["Ropes with three knots", "Story picture cards"],
+      ccss: "RL.K.2",
+      nivel: "K",
     },
     {
-      titulo: "QUE: acciones del texto con apoyo visual",
-      objetivo: "Identificar las acciones mas importantes del texto en orden",
-      descripcion: "Los ninos identifican las 3 acciones mas importantes del texto y las ordenan por relevancia. Se anotan en el brazo QUE de la cruz. Para sala 4 se apoya con imagenes de la historia. Para sala 5 se hace sin apoyo visual y se agrega el orden temporal.",
-      materiales: ["Cruz de comprension", "Tarjetas de acciones", "Imagenes de la historia para sala 4"],
-      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Comprension literal (QUE sucede). Cruz MINEDUC Chile.",
-      sala: "ambas"
+      titulo: "Character Feelings Map",
+      objetivo: "Describe characters, settings and major events in a story, using key details.",
+      descripcion: "Draw the character in the centre of the chart. Children add a feeling word and must point to the page that shows it. The emphasis is on evidence, not on opinion: how do we know she was scared.",
+      materiales: ["Chart paper", "Feeling word cards", "The book"],
+      ccss: "RL.1.3",
+      nivel: "1",
     },
     {
-      titulo: "DONDE y CUANDO: espacio y tiempo en el texto",
-      objetivo: "Identificar indicadores de lugar y tiempo con evidencia textual",
-      descripcion: "DONDE: los ninos buscan frases del texto que indican el lugar y lo dibujan. CUANDO: identifican indicadores de tiempo (de manana, en verano, hace mucho tiempo) y los ubican en una linea temporal. Se trabaja en grupos de 4: 2 a cargo de DONDE y 2 a cargo de CUANDO.",
-      materiales: ["Cruz de comprension", "Linea de tiempo en papel", "Hojas para dibujar el escenario"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de secuencia narrativa. Predictor de desempeno en PISA Lectura.",
-      sala: "ambas"
+      titulo: "Two Books, One Topic",
+      objetivo: "Explain major differences between books that tell stories and books that give information.",
+      descripcion: "Two books on the same subject, one narrative and one informational. Children sort five features into the right column: characters, facts, once upon a time, diagrams, an ending. Then choose which one they would use to answer a question.",
+      materiales: ["Paired books", "Feature cards"],
+      ccss: "RL.1.5",
+      nivel: "1",
     },
     {
-      titulo: "Recontar la historia: cadena de imagenes",
-      objetivo: "Recontar con propias palabras usando conectores de secuencia",
-      descripcion: "Con imagenes de secuencia del cuento en el pizarron los ninos recontan en cadena: cada uno agrega un fragmento. La docente guia con: que paso primero? y despues? como termino? Para sala 5 se hace sin imagenes de apoyo usando solo conectores: primero, luego, al final.",
-      materiales: ["Imagenes de secuencia del cuento", "Titeres opcionales"],
-      dccaba: "DC CABA 2025 - CT Sala 4 y 5: Recontado de la historia. Reading Recovery (Clay): activa memoria episodica y estructura narrativa.",
-      sala: "ambas"
+      titulo: "What Does the Author Want",
+      objetivo: "Identify the main purpose of a text, including what the author wants to answer, explain or describe.",
+      descripcion: "After reading, children choose between three purpose cards, to teach, to convince, to entertain, and defend the choice with one line from the text. Disagreement is kept, not resolved: two defensible answers is a better lesson than one right one.",
+      materiales: ["Informational texts", "Purpose cards"],
+      ccss: "RI.2.6",
+      nivel: "2",
     },
     {
-      titulo: "Conexiones texto-vida: texto-texto-mundo",
-      objetivo: "Conectar el texto con experiencias personales y otros textos conocidos",
-      descripcion: "La docente propone los tres tipos de conexion: TEXTO-VIDA (esto te paso a vos?), TEXTO-TEXTO (conoces otro cuento con un personaje asi?), TEXTO-MUNDO (esto pasa en la vida real?). Los ninos comparten en parejas y luego algunos con el grupo.",
-      materiales: ["Libro leido", "Hojas para dibujar conexiones", "Otros libros de la biblioteca de la sala"],
-      dccaba: "DC CABA 2025 - CT: Diversidad de textos. Calkins (2001): las conexiones generan motivacion lectora y comprension profunda.",
-      sala: "ambas"
-    },
-    // BLOQUE 3 - SALA 5: Comprension inferencial
-    {
-      titulo: "POR QUE: causas e inferencias",
-      objetivo: "Inferir causas no explicitas en el texto",
-      descripcion: "Se agrega el brazo POR QUE a la cruz. Los ninos infieren causas que el texto no dice explicitamente. La docente pregunta: como lo sabemos si no esta escrito? Se debate en grupo. Solo en sala 5. Para sala 4 esta pregunta se responde solo si la causa esta explicita.",
-      materiales: ["Cruz de comprension con brazo POR QUE", "Flechas causa-efecto"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension inferencial. Cruz MINEDUC Chile + Reader's Workshop Canada: nivel superior al literal.",
-      sala: "5"
-    },
-    {
-      titulo: "COMO sucede: secuencia de procesos",
-      objetivo: "Explicar como ocurren los eventos usando vocabulario de secuencia",
-      descripcion: "Los ninos explican los procesos que llevan a los eventos del texto usando: primero... luego... al final... Se contrastan diferentes versiones. La docente registra quien usa conectores de forma autonoma y quien necesita andamio.",
-      materiales: ["Cruz con brazo COMO", "Tarjetas de conectores visuales"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de procesos. Base para textos informativos y explicativos.",
-      sala: "5"
-    },
-    {
-      titulo: "QUE OPINAS: opinion fundamentada",
-      objetivo: "Expresar opinion sobre el texto con argumentos del texto",
-      descripcion: "Los ninos usan la estructura: Yo opino que... porque en el texto dice... Se registran en globos de opinion en el pizarron. Se debate si hay distintas opiniones validas sobre el mismo texto. La docente celebra las opiniones distintas como enriquecimiento.",
-      materiales: ["Cuento con dilema etico", "Microfono de juguete", "Globos de opinion para el pizarron"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension critica. Finlandia introduce el debate argumentativo desde sala 5.",
-      sala: "5"
-    },
-    {
-      titulo: "Texto informativo: KWL + datos nuevos",
-      objetivo: "Aplicar estrategias de comprension a textos no narrativos",
-      descripcion: "Se usa un libro informativo o afiche. ANTES: que sabemos del tema (K), que queremos saber (W). DURANTE: buscamos datos nuevos y los marcamos. DESPUES: que aprendimos (L) y comparamos con lo que ya sabiamos. Se arma una cartelera informativa con los datos encontrados.",
-      materiales: ["Libro informativo con imagenes", "Tarjetas KWL", "Cartelera colectiva"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Diversidad de textos - textos informativos. CAFE Strategy + Reader's Workshop Canada.",
-      sala: "5"
-    },
-    {
-      titulo: "Personajes: fisico, personalidad y acciones",
-      objetivo: "Describir un personaje con atributos fisicos, de personalidad y acciones",
-      descripcion: "Cada nino elige un personaje y completa un organizador grafico: como es fisicamente? como es su personalidad? que hace en la historia? que le pasa al final? Se presentan al grupo y se comparan. La docente desafia: como lo sabes? Muestra donde dice eso.",
-      materiales: ["Cuento con personajes variados", "Organizador grafico impreso"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de personajes con atributos. Predictor de comprension lectora en educacion primaria.",
-      sala: "5"
-    },
-    {
-      titulo: "Comprension critica: dilemas del cuento",
-      objetivo: "Evaluar las acciones de los personajes con argumentos propios",
-      descripcion: "Se presenta un dilema etico del cuento. Los ninos debaten: estuvo bien lo que hizo el personaje? Por que? Se vota y se elabora un juicio colectivo usando la estructura: Yo creo que... porque... La docente registra la complejidad argumentativa de cada nino.",
-      materiales: ["Cuento con dilemas eticos", "Balanza de justicia de juguete"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension critica. Los ninos valoran las acciones de los personajes y dan opinion fundamentada.",
-      sala: "5"
-    },
-    {
-      titulo: "Ciclo completo: Antes - Durante - Despues",
-      objetivo: "Aplicar el ciclo completo de lectura dialogica de forma autonoma",
-      descripcion: "Los ninos lideran cada fase: Antes (un nino coordina las predicciones), Durante (otro nino con el titere hace las pausas y preguntas), Despues (completan la cruz entre todos). La docente facilita sin dirigir. Al final reflexionan: que estrategia les resulto mas util?",
-      materiales: ["Cuento nuevo", "Titere preguntador", "Cruz completa"],
-      dccaba: "DC CABA 2025 - CT: Ciclo completo Antes-Durante-Despues liderado por los ninos. Modelo de maxima evidencia (Lectura Dialogica + Cruz MINEDUC).",
-      sala: "5"
-    },
-    // ── ACTIVIDADES NUEVAS CT: leer palabras, frases y oraciones ──
-    {
-      titulo: "La ventanita: leer palabras letra por letra",
-      objetivo: "Decodificar una palabra revelando una letra por vez y sintetizando los sonidos",
-      descripcion: "Se escriben palabras breves en imprenta minuscula en tiras de papel. Se cubren con una cartulina o regla y se deslizan poco a poco, revelando una letra por vez. Con cada letra los ninos pronuncian el sonido y lo mantienen hasta que aparece la siguiente, prolongando: ssssoooollll. Al completar se pregunta: que palabra se formo? Empezar con palabras breves de silabas directas (sol, mar, mesa, pato) e ir complejizando.",
-      materiales: ["Tiras de papel con palabras en imprenta minuscula", "Cartulina o regla para cubrir"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Decodificacion y sintesis de sonidos. La ventanita favorece la recodificacion fonologica, habilidad clave para leer.",
-      sala: "5"
-    },
-    {
-      titulo: "Dedo lector: decodificar en el pizarron",
-      objetivo: "Leer palabras de forma colectiva destapando letra por letra en el pizarron",
-      descripcion: "Se escribe en el pizarron una palabra breve y se tapa con la mano, una regla o cartulina. Se destapa una letra por vez mientras se la senala con el dedo. Los ninos dicen el sonido de cada letra y van uniendo los sonidos a medida que se descubren. Al completar: que palabra se formo? Se repite con otra palabra y se invita a un nino a pasar a senalar con el dedo lector.",
-      materiales: ["Pizarron", "Tiza o fibron", "Mano, regla o cartulina"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Decodificacion colectiva con modelado docente. Variante de la ventanita para grupo total.",
-      sala: "5"
-    },
-    {
-      titulo: "Parecidas, no iguales: leer con precision",
-      objetivo: "Leer palabras con precision discriminando entre opciones similares",
-      descripcion: "Tarjetas con un dibujo y dos o tres palabras parecidas entre si (por ejemplo saco / sapo / sano). La docente nombra el dibujo para que quede claro de que palabra se trata. Luego leen a grupo completo las palabras y marcan con una cruz cual representa el dibujo. Se enfatiza la atencion: son similares pero no iguales. Variante: unir cada palabra de una serie desordenada (lana / luna / lupa) con su dibujo.",
-      materiales: ["Tarjetas con un dibujo y palabras similares"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura precisa sin errores. La discriminacion entre palabras similares afina la decodificacion.",
-      sala: "5"
-    },
-    {
-      titulo: "La verduleria: leer con fluidez y velocidad",
-      objetivo: "Leer listas de palabras con precision y mayor velocidad en contexto de juego",
-      descripcion: "En pequenos grupos, cada equipo recibe una lista de compras de frutas y verduras. Los dibujos de frutas y verduras estan en el centro. La docente modela leyendo las primeras palabras de una lista y tomando el producto indicado. Los equipos hacen lo mismo: el que junta todos los productos de su lista gana. Al final se revisa entre todos que los productos sean los correctos. Variante: supermercado, libreria, vivero.",
-      materiales: ["Listas de compras con palabras", "Tarjetas de dibujos de frutas y verduras"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora (precision + velocidad). La lectura con proposito real motiva y consolida la decodificacion.",
-      sala: "5"
-    },
-    {
-      titulo: "Busqueda del tesoro: leer para encontrar",
-      objetivo: "Leer palabras con precision y velocidad para localizar objetos reales",
-      descripcion: "En pequenos grupos, cada equipo recibe una lista de objetos que estan dentro del aula (goma, lapiz, zapatilla, regla, cuaderno). Se ponen de acuerdo para leer cada palabra y recolectar lo que indica. El equipo que junta primero todos los objetos de su lista gana. Se adapta segun los objetos disponibles en la sala.",
-      materiales: ["Listas de palabras con objetos del aula"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora con proposito. Leer para actuar refuerza la comprension de palabras.",
-      sala: "5"
-    },
-    {
-      titulo: "Bingo de palabras con opacidades ortograficas",
-      objetivo: "Reconocer palabras con ca/co/cu, ga/go/gu, ce/ci, ge/gi",
-      descripcion: "Cada estudiante recibe un carton con palabras que contienen opacidades ortograficas (ca/co/cu, ga/go/gu, ce/ci, ge/gi). La docente lee una palabra en voz alta de una tarjeta y los ninos buscan en su carton la palabra que escucharon. Si la encuentran, colocan una ficha encima. Gana quien complete primero una fila, columna o el carton entero.",
-      materiales: ["Cartones con palabras de opacidades ortograficas", "Fichas para tapar", "Tarjetas con palabras para leer"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con ortografia menos transparente. El juego y la repeticion consolidan las opacidades.",
-      sala: "5"
-    },
-    {
-      titulo: "Arriba las manos: opacidades en juego",
-      objetivo: "Reconocer y diferenciar palabras con opacidades (b-v, s-c-z, g-j, c-k-qu)",
-      descripcion: "La docente reparte tarjetas con palabras a varios ninos y se queda con tarjetas de dibujos. Levanta un dibujo en alto (por ejemplo vaca): habra dos ninos que tienen esa palabra escrita. El primero que levante el cartel correcto bien alto gana el punto. Se continua con otros dibujos. Puede jugarse en equipos. Palabras: burro/vaca, celeste/circo/zapato, genio/jirafa/girasol, kiwi/quince/queso.",
-      materiales: ["Tarjetas con dibujos de palabras con opacidades", "Tarjetas con esas palabras (dos de cada una)"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Reconocimiento de opacidades ortograficas a traves del juego de asociacion dibujo-palabra.",
-      sala: "5"
-    },
-    {
-      titulo: "Domino con sinonimos",
-      objetivo: "Leer palabras y unir las que significan lo mismo",
-      descripcion: "Fichas de domino divididas por la mitad, con una palabra en cada extremo, distribuidas de modo que los sinonimos queden en fichas separadas (anteojos-lentes, rapido-veloz, pelo-cabello, grande-enorme, pequeno-chico). Se reparten 5 fichas por equipo y se coloca una en el centro. Por turnos leen sus fichas y unen alguna que contenga un sinonimo de las del centro. Gana el primero que se queda sin fichas. Variante: con antonimos.",
-      materiales: ["Fichas de domino con pares de sinonimos"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras y reconocimiento de sinonimos. Integra decodificacion con vocabulario y significado.",
-      sala: "5"
-    },
-    {
-      titulo: "Uni con flechas: imagen y palabra",
-      objetivo: "Leer palabras con opacidades y unirlas con su imagen",
-      descripcion: "Cada estudiante recibe una hoja con imagenes y palabras (gusano, gelatina, girasol, cama, maceta, cielo). La docente modela la lectura de cada palabra haciendo hincapie en las silabas con opacidades. Los ninos leen al unisono y luego unen con flechas cada imagen con su palabra, en parejas o de forma individual. Al terminar, correccion grupal leyendo en voz alta y comparando con las imagenes.",
-      materiales: ["Hojas con imagenes y palabras", "Lapiz o marcador"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con opacidades ortograficas unida a la comprension (imagen-palabra).",
-      sala: "5"
-    },
-    {
-      titulo: "La incorrecta: leer y categorizar",
-      objetivo: "Leer palabras e identificar cual no pertenece a la categoria",
-      descripcion: "Renglones con palabras de una misma categoria, excepto una intrusa (por ejemplo: mono - cocodrilo - cebra - botella - tiburon). La docente modela: leemos las palabras de este renglon... todas son animales menos una. Cual es? Botella. Luego los ninos identifican la palabra incorrecta en cada renglon y se hace una puesta en comun. Variante: categorias mas complejas (animales marinos / terrestres).",
-      materiales: ["Renglones de palabras por categoria con una intrusa"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura con precision e identificacion de categoria semantica. Integra decodificacion y comprension.",
-      sala: "5"
-    },
-    {
-      titulo: "Completa la oracion: elegir la palabra correcta",
-      objetivo: "Leer una oracion y completarla eligiendo entre palabras parecidas",
-      descripcion: "Hojas con oraciones en imprenta minuscula a las que les falta una palabra, con opciones similares entre si. Por ejemplo: El ___ come una banana, opciones el mono o la mano. Si la lectura es vacilante, la docente lee la oracion y los ninos solo las palabras faltantes. Los ninos eligen la correcta y la marcan con un circulo. Luego releen la oracion completa para verificar que tenga sentido.",
-      materiales: ["Hojas con oraciones incompletas y opciones de palabras similares"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de palabras con precision y distincion semantica. El sentido de la oracion guia la eleccion correcta.",
-      sala: "5"
-    },
-    {
-      titulo: "Armamos frases: articulos y sustantivos",
-      objetivo: "Leer y unir articulos con sustantivos reconociendo la concordancia",
-      descripcion: "Se escriben en el pizarron dos columnas: una con articulos (el, la, los, las, un, una, unos, unas) y otra con sustantivos (munecas, nenes, manzana, arbol, luna). La docente modela: voy a elegir unas y nenes. Se puede decir unas nenes? No. Buscamos otra: unas munecas? Si. Entre todos unen los articulos con los sustantivos que concuerdan, leyendo en voz alta.",
-      materiales: ["Pizarron y marcador"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de frases simples. Reconocer la relacion del articulo con el sustantivo inicia el procesamiento sintactico.",
-      sala: "5"
-    },
-    {
-      titulo: "Junto lo que va junto: frases en oraciones",
-      objetivo: "Leer frases y unirlas para formar oraciones con sentido",
-      descripcion: "Tarjetas con frases que pueden unirse para formar oraciones (el mono / come bananas en el arbol / la casa / tiene cuatro habitaciones / la abuela / cocina con sus nietos). Se ubican sobre las mesas o el piso. La docente modela: en esta dice el mono, cual frase puede unirse? Tiene cuatro habitaciones? No tiene sentido. Come bananas en el arbol? Si. Luego los ninos arman oraciones. Variante: en equipos que compiten.",
-      materiales: ["Tarjetas con frases para combinar"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura de frases y comprension para formar oraciones correctas. Procesamiento sintactico y semantico.",
-      sala: "5"
-    },
-    {
-      titulo: "Que dinosaurio es: comprender oraciones",
-      objetivo: "Leer oraciones descriptivas y relacionarlas con la imagen correcta",
-      descripcion: "Una hoja con 4 dibujos de dinosaurios y, a un lado, oraciones desordenadas que los describen en imprenta minuscula (Tiene cuernos en la cabeza y patas cortas; Es muy grande, camina en dos patas y tiene dientes afilados; etc.). La docente modela leyendo una oracion y preguntando a que dibujo corresponde, uniendo con una flecha. Luego se hace en parejas o de forma individual y se cierra con una puesta en comun. Variante: otros animales u objetos.",
-      materiales: ["Hojas con dibujos y oraciones descriptivas desordenadas"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Lectura y comprension de oraciones. Relacionar texto con imagen consolida la comprension literal.",
-      sala: "5"
-    },
-    {
-      titulo: "Los artistas: leer y dibujar la oracion",
-      objetivo: "Leer oraciones, comprenderlas y representarlas con un dibujo",
-      descripcion: "La docente propone convertirse en artistas. Modela: vamos a leer las oraciones y pensar como representarlas. Por ejemplo El cocinero prepara una torta de cumpleanos: que deberiamos dibujar? Una peluqueria? No. Una cocina, un cocinero y una torta. Luego cada nino (solo o en parejas) elige una oracion y realiza el dibujo correspondiente. Oraciones: Los ninos juegan en el parque; Los autos circulan por la ruta; El perro tiene manchas marrones y negras.",
-      materiales: ["Tarjetas con oraciones representables", "Hojas y crayones"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Comprension de oraciones. Representar graficamente lo leido evidencia la comprension del sentido.",
-      sala: "5"
-    },
-    {
-      titulo: "Como estoy: leer con prosodia",
-      objetivo: "Leer oraciones en voz alta con la entonacion que indica la emocion",
-      descripcion: "Lista de oraciones con signos de puntuacion variados (preguntas, exclamaciones) y tarjetas con emojis de emociones (contento, sorprendido, enojado, cansado, triste, preocupado). Cada nino lee una oracion en voz alta segun el emoji que le toca, en secreto, y los demas adivinan con que emocion la leyo. La docente modela primero leyendo una oracion con tono preocupado, bien acentuado.",
-      materiales: ["Lista de oraciones con signos de puntuacion", "Tarjetas con emojis de emociones"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez y prosodia. La lectura expresiva integra decodificacion, comprension y entonacion.",
-      sala: "5"
-    },
-    {
-      titulo: "Correcto o incorrecto: leer respetando la puntuacion",
-      objetivo: "Leer oraciones respetando las pausas e identificar si la puntuacion es correcta",
-      descripcion: "Tarjetas con oraciones: algunas con puntuacion correcta y otras incorrecta (Los chicos, comen huevos, fritos / La vaca, el pato y el cerdo viven en la granja). Se leen en voz alta por turnos respetando la puntuacion, haciendo una pausa en cada coma. Si al leerla no se entiende el significado, el grupo dice Incorrecto. La docente modela: si leo Los chicos, comen huevos, fritos, se entiende? No. Por que? Las comas estan mal usadas.",
-      materiales: ["Tarjetas con oraciones de puntuacion correcta e incorrecta"],
-      dccaba: "DC CABA 2025 - CT Sala 5: Fluidez lectora y uso de pausas. Respetar la puntuacion es parte de la comprension del texto.",
-      sala: "5"
-    },
-    {
-      titulo: "Evaluacion CT: texto nuevo y rubrica",
-      objetivo: "Evaluar comprension con texto no trabajado previamente",
-      descripcion: "La docente lee un texto nuevo y observa como cada nino aplica de forma autonoma las estrategias de lectura dialogica y la cruz. Registra en rubrica: nivel literal (sala 4) e inferencial/critico (sala 5). Los datos informan la planificacion del trimestre siguiente.",
-      materiales: ["Texto de evaluacion nuevo", "Rubrica CT por nivel", "Registro individual"],
-      dccaba: "DC CABA 2025 - CT: Evaluacion continua y formativa. La evaluacion esta al servicio del aprendizaje y la planificacion.",
-      sala: "ambas"
+      titulo: "Two Texts, One Question",
+      objetivo: "Compare and contrast the most important points and key details presented in two texts on the same topic.",
+      descripcion: "Two short texts on one topic. Children fill a two-column chart with what each says, then mark what only one of them says. That difference is the discussion: why would one author include it and the other not.",
+      materiales: ["Paired texts", "Comparison chart"],
+      ccss: "RI.3.9",
+      nivel: "3",
     },
   ],
-
-  // ── ORALIDAD ──────────────────────────────────────────────────────────────
-  // DC CABA 2025: el eje de Oralidad es transversal a toda la ensenanza.
-  // Sala 4: participacion en situaciones comunicativas, escucha activa, narracion con apoyo.
-  // Sala 5: narracion autonoma, argumentacion, exposicion oral, debate, dramatizacion.
-  // La asamblea diaria es el espacio de oralidad sistematico recomendado por el DC CABA.
+  // ── ORAL LANGUAGE - speaking and listening ──────────────────
+  // Progresion TK → Grade 3. Cada paso citado al estandar oficial que lo
+  // fundamenta: CCSS ELA de California, o PTKLF para TK.
   O: [
-    // BLOQUE 1 - AMBAS SALAS: Escucha activa y oralidad situacional
     {
-      titulo: "Asamblea: el espacio de la palabra",
-      objetivo: "Participar en intercambios orales respetando turnos y expresandose en oracion completa",
-      descripcion: "La asamblea es el espacio diario de oralidad. La docente modela el turno: quien tiene el objeto de la palabra (pelota, baston) habla, el resto escucha. Se empieza con temas cotidianos: que hicieron el fin de semana? que notaron hoy? Se exige oracion completa y se celebra cada participacion.",
-      materiales: ["Objeto de la palabra (pelota, baston)", "Reloj de arena", "Lista de nombres"],
-      dccaba: "DC CABA 2025 - O Sala 4 y 5: Participacion en conversaciones grupales respetando el turno. La asamblea diaria es el espacio de intercambio oral sistematico recomendado por el DC.",
-      sala: "ambas"
+      titulo: "Mystery Bag Talk",
+      objetivo: "Describe familiar objects using increasingly precise vocabulary.",
+      descripcion: "A child reaches into the bag without looking and describes what they feel before pulling it out: size, texture, shape. The group guesses. The rule is that two descriptors must come before any guess is allowed.",
+      materiales: ["Cloth bag", "Ten objects of contrasting texture"],
+      ccss: "PTKLF.LL.LS.2",
+      nivel: "TK",
+      prerequisito: true,
     },
     {
-      titulo: "Escucha activa: sonidos y voces",
-      objetivo: "Discriminar sonidos y voces con respuesta verbal en oracion completa",
-      descripcion: "Se reproducen grabaciones de sonidos ambientales y voces conocidas. El nino responde en oracion completa: Eso es el sonido de... / Esa es la voz de... Si responde con una sola palabra, la docente modela la oracion completa y espera la repeticion. Se registra quien necesita andamio.",
-      materiales: ["Grabaciones de sonidos y voces", "Microfono de juguete", "Antifaz"],
-      dccaba: "DC CABA 2025 - O Sala 4: Escucha activa en situaciones comunicativas variadas. La oracion completa como estandar de produccion oral desde sala 4.",
-      sala: "ambas"
+      titulo: "Tell Me Your Morning",
+      objetivo: "Use sentences of increasing complexity to narrate personal experiences.",
+      descripcion: "Each child narrates one thing they did before school, using the visible frame: First I, then I. The frame stays on the wall all year. Record who sustains two connected sentences without prompting.",
+      materiales: ["Sentence frame poster"],
+      ccss: "PTKLF.LL.LS.3",
+      nivel: "TK",
     },
     {
-      titulo: "Instrucciones: ejecutar y verbalizar",
-      objetivo: "Seguir instrucciones orales y verbalizarlas con estructura completa",
-      descripcion: "Instrucciones de un paso (sala 4) o dos pasos (sala 5). El nino las ejecuta y las verbaliza: Yo levante el brazo / Primero yo... y despues yo... REGLA: no avanzar a la siguiente instruccion sin la verbalizacion completa. Aumentar dificultad gradualmente.",
-      materiales: ["Objetos para manipular", "Tarjetas con acciones pictogramas"],
-      dccaba: "DC CABA 2025 - O Sala 4: Instrucciones simples. Sala 5: secuencia de dos pasos. ECO-E (Argentina/Chile): la verbalizacion posterior ancla el vocabulario de accion.",
-      sala: "ambas"
+      titulo: "Morning Meeting Turn and Talk",
+      objetivo: "Follow agreed-upon rules for discussions, listening and taking turns.",
+      descripcion: "Question of the day on the easel. Partners talk: one speaks while the other holds the listening card, then they swap. Two pairs share out with the whole group, reporting what their partner said, not what they said.",
+      materiales: ["Easel", "Question card", "Listening cards"],
+      ccss: "SL.K.1a",
+      nivel: "K",
     },
     {
-      titulo: "Descripcion de objetos: ES / TIENE / SIRVE PARA",
-      objetivo: "Describir objetos usando un marco estructurado",
-      descripcion: "El nino saca un objeto de la bolsa misteriosa y lo describe usando el marco visible: Es un... / Tiene... / Sirve para... La docente no avanza con respuesta de palabra suelta. Si el nino se traba, senala el marco como apoyo visual y espera. Para sala 5 se agrega: Es igual/parecido a...",
-      materiales: ["Bolsa misteriosa con objetos variados", "Marco de descripcion impreso en grande", "Microfono"],
-      dccaba: "DC CABA 2025 - O Sala 4: Descripcion de objetos y situaciones. Sala 5: descripcion con precision (color, forma, tamaño, funcion). Marco estructurado como andamio.",
-      sala: "ambas"
-    },
-    // BLOQUE 2 - AMBAS SALAS: Vocabulario y comprension oral
-    {
-      titulo: "Vocabulario nuevo: bolsa misteriosa y clasificacion",
-      objetivo: "Ampliar vocabulario y usar palabras nuevas en oracion completa",
-      descripcion: "Se presenta un objeto desconocido. El nino lo saca, lo explora y lo describe. La docente valida el nombre correcto y lo integra a la clase: quien mas conoce esta palabra? Se clasifica por categoria: es un animal, una herramienta, una fruta. Al final se revisa el muro de palabras.",
-      materiales: ["Objetos o imagenes nuevas", "Bolsa misteriosa", "Muro de palabras"],
-      dccaba: "DC CABA 2025 - O Sala 4 y 5: Amplitud de vocabulario en contextos significativos. El contexto real facilita la retencion a largo plazo.",
-      sala: "ambas"
+      titulo: "Ask to Understand",
+      objetivo: "Ask and answer questions in order to seek help, get information, or clarify.",
+      descripcion: "The teacher gives a deliberately incomplete instruction. Children must ask the question that completes it. The question gets celebrated, not the answer. Repeat with a partner giving the incomplete instruction.",
+      materiales: ["Instruction cards"],
+      ccss: "SL.K.3",
+      nivel: "K",
     },
     {
-      titulo: "Categorias semanticas: clasificar y argumentar",
-      objetivo: "Clasificar objetos por categoria y verbalizar el criterio usado",
-      descripcion: "Se presentan objetos de distintas categorias. El nino los clasifica y verbaliza: El perro es un animal porque... La docente no acepta clasificacion sin verbalizacion. Se complica agregando subcategorias (animal domestico vs salvaje) y pidiendo que justifiquen.",
-      materiales: ["Cajas de categorias rotuladas", "Objetos o imagenes variadas"],
-      dccaba: "DC CABA 2025 - O: Amplitud de vocabulario. La categorizacion semantica es base del desarrollo del lenguaje academico.",
-      sala: "ambas"
+      titulo: "Describe So I Can Draw It",
+      objetivo: "Describe people, places, things and events with relevant details.",
+      descripcion: "One child describes a picture only they can see. The partner draws from the description without asking questions in the first round. Then compare. Second round the partner may ask three questions. The gap between the two drawings is the lesson.",
+      materiales: ["Picture cards", "Paper and pencils"],
+      ccss: "SL.1.4",
+      nivel: "1",
     },
     {
-      titulo: "Inferencias orales: causa y efecto",
-      objetivo: "Inferir causas a partir de imagenes y expresarlas con PORQUE",
-      descripcion: "Se muestran imagenes con situaciones. El nino infiere usando: El nino esta llorando porque... / La planta se seco porque... La docente desafia: como lo sabes si la imagen no lo dice? Se trabaja la diferencia entre lo que SE VE y lo que SE DEDUCE.",
-      materiales: ["Imagenes con situaciones cotidianas", "Tarjetas de causa-efecto", "Flechas visuales"],
-      dccaba: "DC CABA 2025 - O Sala 5: Inferencias simples. ECO-C: la inferencia oral precede y anticipa la inferencia en la lectura.",
-      sala: "ambas"
-    },
-    // BLOQUE 3 - AMBAS SALAS: Narracion oral
-    {
-      titulo: "Narracion de experiencias personales",
-      objetivo: "Narrar experiencias propias usando conectores de secuencia temporal",
-      descripcion: "El nino narra una experiencia personal usando los 4 conectores: Primero... luego... despues... al final... La docente muestra los conectores en tarjetas visuales. Si el nino salta uno, se senala la tarjeta faltante y se espera que lo incluya. Para sala 4 se admite apoyo visual durante toda la narracion.",
-      materiales: ["Tarjetas visuales de conectores", "Fotos de experiencias (opcionales)", "Microfono"],
-      dccaba: "DC CABA 2025 - O Sala 4: Narracion de experiencias personales con apoyo. Sala 5: narracion autonoma con conectores temporales y causales.",
-      sala: "ambas"
+      titulo: "Build on What They Said",
+      objetivo: "Build on others' talk by responding to the comments of others through multiple exchanges.",
+      descripcion: "Three sentence starters on the wall: I agree because, I want to add, I thought something different. Every contribution after the first must begin with one of them. The teacher tracks the chain of exchanges rather than the number of speakers.",
+      materiales: ["Sentence starter posters"],
+      ccss: "SL.1.1b",
+      nivel: "1",
     },
     {
-      titulo: "Dramatizacion: juego simbolico y lenguaje",
-      objetivo: "Desarrollar el lenguaje oral a traves de la dramatizacion y el juego simbolico",
-      descripcion: "Los ninos dramatizan un cuento conocido asumiendo roles. La docente es el narrador. Se detiene en momentos de dialogo y los ninos improvisan lo que dirian los personajes. Luego se comenta: que dijo el personaje? como lo dijo? Por que lo dijo asi?",
-      materiales: ["Vestuario simple", "Titeres", "Escenografia minima"],
-      dccaba: "DC CABA 2025 - O Sala 4 y 5: Dramatizaciones y juego simbolico. El juego es el organizador principal de la ensenanza en el nivel inicial (DC CABA, principio didactico).",
-      sala: "ambas"
-    },
-    // BLOQUE 4 - SALA 5: Oralidad autonoma y argumentativa
-    {
-      titulo: "Exposicion oral: estructura INICIO-DESARROLLO-CIERRE",
-      objetivo: "Presentar un tema breve con estructura completa",
-      descripcion: "Cada nino presenta un tema de 1 minuto usando la estructura: Hoy voy a hablar de... (inicio) / Lo que mas me importa es... (desarrollo) / Para terminar... (cierre). La docente muestra la estructura en cartel. Si empieza sin ella, para amablemente y recuerda el inicio correcto.",
-      materiales: ["Cartel de estructura de exposicion", "Microfono", "Publico de peluches para los mas timidos"],
-      dccaba: "DC CABA 2025 - O Sala 5: Exposicion oral de temas conocidos con apoyo de imagenes. Base del lenguaje academico en primaria.",
-      sala: "5"
+      titulo: "Partner Reading Check",
+      objetivo: "Build on others' talk by linking their comments to the remarks of others.",
+      descripcion: "Partners take turns reading a paragraph aloud. The listener does not correct: they mark where the reader stopped and self-corrected. Afterwards they discuss what made those spots hard. The mark is the data.",
+      materiales: ["Grade-level texts", "Marking strips"],
+      ccss: "SL.2.1b",
+      nivel: "2",
     },
     {
-      titulo: "Argumentacion: Yo opino que... porque...",
-      objetivo: "Dar razones de preferencias y opiniones con estructura argumentativa",
-      descripcion: "La docente presenta dilemas o preferencias. El nino argumenta: A mi me gusta X porque Y / Yo creo que Z porque W. REGLA: no se acepta la opinion sin el PORQUE. Si falta, la docente senala el conector visual y espera la oracion completa. Se debate si hay distintas opiniones validas.",
-      materiales: ["Tarjetas de dilemas o preferencias", "Conector PORQUE en cartel visible", "Microfono"],
-      dccaba: "DC CABA 2025 - O Sala 5: Argumentacion simple - dar razones de preferencias y opiniones. Base del pensamiento critico.",
-      sala: "5"
-    },
-    {
-      titulo: "Debate: escuchar y responder con argumentos",
-      objetivo: "Participar en un debate respetando el turno y respondiendo al argumento del otro",
-      descripcion: "Se propone un tema de debate accesible: es mejor el dia o la noche? Se divide la clase en dos grupos. Cada grupo prepara 3 argumentos. El debate tiene reglas: escuchar al otro antes de responder, responder al argumento (no al nino), usar PORQUE. La docente modera.",
-      materiales: ["Objeto de turno", "Tarjetas de argumentos para preparar", "Reloj visible"],
-      dccaba: "DC CABA 2025 - O Sala 5: Participacion en debates. El sistema finlandes de debate temprano + Cruz QUE OPINAS (MINEDUC Chile).",
-      sala: "5"
-    },
-    {
-      titulo: "Narracion autonoma: cuento con inicio, conflicto y resolucion",
-      objetivo: "Narrar un cuento inventado con estructura narrativa completa",
-      descripcion: "El nino inventa y narra un cuento breve con estructura: habia una vez... (inicio), un dia... (conflicto), y entonces... (resolucion), al final... (cierre). La docente usa la estructura de tarjetas como andamio. Se graba la narracion para que el nino se escuche. Al escucharse el nino identifica que le falta o mejorar.",
-      materiales: ["Tarjetas de estructura narrativa", "Grabador o celular", "Titeres para apoyo"],
-      dccaba: "DC CABA 2025 - O Sala 5: Narracion autonoma de experiencias, cuentos y situaciones imaginadas. La grabacion desarrolla metacognicion oral.",
-      sala: "5"
-    },
-    {
-      titulo: "Exposicion con imagenes: tema de interes propio",
-      objetivo: "Presentar al grupo un tema de interes personal con apoyo visual",
-      descripcion: "Cada nino elige un tema de su interes (un animal, un deporte, su familia) y prepara una exposicion de 2 minutos con imagenes. El grupo escucha y luego hace al menos una pregunta. La docente registra la estructura usada y el vocabulario especifico del tema.",
-      materiales: ["Imagenes o dibujos preparados por el nino", "Microfono", "Rubrica de exposicion"],
-      dccaba: "DC CABA 2025 - O Sala 5: Exposicion oral de temas conocidos. Entrevistas a adultos de la comunidad (variante recomendada por el DC).",
-      sala: "5"
-    },
-    {
-      titulo: "Evaluacion ECO: situaciones naturales de comunicacion",
-      objetivo: "Evaluar la oralidad en contextos comunicativos reales y variados",
-      descripcion: "La docente genera situaciones naturales de conversacion (describir, narrar, argumentar, exponer) sin modelado previo. Registra en rubrica por nivel: autonoma, con andamio, con palabra suelta. Incluye: escucha activa, turno de dialogo, vocabulario, conectores, argumentacion.",
-      materiales: ["Rubrica ECO completa", "Registro individual", "Situaciones comunicativas variadas preparadas"],
-      dccaba: "DC CABA 2025 - O: Evaluacion continua y formativa. La evaluacion de oralidad debe realizarse en situaciones comunicativas reales, no en pruebas aisladas.",
-      sala: "ambas"
+      titulo: "Say It Again, Better",
+      objetivo: "Report on a topic with appropriate facts and relevant descriptive details, speaking clearly at an understandable pace.",
+      descripcion: "A child reports on something they read. The group asks for one more detail and the child says it again, fuller. The second version is the one that counts and the only one recorded.",
+      materiales: ["Reading logs", "Timer"],
+      ccss: "SL.3.4",
+      nivel: "3",
     },
   ],
-
-  // ── APROXIMACION A LA ESCRITURA (EA) — segunda mitad de ano ─────────────
-  // DC CABA 2025: Practicas de lectura y escritura en contextos reales.
-  // Se incorpora desde julio aproximadamente, cuando la CF ya esta consolidada.
-  // Sala 5 es el foco principal; sala 4 trabaja solo los niveles iniciales.
+  // ── EMERGENT AND DEVELOPING WRITING ─────────────────────────
+  // Progresion TK → Grade 3. Cada paso citado al estandar oficial que lo
+  // fundamenta: CCSS ELA de California, o PTKLF para TK.
   EA: [
     {
-      titulo: "Escritura del nombre propio",
-      objetivo: "Reconocer y escribir el nombre propio como primer texto significativo",
-      descripcion: "La docente presenta tarjetas con los nombres del grupo. Cada nino busca la suya, la observa y copia su nombre en papel sin renglones. Se trabaja letra por letra con la tarjeta como modelo. Se comparan nombres: cuales son largos, cuales cortos, cuales empiezan igual. El nombre queda pegado en el cuaderno como referente permanente.",
-      materiales: ["Tarjetas con nombres en mayuscula imprenta", "Papel blanco sin renglones", "Marcadores gruesos", "Cuaderno personal"],
-      dccaba: "DC CABA 2025 - EA: El nombre propio es el primer texto con significado real para el nino. Base de todos los programas de alfabetizacion temprana (Ferreiro & Teberosky, 1979).",
-      sala: "ambas"
+      titulo: "Sign In Every Morning",
+      objetivo: "Write own name with increasing conventional approximation.",
+      descripcion: "The sign-in sheet is at the door. Every child signs in on arrival at whatever stage they are: a mark, a first letter, the whole name. Nobody is corrected. The sheets are kept in order, so the progression across weeks is visible without any extra assessment time.",
+      materiales: ["Sign-in clipboard", "Pencils", "Name models at eye level"],
+      ccss: "PTKLF.LL.WR.2",
+      nivel: "TK",
+      prerequisito: true,
     },
     {
-      titulo: "Letras de mi nombre en el cuerpo",
-      objetivo: "Identificar y reconocer las letras del nombre propio en diferentes soportes",
-      descripcion: "Los ninos buscan las letras de su nombre en diarios, revistas y envases. Las recortan o senalan. Luego arman su nombre con letras moviles (tarjetas). Se trabaja la idea de que las letras son fijas: siempre son las mismas para el mismo nombre. Cierre: cada nino presenta su nombre armado al grupo.",
-      materiales: ["Diarios y revistas", "Tijeras con punta roma", "Letras moviles (tarjetas o imanes)", "Pegamento"],
-      dccaba: "DC CABA 2025 - EA: Exploracion de portadores de texto. Reconocer letras conocidas en distintos soportes desarrolla la nocion de que la escritura es un sistema estable.",
-      sala: "ambas"
+      titulo: "Draw It, Tell It",
+      objetivo: "Produce marks, scribbles and letters with communicative intent.",
+      descripcion: "Children draw something they know well and then tell a partner about it while pointing at their own drawing. The teacher writes one sentence of what the child said underneath, in front of them, saying each word aloud as it is written.",
+      materiales: ["Paper", "Markers"],
+      ccss: "PTKLF.LL.WR.1",
+      nivel: "TK",
     },
     {
-      titulo: "Escritura espontanea: que quiero decir?",
-      objetivo: "Producir escritura espontanea para comunicar un mensaje personal",
-      descripcion: "Cada nino elige algo que quiere contarle a alguien (un familiar, un amigo imaginario) y lo escribe como puede: con letras que conoce, con dibujo-escritura, con letras mezcladas. La docente pregunta a cada uno que quiso escribir y lo anota al pie en escritura convencional. Se leen las producciones en voz alta.",
-      materiales: ["Papel carta", "Lapices y marcadores", "Sobres de carta opcionales"],
-      dccaba: "DC CABA 2025 - EA: La produccion de escritura con intencion comunicativa real es mas efectiva que la copia mecanica. Ferreiro (1979): los ninos pasan por niveles de conceptualizacion que deben respetarse.",
-      sala: "ambas"
+      titulo: "Draw, Label, Tell",
+      objetivo: "Use drawing, dictating and writing to compose informative texts.",
+      descripcion: "Children draw something they know a lot about, add at least one label using the sounds they hear, and tell it to a partner. Any spelling approximation counts: the target is sound to letter, not correctness.",
+      materiales: ["Paper", "Pencils", "Alphabet strips"],
+      ccss: "W.K.2",
+      nivel: "K",
     },
     {
-      titulo: "Palabras del proyecto: mural de escritura",
-      objetivo: "Escribir palabras significativas del proyecto con apoyo del mural del aula",
-      descripcion: "Se arma un mural con las palabras clave del proyecto en curso (ej: si el proyecto es Los Insectos, van: mariposa, hormiga, alas, antenas). Los ninos copian la palabra de su eleccion en una tira de papel y la ilustran. El mural queda como banco de palabras disponible todo el mes.",
-      materiales: ["Papel afiche para el mural", "Tiras de papel", "Marcadores de colores", "Imagenes del proyecto"],
-      dccaba: "DC CABA 2025 - EA: El vocabulario del proyecto como recurso de escritura. La copia con sentido (no mecanica) del nivel inicial desarrolla la relacion sonido-grafia en contexto real.",
-      sala: "ambas"
+      titulo: "Letter Formation Trays",
+      objetivo: "Print many upper- and lowercase letters.",
+      descripcion: "Model the letter with a spoken path, start at the top, pull down. Children trace it in the sand tray three times saying the path, then write it once on paper. Two letters per session, no more, and always letters whose sound they already own.",
+      materiales: ["Sand trays", "Letter cards", "Paper"],
+      ccss: "L.K.1a",
+      nivel: "K",
     },
     {
-      titulo: "Etiquetas: escribir para nombrar el mundo",
-      objetivo: "Producir escritura funcional etiquetando objetos del aula",
-      descripcion: "La sala se convierte en un museo: cada sector, caja y rincón necesita una etiqueta. Los ninos escriben las etiquetas (con modelo o autonomamente segun nivel). Se pegan en los objetos reales. La docente lee cada etiqueta en voz alta con el grupo. Queda como instalacion permanente del mes.",
-      materiales: ["Tarjetas en blanco", "Marcadores", "Cinta adhesiva", "Lista de palabras de referencia"],
-      dccaba: "DC CABA 2025 - EA: Escritura funcional con proposito real. El DC enfatiza que los ninos deben escribir para algo, no solo por ejercicio.",
-      sala: "ambas"
+      titulo: "Sentence of the Day",
+      objetivo: "Write informative texts naming a topic and supplying facts about it.",
+      descripcion: "A two-word idea goes on the board. The class grows it word by word until it is a sentence that says something. Each child copies the final version and adds one word of their own. The added word is what gets shared.",
+      materiales: ["Board", "Notebooks"],
+      ccss: "W.1.2",
+      nivel: "1",
     },
     {
-      titulo: "Dictado al docente: texto colectivo",
-      objetivo: "Participar en la produccion de un texto colectivo dictado al docente",
-      descripcion: "El grupo dicta una historia, noticia o carta y la docente escribe en el pizarron en tiempo real, verbalizando cada decision: escribo una mayuscula porque empieza la oracion, pongo punto porque termina la idea. Los ninos observan como el habla se convierte en escritura. Luego la docente lee el texto completo y los ninos ilustran su parte favorita.",
-      materiales: ["Pizarron o papel afiche", "Marcadores gruesos", "Hoja para ilustrar"],
-      dccaba: "DC CABA 2025 - EA: El dictado al docente es la estrategia de maxima evidencia para mostrar la relacion oral-escrito. Chambers (1993): el adulto como escriba modela el proceso de manera visible.",
-      sala: "ambas"
+      titulo: "Opinion with a Reason",
+      objetivo: "Write opinion pieces stating an opinion and supplying a reason for it.",
+      descripcion: "Children choose their favourite of three read alouds, place their sticker on the graph and write the reason. The reason is what gets revised, never the opinion. The graph makes the class distribution visible and the reasons get read aloud.",
+      materiales: ["Book covers", "Stickers", "Chart", "Paper strips"],
+      ccss: "W.1.1",
+      nivel: "1",
     },
     {
-      titulo: "Lectura de lista: escribir para recordar",
-      objetivo: "Producir una lista con proposito real como texto funcional basico",
-      descripcion: "El grupo necesita una lista real: ingredientes para una receta, materiales para manualidades, libros de la biblioteca. Los ninos dictan los items y la docente va anotando. Luego cada nino copia un item de la lista con modelo a la vista. Se usa la lista realmente (para ir a buscar lo que falta, por ejemplo).",
-      materiales: ["Hoja para la lista colectiva", "Copias individuales", "Lapices", "Hoja para copiar"],
-      dccaba: "DC CABA 2025 - EA: Las listas son el tipo de texto mas simple estructuralmente y con alto valor funcional. Base para la escritura convencional segun Tolchinsky (2003).",
-      sala: "ambas"
+      titulo: "Opinion with Linking Words",
+      objetivo: "Write opinion pieces using linking words to connect opinion and reasons.",
+      descripcion: "Children write an opinion about a shared read using because, and and also at least twice. Then they swap and the partner marks where the link is missing. The revision is done on the partner's marks, not on the teacher's.",
+      materiales: ["Shared text", "Linking word poster", "Paper"],
+      ccss: "W.2.1",
+      nivel: "2",
     },
     {
-      titulo: "Escritura con apoyo: sonido a letra",
-      objetivo: "Escribir palabras cortas identificando fonemas y sus grafias con apoyo de la docente",
-      descripcion: "La docente elige 3-4 palabras cortas de alta frecuencia del proyecto (ej: sol, mar, casa). Para cada una: 1) La dicen lentamente estirando los sonidos. 2) Cuentan cuantos sonidos tiene. 3) Piensan qué letra va para cada sonido. 4) La escriben en el cuaderno. La docente circula y da apoyo individual sin corregir el resultado sino el proceso.",
-      materiales: ["Cuaderno personal", "Lapiz y goma", "Abecedario de pared", "Lista de palabras del proyecto"],
-      dccaba: "DC CABA 2025 - EA: Relacion sonido-letra en palabras del contexto real. El DC recomienda partir de palabras significativas del proyecto para que la escritura tenga sentido.",
-      sala: "5"
-    },
-    {
-      titulo: "Revision colectiva: mejoramos el texto",
-      objetivo: "Revisar colectivamente un texto escrito para mejorarlo como escritores reales",
-      descripcion: "Se retoma un texto producido la clase anterior (la historia dictada, la carta, las etiquetas). La docente lo lee y pregunta: que le falta? que podemos mejorar? Se hacen 2-3 correcciones colectivas: agregar una palabra, cambiar el final, agregar un detalle. Se relee el texto mejorado. Los ninos descubren que los textos se reescriben.",
-      materiales: ["Texto producido en clase anterior", "Marcadores de color para las correcciones", "Pizarron o afiche"],
-      dccaba: "DC CABA 2025 - EA: La revision es parte del proceso escritor. Ensenar desde el inicio que los textos se pueden mejorar instala la mentalidad de escritor segun el DC.",
-      sala: "5"
-    },
-    {
-      titulo: "Escritura de oracion: sujeto + accion",
-      objetivo: "Producir una oracion escrita simple con sujeto y verbo de forma autonoma",
-      descripcion: "La docente modela en el pizarron: El gato duerme. Luego cada nino elige un personaje del proyecto y escribe su propia oracion. Se trabaja en tres pasos: 1) Decir la oracion en voz alta. 2) Contar las palabras con los dedos. 3) Escribir cada palabra separada. La docente circula y pregunta: cuantas palabras tiene tu oracion? Ambas son palabras o una sola? El objetivo es la separacion entre palabras, no la ortografia.",
-      materiales: ["Cuaderno personal", "Lapiz", "Diccionario de imagenes del proyecto", "Abecedario de pared"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones simples. La separacion entre palabras es el hito clave del nivel alfabetico inicial (Ferreiro & Teberosky, 1979). Sala 5 accede a la escritura de oraciones en la segunda mitad del año.",
-      sala: "5"
-    },
-    {
-      titulo: "Escritura compartida: construimos un texto juntos",
-      objetivo: "Participar en la produccion colectiva de un texto breve con estructura",
-      descripcion: "Docente y ninos escriben juntos un texto de 3-4 oraciones. La docente escribe en el pizarron mientras los ninos dictan. Se detiene en cada decision: que ponemos primero? como empieza? con que termina? Los ninos copian el texto en su cuaderno y lo ilustran. Al releerlo se pregunta: tiene inicio, desarrollo y fin? La escritura compartida es el puente entre el dictado al docente y la escritura autonoma.",
-      materiales: ["Pizarron", "Marcadores gruesos", "Cuadernos", "Hojas para ilustrar"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura compartida como andamiaje para la escritura autonoma. Chambers (1993): el adulto como copiloto del proceso escritor. Gradual Release of Responsibility (Pearson & Gallagher, 1983).",
-      sala: "5"
-    },
-    {
-      titulo: "Escritura de descripcion: como es mi personaje?",
-      objetivo: "Escribir una descripcion de dos o tres atributos de un personaje conocido",
-      descripcion: "Cada nino elige un personaje del proyecto o de un cuento trabajado y escribe 2-3 oraciones descriptivas: Como se ve. Que hace. Como es su personalidad. Se usa el organizador grafico CUERPO / ACCIONES / SENTIMIENTOS como andamio. La docente modela primero con un personaje colectivo. Al terminar cada nino lee su descripcion al grupo y el resto adivina de quien se trata.",
-      materiales: ["Organizador grafico impreso", "Cuaderno", "Lapices y marcadores", "Imagenes de personajes del proyecto"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos descriptivos. La descripcion escrita requiere manejo del adjetivo y la oracion nominal, que aparece consolidado en sala 5 (DC CABA 2025).",
-      sala: "5"
-    },
-    {
-      titulo: "Escritura de cuento: inicio, conflicto y final",
-      objetivo: "Producir un cuento breve con estructura narrativa completa de forma autonoma",
-      descripcion: "Cada nino escribe un cuento de tres partes en hojas dobladas: INICIO (Habia una vez...), CONFLICTO (Pero un dia...) y FINAL (Al final...). La docente muestra la estructura en cartel y modela con un cuento de 3 oraciones. Los ninos escriben y luego se comparten en circulo. Se festeja que son autores reales. Los cuentos quedan en la biblioteca de la sala.",
-      materiales: ["Hojas A4 dobladas en tres partes", "Lapices y marcadores", "Cartel de estructura narrativa", "Cinta para armar biblioteca"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de textos narrativos con estructura. La escritura con estructura narrativa en sala 5 es el antecedente directo de la escritura de cuentos en primero y segundo grado (DC CABA Primaria).",
-      sala: "5"
-    },
-    {
-      titulo: "Revision por pares: el escritor y el lector",
-      objetivo: "Revisar la escritura propia con apoyo de un par para mejorar la comunicacion",
-      descripcion: "En parejas un nino lee su texto al otro. El lector dice: entendi... / no entendi... / me gustaria saber mas de... El escritor anota o recuerda una sola mejora para hacer. Se hace la mejora y se relee. La docente modela primero con un texto anonimo en el pizarron. El objetivo es que descubran que escribir es para que otro lo entienda.",
-      materiales: ["Textos producidos en clases anteriores", "Lapiz de color para las revisiones", "Ficha de rol escritor/lector"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Revision y correccion como parte del proceso escritor. Reading-Writing Workshop (Calkins, 2001): la revision por pares instala la conciencia del lector desde el nivel inicial.",
-      sala: "5"
-    },
-    // ── ACTIVIDADES NUEVAS EA: escribir palabras, frases y oraciones ──
-    {
-      titulo: "Palabras con letras moviles",
-      objetivo: "Componer palabras buscando la letra que corresponde a cada sonido",
-      descripcion: "Se presenta la imagen de la palabra a formar, por ejemplo un sol. Se nombra y se estiran sus sonidos: ssoooolll. Los ninos buscan las letras moviles que correspondan a cada sonido y forman la palabra sobre la mesa o el pizarron. La primera vez se modela mostrando solo las letras necesarias. A medida que ganan autonomia, buscan las letras en una bandeja donde estan todas mezcladas mientras se autodictan la palabra.",
-      materiales: ["Letras moviles", "Tarjetas con imagenes de palabras", "Bandeja"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Composicion de palabras por correspondencia sonido-letra sin el proceso de trazado. Ideal para los primeros momentos de la escritura.",
-      sala: "5"
-    },
-    {
-      titulo: "Sopa de letras: formar palabras",
-      objetivo: "Tomar las letras necesarias para formar la palabra de una imagen",
-      descripcion: "La docente ubica letras moviles mezcladas en el piso o la mesa formando una sopa de letras. Muestra un dibujo (por ejemplo sol) y explica: junten con su cuchara (la mano) las letras que necesiten para formar esa palabra. Entre todos explicitan que letras se necesitan, las juntan y la leen. Luego cada nino forma la palabra del dibujo que le toca. Se complejiza segun la estructura silabica (sol, pato, panal, plato).",
-      materiales: ["Letras moviles", "Tarjetas con dibujos de distinta complejidad silabica", "Cucharas opcionales"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por correspondencia. La manipulacion de letras consolida la relacion sonido-grafia.",
-      sala: "5"
-    },
-    {
-      titulo: "Crucipalabras: una letra por sonido",
-      objetivo: "Escribir palabras colocando una letra en cada casillero segun sus sonidos",
-      descripcion: "Tarjetas con dibujos y, al lado, tablas con tantos recuadros como letras tiene la palabra. La docente explica: para escribir mano necesitamos 4 letras porque son 4 sonidos. Modela seleccionando un dibujo, prolongando los sonidos y mostrando que letra va en cada recuadro. Luego los ninos completan con letras moviles. Se complejiza segun la estructura silabica.",
-      materiales: ["Letras moviles", "Tarjetas con dibujos y tablas de recuadros"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras con apoyo visual de la cantidad de sonidos. El casillero ayuda a no omitir letras.",
-      sala: "5"
-    },
-    {
-      titulo: "Palabras que se transforman",
-      objetivo: "Cambiar una letra de una palabra para formar una palabra nueva",
-      descripcion: "Se propone una palabra sencilla con letras moviles sobre una superficie plana (por ejemplo sol). Se reconocen sus sonidos. La docente invita a cambiar una letra para formar una palabra nueva: si a sol le cambiamos la o por la a, que queda? Sal. Se sigue la cadena: sol, sal, mal, mil. Se modela verbalizando los sonidos y mostrando el reemplazo de la letra.",
-      materiales: ["Letras moviles", "Superficie plana o pizarron magnetico"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Conciencia fonemica y escritura inicial. La transformacion de palabras hace visible como cada sonido importa.",
-      sala: "5"
-    },
-    {
-      titulo: "La Tortuga: escribir palabras al dictado lento",
-      objetivo: "Escribir palabras a partir del reconocimiento de sonidos prolongados",
-      descripcion: "Se presenta una tortuga (titere o juguete) que habla muy, muy lento. Los ninos escriben en sus cuadernos las palabras que la tortuga va pronunciando despacio, segun lo trabajado previamente. Cuando la tortuga se retira, se evalua entre todos quien escribio mas palabras y quien omitio menos sonidos, y se revisan juntos los errores. Se complejiza la estructura silabica (CV, luego CVC, CCV).",
-      materiales: ["Titere o juguete de tortuga", "Lista de palabras segun el nivel", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por correspondencia sonido-letra. El ritmo lento facilita la segmentacion y el trazado.",
-      sala: "5"
-    },
-    {
-      titulo: "Dictado de palabras estirando los sonidos",
-      objetivo: "Escribir palabras letra por letra a partir de los sonidos prolongados",
-      descripcion: "La docente elige una palabra sencilla, por ejemplo luna, y la repite estirando cada sonido: llllluuunnnaaa. Invita a escribirla letra por letra con apoyo verbal: que sonido escuchan primero? Con que letra lo escribimos? Se repite con otras palabras variando la dificultad. Para complejizar: silabas mas complejas (mar, panal, pluma) o que los ninos dicten palabras al grupo estirando ellos los sonidos.",
-      materiales: ["Lista de palabras segun el nivel", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura por correspondencia con modelado del estiramiento de sonidos. Fortalece conciencia fonologica y trazado.",
-      sala: "5"
-    },
-    {
-      titulo: "Etiquetadora: escribir nombres de cosas",
-      objetivo: "Escribir palabras de categorias semanticas para crear carteles",
-      descripcion: "La docente cuenta que se le rompio la etiquetadora, la maquina que hace carteles con los nombres de las cosas, y necesita ayuda. Muestra una imagen (por ejemplo una cocina): a esta tarjeta se le perdio el cartel, vamos a escribirlo. Escribe cocina en el pizarron, luego lo borra y los ninos lo escriben en la tarjeta. Despues escriben el resto de los carteles, incluso de objetos de cada imagen (tenedor, plato, cuchara).",
-      materiales: ["Tarjetas con imagenes de lugares y objetos", "Tarjetas en blanco para carteles"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de palabras por categorias semanticas con proposito funcional (rotular, nombrar el mundo).",
-      sala: "5"
-    },
-    {
-      titulo: "La oracion que crece",
-      objetivo: "Escribir una oracion que se amplia agregando nombre, accion y lugar",
-      descripcion: "Se parte de una imagen disparadora (por ejemplo una vaca comiendo pasto en el campo). Se pregunta que ven: una vaca. Se escribe la frase. Luego se agregan componentes con preguntas: como es la vaca? Negra. Que hace? Come pasto. Queda La vaca negra come pasto. Por ultimo: donde esta? En el campo. La vaca negra come pasto en el campo. Cada vez se borra y los ninos la escriben en sus cuadernos. Se comparan versiones de distintos dias.",
-      materiales: ["Imagenes disparadoras simples", "Pizarron", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones que crecen en complejidad (nombre, accion, lugar). Enriquece la escritura progresivamente.",
-      sala: "5"
-    },
-    {
-      titulo: "El dado de las oraciones",
-      objetivo: "Escribir oraciones combinando personaje, accion y lugar al azar",
-      descripcion: "Tres dados tematicos: uno de personajes (gato, nina, vaca), uno de acciones (correr, comer, dibujar) y uno de lugares (parque, casa, campo). Tres ninos lanzan un dado cada uno. La docente escribe la oracion modelo verbalizando: salio rana, salta y jardin. Primero quien: La rana. Que hace: salta. Donde: en el jardin. La rana salta en el jardin. Luego cada nino la escribe en su cuaderno. Para complejizar: dado de momentos del dia (sol/luna) para el cuando.",
-      materiales: ["Tres dados tematicos (personajes, acciones, lugares)", "Pizarron", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones completas con estructura quien-que hace-donde, de manera ludica.",
-      sala: "5"
-    },
-    {
-      titulo: "Vamos a escribir frases: articulo y sustantivo",
-      objetivo: "Escribir frases simples reconociendo la concordancia articulo-sustantivo",
-      descripcion: "La docente muestra una imagen (por ejemplo un oso) y pregunta que ven. Explicita que se pueden usar dos articulos: el oso y un oso, escribiendolos. Luego se dividen en grupos pequenos con tarjetas de articulos (el, la, los, las, un, una, unos, unas) e imagenes. Forman frases combinando las tarjetas y las escriben en una hoja. Gana el grupo que mas frases correctas arma. Para complejizar: agregar una caracteristica (el oso marron).",
-      materiales: ["Tarjetas con imagenes", "Tarjetas con articulos", "Hojas"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de frases simples con articulos definidos e indefinidos. Reconocimiento de la concordancia.",
-      sala: "5"
-    },
-    {
-      titulo: "De que color es: sumar adjetivos a la frase",
-      objetivo: "Extender una frase simple agregando un adjetivo",
-      descripcion: "Se parte de una imagen (por ejemplo un oso) y se escribe la frase con articulo: el oso. La docente selecciona una tarjeta de color y propone sumar una caracteristica: puede ser marron el oso? Se agrega: El oso marron. Se borra y los ninos la escriben en sus cuadernos. Luego en grupos combinan tarjetas de articulos, imagenes y colores para formar y escribir frases. Variante: tarjetas de tamanos o formas.",
-      materiales: ["Tarjetas con imagenes", "Tarjetas con articulos", "Tarjetas con colores", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Extension de la frase simple sumando adjetivos. El uso del adjetivo enriquece la produccion escrita.",
-      sala: "5"
-    },
-    {
-      titulo: "Que le pasa: escribir oraciones con emociones",
-      objetivo: "Escribir oraciones sencillas a partir de la emocion de un personaje",
-      descripcion: "Imagenes de personajes con expresiones faciales (un oso alegre, un perro triste, un nino sorprendido). La docente muestra una y pregunta que ven: hay un oso. Que le pasa, como se siente? Esta contento. Se escribe El oso esta contento. Se borra y los ninos la escriben en sus cuadernos. Luego en grupos pequenos cada uno forma una oracion con la imagen que le toco. Para complejizar: sumar una caracteristica (el oso marron).",
-      materiales: ["Imagenes de personajes con emociones", "Pizarron", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Produccion de oraciones sencillas a partir de la lectura de emociones. Integra comprension y escritura.",
-      sala: "5"
-    },
-    {
-      titulo: "Distintos tipos de oraciones",
-      objetivo: "Escribir oraciones exclamativas, interrogativas, afirmativas y negativas",
-      descripcion: "Un cuadro con el dibujo de una palabra, el tipo de oracion a formular y un espacio para completar. La docente presenta una imagen (por ejemplo un helado): pensemos una oracion exclamativa. Para que sirven? Para expresar emociones. Se les ocurre alguna con helado? Por ejemplo Me encanta el helado, atentos a los signos de exclamacion. Se escribe en el pizarron, se borra y los ninos la escriben en el cuadro. Se sigue con otros tipos. Para complejizar: escribir un dialogo de preguntas y respuestas.",
-      materiales: ["Cuadro con dibujo, tipo de oracion y espacio para completar", "Cuadernos"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Escritura de distintos tipos de oraciones segun los signos de puntuacion trabajados (exclamacion, interrogacion).",
-      sala: "5"
-    },
-    {
-      titulo: "Evaluacion EA sala 5: texto autonomo + portfolio",
-      objetivo: "Evaluar el nivel de escritura convencional mediante produccion autonoma de un texto breve",
-      descripcion: "Cada nino produce de forma totalmente autonoma: su nombre + una oracion sobre algo del proyecto + un dibujo. La docente registra: nivel de escritura (silabico / silabico-alfabetico / alfabetico), separacion entre palabras, correspondencia sonido-letra, uso de mayuscula al inicio. No se corrige ni se pide reescritura. La produccion va al portfolio como evidencia del nivel al finalizar el segundo trimestre.",
-      materiales: ["Hoja blanca A4", "Lapiz y goma", "Portfolio individual", "Rubrica de niveles Ferreiro"],
-      dccaba: "DC CABA 2025 - EA Sala 5: Evaluacion formativa del nivel de escritura. La rubrica de niveles (Ferreiro & Teberosky) es el instrumento de evaluacion recomendado por el DC CABA para el nivel inicial.",
-      sala: "5"
+      titulo: "Paragraph with a Spine",
+      objetivo: "Write informative texts to examine a topic and convey ideas and information clearly.",
+      descripcion: "Topic sentence first, three facts from the paired texts, closing sentence. Each fact must come from the text and be marked with the page where it was found. The page mark is not optional: unsourced facts get struck out.",
+      materiales: ["Paired texts", "Paragraph organiser"],
+      ccss: "W.3.2",
+      nivel: "3",
     },
   ],
+  // OCT: alias O+CT combinados, se resuelve en runtime
+  OCT: [],
+}
 
-  // ── OCT: alias O+CT combinados — segunda mitad de ano ──────────────────────
-  // En la segunda mitad del año ALBA rota: CF / O+CT / EA
-  // OCT alterna automaticamente entre O y CT segun la clase par/impar del eje
-  OCT: [],  // se resuelve en runtime — ver logica de rotacion mitad de año
+// Hasta donde llega cada nivel dentro de la progresion de su eje.
+// Reemplaza al corte binario de dos salas: California va de TK a 3er grado
+// como un continuo (P-3 Learning Progressions, CDE 2025), no como cinco
+// curriculums sueltos. Cada nivel ve todo lo anterior mas lo suyo.
+const CORTES_POR_NIVEL: Record<string, Record<string, number>> = {
+  "TK": { CF: 4, CT: 2, O: 2, EA: 2 },
+  "K": { CF: 11, CT: 4, O: 4, EA: 4 },
+  "G1": { CF: 15, CT: 6, O: 6, EA: 6 },
+  "G2": { CF: 17, CT: 7, O: 7, EA: 7 },
+  "G3": { CF: 18, CT: 8, O: 8, EA: 8 },
 }
 
 const SALAS_4_ANIOS = ["tk"]
 // ── MATERNAL — SALA DE 2 ANOS ───────────────────────────────────────────
-// Los ejes son las CINCO CAPACIDADES del Diseno Curricular de CABA.
+// Ejes heredados del modelo argentino de maternal. Inactivos en ALBA US:
+// nivelDeSala nunca devuelve "2" ni "3", asi que estas ramas no se alcanzan.
 // La capacidad es la lente con la que se observa; la alfabetizacion sigue
 // siendo el objetivo: toda actividad, sea de la capacidad que sea, tiene que
 // hacer trabajar el lenguaje.
@@ -1482,33 +1160,52 @@ const SECUENCIA_MATERNAL: Record<string, { titulo: string; objetivo: string; des
 // sala de 5 en una de 2 no sirve y ademas confunde. Antes el filtro usaba
 // esde4Anios, que solo distingue 4 de 5, asi que trataba a maternal como
 // sala de 5 y le mandaba actividades de escritura del nombre propio.
-function nivelDeSala(sala: string): "2" | "3" | "4" | "5" {
-  const s = (sala || "").toUpperCase()
-  if (s.includes("PINITOS")) return "2"
-  if (s.includes("PRUEBA MATERNAL")) return "2"
-  if (s.includes("NARANJOS")) return "3"
-  return esde4Anios(sala) ? "4" : "5"
+// Nivel del aula en el sistema de California: TK, Kindergarten y grados 1 a 3.
+// Las claves de grado llevan prefijo G a proposito. El motor todavia conserva
+// ramas de logica que preguntan si el nivel es "2" o "3" para las salas de
+// maternal argentinas; si los grados usaran esos mismos valores, Grade 2
+// recibiria las actividades de una sala de 2 anos. El prefijo lo hace imposible.
+// Los valores "2" a "5" son herencia del modelo argentino (salas de 2, 3, 4 y
+// 5 anos). Esta funcion ya no los devuelve nunca, pero quedan declarados en el
+// tipo porque el motor conserva ramas de logica que los comparan. Sin esto el
+// compilador marca esas comparaciones como imposibles, que es exactamente lo
+// que son: codigo heredado inalcanzable, pendiente de retirar.
+function nivelDeSala(sala: string): "TK" | "K" | "G1" | "G2" | "G3" | "2" | "3" | "4" | "5" {
+  const s = (sala || "").toUpperCase().trim()
+  if (s.startsWith("TK") || s.includes("TRANSITIONAL")) return "TK"
+  if (s.includes("KINDER")) return "K"
+  if (s.includes("GRADE 1")) return "G1"
+  if (s.includes("GRADE 2")) return "G2"
+  if (s.includes("GRADE 3")) return "G3"
+  return "K"
 }
 
+// El nivel dicho como se dice en una escuela de California.
+function nombreDeNivel(nivel: string): string {
+  return nivel === "TK" ? "transitional kindergarten"
+       : nivel === "K"  ? "kindergarten"
+       : `grade ${nivel.replace("G", "")}`
+}
+
+// Se conserva por compatibilidad: el nivel mas chico, el unico que todavia no
+// trabaja lectura de palabras, es TK.
 function esde4Anios(sala: string): boolean {
-  const s = sala.toLowerCase().replace(/\s/g, "")
-  return SALAS_4_ANIOS.some(ref => s.includes(ref.replace(/\s/g, "")))
+  return nivelDeSala(sala) === "TK"
 }
 
-// Detectar segunda mitad del ciclo lectivo (aproximadamente julio en adelante)
-// El ciclo lectivo CABA va de marzo a diciembre (semanas 1-40 aprox.)
-// Mitad = semana 21 → aprox. 1 de julio
-// Se calcula desde el primer lunes de marzo del año en curso
+// Detectar segunda mitad del ciclo lectivo.
+// El ciclo escolar de California va de agosto a junio: la mitad cae cerca de
+// enero. Se calcula desde el primer lunes de agosto del año en curso.
 function esSegundaMitadAnio(): boolean {
   const ahora = new Date()
   const anio = ahora.getFullYear()
   // Primer lunes de marzo
-  const inicioMarzo = new Date(anio, 2, 1) // 1 de marzo
-  const diaSemana = inicioMarzo.getDay() // 0=dom, 1=lun
+  const inicioAgosto = new Date(anio, 7, 1) // 1 de agosto
+  const diaSemana = inicioAgosto.getDay() // 0=dom, 1=lun
   const diasHastaLunes = diaSemana === 0 ? 1 : diaSemana === 1 ? 0 : 8 - diaSemana
-  const primerLunesMarzo = new Date(anio, 2, 1 + diasHastaLunes)
+  const primerLunesAgosto = new Date(anio, 7, 1 + diasHastaLunes)
   // Semanas transcurridas desde el inicio del ciclo
-  const msTranscurridos = ahora.getTime() - primerLunesMarzo.getTime()
+  const msTranscurridos = ahora.getTime() - primerLunesAgosto.getTime()
   const semanasTranscurridas = Math.floor(msTranscurridos / (7 * 24 * 60 * 60 * 1000))
   return semanasTranscurridas >= 21
 }
@@ -1532,9 +1229,11 @@ function calcularActividadDelDia(
   const fullSeq = SECUENCIA[eje]
   // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
   // Para EA sala 4 solo accede a los 7 primeros (escritura emergente, antes de escritura convencional)
-  const limites4: Record<string, number> = { CF: 15, CT: 9, O: 10, EA: 7 }
-  const limite = limites4[eje] ?? fullSeq.length
-  const seq = esde4Anios(sala) ? fullSeq.slice(0, limite) : fullSeq
+  // Cada nivel recorre la progresion hasta donde le corresponde: TK ve el
+  // principio, tercer grado ve todo. No son catalogos distintos, es un corte
+  // sobre el mismo continuo.
+  const limite = CORTES_POR_NIVEL[nivelDeSala(sala)]?.[eje] ?? fullSeq.length
+  const seq = fullSeq.slice(0, limite)
   if (!seq || seq.length === 0) return { actividad: fullSeq[0], indice: 0, esRepeticion: false, esAvanzado: false }
   // Offset de mitad de año: si la sala no tiene cierres en este eje, arrancar en la actividad 9
   // Esto evita mostrar actividades del primer semestre en Junio
@@ -1543,7 +1242,9 @@ function calcularActividadDelDia(
 
   // Punto de partida: las salas de 5 ya venian trabajando antes de registrar en ALBA,
   // asi que no arrancan del principio. Las de 4 si.
-  const arranque = esde4Anios(sala) ? 0 : Math.min(OFFSET_MITAD_ANIO, seq.length - 1)
+  // El ciclo lectivo de California arranca en agosto: todos los niveles
+  // empiezan la progresion desde el principio de su tramo.
+  const arranque = 0
 
   const norm = (t: string) => (t || "").trim().toLowerCase()
   const dadas = new Set(yaDadas.map(norm))
@@ -1817,9 +1518,8 @@ export async function GET(req: Request) {
       const ORDEN: ("CF" | "CT" | "O")[] = ["CF", "O", "CT"]
       const ejeElegido: "CF" | "CT" | "O" = ORDEN[totalCierres % ORDEN.length]
 
-      const secuenciaEje = esde4Anios(sala)
-        ? SECUENCIA[ejeElegido].slice(0, ({ CF: 12, CT: 8, O: 10 })[ejeElegido])
-        : SECUENCIA[ejeElegido]
+      const secuenciaEje = SECUENCIA[ejeElegido].slice(
+        0, CORTES_POR_NIVEL[nivelDeSala(sala)]?.[ejeElegido] ?? SECUENCIA[ejeElegido].length)
       const cierresDeEje = ejeElegido === "CF" ? cierresCF : ejeElegido === "CT" ? cierresCT : cierresO
       // Estamos a mitad de año: si la sala no tiene cierres, arrancar desde la actividad 9
       // OFFSET_MITAD_ANIO = 8 (actividades 1-8 corresponden a primer semestre)
@@ -1837,7 +1537,7 @@ export async function GET(req: Request) {
           descripcion: actividadInicial.descripcion,
           objetivo: actividadInicial.objetivo,
           materiales: actividadInicial.materiales,
-          razon: `Clase ${cierresDeEje + 1} en ${ejeElegido}. ` + (esde4Anios(sala) ? "(4 anos)" : "(5 anos)"),
+          razon: `Clase ${cierresDeEje + 1} en ${ejeElegido}. ` + `(${nombreDeNivel(nivelDeSala(sala))})`,
           alumnosEnRiesgo: 0,
           totalAlumnos: 0,
           tendencia: "estancado",
@@ -2171,12 +1871,11 @@ export async function GET(req: Request) {
     // ── 7. Construir respuesta ─���───────────────────────────────────────────
     // DC CABA 2025: sala 4 cubre hasta repaso de vocales (CF), comprension literal (CT) y oralidad situacional (O)
   // La funcion filtra la secuencia para que sala 4 no acceda a actividades de sala 5
-  const limites4: Record<string, number> = { CF: 15, CT: 9, O: 10, EA: 7 }
     const ejeKey = ejeSugerido as "CF" | "CT" | "O" | "EA"
-    const totalEnSecuencia = esde4Anios(sala)
-      ? SECUENCIA[ejeKey].slice(0, limites4[ejeKey] ?? SECUENCIA[ejeKey].length).length
-      : SECUENCIA[ejeKey].length
-    const edadLabel = esde4Anios(sala) ? " (4 anos)" : " (5 anos)"
+    const totalEnSecuencia = Math.min(
+      CORTES_POR_NIVEL[nivelDeSala(sala)]?.[ejeKey] ?? SECUENCIA[ejeKey].length,
+      SECUENCIA[ejeKey].length)
+    const edadLabel = ` (${nombreDeNivel(nivelDeSala(sala))})`
     const ejeNombre = ejeSugerido === "CF" ? "Conciencia Fonologica" : ejeSugerido === "CT" ? "Comprension de Textos" : ejeSugerido === "EA" ? "Aproximacion a la Escritura" : "Oralidad (ECO)"
 
     // Enriquecer la razon con evidencia internacional si existe
@@ -3133,8 +2832,10 @@ Respondé SOLO con este JSON, sin backticks:
     ? "Eres ALBA, el asistente pedagogico de una SALA DE 2 ANOS del jardin maternal. Tu marco es el Diseno Curricular de Jardin Maternal y las CINCO CAPACIDADES. NO sos un asistente de alfabetizacion: a esta edad se aprende con el cuerpo, los objetos y el juego, no hablando."
     : nivel === "3"
     ? "Eres ALBA, el asistente pedagogico de una SALA DE 3 ANOS. Tu marco es el Diseno Curricular de Sala de 3 y sus cinco areas. NO sos un asistente de alfabetizacion: a esta edad se aprende con el cuerpo, los objetos y el juego."
-    : "Eres ALBA, el asistente pedagogico de alfabetizacion inicial de nivel jardin (4-5 anos)"
-} de Buenos Aires, Argentina. Tu mision es asistir a docentes de nivel inicial para que gestionen su clase con la maxima efectividad en el tiempo minimo — la maestra tiene 3 minutos frente a la compu antes de estar con sus alumnos.
+    : `Eres ALBA, el asistente pedagogico de alfabetizacion temprana de un aula de ${nombreDeNivel(nivel)} en una escuela publica de California. Tu marco son los Common Core State Standards de California para English Language Arts y, en transitional kindergarten, las California Preschool/TK Learning Foundations. NO inventas actividades: trabajas sobre una secuencia curada y sobre la evidencia real del aula.`
+}
+
+La maestra ya dio su clase con el programa que adopto su distrito. Vos no reemplazas esa clase: la acompanas. Tu trabajo es que atienda a los chicos que no llegaron, en el minimo tiempo posible, porque tiene tres minutos antes de volver con sus alumnos.
 
 CONTEXTO DE LA SALA:
 - Sala: ${sala}
