@@ -21,13 +21,13 @@ async function checkCierres() {
   }
   console.log("Error:", error?.message)
   
-  // Check SALADEPRUEBA specifically
+  // Check Kindergarten specifically
   const { data: sala, count } = await supabase
     .from("registro_cierre")
     .select("*", { count: "exact" })
-    .eq("sala", "SALADEPRUEBA")
+    .eq("sala", "Kindergarten")
   
-  console.log("\nSALADEPRUEBA cierres:", count)
+  console.log("\nKindergarten cierres:", count)
   if (sala) {
     sala.forEach(r => {
       console.log(`  - eje: ${r.eje}, fecha: ${r.fecha}`)

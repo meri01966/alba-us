@@ -8,7 +8,7 @@ const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"] as const
 const DIAS_ALFABETIZACION = ["Lunes", "Martes", "Viernes"] as const
 
 // Salas de 5 anos (Musica, Ed. Fisica, Computacion) vs salas de 4 (Musica, Ingles, Ed. Fisica)
-const SALAS_5 = ["Girasoles", "Manzanos", "Alamos"]
+const SALAS_5 = ["Kindergarten", "TK", "Grade 1"]
 
 type TipoClase = "musica" | "ingles" | "edFisica" | "computacion"
 

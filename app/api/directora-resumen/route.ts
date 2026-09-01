@@ -17,7 +17,7 @@ const INICIO_CUATRIMESTRE = "2026-08-03"
 // Se cuentan desde aca para no mostrar ceros que no son reales.
 const JORNADAS_CONFIABLES_DESDE = "2026-08-10"
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TM", "Nogales TT", "SALADEPRUEBA"]
+const SALAS = ["TK", "Kindergarten", "Grade 1", "Grade 2", "Grade 3"]
 const EJES = ["CF", "CT", "O", "E"] as const
 
 export const dynamic = "force-dynamic"

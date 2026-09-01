@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const sala = searchParams.get("sala") || "SALADEPRUEBA"
+  const sala = searchParams.get("sala") || "Kindergarten"
 
   const { data, error } = await supabase
     .from("registro_cierre")

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const sala = searchParams.get("sala") || "Manzanos"
+    const sala = searchParams.get("sala") || "TK"
 
     // Por ahora retornamos null ya que no hay tabla planificaciones
     // Las planificaciones se muestran desde el modal que usa /api/planificaciones
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { titulo, objetivo, actividad, recursos, sala = "Manzanos", eje = "CF" } = body
+    const { titulo, objetivo, actividad, recursos, sala = "TK", eje = "CF" } = body
 
     const today = new Date().toISOString().split("T")[0]
 

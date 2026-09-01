@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const sala = searchParams.get("sala") || "Girasoles"
+    const sala = searchParams.get("sala") || "Kindergarten"
     const fecha = searchParams.get("fecha") || new Date().toISOString().split("T")[0]
 
     // Obtener alumnos de la sala
