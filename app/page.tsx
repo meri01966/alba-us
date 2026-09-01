@@ -356,7 +356,7 @@ function SintesisPedagogicaModal({
 }
 
 // Salas disponibles
-const SALAS_DISPONIBLES = ["TK", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Kindergarten"]
+const SALAS_DISPONIBLES = ["TK", "Kindergarten", "Grade 1", "Grade 2", "Grade 3"]
 
 export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = {}) {
   const [activeView, setActiveView] = useState<ViewType>("clase")
