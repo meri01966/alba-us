@@ -181,11 +181,11 @@ export default function PreviewLayout() {
         </div>
         <div className="flex items-center gap-3">
           <select className="text-xs bg-white/10 border border-white/20 text-white rounded-lg px-3 py-1.5 focus:outline-none">
-            <option>Sala Manzanos (5 anos)</option>
-            <option>Sala Girasoles (5 anos)</option>
-            <option>Sala Alamos (5 anos)</option>
-            <option>Sala Nogales TT (4 anos)</option>
-            <option>Sala Nogales TM (4 anos)</option>
+            <option>Sala TK (5 anos)</option>
+            <option>Sala Kindergarten (5 anos)</option>
+            <option>Sala Grade 1 (5 anos)</option>
+            <option>Sala Grade 3 (4 anos)</option>
+            <option>Sala Grade 2 (4 anos)</option>
           </select>
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold cursor-pointer">
             M

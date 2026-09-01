@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       actividadALBA,
       actividadDocente,
       eje,
-      sala = "Girasoles",
+      sala = "Kindergarten",
       evaluacionGeneral,
       observaciones,
       sugerenciaParaIA,

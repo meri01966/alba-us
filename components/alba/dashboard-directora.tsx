@@ -60,7 +60,7 @@ function corresponsdeAvisarSinPlanificar(): boolean {
   return dia >= 2 && dia <= 5
 }
 
-const SALAS = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM", "SALADEPRUEBA", "PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBA MATERNAL"]
+const SALAS = ["TK", "Kindergarten", "Grade 1", "Grade 3", "Grade 2", "Kindergarten", "PINITOS TT", "PINITOS TM", "NARANJOS TM", "NARANJOS TT", "PRUEBA MATERNAL"]
 const COLORES: Record<Estado, string> = { green: "#22c55e", yellow: "#eab308", red: "#ef4444" }
 
 // Detectar si una sala es Maternal (Naranjos y Pinitos son maternal en ambos turnos; ademas cualquier sala que termine en TM)

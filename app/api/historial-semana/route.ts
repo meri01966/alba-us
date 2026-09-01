@@ -3,7 +3,7 @@ import { getServerClient } from "@/lib/supabase"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const sala = searchParams.get("sala") || "Manzanos"
+  const sala = searchParams.get("sala") || "TK"
 
   try {
     const supabase = getServerClient()

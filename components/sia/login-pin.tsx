@@ -6,11 +6,11 @@ import { BookOpen, Lock } from "lucide-react"
 // PINs del piloto (seguridad liviana — se mueven a Supabase post-piloto).
 // Cada sala tiene su propio PIN. El PIN determina a qué sala entra la maestra.
 const PIN_POR_SALA: Record<string, string> = {
-  "2026G":  "Girasoles",
-  "2026M":  "Manzanos",
-  "2026A":  "Alamos",
-  "2026TM": "Nogales TM",
-  "2026TT": "Nogales TT",
+  "2026G":  "Kindergarten",
+  "2026M":  "TK",
+  "2026A":  "Grade 1",
+  "2026TM": "Grade 2",
+  "2026TT": "Grade 3",
 }
 
 // Salas de maternal: entran a /maestra-maternal, que es otra pantalla

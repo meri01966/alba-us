@@ -878,7 +878,7 @@ export interface DayPlanningHandle {
 }
 
 export const DayPlanning = forwardRef<DayPlanningHandle, DayPlanningProps>(function DayPlanning(
-  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Girasoles", onActividadALBA, onEjeALBA, section = "ambas" },
+  { evaluaciones = {}, ejeActual = "CF", actividadActual = "", totalAlumnos = 0, sala = "Kindergarten", onActividadALBA, onEjeALBA, section = "ambas" },
   ref
 ) {
   const [brain,         setBrain]         = useState<BrainActivity | null>(null)

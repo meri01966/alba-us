@@ -35,7 +35,7 @@ const EJE_COLORS: Record<string, { bg: string; text: string; border: string }> =
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"]
 
-export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, onAlertas, alertasPendientes = 0, salaActual = "Manzanos", historialMes = [] }: HeaderProps) {
+export function Header({ activeView = "clase", onNavigate, onSintesis, onPlanificacion, onAlertas, alertasPendientes = 0, salaActual = "TK", historialMes = [] }: HeaderProps) {
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [mesActual, setMesActual] = useState(new Date().getMonth())
   const [anioActual, setAnioActual] = useState(new Date().getFullYear())

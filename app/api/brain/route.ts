@@ -1286,7 +1286,7 @@ const SECUENCIA: Record<"CF" | "CT" | "O" | "EA" | "OCT", { titulo: string; obje
   OCT: [],  // se resuelve en runtime — ver logica de rotacion mitad de año
 }
 
-const SALAS_4_ANIOS = ["nogalestt", "nogalestm", "nogales tt", "nogales tm"]
+const SALAS_4_ANIOS = ["tk"]
 // ── MATERNAL — SALA DE 2 ANOS ───────────────────────────────────────────
 // Los ejes son las CINCO CAPACIDADES del Diseno Curricular de CABA.
 // La capacidad es la lente con la que se observa; la alfabetizacion sigue
@@ -1526,7 +1526,7 @@ function calcularActividadDelDia(
   eje: "CF" | "CT" | "O" | "EA",
   clasesCompletadasEnEje: number,
   promedioEje: number,
-  sala = "Manzanos",
+  sala = "TK",
   yaDadas: string[] = []
 ): { actividad: (typeof SECUENCIA)["CF"][0]; indice: number; esRepeticion: boolean; esAvanzado: boolean } {
   const fullSeq = SECUENCIA[eje]
@@ -1590,7 +1590,7 @@ export const fetchCache = "force-no-store"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const sala = searchParams.get("sala") || "Manzanos"
+  const sala = searchParams.get("sala") || "TK"
 
   // Crear cliente Supabase con cache desactivado para que cada request lea datos frescos
   const supabase = createClient(
@@ -1626,7 +1626,7 @@ export async function GET(req: Request) {
     }
 
     // Buscar actividad del cronograma: hoy → resto de semana → semana siguiente
-    // Normaliza nombre de sala para tolerar variantes (SALADEPRUEBA vs Sala de prueba)
+    // Normaliza nombre de sala para tolerar variantes (Kindergarten vs Sala de prueba)
     const normalizarSala = (s: string) => s.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "")
     const salaKey = normalizarSala(sala)
     const esSalaPrueba = salaKey.includes("prueba")
@@ -1863,13 +1863,13 @@ export async function GET(req: Request) {
     const regs = registros || []
 
     // ── 3. Inteligencia inter-salas: actividades exitosas en la RED ─────────
-    // La RED ALBA esta integrada por: Manzanos, Girasoles, Alamos, Nogales TT, Nogales TM, Sala de Prueba
+    // La RED ALBA esta integrada por: TK, Kindergarten, Grade 1, Grade 3, Grade 2, Sala de Prueba
     // Cada sala nutre el cerebro con dos fuentes:
     //   a) seguimiento: resultado por alumno por actividad (green/yellow/red)
     //   b) registro_cierre: actividades subidas por la docente con evaluacion general
     // ALBA indexa ambas fuentes y distribuye las mejores actividades a toda la red
 
-    const SALAS_RED = ["Manzanos", "Girasoles", "Alamos", "Nogales TT", "Nogales TM"]
+    const SALAS_RED = ["TK", "Kindergarten", "Grade 1", "Grade 3", "Grade 2"]
 
     // a) Fuente 1: seguimiento de todas las salas de la red (excluyendo la sala actual)
     // seguimiento no tiene columna "sala", filtramos por alumno_ids de las otras salas
@@ -2317,7 +2317,7 @@ export async function GET(req: Request) {
       if (exitosasRed[eje].length > 0) {
         const docentes = exitosasRed[eje].filter(a => a.esDocente).length
         const msg = docentes > 0
-          ? `La red ALBA (Manzanos, Girasoles, Alamos, Nogales TT, Nogales TM) tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >${umbralTasa}% de logro en ${nombre}, incluyendo ${docentes} propuesta${docentes > 1 ? "s" : ""} por docentes. ALBA las priorizara automaticamente.`
+          ? `La red ALBA (TK, Kindergarten, Grade 1, Grade 3, Grade 2) tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >${umbralTasa}% de logro en ${nombre}, incluyendo ${docentes} propuesta${docentes > 1 ? "s" : ""} por docentes. ALBA las priorizara automaticamente.`
           : `La red ALBA tiene ${exitosasRed[eje].length} actividad${exitosasRed[eje].length > 1 ? "es" : ""} con >${umbralTasa}% de logro en ${nombre}. ALBA las priorizara automaticamente.`
         alertas.push({ tipo: "red_exitosa", mensaje: msg, urgencia: "info" })
       }
@@ -2829,7 +2829,7 @@ Respondé SOLO con este JSON, sin backticks:
         const { data: cierres } = await supabase
           .from("registro_cierre")
           .select("actividad_alba, evaluacion_general, eje, fecha")
-          .eq("sala", sala || "Girasoles")
+          .eq("sala", sala || "Kindergarten")
           .order("fecha", { ascending: false })
           .limit(20)
         if (cierres && cierres.length > 0) {
@@ -2858,7 +2858,7 @@ Respondé SOLO con este JSON, sin backticks:
       // ── DECISION EN CODIGO: que eje y que paso le toca a cada dia ────────
       // La IA ya no decide la progresion. El sistema calcula, con la evidencia
       // real de la sala, en que paso de cada secuencia esta y que eje necesita.
-      const salaNombre = sala || "Girasoles"
+      const salaNombre = sala || "Kindergarten"
       const esMaternal = esDeMaternal(salaNombre)
       const nivel = nivelDeSala(salaNombre)
 
