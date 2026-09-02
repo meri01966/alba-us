@@ -132,6 +132,14 @@ function MiniBarChart({
 export default function DashboardDirectora({ soloSala }: { soloSala?: string } = {}) {
   // Modo demo: si se pasa soloSala, el tablero muestra unicamente esa sala
   const salasVisibles = soloSala ? SALAS.filter((s) => s === soloSala) : SALAS
+  // El rol se lee despues del montaje: en el servidor no hay localStorage y
+  // leerlo durante el render rompe la hidratacion.
+  const [rol, setRol] = useState<string | null>(null)
+  useEffect(() => {
+    try { setRol(localStorage.getItem("alba_sesion_rol")) } catch {}
+  }, [])
+  const volverAlAula = rol === "admin"
+
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [registros, setRegistros] = useState<Registro[]>([])
   const [cierres, setCierres] = useState<{ sala: string; eje: string; fecha: string }[]>([])
@@ -601,6 +609,16 @@ export default function DashboardDirectora({ soloSala }: { soloSala?: string } =
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* Vuelta al aula. Solo con acceso total: direccion se queda aca,
+                el portero la devuelve a este tablero si intenta salir. */}
+            {volverAlAula && (
+              <a
+                href="/"
+                className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+              >
+                ← Classrooms
+              </a>
+            )}
             {alertasTotal > 0 && (
               <div className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-full">
                 <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
