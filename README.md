@@ -7,8 +7,7 @@ curriculum a district adopted, and it does not teach children. It sits on top of
 program the teacher already uses and answers the question no one else answers: **what do I
 do tomorrow with the six students who did not get there today.**
 
-This is the California adaptation. The system it comes from has been running in real
-classrooms since 2025.
+This is the California adaptation of a system already in daily use in real classrooms.
 
 ---
 
@@ -53,6 +52,24 @@ And every time an intervention works or fails, that result travels to the networ
 
 ---
 
+## See it running
+
+The deployment carries a full school of fictional data: five grade levels from TK through
+grade 3, 66 students, and three weeks of recorded evidence.
+
+**Access code: `ALBA2026`**
+
+That code opens every classroom and the School View. Switch classrooms from the selector
+in the top bar.
+
+To see what a single teacher sees, use her own code instead: `TK25`, `K25`, `G125`, `G225`
+or `G325`. Each one opens that classroom and nothing else, which is the real permission
+model: a teacher sees her own students by name, and no one above her does.
+
+Every student in this database is invented. No real child's data has ever been in it.
+
+---
+
 ## How it is built
 
 The design principle is simple and it is enforced in the schema, not in a prompt:
@@ -82,6 +99,14 @@ guidance comes from tables.
 
 Next.js 16, React 19, TypeScript, Tailwind. PostgreSQL on Supabase. Deployed on Vercel.
 
+### On the access codes
+
+They live in the browser bundle and anyone can read them in the page source. That is a
+deliberate trade for a demo whose entire dataset is fictional. Before a single real child's
+data enters, authentication moves to Supabase Auth with row level security. The permission
+model those codes express — the teacher sees names, everyone above her sees aggregates —
+is the part that is not provisional.
+
 ---
 
 ## Where the content comes from
@@ -104,11 +129,11 @@ Beck and McKeown, Duke, Scarborough, Gibbons, August and Shanahan.
 Table names, routes and comments are in Spanish. That is not an oversight and we are not
 hiding it.
 
-ALBA was built in Buenos Aires and has been in daily use in real classrooms since 2025,
-with teachers recording evidence every day and a school paying for it. This repository is
-the adaptation of a working system, not a prototype written to look like one. The Spanish
-is the fingerprint of an engine that already survived contact with actual teachers, which
-is the hardest test any education product faces.
+ALBA was built in Buenos Aires and is in daily use in real classrooms, with teachers
+recording evidence every day and a school paying for it. This repository is the adaptation
+of a working system, not a prototype written to look like one. The Spanish is the
+fingerprint of an engine that already survived contact with actual teachers, which is the
+hardest test any education product faces.
 
 The pedagogical content, the standards and the teaching guidance are fully Californian.
 The plumbing kept its accent.
