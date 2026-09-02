@@ -3,27 +3,31 @@
 import { useState } from "react"
 import { BookOpen, Lock } from "lucide-react"
 
-// PINs del piloto (seguridad liviana — se mueven a Supabase post-piloto).
-// Cada sala tiene su propio PIN. El PIN determina a qué sala entra la maestra.
+// Access codes. Light security by design: these ship in the browser bundle, so
+// anyone with the link can read them in the page source. That is acceptable
+// while every student in this database is fictional. Before a single real
+// child's data enters, this moves to Supabase Auth with row level security.
+
+// One code per classroom. The code decides which classroom the teacher opens,
+// and she sees only that one.
 const PIN_POR_SALA: Record<string, string> = {
-  "2026G":  "Kindergarten",
-  "2026M":  "TK",
-  "2026A":  "Grade 1",
-  "2026TM": "Grade 2",
-  "2026TT": "Grade 3",
+  "TK25":  "TK",
+  "K25":   "Kindergarten",
+  "G125":  "Grade 1",
+  "G225":  "Grade 2",
+  "G325":  "Grade 3",
 }
 
-// Salas de maternal: entran a /maestra-maternal, que es otra pantalla
-const PIN_MATERNAL: Record<string, string> = {
-  "1111":   "PRUEBA MATERNAL",
-  "2026P1": "PINITOS TM",
-  "2026P2": "PINITOS TT",
-  "2026N1": "NARANJOS TM",
-  "2026N2": "NARANJOS TT",
-}
+// Maternal does not exist in the California system: TK is the youngest level.
+// The map stays declared so the rest of the engine keeps compiling, but no code
+// resolves to it, which makes those screens unreachable.
+const PIN_MATERNAL: Record<string, string> = {}
 
-const PIN_DIRECCION = "7788"
-const PIN_ADMIN = "0000"
+// School View only: aggregated data, no classroom detail.
+const PIN_DIRECCION = "PRINCIPAL25"
+
+// Full access: every classroom plus School View. This is the demo code.
+const PIN_ADMIN = "ALBA2026"
 
 // Claves de sesion en el navegador
 const SESION_ROL = "alba_sesion_rol"       // "maestra" | "maternal" | "direccion" | "admin"
