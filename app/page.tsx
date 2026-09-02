@@ -386,7 +386,15 @@ export default function ALBADashboard({ forzarSala }: { forzarSala?: string } = 
   // Gestion de sala — persiste en localStorage para no volver al inicio al recargar
   const [salaActual, setSalaActual] = useState(forzarSala || "TK")
   const [salaHydrated, setSalaHydrated] = useState(false)
-  const esMaestra = typeof window !== "undefined" && localStorage.getItem("alba_sesion_rol") === "maestra"
+  // El rol se lee DESPUES del montaje. En el servidor no existe localStorage, asi
+  // que leerlo durante el render devolvia un valor distinto en servidor y en
+  // navegador y rompia la hidratacion de React.
+  const [rol, setRol] = useState<string | null>(null)
+  useEffect(() => {
+    try { setRol(localStorage.getItem("alba_sesion_rol")) } catch {}
+  }, [])
+  // Solo el acceso total cambia de aula. La maestra queda en la suya.
+  const puedeCambiarSala = rol === "admin"
   
   // Cargar sala: el parametro ?sala=X de la URL tiene prioridad (links directos
   // para cada maestra). Si no hay, se usa la ultima sala guardada en localStorage.
@@ -1306,14 +1314,14 @@ useEffect(() => {
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => { if (!forzarSala && !esMaestra) setShowSalaDropdown(!showSalaDropdown) }}
+                  onClick={() => { if (!forzarSala && puedeCambiarSala) setShowSalaDropdown(!showSalaDropdown) }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-medium"
                   style={{ color: "#1e3a5f" }}
                 >
                   <span>Sala: {salaActual}</span>
-                  {!forzarSala && !esMaestra && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
+                  {!forzarSala && puedeCambiarSala && <ChevronDown className={`w-4 h-4 transition-transform ${showSalaDropdown ? "rotate-180" : ""}`} />}
                 </button>
-                {showSalaDropdown && !forzarSala && !esMaestra && (
+                {showSalaDropdown && !forzarSala && puedeCambiarSala && (
                   <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20 min-w-[160px]">
                     {SALAS_DISPONIBLES.map((sala) => (
                       <button
@@ -1343,6 +1351,19 @@ useEffect(() => {
                 <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">
                   Modo Demo
                 </span>
+              )}
+
+              {/* School View. Solo con acceso total: la maestra no ve el tablero
+                  institucional, y direccion ya entra directo ahi. Sin este link
+                  no habia forma de llegar sin escribir la URL a mano. */}
+              {puedeCambiarSala && (
+                <a
+                  href="/directora"
+                  className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors font-medium"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  School View
+                </a>
               )}
             </div>
 
