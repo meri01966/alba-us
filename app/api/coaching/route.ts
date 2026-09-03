@@ -232,12 +232,17 @@ export async function GET(request: Request) {
     let capa = await buscar(estado, estado === "pattern" ? triggerKey : null)
     let repliegue: string | null = null
 
-    // Si ya recibio la capa de este patron, el patron sigue ahi pero no hay
-    // nada nuevo que decirle sobre el. Antes de quedarse muda una semana
-    // entera, ALBA sigue con la formacion de fondo y le recuerda el patron.
-    if (!capa && estado === "pattern") {
+    // Si se acabaron las capas de este estado, ALBA no se queda muda: repliega
+    // a la formacion de fondo, que le sirve a cualquier docente sea cual sea el
+    // estado de su aula. Las capas de 'mixed' no son "las del aula con
+    // problemas": son el oficio.
+    if (!capa && estado !== "mixed") {
       capa = await buscar("mixed", null)
-      if (capa) repliegue = `Ya tuviste la formacion de este patron y sigue presente: ${motivo}`
+      if (capa) {
+        repliegue = estado === "pattern"
+          ? `Ya tuviste la formacion de este patron y sigue presente: ${motivo}`
+          : `Ya recorriste la formacion de este estado: ${motivo}`
+      }
     }
 
     // ── 7. Si no queda ninguna nueva, se dice. No se repite. ──────────────
