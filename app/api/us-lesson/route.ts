@@ -107,7 +107,41 @@ export async function GET(request: Request) {
       })
     }
 
-    // ── 2. La secuencia de ese eje y ese grado ────────────────────────────
+    // ── 2. Los estandares de esa area y ese grado ─────────────────────────
+    //
+    // OJO, esto se hace por el ESTANDAR y no por activities.eje, y la razon
+    // importa: activities.eje guarda el codigo corto heredado de Argentina
+    // (CF, CT, O, EA). El area de California vive en standards.cluster
+    // ("Phonological Awareness", "Print Concepts", ...), que es exactamente el
+    // mismo vocabulario que usan coaching_layers.skill_area y
+    // teaching_guidance.skill_area. Filtrando por el estandar, la clase del
+    // dia y la capacitacion hablan del mismo eje siempre, y no depende de que
+    // diga una columna heredada.
+    const { data: stdsArea, error: errStd } = await supabase
+      .from("standards")
+      .select("code, cluster, seq")
+      .eq("grade_level", nivel)
+      .eq("cluster", eje)
+      .order("seq", { ascending: true })
+
+    if (errStd) return NextResponse.json({ error: errStd.message }, { status: 500 })
+
+    const codigosDelArea = (stdsArea || []).map((s: any) => s.code)
+
+    if (codigosDelArea.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        sala,
+        nivel,
+        totalAlumnos: alumnos.length,
+        englishLearners,
+        eje,
+        leccion: null,
+        mensaje: `No standards loaded for ${nivel} in ${eje}`,
+      })
+    }
+
+    // ── 3. La secuencia de actividades atadas a esos estandares ───────────
     const { data: acts, error: errAct } = await supabase
       .from("activities")
       .select(
@@ -116,7 +150,7 @@ export async function GET(request: Request) {
           "eld_emerging, eld_expanding, eld_bridging"
       )
       .eq("grade_level", nivel)
-      .eq("eje", eje)
+      .in("ccss_code", codigosDelArea)
       .eq("activa", true)
       .order("seq", { ascending: true })
 
@@ -135,7 +169,7 @@ export async function GET(request: Request) {
       })
     }
 
-    // ── 3. Que dio esta aula en las ultimas tres semanas ──────────────────
+    // ── 4. Que dio esta aula en las ultimas tres semanas ──────────────────
     const desde = new Date(Date.now() - VENTANA_DIAS * 24 * 60 * 60 * 1000).toISOString()
     const { data: seg } = await supabase
       .from("seguimiento")
@@ -145,14 +179,14 @@ export async function GET(request: Request) {
 
     const yaDadas = new Set<string>((seg || []).map((r: any) => String(r.actividad)))
 
-    // ── 4. La que toca ────────────────────────────────────────────────────
+    // ── 5. La que toca ────────────────────────────────────────────────────
     // La primera de la secuencia que todavia no dio. Si dio todas, vuelve a
     // empezar: una maestra nunca abre ALBA y no encuentra clase.
     const pendiente = acts.find((a: any) => !yaDadas.has(a.titulo))
     const ciclo = !pendiente
     const elegida: any = pendiente ?? acts[0]
 
-    // ── 5. El estandar. Sale de la foreign key, no de un texto suelto. ────
+    // ── 6. El estandar. Sale de la foreign key, no de un texto suelto. ────
     const { data: std } = await supabase
       .from("standards")
       .select("code, descripcion, framework, strand_name, cluster")
