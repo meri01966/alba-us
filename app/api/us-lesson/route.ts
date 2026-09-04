@@ -142,6 +142,16 @@ export async function GET(request: Request) {
     }
 
     // ── 3. La secuencia de actividades atadas a esos estandares ───────────
+    //
+    // NO se filtra por activities.grade_level a proposito. El grado ya viene
+    // decidido por el estandar: los codigos que salieron del paso 2 son los de
+    // ESTE grado (RF.K.2b es de Kindergarten por definicion, PTKLF es de TK), y
+    // el foreign key garantiza que la actividad cuelga de uno de ellos.
+    // Filtrar ademas por la columna grade_level de activities era pedir dos
+    // veces lo mismo, y cuando esa columna no coincidia con alumnos.grade_level
+    // el aula se quedaba sin clase: eso es exactamente lo que pasaba en
+    // Kindergarten, que tenia estandares y actividades y devolvia null igual.
+    // Una sola fuente de verdad para el grado, y es el estandar.
     const { data: acts, error: errAct } = await supabase
       .from("activities")
       .select(
@@ -149,7 +159,6 @@ export async function GET(request: Request) {
           "mc_contenido, mc_tips, mc_referencia, mc_observar, " +
           "eld_emerging, eld_expanding, eld_bridging"
       )
-      .eq("grade_level", nivel)
       .in("ccss_code", codigosDelArea)
       .eq("activa", true)
       .order("seq", { ascending: true })
